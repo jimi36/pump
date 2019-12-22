@@ -117,7 +117,7 @@ namespace librabbit {
 						pending_event |= IO_EVENT_WRITE;
 
 					if (pop_pending_channel_)
-						tracker->track(true);
+						tracker->track(false);
 
 					if (pending_event != IO_EVENT_NONE)
 						ch->handle_io_event(pending_event, nullptr);

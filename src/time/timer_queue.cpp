@@ -33,7 +33,7 @@ namespace librabbit {
 
 		bool timer_queue::start(const timer_pending_callback &cb)
 		{
-			assert(cb || !"timer queue must be started with invalid timer pending callback!!!");
+			//assert(cb);
 
 			if (!started_)
 			{
