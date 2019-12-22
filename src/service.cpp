@@ -38,8 +38,8 @@ namespace librabbit {
 			loop_poller_ = new poll::select_poller(false);
 			once_poller_ = new poll::select_poller(true);
 #	else
-			loop_poller_ = new poll::epoller(false);
-			once_poller_ = new poll::epoller(true);
+			loop_poller_ = new poll::epoll_poller(false);
+			once_poller_ = new poll::epoll_poller(true);
 #	endif
 #endif
 		}

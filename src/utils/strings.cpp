@@ -54,7 +54,7 @@ namespace librabbit {
 			if (cd == (iconv_t)-1)
 				return false;
 
-			size_t inlen = src.processed_size();
+			size_t inlen = src.size();
 			size_t outlen = inlen * 3 + 1;
 
 			des.resize(outlen, 0);
@@ -85,14 +85,14 @@ namespace librabbit {
 			if (cd == (iconv_t)-1)
 				return false;
 
-			size_t inlen = src.processed_size();
+			size_t inlen = src.size();
 			size_t outlen = inlen * 3 + 1;
 
 			des.resize(outlen, 0);
 
 			char *psrc = (char*)src.c_str();
 			char *pdes = (char*)des.c_str();
-			size_t ret = iconv(cd, &psrc, &inlen, &pdes, &outlen);
+			int ret = iconv(cd, &psrc, &inlen, &pdes, &outlen);
 			iconv_close(cd);
 			if (ret != -1)
 				return false;

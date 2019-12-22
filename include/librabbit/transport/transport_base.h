@@ -64,8 +64,8 @@ namespace librabbit {
 		};
 
 		class LIB_EXPORT transport_base:
-			public poll::channel,
-			public service_getter
+			public service_getter,
+			public poll::channel
 		{
 		protected:
 			friend class flow::flow_base;

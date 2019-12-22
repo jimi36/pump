@@ -25,8 +25,14 @@ public:
 	/*********************************************************************************
 	 * Tcp dialed event callback
 	 ********************************************************************************/
-	virtual void on_dialed_callback(void_ptr ctx, transport_base_sptr transp)
+	virtual void on_dialed_callback(void_ptr ctx, transport_base_sptr transp, bool succ)
 	{
+		if (!succ)
+		{
+			printf("tcp client dialed error\n");
+			return;
+		}		
+
 		transport_ = static_pointer_cast<tcp_transport>(transp);
 
 		transport_io_notifier_sptr io_notifier = shared_from_this();

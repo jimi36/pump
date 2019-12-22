@@ -130,7 +130,7 @@ namespace librabbit {
 				if (!handshaker->init(fd, true, tls_cert_, local_address, remote_address))
 					assert(false);
 
-				if (!handshaker->start(get_service(), handshake_timeout_, std::move(notifier)))
+				if (!handshaker->start(get_service(), handshake_timeout_, notifier))
 				{
 					__set_status(TRANSPORT_HANDSHAKING, TRANSPORT_ERROR);
 					return;
@@ -241,7 +241,7 @@ namespace librabbit {
 				return false;
 
 			poll::channel_sptr ch = shared_from_this();
-			tracker_.reset(new poll::channel_tracker(std::move(ch), TRACK_WRITE, TRACK_MODE_ONCE));
+			tracker_.reset(new poll::channel_tracker(ch, TRACK_WRITE, TRACK_MODE_ONCE));
 			tracker_->track(true);
 
 			if (!get_service()->add_channel_tracker(tracker_))

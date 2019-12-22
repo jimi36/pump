@@ -107,7 +107,7 @@ namespace librabbit {
 					uint64 now = timestamp::now_time();
 					if (next_observe_time_ > now)
 					{
-						std::cv_status status = observer_cv_.wait_for(
+						observer_cv_.wait_for(
 							locker, std::chrono::milliseconds(next_observe_time_ - now)
 						);
 					}

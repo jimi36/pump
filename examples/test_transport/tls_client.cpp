@@ -1,6 +1,8 @@
 #include "tls_transport_test.h"
 
+#ifdef USE_GNUTLS
 #include <gnutls/gnutls.h>
+#endif
 
 static service *sv;
 
@@ -24,8 +26,14 @@ public:
 	/*********************************************************************************
 	 * Tls dialed event callback
 	 ********************************************************************************/
-	virtual void on_dialed_callback(void_ptr ctx, transport_base_sptr transp)
+	virtual void on_dialed_callback(void_ptr ctx, transport_base_sptr transp, bool succ)
 	{
+		if (!succ)
+		{
+			printf("tls cleint dialed error\n");
+			return;
+		}
+
 		transport_ = static_pointer_cast<tls_transport>(transp);
 
 		transport_io_notifier_sptr io_notifier = shared_from_this();
@@ -133,6 +141,7 @@ static std::shared_ptr<my_tls_dialer> my_dialed_notifier;
 
 void start_tls_client(const std::string &ip, uint16 port)
 {
+#ifdef USE_GNUTLS
 	if (gnutls_global_init() != 0)
 		return;
 
@@ -158,4 +167,5 @@ void start_tls_client(const std::string &ip, uint16 port)
 	}
 
 	sv->wait_stop();
+#endif
 }

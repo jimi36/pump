@@ -131,7 +131,7 @@ namespace librabbit {
 			}
 #else
 			gmtime_r(&seconds, &tm_time);
-			while (idx < fromat.processed_size())
+			while (idx < fromat.size())
 			{
 				if (strncmp(fromat.c_str() + idx, "YY", 2) == 0)
 				{

@@ -31,7 +31,11 @@ void send(udp_transport_sptr transport, const std::string &ip, uint16 port)
 	{
 		if (transport->send(buf, 4096, addr) <= 0)
 		{
+#ifdef WIN32
 			Sleep(100);
+#else
+			usleep(1000);
+#endif
 		}
 	}
 }

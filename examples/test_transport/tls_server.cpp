@@ -1,6 +1,8 @@
 #include "tls_transport_test.h"
 
+#ifdef USE_GNUTLS
 #include <gnutls/gnutls.h>
+#endif
 
 static service *sv;
 
@@ -149,6 +151,7 @@ static std::shared_ptr<accepted_notifier> my_accpeted_notifier;
 
 void start_tls_server(const std::string &ip, uint16 port, const std::string &cert_file, const std::string &key_file)
 {
+#ifdef USE_GNUTLS
 	if (gnutls_global_init() != 0)
 		return;
 
@@ -177,4 +180,6 @@ void start_tls_server(const std::string &ip, uint16 port, const std::string &cer
 	}
 
 	sv->wait_stop();
+#endif
 }
+

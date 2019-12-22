@@ -90,7 +90,11 @@ namespace librabbit {
 
 		bool update_connect_context(int32 fd)
 		{
+#ifdef WIN32
 			return (::setsockopt(fd, SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT, nullptr, 0) == 0);
+#else
+			return true;
+#endif
 		}
 
 		bool set_udp_conn_reset(int32 fd, bool enable)
@@ -191,7 +195,7 @@ namespace librabbit {
 #ifdef WIN32
 			return ::WSAGetLastError();
 #else
-			return last_errno;
+			return errno;
 #endif
 		}
 

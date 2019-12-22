@@ -43,10 +43,10 @@ namespace librabbit {
 			struct epoll_event ev;
 			bzero(&ev, sizeof(ev));
 			ev.data.ptr  = tracker;
-			ev.io_event  = EL_TRI_TYPE;
-			ev.io_event |= (listen_event & IO_EVNET_READ) ? EL_READ_EVENT : 0;
-			ev.io_event |= (listen_event & IO_EVENT_WRITE) ? EL_WRITE_EVENT : 0;
-			ev.io_event |= pop_pending_channel_ ? EPOLLONESHOT : 0;
+			ev.events  = EL_TRI_TYPE;
+			ev.events |= (listen_event & IO_EVNET_READ) ? EL_READ_EVENT : 0;
+			ev.events |= (listen_event & IO_EVENT_WRITE) ? EL_WRITE_EVENT : 0;
+			ev.events |= pop_pending_channel_ ? EPOLLONESHOT : 0;
 			return epoll_ctl(epollfd_, EPOLL_CTL_ADD, tracker->get_fd(), &ev) == 0;
 #else
 			return false;
@@ -56,17 +56,17 @@ namespace librabbit {
 		void epoll_poller::__awake_channel_tracker(channel_tracker_ptr tracker)
 		{
 #ifndef WIN32
-			tracker->track(TRACK_ON);
+			tracker->track(true);
 
 			int32 listen_event = tracker->get_track_event();
 			struct epoll_event ev;
 			bzero(&ev, sizeof(ev));
 			ev.data.ptr  = tracker;
-			ev.io_event  = EL_TRI_TYPE;
-			ev.io_event |= (listen_event & IO_EVNET_READ) ? EL_READ_EVENT : 0;
-			ev.io_event |= (listen_event & IO_EVENT_WRITE) ? EL_WRITE_EVENT : 0;
-			ev.io_event |= pop_pending_channel_ ? EPOLLONESHOT : 0;
-			epoll_ctl(epollfd_, EPOLL_CTL_MOD, tracker->get_fd(), &ev) == 0;
+			ev.events  = EL_TRI_TYPE;
+			ev.events |= (listen_event & IO_EVNET_READ) ? EL_READ_EVENT : 0;
+			ev.events |= (listen_event & IO_EVENT_WRITE) ? EL_WRITE_EVENT : 0;
+			ev.events |= pop_pending_channel_ ? EPOLLONESHOT : 0;
+			epoll_ctl(epollfd_, EPOLL_CTL_MOD, tracker->get_fd(), &ev);
 #endif
 		}
 
@@ -83,7 +83,7 @@ namespace librabbit {
 #ifndef WIN32
 			int32 count = ::epoll_wait(epollfd_, &(*events_.begin()), events_.size(), timeout);
 			if (count > 0)
-				__fill_active_channels(count);
+				__dispatch_pending_event(count);
 #endif
 		}
 
@@ -96,7 +96,7 @@ namespace librabbit {
 				auto it = trackers_.find(tracker);
 				if (it != trackers_.end())
 				{
-					auto ch_locker = tracker->get_channel().lock();
+					auto ch_locker = tracker->get_channel();
 					auto ch = ch_locker.get();
 
 					// If the channel is already not existed, the channel tracker should be distroied at here.
@@ -111,13 +111,13 @@ namespace librabbit {
 					}
 
 					int32 pending_event = IO_EVENT_NONE;
-					if (events_[i].io_event & EL_READ_EVENT)
+					if (events_[i].events & EL_READ_EVENT)
 						pending_event |= IO_EVNET_READ;
-					if (events_[i].io_event & EL_WRITE_EVENT)
+					if (events_[i].events & EL_WRITE_EVENT)
 						pending_event |= IO_EVENT_WRITE;
 
 					if (pop_pending_channel_)
-						tracker->track(TRACK_OFF);
+						tracker->track(true);
 
 					if (pending_event != IO_EVENT_NONE)
 						ch->handle_io_event(pending_event, nullptr);
