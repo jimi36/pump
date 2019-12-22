@@ -1,0 +1,139 @@
+/*
+ * Copyright (C) 2015-2018 ZhengHaiTao <ming8ren@163.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef librabbit_transport_tcp_dialer_h
+#define librabbit_transport_tcp_dialer_h
+
+#include "librabbit/time/timer.h"
+#include "librabbit/transport/tcp_transport.h"
+#include "librabbit/transport/flow/flow_tcp_dialer.h"
+
+namespace librabbit {
+	namespace transport {
+
+		class tcp_dialer;
+		DEFINE_ALL_POINTER_TYPE(tcp_dialer);
+
+		class LIB_EXPORT tcp_dialer :
+			public transport_base,
+			public time::timeout_notifier,
+			public std::enable_shared_from_this<tcp_dialer>
+		{
+		public:
+			/*********************************************************************************
+			 * Create instance
+			 ********************************************************************************/
+			static tcp_dialer_sptr create_instance()
+			{
+				tcp_dialer_sptr ins(new tcp_dialer);
+				return ins;
+			}
+
+			/*********************************************************************************
+			 * Deconstructor
+			 ********************************************************************************/
+			virtual ~tcp_dialer();
+
+			/*********************************************************************************
+			 * Start
+			 ********************************************************************************/
+			bool start(
+				service_ptr sv,
+				int64 timeout,
+				const address &bind_address,
+				const address &connect_address,
+				dialed_notifier_sptr &notifier
+			);
+
+			/*********************************************************************************
+			 * Stop
+			 ********************************************************************************/
+			virtual void stop();
+
+		protected:
+			/*********************************************************************************
+			 * Write event callback
+			 ********************************************************************************/
+			virtual void on_write_event(net::iocp_task_ptr itask);
+
+			/*********************************************************************************
+			 * Tracker event callback
+			 ********************************************************************************/
+			virtual void on_tracker_event(bool on);
+
+			/*********************************************************************************
+			 * Timeout event callback
+			 ********************************************************************************/
+			virtual void on_timer_timeout(void_ptr arg);
+
+		private:
+			/*********************************************************************************
+			 * Open flow
+			 ********************************************************************************/
+			bool __open_flow(const address &bind_address);
+
+			/*********************************************************************************
+			 * Close flow
+			 ********************************************************************************/
+			void __close_flow();
+
+			/*********************************************************************************
+			 * Start tracker
+			 ********************************************************************************/
+			bool __start_tracker();
+
+			/*********************************************************************************
+			 * Stop tracker
+			 ********************************************************************************/
+			void __stop_tracker();
+
+			/*********************************************************************************
+			 * Start timeout timer
+			 ********************************************************************************/
+			void __start_timer(int64 timeout);
+
+			/*********************************************************************************
+			 * Stop timeout timer
+			 ********************************************************************************/
+			void __stop_timer();
+
+		private:
+			/*********************************************************************************
+			 * Constructor
+			 ********************************************************************************/
+			tcp_dialer();
+
+		private:
+			// Bind address
+			address bind_address_;
+
+			// Connect address
+			address connect_address_;
+
+			// Connect timeout timer
+			std::shared_ptr<time::timer> timer_;
+
+			// Channel tracker
+			poll::channel_tracker_sptr tracker_;
+
+			// Tcp dialer flow layer
+			flow::flow_tcp_dialer_sptr flow_;
+		};
+
+	}
+}
+
+#endif
