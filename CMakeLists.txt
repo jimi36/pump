@@ -11,7 +11,7 @@ ELSE()
 endif()
 
 # Option gnutls (default Yes)
-OPTION(HAS_GNUTLS "Set has gnutls yes or no (default yes)" ON)
+OPTION(HAS_GNUTLS "Set has gnutls yes or no (default yes)" OFF)
 IF(HAS_GNUTLS)
     ADD_DEFINITIONS("-DUSE_GNUTLS")
 ENDIF()
