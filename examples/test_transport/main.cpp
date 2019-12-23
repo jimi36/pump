@@ -1,11 +1,11 @@
-#include <librabbit/init.h>
+#include <pump/init.h>
 #include "tcp_transport_test.h"
 #include "tls_transport_test.h"
 #include "udp_transport_test.h"
 
 int main(int argc, const char **argv)
 {
-	librabbit::init();
+	pump::init();
 
 	if (argc < 5)
 		return -1;
@@ -69,7 +69,7 @@ int main(int argc, const char **argv)
 		client.join();
 	}
 
-	librabbit::uninit();
+	pump::uninit();
 
 	return 0;
 }

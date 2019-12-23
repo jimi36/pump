@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-#include "librabbit/time/timer.h"
+#include "pump/time/timer.h"
 
-namespace librabbit {
+namespace pump {
 	namespace time {
 
 		const int32 TIMER_STOPPED  = 0;

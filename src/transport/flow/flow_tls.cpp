@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "librabbit/transport/flow/flow_tls.h"
+#include "pump/transport/flow/flow_tls.h"
 
 #ifdef USE_GNUTLS
 extern "C" {
@@ -22,7 +22,7 @@ extern "C" {
 }
 #endif
 
-namespace librabbit {
+namespace pump {
 	namespace transport {
 		namespace flow {
 

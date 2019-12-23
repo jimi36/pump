@@ -1,13 +1,13 @@
 #include <stdio.h>
-#include <librabbit/service.h>
-#include <librabbit/time/timer.h>
+#include <pump/service.h>
+#include <pump/time/timer.h>
 
 class Timeout: 
-	public librabbit::time::timeout_notifier,
+	public pump::time::timeout_notifier,
 	public std::enable_shared_from_this<Timeout>
 {
 public:
-	Timeout(librabbit::service *sv)
+	Timeout(pump::service *sv)
 	{
 		sv_ = sv;
 	}
@@ -15,7 +15,7 @@ public:
 	void start()
 	{
 		auto notify = std::static_pointer_cast<timeout_notifier>(shared_from_this());
-		t_.reset(new librabbit::time::timer(nullptr, notify, 1000, true));
+		t_.reset(new pump::time::timer(nullptr, notify, 1000, true));
 		if (!sv_->start_timer(t_))
 		{
 			printf("start timeout error\n");
@@ -31,13 +31,13 @@ public:
 	}
 
 private:
-	librabbit::service *sv_;
-	std::shared_ptr<librabbit::time::timer> t_;
+	pump::service *sv_;
+	std::shared_ptr<pump::time::timer> t_;
 };
 
 int main(int argc, const char **argv)
 {
-	librabbit::service *sv = new librabbit::service;
+	pump::service *sv = new pump::service;
 	sv->start();
 
 	std::shared_ptr<Timeout> t1(new Timeout(sv));

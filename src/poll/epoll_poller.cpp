@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-#include "librabbit/poll/epoll_poller.h"
+#include "pump/poll/epoll_poller.h"
 
-namespace librabbit {
+namespace pump {
 	namespace poll {
 
 		epoll_poller::epoll_poller(bool pop_pending): 

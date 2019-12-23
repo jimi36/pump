@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-#include "librabbit/transport/address.h"
+#include "pump/transport/address.h"
 
-namespace librabbit {
+namespace pump {
 	namespace transport {
 
 		address::address():

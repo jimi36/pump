@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-#include "librabbit/poll/channel.h"
+#include "pump/poll/channel.h"
 
-namespace librabbit {
+namespace pump {
 	namespace poll {
 
 		channel::channel(int32 fd) :

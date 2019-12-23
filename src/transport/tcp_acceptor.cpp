@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-#include "librabbit/transport/tcp_acceptor.h"
+#include "pump/transport/tcp_acceptor.h"
 
-namespace librabbit {
+namespace pump {
 	namespace transport {
 
 		tcp_acceptor::tcp_acceptor() :

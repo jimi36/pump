@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-#include "librabbit/service.h"
-#include "librabbit/time/timer_queue.h"
-#include "librabbit/poll/iocp_poller.h"
-#include "librabbit/poll/epoll_poller.h"
-#include "librabbit/poll/select_poller.h"
+#include "pump/service.h"
+#include "pump/time/timer_queue.h"
+#include "pump/poll/iocp_poller.h"
+#include "pump/poll/epoll_poller.h"
+#include "pump/poll/select_poller.h"
 
-namespace librabbit {
+namespace pump {
 
 	service::service(bool has_poller) :
 		running_(false),

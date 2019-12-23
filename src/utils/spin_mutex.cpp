@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-#include "librabbit/utils/spin_mutex.h"
+#include "pump/utils/spin_mutex.h"
 
-namespace librabbit {
+namespace pump {
 	namespace utils {
 
 		/*********************************************************************************

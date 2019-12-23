@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-#include "librabbit/transport/flow/buffer.h"
+#include "pump/transport/flow/buffer.h"
 
-namespace librabbit {
+namespace pump {
 	namespace transport {
 		namespace flow {
 

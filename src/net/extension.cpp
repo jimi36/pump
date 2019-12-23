@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-#include "librabbit/net/extension.h"
+#include "pump/net/extension.h"
 
-namespace librabbit {
+namespace pump {
 	namespace net {
 
 #ifdef WIN32

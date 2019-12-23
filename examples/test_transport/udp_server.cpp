@@ -1,6 +1,6 @@
 #include "udp_transport_test.h"
 
-static librabbit::service *sv;
+static service *sv;
 
 class my_udp_server_notify: 
 	public transport_udp_notifier
@@ -48,12 +48,12 @@ static std::shared_ptr<transport_udp_notifier> my_udp_notifier;
 
 void start_udp_server(const std::string &ip, uint16 port)
 {
-	sv = new librabbit::service;
+	sv = new service;
 	sv->start();
 
 	address localaddr(ip, port);
 	my_udp_notifier.reset(new my_udp_server_notify);
-	udp_transport_sptr transport = librabbit::udp_transport::create_instance();
+	udp_transport_sptr transport = udp_transport::create_instance();
 	if (!transport->start(sv, localaddr, my_udp_notifier))
 	{
 		printf("udp server start error\n");

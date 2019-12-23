@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-#include "librabbit/net/socket.h"
+#include "pump/net/socket.h"
 
-namespace librabbit {
+namespace pump {
 	namespace net {
 
 		int32 create_socket(int32 domain, int32 type)

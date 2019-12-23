@@ -1,6 +1,6 @@
 #include "tcp_transport_test.h"
 
-static librabbit::service *sv;
+static service *sv;
 
 static int send_loop = 0;
 static int send_pocket_size = 1024*4;

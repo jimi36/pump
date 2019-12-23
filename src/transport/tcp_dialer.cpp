@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-#include "librabbit/transport/tcp_dialer.h"
+#include "pump/transport/tcp_dialer.h"
 
-namespace librabbit {
+namespace pump {
 	namespace transport {
 
 		tcp_dialer::tcp_dialer() :

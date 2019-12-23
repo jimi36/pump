@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "librabbit/init.h"
+#include "pump/init.h"
 
 #ifdef USE_GNUTLS
 extern "C" {
@@ -22,7 +22,7 @@ extern "C" {
 }
 #endif
 
-namespace librabbit {
+namespace pump {
 
 #ifndef WIN32 
 	typedef void(*sighandler_t)(int32);

@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-#include "librabbit/net/iocp.h"
-#include "librabbit/net/socket.h"
+#include "pump/net/iocp.h"
+#include "pump/net/socket.h"
 
-namespace librabbit {
+namespace pump {
 	namespace net {
 
 		struct iocp_task

@@ -3,11 +3,11 @@
 
 #include <stdio.h>
 
-#include <librabbit/time.h>
-#include <librabbit/service.h>
-#include <librabbit/transport.h>
+#include <pump/time.h>
+#include <pump/service.h>
+#include <pump/transport.h>
 
-using namespace librabbit;
+using namespace pump;
 
 extern void start_tls_server(const std::string &ip, uint16 port, const std::string &cert_file, const std::string &key_file);
 

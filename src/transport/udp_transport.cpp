@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-#include "librabbit/utils/features.h"
-#include "librabbit/transport/udp_transport.h"
+#include "pump/utils/features.h"
+#include "pump/transport/udp_transport.h"
 
-namespace librabbit {
+namespace pump {
 	namespace transport {
 
 		udp_transport::udp_transport() :

@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-#include "librabbit/utils/strings.h"
+#include "pump/utils/strings.h"
 
-namespace librabbit {
+namespace pump {
 	namespace utils {
 
 		uint8 dec_to_hexchar(uint8 n)

@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-#include "librabbit/poll/poller.h"
-#include "librabbit/transport/tcp_transport.h"
+#include "pump/poll/poller.h"
+#include "pump/transport/tcp_transport.h"
 
-namespace librabbit {
+namespace pump {
 	namespace transport {
 
 		tcp_transport::tcp_transport() :

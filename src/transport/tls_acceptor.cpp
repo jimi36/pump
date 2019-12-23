@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-#include "librabbit/transport/tls_acceptor.h"
-#include "librabbit/transport/tls_transport.h"
+#include "pump/transport/tls_acceptor.h"
+#include "pump/transport/tls_transport.h"
 
-namespace librabbit {
+namespace pump {
 	namespace transport {
 
 		tls_acceptor::tls_acceptor():

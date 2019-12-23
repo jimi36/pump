@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-#include "librabbit/transport/tls_handshaker.h"
+#include "pump/transport/tls_handshaker.h"
 
-namespace librabbit {
+namespace pump {
 	namespace transport {
 
 		const int32 TLS_HANDSHAKE_DONE  = 0;

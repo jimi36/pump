@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-#include "librabbit/poll/iocp_poller.h"
+#include "pump/poll/iocp_poller.h"
 
-namespace librabbit {
+namespace pump {
 	namespace poll {
 
 		iocp_poller::iocp_poller(bool pop_pending) :

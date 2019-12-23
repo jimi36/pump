@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-#include "librabbit/transport/flow/flow_tcp_dialer.h"
+#include "pump/transport/flow/flow_tcp_dialer.h"
 
-namespace librabbit {
+namespace pump {
 	namespace transport {
 		namespace flow {
 

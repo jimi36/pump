@@ -1,6 +1,6 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
 
-PROJECT(librabbit_mian)
+PROJECT(pump_mian)
 
 # Option build debug type (default Debug)
 OPTION(BUILD_DEBUG "Set build type to Debug or Release (default Debug)" ON)
@@ -26,11 +26,7 @@ ENDIF()
 SET(ROOT_DIR ${PROJECT_SOURCE_DIR})
 
 # Define librabbit name
-IF(WIN32)
-	SET(LIBRABBIT_NAME "librabbit")
-ELSEIF(UNIX)
-	SET(LIBRABBIT_NAME "rabbit")
-ENDIF()
+SET(LIBRABBIT_NAME "pump")
 
 LIST(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
@@ -40,6 +36,6 @@ INCLUDE(SetCompileFlags)
 
 INCLUDE(SetCompilePaths)
 
-INCLUDE(BuildLibrabbit)
+INCLUDE(BuildPump)
 
 INCLUDE(BuildExamples)

@@ -164,7 +164,7 @@ void start_tcp_client(const std::string &ip, uint16 port)
 
 	address bind_address("0.0.0.0", 0);
 	address connect_address(ip, port);
-	librabbit::dialed_notifier_sptr notifier = my_dialed_notifier;
+	pump::dialed_notifier_sptr notifier = my_dialed_notifier;
 	if (!dialer->start(sv, 0, bind_address, connect_address, notifier))
 	{
 		printf("tcp dialer start error\n");

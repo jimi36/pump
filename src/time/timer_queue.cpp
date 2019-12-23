@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-#include "librabbit/time/timer_queue.h"
+#include "pump/time/timer_queue.h"
 
-namespace librabbit {
+namespace pump {
 	namespace time {
 
 		const int32 TIMER_DEFAULT_INTERVAL = 1000;

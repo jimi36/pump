@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-#include "librabbit/time/timestamp.h"
+#include "pump/time/timestamp.h"
 
-namespace librabbit {
+namespace pump {
 	namespace time {
 
 #define US_PER_MS			1000

@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-#include "librabbit/poll/select_poller.h"
+#include "pump/poll/select_poller.h"
 
-namespace librabbit {
+namespace pump {
 	namespace poll {
 
 		static bool is_selectable(int32 fd)

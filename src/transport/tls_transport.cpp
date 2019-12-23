@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-#include "librabbit/transport/tls_transport.h"
+#include "pump/transport/tls_transport.h"
 
-namespace librabbit {
+namespace pump {
 	namespace transport {
 
 		tls_transport::tls_transport() :
