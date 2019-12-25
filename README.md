@@ -1,6 +1,6 @@
 # Pump
 
-The library is an asynchronous net library, callback based. It is wrote with c++, and require c++11 fetures. It implement udp, tcp and tls transport. And tls is based on [gnutls](https://www.gnutls.org), but it is optional. If no need tls transport, you can disable it.
+The library is an asynchronous net library, callback based. It implement udp, tcp and tls transport. And tls is based on [gnutls](https://www.gnutls.org), but it is optional. If no need tls transport, you can disable it.
 
 # Fetures
 
@@ -10,7 +10,7 @@ The library is an asynchronous net library, callback based. It is wrote with c++
 
 # Build
 
-To build the library, require [cmake](https://cmake.org/).
+To build the library, require [cmake](https://cmake.org/), require c++ compiler witch support c++11 fetures. The library is without tls transport as defult, if you want it, you should turn on the gnutls option in CmakeLists.txt.
 
 ## Window
 
@@ -218,9 +218,9 @@ This is usage of udp transport:
  protected:
     // udp transport receive callback 
     virtual void on_recv_callback(pump::transport_base_ptr transp, pump::c_block_ptr b, int32 size, const pump::address &remote_address)
-	{
+    {
         ...
-	}
+    }
 
     // udp transport stopped
     virtual void on_stopped_callback(pump::transport_base_ptr transp)
