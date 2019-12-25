@@ -10,7 +10,7 @@ The library is an asynchronous net library, callback based. It implement udp, tc
 
 # Build
 
-To build the library, require [cmake](https://cmake.org/), require c++ compiler witch support c++11 fetures. The library is without tls transport as defult, if you want it, you should turn on the gnutls option in CmakeLists.txt.
+To build the library, require [cmake](https://cmake.org/), require c++ compiler which support c++11 fetures. The library is without tls transport as defult, if you want it, you should turn on the gnutls option in CmakeLists.txt.
 
 ## Window
 
