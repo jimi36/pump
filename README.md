@@ -67,9 +67,9 @@ There are tcp and tls acceptors, they have the similar usage.
 
     // accecptor stopped
     virtual void on_stopped_accepting_callback(void_ptr ctx)
-	{
+    {
         ...
-	}
+    }
 
     ...
  };
