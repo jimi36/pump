@@ -1,35 +1,34 @@
 # Pump
 
-The library is an asynchronous net library, callback based. It implement udp, tcp and tls transport. And tls is based on [gnutls](https://www.gnutls.org), but it is optional. If no need tls transport, you can disable it.
+The library is an asynchronous net library, callback based. It implement udp, tcp and tls transport. And tls is based on [gnutls](https://www.gnutls.org), but it is optional.
 
 # Fetures
 
-- Set Timer.
-- Post function callback ability.
+- Base callback.
+- Post callback ability.
 - Transport reading and writing separation.
 
 # Build
 
-To build the library, require [cmake](https://cmake.org/), require c++ compiler which support c++11 fetures. The library is without tls transport as defult, if you want it, you should turn on the gnutls option in CmakeLists.txt.
+The library is without tls transport as default. If you want it, you should turn on the gnutls option in CmakeLists.txt.  
+To build the library, require [cmake](https://cmake.org/) and c++ compiler which support c++11.
 
 ## Window
 
-On window, vs2017 or vs2019 environment is required.  
+On window, 2017 or higher version VS is required. First create vs project, then build the project:
 
-Create vs project:
 ```bash
-cd build
+mkdir build && cd build
 cmake .. -G "Visual Studio 15 2017 Win64"
+pump_mian.sln
 ```
-
-Then build the library with vs priject.
 
 ## Linux
 
-On linux, gcc and g++ is required and must suppert c++11. Then build the library:
+On linux, gcc and g++ is required and must suppert c++11. Build the library:
 
 ```bash
-cd build
+mkdir build && cd build
 cmake .. && make
 ```
 
@@ -37,7 +36,7 @@ cmake .. && make
 
 ## Service
 
-At first, you should create and start the library service engine:
+First of all, you should create and start the library service engine:
 ```c++
 #include <pump/service.h>
 
@@ -212,7 +211,8 @@ This is usage of udp transport:
 #include <pump/transports.h>
 
  class my_udp_transport: 
-	public pump::transport_udp_notifier,
+	public pump::transport_io_notifier,
+	public pump::transport_terminated_notifier,
     public std::enable_shared_from_this<my_udp_transport>
  {
  protected:
@@ -233,14 +233,14 @@ This is usage of udp transport:
 
  ...
 
- pump::transport_udp_notifier_sptr notifier(new my_udp_transport);
+ std::shared_ptr<my_udp_transport> my_transport(new my_udp_transport);
 
  pump::address localaddr("0.0.0.0", 8888);
+ pump::transport_io_notifier_sptr io_notifier = my_transport;
+ pump::transport_terminated_notifier_sptr terminated_notifier = my_transport;
  pump::udp_transport_sptr transp = pump::udp_transport::create_instance();
- if (!transp->start(sv, localaddr, notifier))
+ if (!transp->start(sv, localaddr, io_notifier, terminated_notifier))
  {
     printf("udp transport start error\n");
  }
-
- ...
 ```

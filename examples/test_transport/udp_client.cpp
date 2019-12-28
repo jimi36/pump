@@ -3,9 +3,18 @@
 static service *sv;
 
 class my_udp_client: 
-	public transport_udp_notifier
+	public transport_io_notifier,
+	public transport_terminated_notifier
 {
 public:
+	/*********************************************************************************
+	 * Tcp read event callback
+	 ********************************************************************************/
+	virtual void on_recv_callback(transport_base_ptr transp, c_block_ptr b, int32 size)
+	{
+
+	}
+
 	/*********************************************************************************
 	 * Read event callback for udp
 	 ********************************************************************************/
@@ -15,9 +24,25 @@ public:
 	}
 
 	/*********************************************************************************
+	 * Sent event callback
+	 ********************************************************************************/
+	virtual void on_sent_callback(transport_base_ptr transp)
+	{
+
+	}
+
+	/*********************************************************************************
 	 * Stopped event callback
 	 ********************************************************************************/
 	virtual void on_stopped_callback(transport_base_ptr transp)
+	{
+
+	}
+
+	/*********************************************************************************
+	 * Disconnected event callback
+	 ********************************************************************************/
+	virtual void on_disconnected_callback(transport_base_ptr transp)
 	{
 
 	}
@@ -40,7 +65,7 @@ void send(udp_transport_sptr transport, const std::string &ip, uint16 port)
 	}
 }
 
-static std::shared_ptr<transport_udp_notifier> my_udp_notifier;
+static std::shared_ptr<my_udp_client> udp_client;
 
 void start_udp_client(const std::string &ip, uint16 port)
 {
@@ -48,9 +73,11 @@ void start_udp_client(const std::string &ip, uint16 port)
 	sv->start();
 
 	address localaddr("0.0.0.0", 0);
-	my_udp_notifier.reset(new my_udp_client);
+	udp_client.reset(new my_udp_client);
+	transport_io_notifier_sptr io_notifier = udp_client;
+	transport_terminated_notifier_sptr terminated_notifier = udp_client;
 	udp_transport_sptr transport = udp_transport::create_instance();
-	if (!transport->start(sv, localaddr, my_udp_notifier))
+	if (!transport->start(sv, localaddr, io_notifier, terminated_notifier))
 	{
 		printf("udp client start error\n");
 		return;

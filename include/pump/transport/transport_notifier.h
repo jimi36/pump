@@ -68,6 +68,11 @@ namespace pump {
 			virtual void on_recv_callback(transport_base_ptr transp, c_block_ptr b, int32 size) = 0;
 
 			/*********************************************************************************
+			 * Read event callback for udp
+			 ********************************************************************************/
+			virtual void on_recv_callback(transport_base_ptr transp, c_block_ptr b, int32 size, const address &remote_address) = 0;
+
+			/*********************************************************************************
 			 * Sent event callback
 			 ********************************************************************************/
 			virtual void on_sent_callback(transport_base_ptr transp) = 0;
@@ -88,21 +93,6 @@ namespace pump {
 			virtual void on_stopped_callback(transport_base_ptr transp) = 0;
 		};
 		DEFINE_ALL_POINTER_TYPE(transport_terminated_notifier);
-
-		class LIB_EXPORT transport_udp_notifier
-		{
-		public:
-			/*********************************************************************************
-			 * Read event callback for udp
-			 ********************************************************************************/
-			virtual void on_recv_callback(transport_base_ptr transp, c_block_ptr b, int32 size, const address &remote_address) = 0;
-
-			/*********************************************************************************
-			 * Stopped event callback
-			 ********************************************************************************/
-			virtual void on_stopped_callback(transport_base_ptr transp) = 0;
-		};
-		DEFINE_ALL_POINTER_TYPE(transport_udp_notifier);
 
 	}
 }

@@ -32,7 +32,8 @@ namespace pump {
 		bool udp_transport::start(
 			service_ptr sv,
 			const address &bind_address,
-			transport_udp_notifier_sptr &notifier
+			transport_io_notifier_sptr &io_notifier,
+			transport_terminated_notifier_sptr &terminated_notifier
 		) {
 			if (!__set_status(TRANSPORT_INIT, TRANSPORT_STARTING))
 				return false;
@@ -40,8 +41,11 @@ namespace pump {
 			assert(sv);
 			__set_service(sv);
 
-			assert(notifier);
-			__set_notifier(notifier);
+			assert(io_notifier);
+			__set_notifier(io_notifier);
+
+			assert(terminated_notifier);
+			terminated_notifier_ = terminated_notifier;
 
 			{
 				utils::scoped_defer defer([&]() {
@@ -106,7 +110,7 @@ namespace pump {
 			if (size <= 0)
 				return;
 
-			auto notifier_locker = __get_notifier<transport_udp_notifier>();
+			auto notifier_locker = __get_notifier<transport_io_notifier>();
 			auto notifier = notifier_locker.get();
 			if (notifier)
 				notifier->on_recv_callback(this, b, size, remote_address);
@@ -130,7 +134,7 @@ namespace pump {
 
 			if (tracker_cnt_ == 0)
 			{
-				auto notifier_locker = __get_notifier<transport_udp_notifier>();
+				auto notifier_locker = terminated_notifier_.lock();
 				auto notifier = notifier_locker.get();
 				assert(notifier);
 

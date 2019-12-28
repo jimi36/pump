@@ -3,9 +3,9 @@
 
 #include <stdio.h>
 
-#include <pump/time.h>
+#include <pump/times.h>
 #include <pump/service.h>
-#include <pump/transport.h>
+#include <pump/transports.h>
 
 using namespace pump;
 

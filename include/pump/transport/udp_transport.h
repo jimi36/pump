@@ -51,7 +51,8 @@ namespace pump {
 			bool start(
 				service_ptr sv,
 				const address &bind_address,
-				transport_udp_notifier_sptr &notifier
+				transport_io_notifier_sptr &io_notifier,
+				transport_terminated_notifier_sptr &terminated_notifier
 			);
 
 			/*********************************************************************************
@@ -110,6 +111,9 @@ namespace pump {
 
 			// Udp flow
 			flow::flow_udp_sptr flow_;
+
+			// Transport terminated notifier
+			transport_terminated_notifier_wptr terminated_notifier_;
 		};
 
 	}

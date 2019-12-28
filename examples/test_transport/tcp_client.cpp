@@ -101,6 +101,14 @@ public:
 	}
 
 	/*********************************************************************************
+	 * Read event callback for udp
+	 ********************************************************************************/
+	virtual void on_recv_callback(transport_base_ptr transp, c_block_ptr b, int32 size, const address &remote_address)
+	{
+
+	}
+
+	/*********************************************************************************
 	 * Tcp data writed completed event callback
 	 ********************************************************************************/
 	virtual void on_sent_callback(transport_base_ptr transp)
