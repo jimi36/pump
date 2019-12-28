@@ -20,7 +20,7 @@ On window, 2017 or higher version VS is required. First create vs project, then 
 ```bash
 mkdir build && cd build
 cmake .. -G "Visual Studio 15 2017 Win64"
-pump_main.sln
+pump_man.sln
 ```
 
 ## Linux
@@ -36,7 +36,7 @@ cmake .. && make
 
 ## Service
 
-First of all, you should create and start the library service engine:
+First of all, you should create and start the library service:
 ```c++
 #include <pump/service.h>
 
