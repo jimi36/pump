@@ -20,7 +20,7 @@ On window, 2017 or higher version VS is required. First create vs project, then 
 ```bash
 mkdir build && cd build
 cmake .. -G "Visual Studio 15 2017 Win64"
-pump_mian.sln
+pump_main.sln
 ```
 
 ## Linux

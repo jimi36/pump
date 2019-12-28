@@ -1,6 +1,6 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
 
-PROJECT(pump_mian)
+PROJECT(pump_main)
 
 # Option build debug type (default Debug)
 OPTION(BUILD_DEBUG "Set build type to Debug or Release (default Debug)" ON)
