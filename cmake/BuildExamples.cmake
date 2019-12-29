@@ -12,7 +12,7 @@ MACRO(build_example NAME)
 	ADD_EXECUTABLE(${NAME} ${SOURCES})
 
 	IF(WIN32)
-		SET(LINK_LIBS "ws2_32.lib;${LIBRABBIT_NAME}.lib")
+		SET(LINK_LIBS "ws2_32.lib;${LIBRARY_NAME}.lib")
 		IF(HAS_GNUTLS)
 			SET(LINK_LIBS "${LINK_LIBS};libgnutls.lib")
 		ENDIF()

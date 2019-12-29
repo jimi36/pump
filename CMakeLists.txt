@@ -1,5 +1,10 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
 
+IF(UNIX)
+	SET(CMAKE_C_COMPILER gcc)
+	SET(CMAKE_CXX_COMPILER g++)
+ENDIF()
+
 PROJECT(pump_main)
 
 # Option build debug type (default Debug)
@@ -11,7 +16,7 @@ ELSE()
 endif()
 
 # Option gnutls (default Yes)
-OPTION(HAS_GNUTLS "Set has gnutls yes or no (default yes)" OFF)
+OPTION(HAS_GNUTLS "Set has gnutls yes or no (default yes)" ON)
 IF(HAS_GNUTLS)
     ADD_DEFINITIONS("-DUSE_GNUTLS")
 ENDIF()
@@ -25,12 +30,10 @@ ENDIF()
 # Define root dir
 SET(ROOT_DIR ${PROJECT_SOURCE_DIR})
 
-# Define librabbit name
-SET(LIBRABBIT_NAME "pump")
+# Define library name
+SET(LIBRARY_NAME "pump")
 
 LIST(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
-
-INCLUDE(SetCompiler)
 
 INCLUDE(SetCompileFlags)
 
