@@ -219,16 +219,16 @@ namespace pump {
 #endif
 				net_recv_buffer_.append(buf, size);
 
-				return FLOW_ERR_AGAIN;
+				return FLOW_ERR_NO;
 			}
 
-			c_block_ptr flow_tls::read_from_ssl(int32 &size)
+			c_block_ptr flow_tls::read_from_ssl(int32_ptr size)
 			{
 #ifdef USE_GNUTLS
-				size = (int32)gnutls_read(session_->session, (int8_ptr)ssl_read_buffer_.data(), ssl_read_buffer_.size());
+				*size = (int32)gnutls_read(session_->session, (int8_ptr)ssl_read_buffer_.data(), ssl_read_buffer_.size());
 				return ssl_read_buffer_.data();
 #else
-				size = -1;
+				*size = -1;
 				return nullptr;
 #endif
 			}
@@ -267,7 +267,7 @@ namespace pump {
 					ssl_send_cache_.clear();
 				}
 				if (net_send_buffer_.data_size() == 0)
-					return FLOW_ERR_AGAIN;
+					return FLOW_ERR_NO_DATA;
 				
 #if defined(WIN32) && defined(USE_IOCP)
 				net::link_iocp_task(send_task_);
@@ -278,7 +278,7 @@ namespace pump {
 					net::unlink_iocp_task(send_task_);
 					return FLOW_ERR_ABORT;
 				}
-				return FLOW_ERR_AGAIN;
+				return FLOW_ERR_NO;
 #else
 				int32 size = net::send(fd_, net_send_buffer_.data(), net_send_buffer_.data_size());
 				if (size <= 0)
@@ -287,7 +287,7 @@ namespace pump {
 					{
 					case LANE_EINPROGRESS:
 					case LANE_EWOULDBLOCK:
-						return FLOW_ERR_AGAIN;
+						return FLOW_ERR_NO;
 					default:
 						return FLOW_ERR_ABORT;
 					}
@@ -296,7 +296,7 @@ namespace pump {
 				if (!net_send_buffer_.shift(size))
 					assert(false);
 
-				return FLOW_ERR_AGAIN;
+				return FLOW_ERR_NO;
 #endif
 			}
 
@@ -333,10 +333,10 @@ namespace pump {
 				if (!net_send_buffer_.shift(size))
 					assert(false);
 
-				if (net_send_buffer_.data_size() == 0)
-					return FLOW_ERR_NO_DATA;
+				if (net_send_buffer_.data_size() > 0)
+					return FLOW_ERR_AGAIN;
 
-				return FLOW_ERR_AGAIN;
+				return FLOW_ERR_NO;
 			}
 
 			void flow_tls::__write_to_net_send_cache(c_block_ptr data, uint32 size)

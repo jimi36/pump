@@ -72,11 +72,6 @@ namespace pump {
 		bool remove_channel_tracker(poll::channel_tracker_sptr &tracker);
 
 		/*********************************************************************************
-		 * Delete channel by delay
-		 ********************************************************************************/
-		bool delay_remove_channel_tracker(poll::channel_tracker_sptr &tracker);
-
-		/*********************************************************************************
 		 * Post channel event
 		 ********************************************************************************/
 		bool post_channel_event(poll::channel_sptr &ch, uint32 event);
@@ -135,10 +130,6 @@ namespace pump {
 		std::condition_variable task_cv_;
 		std::vector<post_task_type> tasks_;
 		std::vector<time::timer_wptr> timers_;
-
-		// delay destory channels
-		std::mutex delay_dc_mx_;
-		std::unordered_map<poll::channel_ptr, poll::channel_sptr> delay_destory_channels_;
 	};
 	DEFINE_ALL_POINTER_TYPE(service);
 

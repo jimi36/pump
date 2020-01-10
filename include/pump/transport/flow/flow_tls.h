@@ -46,6 +46,9 @@ namespace pump {
 
 				/*********************************************************************************
 				 * Init flow
+				 * Return results:
+				 *     FLOW_ERR_NO    => success
+				 *     FLOW_ERR_ABORT => error
 				 ********************************************************************************/
 				int32 init(poll::channel_sptr &ch, int32 fd, void_ptr tls_cert, bool is_client);
 
@@ -55,42 +58,59 @@ namespace pump {
 				void rebind_channel(poll::channel_sptr &ch);
 
 				/*********************************************************************************
-				 * Handshaking
+				 * Handshake
+				 * Return results: 
+				 *     FLOW_ERR_NO    => handshake success, no mean finished completely
+				 *     FLOW_ERR_ABORT => handshake error
 				 ********************************************************************************/
 				int32 handshake();
 
 				/*********************************************************************************
 				 * Want to recv
-				 * If using iocp, this will post a request for connecting to iocp.
+				 * If using iocp this post a iocp task for connecting, else do nothing.
+				 * Return results:
+				 *     FLOW_ERR_NO    => success
+				 *     FLOW_ERR_ABORT => error
 				 ********************************************************************************/
 				int32 want_to_recv();
 
 				/*********************************************************************************
 				 * Recv from net
+				 * Return results:
+				 *     FLOW_ERR_NO    => success
+				 *     FLOW_ERR_AGAIN => no more data on net
+				 *     FLOW_ERR_ABORT => error
 				 ********************************************************************************/
 				int32 recv_from_net(net::iocp_task_ptr itask);
 
 				/*********************************************************************************
 				 * Read from ssl
 				 ********************************************************************************/
-				c_block_ptr read_from_ssl(int32 &size);
+				c_block_ptr read_from_ssl(int32_ptr size);
 
 				/*********************************************************************************
 				 * Write to ssl
+				 * If happened error return -1, Otherwise return size of buffer wrote.
 				 ********************************************************************************/
 				int32 write_to_ssl(buffer_ptr wb);
 
 				/*********************************************************************************
 				 * Want to send
-				 * If using iocp, this will post a request for sending to iocp. Otherwise flow
-				 * will send the buffer as much as possible. If the buffer is wrote completely,
-				 * return 1. If the buffer is not sent completely, return -1. If happening
-				 * error, return 0.
+				 * If using iocp this post an iocp task for sending, else this try sending data.
+				 * Return results: 
+				 *     FLOW_ERR_NO      => success
+				 *     FLOW_ERR_NO_DATA => no data to send
+				 *     FLOW_ERR_ABORT   => error
 				 ********************************************************************************/
 				int32 want_to_send();
 
 				/*********************************************************************************
 				 * Send to net
+				 * Return results:
+				 *     FLOW_ERR_NO      => send completely
+				 *     FLOW_ERR_AGAIN   => try to send again
+				 *     FLOW_ERR_NO_DATA => no data to send
+				 *     FLOW_ERR_ABORT   => error
 				 ********************************************************************************/
 				int32 send_to_net(net::iocp_task_ptr itask);
 

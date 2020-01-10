@@ -156,6 +156,7 @@ namespace pump {
 				tracker_->track(true);
 				return;
 			case FLOW_ERR_NO_DATA:
+			case FLOW_ERR_NO:
 				break;
 			}
 				
@@ -245,9 +246,11 @@ namespace pump {
 				{
 				case FLOW_ERR_ABORT:
 					return TLS_HANDSHAKE_ERROR;
-				case FLOW_ERR_AGAIN:
+				case FLOW_ERR_NO:
 					tracker_->set_track_event(TRACK_WRITE);
 					return TLS_HANDSHAKE_DOING;
+				case FLOW_ERR_NO_DATA:
+					assert(false);
 				default:
 					assert(false);
 				}

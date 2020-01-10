@@ -200,6 +200,7 @@ namespace pump {
 				s_tracker_->track(true);
 				return;
 			case FLOW_ERR_NO_DATA:
+			case FLOW_ERR_NO:
 				break;
 			}
 
@@ -208,7 +209,7 @@ namespace pump {
 			case FLOW_ERR_ABORT:
 				__try_doing_disconnected_process();
 				return;
-			case FLOW_ERR_AGAIN:
+			case FLOW_ERR_NO:
 				s_tracker_->track(true);
 				return;
 			case FLOW_ERR_NO_DATA:

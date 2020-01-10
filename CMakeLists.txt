@@ -22,7 +22,7 @@ IF(HAS_GNUTLS)
 ENDIF()
 
 # Option iocp (default no)
-OPTION(HAS_IOCP "Set has iocp yes or no (default no)" OFF)
+OPTION(HAS_IOCP "Set has iocp yes or no (default no)" ON)
 IF(WIN32 AND HAS_IOCP)
 	ADD_DEFINITIONS("-DUSE_IOCP")
 ENDIF()

@@ -99,9 +99,9 @@ namespace pump {
 				return b;
 			}
 
-			int32 flow_tcp::want_to_send(buffer_ptr wb)
+			int32 flow_tcp::want_to_send(buffer_ptr sb)
 			{
-				send_buffer_ = wb;
+				send_buffer_ = sb;
 
 #if defined(WIN32) && defined(USE_IOCP)
 				net::link_iocp_task(send_task_);
@@ -112,16 +112,16 @@ namespace pump {
 					net::unlink_iocp_task(send_task_);
 					return FLOW_ERR_ABORT;
 				}
-				return FLOW_ERR_AGAIN;
+				return FLOW_ERR_NO;
 #else
-				int32 size = net::send(get_fd(), send_buffer_->data(), send_buffer_->data_size());
+				int32 size = net::send(fd_, send_buffer_->data(), send_buffer_->data_size());
 				if (size <= 0)
 				{
 					switch (net::last_errno())
 					{
 					case LANE_EINPROGRESS:
 					case LANE_EWOULDBLOCK:
-						return FLOW_ERR_AGAIN;
+						return FLOW_ERR_NO;
 					default:
 						return FLOW_ERR_ABORT;
 					}
@@ -130,7 +130,7 @@ namespace pump {
 				if (!send_buffer_->shift(size))
 					assert(false);
 
-				return FLOW_ERR_AGAIN;
+				return FLOW_ERR_NO;
 #endif
 			}
 
@@ -146,7 +146,7 @@ namespace pump {
 				if (!has_data_to_send())
 					return FLOW_ERR_NO_DATA;
 
-				int32 size = net::send(get_fd(), send_buffer_->data(), send_buffer_->data_size());
+				int32 size = net::send(fd_, send_buffer_->data(), send_buffer_->data_size());
 				if (size <= 0)
 				{
 					switch (net::last_errno())
@@ -162,10 +162,10 @@ namespace pump {
 				if (!send_buffer_->shift(size))
 					assert(false);
 
-				if (send_buffer_->data_size() == 0)
-					return FLOW_ERR_NO_DATA;
+				if (send_buffer_->data_size() > 0)
+					return FLOW_ERR_AGAIN;
 		
-				return FLOW_ERR_AGAIN;
+				return FLOW_ERR_NO;
 			}
 
 		}

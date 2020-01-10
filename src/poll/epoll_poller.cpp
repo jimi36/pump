@@ -56,8 +56,6 @@ namespace pump {
 		void epoll_poller::__awake_channel_tracker(channel_tracker_ptr tracker)
 		{
 #ifndef WIN32
-			tracker->track(true);
-
 			int32 listen_event = tracker->get_track_event();
 			struct epoll_event ev;
 			bzero(&ev, sizeof(ev));

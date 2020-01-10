@@ -38,12 +38,18 @@ namespace pump {
 
 				/*********************************************************************************
 				 * Init flow
+				 * Return results:
+				 *     FLOW_ERR_NO    => success
+				 *     FLOW_ERR_ABORT => error
 				 ********************************************************************************/
 				int32 init(poll::channel_sptr &ch, net::iocp_handler iocp, const address &bind_address);
 
 				/*********************************************************************************
 				 * Want to recv
-				 * If using iocp, this will post a request for connecting to iocp.
+				 * If using iocp this post an iocp task for receiving, else do nothing.
+				 * Return results:
+				 *     FLOW_ERR_NO    => success
+				 *     FLOW_ERR_ABORT => error
 				 ********************************************************************************/
 				int32 want_to_recv();
 

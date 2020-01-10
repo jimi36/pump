@@ -38,12 +38,18 @@ namespace pump {
 
 				/*********************************************************************************
 				 * Init flow
+				 * Return results:
+				 *     FLOW_ERR_NO    => success
+				 *     FLOW_ERR_ABORT => error
 				 ********************************************************************************/
 				int32 init(poll::channel_sptr &ch, net::iocp_handler iocp, const address &listen_address);
 
 				/*********************************************************************************
 				 * Want to accept
-				 * If using iocp, this will post a request for accepting to iocp. 
+				 * If using iocp this post an iock task for accepting.
+				 * Return results:
+				 *     FLOW_ERR_NO    => success
+				 *     FLOW_ERR_ABORT => error
 				 ********************************************************************************/
 				int32 want_to_accept();
 

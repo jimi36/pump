@@ -180,7 +180,7 @@ namespace pump {
 				if (notifier)
 				{
 					int32 size = 0;
-					c_block_ptr b = flow->read_from_ssl(size);
+					c_block_ptr b = flow->read_from_ssl(&size);
 					if (size > 0)
 						notifier->on_recv_callback(this, b, size);
 				}
@@ -214,6 +214,7 @@ namespace pump {
 				__try_doing_disconnected_process();
 				return;
 			case FLOW_ERR_NO_DATA:
+			case FLOW_ERR_NO:
 				break;
 			}
 
@@ -222,7 +223,7 @@ namespace pump {
 			case FLOW_ERR_ABORT:
 				__try_doing_disconnected_process();
 				return;
-			case FLOW_ERR_AGAIN:
+			case FLOW_ERR_NO:
 				s_tracker_->track(true);
 				return;
 			case FLOW_ERR_NO_DATA:
@@ -397,7 +398,11 @@ namespace pump {
 					assert(false);
 			}
 
-			return flow->want_to_send();
+			int32 ret = flow->want_to_send();
+			if (ret == FLOW_ERR_NO_DATA)
+				ret = FLOW_ERR_NO;
+
+			return ret;
 		}
 
 		void tls_transport::__try_doing_disconnected_process()

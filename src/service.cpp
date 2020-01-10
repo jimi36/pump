@@ -175,15 +175,6 @@ namespace pump {
 		return true;
 	}
 
-	bool service::delay_remove_channel_tracker(poll::channel_tracker_sptr &tracker)
-	{
-		auto ch_locker = tracker->get_channel();
-		std::lock_guard<std::mutex> locker(delay_dc_mx_);
-		delay_destory_channels_[ch_locker.get()] = std::move(ch_locker);
-
-		return true;
-	}
-
 	bool service::post_channel_event(poll::channel_sptr &ch, uint32 event)
 	{
 #if defined(WIN32) && defined(USE_IOCP)

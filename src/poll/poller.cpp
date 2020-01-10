@@ -83,7 +83,10 @@ namespace pump {
 
 		void poller::awake_channel_tracker(channel_tracker_sptr &tracker)
 		{
-			__awake_channel_tracker(tracker.get());
+			auto ptracker = tracker.get();
+			ptracker->track(true);
+
+			__awake_channel_tracker(ptracker);
 		}
 
 		void poller::push_channel_event(channel_sptr &c, uint32 event)

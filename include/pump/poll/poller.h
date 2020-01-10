@@ -110,10 +110,7 @@ namespace pump {
 			/*********************************************************************************
 			 * Awake channel tracker for derived class
 			 ********************************************************************************/
-			virtual void __awake_channel_tracker(channel_tracker_ptr tracker) 
-			{
-				tracker->track(true);
-			}
+			virtual void __awake_channel_tracker(channel_tracker_ptr tracker) {}
 
 			/*********************************************************************************
 			 * Poll

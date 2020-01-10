@@ -38,12 +38,18 @@ namespace pump {
 
 				/*********************************************************************************
 				 * Init
+				 * Return results:
+				 *     FLOW_ERR_NO    => success
+				 *     FLOW_ERR_ABORT => error
 				 ********************************************************************************/
 				int32 init(poll::channel_sptr &ch, int32 fd);
 
 				/*********************************************************************************
 				 * Want to recv
-				 * If using iocp, this will post a request for connecting to iocp.
+				 * If using iocp this post an iocp task for receiving, else do nothing.
+				 * Return results:
+				 *     FLOW_ERR_NO    => success
+				 *     FLOW_ERR_ABORT => error
 				 ********************************************************************************/
 				int32 want_to_recv();
 
@@ -54,13 +60,20 @@ namespace pump {
 
 				/*********************************************************************************
 				 * Want to send
-				 * If using iocp, this will post a request for sending to iocp. Otherwise flow
-				 * will send the buffer as much as possible.
+				 * If using iocp this post an iocp task for sending, else this try sending data.
+				 * Return results:
+				 *     FLOW_ERR_NO    => success
+				 *     FLOW_ERR_ABORT => error
 				 ********************************************************************************/
-				int32 want_to_send(buffer_ptr wb);
+				int32 want_to_send(buffer_ptr sb);
 
 				/*********************************************************************************
 				 * Send
+				 * Return results:
+				 *     FLOW_ERR_NO      => send completely
+				 *     FLOW_ERR_AGAIN   => try to send again
+				 *     FLOW_ERR_NO_DATA => no data to send
+				 *     FLOW_ERR_ABORT   => error
 				 ********************************************************************************/
 				int32 send(net::iocp_task_ptr itask);
 
