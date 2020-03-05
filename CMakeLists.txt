@@ -5,40 +5,51 @@ IF(UNIX)
 	SET(CMAKE_CXX_COMPILER g++)
 ENDIF()
 
-PROJECT(pump_main)
-
-# Option build debug type (default Debug)
-OPTION(BUILD_DEBUG "Set build type to Debug or Release (default Debug)" ON)
+# Option build type debug or release (default Debug)
+OPTION(BUILD_DEBUG "Option build type debug or release" ON)
 IF(BUILD_DEBUG)
     SET(CMAKE_BUILD_TYPE Debug)
 ELSE()
     SET(CMAKE_BUILD_TYPE Release)
 endif()
 
-# Option gnutls (default Yes)
-OPTION(HAS_GNUTLS "Set has gnutls yes or no (default yes)" OFF)
-IF(HAS_GNUTLS)
+# Option build with gnutls (default OFF)
+OPTION(WITH_GNUTLS "Option build with gnutls" OFF)
+IF(WITH_GNUTLS)
     ADD_DEFINITIONS("-DUSE_GNUTLS")
 ENDIF()
 
-# Option iocp (default no)
-OPTION(HAS_IOCP "Set has iocp yes or no (default no)" ON)
-IF(WIN32 AND HAS_IOCP)
+# Option build with iocp, but ignored on linux (default NO)
+OPTION(WITH_IOCP "Option build with iocp, but ignored on linux" ON)
+IF(WIN32 AND WITH_IOCP)
 	ADD_DEFINITIONS("-DUSE_IOCP")
 ENDIF()
+
+PROJECT(pump_main)
+
+# Library name
+SET(LIBRARY_NAME "pump")
 
 # Define root dir
 SET(ROOT_DIR ${PROJECT_SOURCE_DIR})
 
-# Define library name
-SET(LIBRARY_NAME "pump")
+# Set link libraries path
+LINK_DIRECTORIES(${CMAKE_BINARY_DIR})
 
+# Set include path
+INCLUDE_DIRECTORIES(${ROOT_DIR}/include)
+
+# Append cmake module path
 LIST(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
-INCLUDE(SetCompileFlags)
+INCLUDE(set_complie_flags)
+INCLUDE(build_pump_library)
+INCLUDE(build_example_project)
 
-INCLUDE(SetCompilePaths)
+build_pump_library()
 
-INCLUDE(BuildPump)
+build_example_project("test_transport")
 
-INCLUDE(BuildExamples)
+build_example_project("test_simple")
+
+build_example_project("test_timer")

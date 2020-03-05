@@ -1,10 +1,9 @@
-#
-# The module build examples project.
 # 
-# On windows, this will build vs project to compile examples.
+# Export functions:
+#	build_example_project(project_name)
 #
 
-MACRO(build_example NAME)
+MACRO(build_example_project NAME)
 	set_complie_flags(${EXE_COMPILE_FLAGS})
 
 	FILE(GLOB_RECURSE SOURCES ${ROOT_DIR}/examples/${NAME}/*)
@@ -13,19 +12,15 @@ MACRO(build_example NAME)
 
 	IF(WIN32)
 		SET(LINK_LIBS "ws2_32.lib;${LIBRARY_NAME}.lib")
-		IF(HAS_GNUTLS)
+		IF(WITH_GNUTLS)
 			SET(LINK_LIBS "${LINK_LIBS};libgnutls.lib")
 		ENDIF()
 	ELSEIF(UNIX)
 		SET(LINK_LIBS "-lpthread -l${LIBRARY_NAME}")
-        IF(HAS_GNUTLS)
+        IF(WITH_GNUTLS)
             SET(LINK_LIBS "${LINK_LIBS} libgnutls.a")
         ENDIF()
 	ENDIF()
 	
 	TARGET_LINK_LIBRARIES (${NAME} ${LINK_LIBS})
 ENDMACRO()
-
-build_example("test_transport")
-build_example("test_simple")
-build_example("test_timer")

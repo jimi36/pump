@@ -3,7 +3,5 @@
 *.a
 *.so
 
-# Folders
+# Build path
 build
-lib
-

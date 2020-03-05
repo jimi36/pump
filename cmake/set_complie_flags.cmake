@@ -1,9 +1,9 @@
 #
-# The module defines the following variables:
+# Export variables:
 #	LIB_COMPILE_FLAGS - compile lib flags
 #	EXE_COMPILE_FLAGS - compile exe flags
 # 
-# The module defines the following function:
+# Export functions:
 #	set_complie_flags(flags)
 #
 
