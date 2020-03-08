@@ -4,4 +4,5 @@
 *.so
 
 # Build path
-build
+lib/*
+!lib/README.md

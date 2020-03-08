@@ -19,6 +19,12 @@ IF(WITH_GNUTLS)
     ADD_DEFINITIONS("-DUSE_GNUTLS")
 ENDIF()
 
+# Option build with jemalloc (default OFF)
+OPTION(WITH_JEMALLOC "Option build with jemalloc" OFF)
+IF(WITH_JEMALLOC)
+    ADD_DEFINITIONS("-DUSE_JEMALLOC")
+ENDIF()
+
 # Option build with iocp, but ignored on linux (default NO)
 OPTION(WITH_IOCP "Option build with iocp, but ignored on linux" ON)
 IF(WIN32 AND WITH_IOCP)
@@ -33,7 +39,8 @@ SET(LIBRARY_NAME "pump")
 # Define root dir
 SET(ROOT_DIR ${PROJECT_SOURCE_DIR})
 
-# Set link libraries path
+# Set libraries path
+LINK_DIRECTORIES(${ROOT_DIR}/lib)
 LINK_DIRECTORIES(${CMAKE_BINARY_DIR})
 
 # Set include path

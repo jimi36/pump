@@ -1,12 +1,12 @@
 # 
 # Export functions:
-#	build_example_project(project_name)
+#	build_test_project(project_name)
 #
 
-MACRO(build_example_project NAME)
+MACRO(build_test_project NAME)
 	set_complie_flags(${EXE_COMPILE_FLAGS})
 
-	FILE(GLOB_RECURSE SOURCES ${ROOT_DIR}/examples/${NAME}/*)
+	FILE(GLOB_RECURSE SOURCES ${ROOT_DIR}/test/${NAME}/*)
 	
 	ADD_EXECUTABLE(${NAME} ${SOURCES})
 

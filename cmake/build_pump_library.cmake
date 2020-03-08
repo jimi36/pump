@@ -35,11 +35,21 @@ MACRO(build_pump_library)
 		IF(WITH_GNUTLS)
 			SET(LINK_LIBS "${LINK_LIBS} libgnutls.a")
 		ENDIF()
+		IF(WITH_JEMALLOC)
+			SET(LINK_LIBS "${LINK_LIBS} jemalloc")
+		ENDIF
 	ELSEIF(WIN32)
 		SET(LINK_LIBS "ws2_32.lib")
 		IF(WITH_GNUTLS)
 			SET(LINK_LIBS "${LINK_LIBS};libgnutls.dll.a")
 		ENDIF()
+		IF(WITH_JEMALLOC)
+			IF(BUILD_DEBUG)
+				SET(LINK_LIBS "${LINK_LIBS};jemallocd.lib")
+			ELSE
+				SET(LINK_LIBS "${LINK_LIBS};jemalloc.lib")
+			ENDIF
+		ENDIF
 	ENDIF()
 	TARGET_LINK_LIBRARIES(${LIBRARY_NAME} ${LINK_LIBS})
 
