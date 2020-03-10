@@ -51,12 +51,12 @@ LIST(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
 INCLUDE(set_complie_flags)
 INCLUDE(build_pump_library)
-INCLUDE(build_example_project)
+INCLUDE(build_test_project)
 
 build_pump_library()
 
-build_example_project("test_transport")
+build_test_project("test_transport")
 
-build_example_project("test_simple")
+build_test_project("test_simple")
 
-build_example_project("test_timer")
+build_test_project("test_timer")

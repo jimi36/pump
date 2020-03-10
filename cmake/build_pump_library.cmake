@@ -37,7 +37,7 @@ MACRO(build_pump_library)
 		ENDIF()
 		IF(WITH_JEMALLOC)
 			SET(LINK_LIBS "${LINK_LIBS} jemalloc")
-		ENDIF
+		ENDIF()
 	ELSEIF(WIN32)
 		SET(LINK_LIBS "ws2_32.lib")
 		IF(WITH_GNUTLS)
@@ -46,10 +46,10 @@ MACRO(build_pump_library)
 		IF(WITH_JEMALLOC)
 			IF(BUILD_DEBUG)
 				SET(LINK_LIBS "${LINK_LIBS};jemallocd.lib")
-			ELSE
+			ELSE()
 				SET(LINK_LIBS "${LINK_LIBS};jemalloc.lib")
-			ENDIF
-		ENDIF
+			ENDIF()
+		ENDIF()
 	ENDIF()
 	TARGET_LINK_LIBRARIES(${LIBRARY_NAME} ${LINK_LIBS})
 
