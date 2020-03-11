@@ -126,6 +126,16 @@ namespace pump {
 			}
 		}
 
+		bool tls_transport::send(flow::buffer_ptr b, bool notify)
+		{
+			assert(b && b->data_size() > 0);
+
+			if (!__is_status(TRANSPORT_STARTED))
+				return false;
+
+			return __async_send(b, notify);
+		}
+
 		bool tls_transport::send(c_block_ptr b, uint32 size, bool notify)
 		{
 			if (b == nullptr || size == 0)
@@ -143,7 +153,7 @@ namespace pump {
 					bsize = size - pos;
 
 				flow::buffer_ptr buffer = new flow::buffer();
-				if (!buffer || !buffer->init(b + pos, bsize))
+				if (!buffer || !buffer->append(b + pos, bsize))
 					break;
 
 				sendlist.push_back(buffer);
@@ -158,7 +168,7 @@ namespace pump {
 				return false;
 			}
 
-			return __async_write(sendlist, notify);
+			return __async_send(sendlist, notify);
 		}
 
 		void tls_transport::on_read_event(net::iocp_task_ptr itask)
@@ -310,7 +320,41 @@ namespace pump {
 			get_service()->remove_channel_tracker(tmp);
 		}
 
-		bool tls_transport::__async_write(std::list<flow::buffer_ptr> &sendlist, bool notify)
+		bool tls_transport::__async_send(flow::buffer_ptr b, bool notify)
+		{
+			bool need_send_here = false;
+			{
+				std::lock_guard<utils::spin_mutex> locker(sendlist_mx_);
+
+				// If sendlist is empty currently and the transport is ready for 
+				// sending, we should send right now.
+				need_send_here = sendlist_.empty() && ready_for_sending_;
+
+				// Insert new sendlist to the sendlist of transport.
+				sendlist_.push_back(b);
+
+				if (notify)
+					sent_notify_list_.push_back(b);
+			}
+
+			if (!need_send_here)
+				return true;
+
+			auto flow_locker = flow_;
+			auto flow = flow_locker.get();
+			if (flow == nullptr)
+				return false;
+
+			if (__send_once(flow) == FLOW_ERR_ABORT)
+				return false;
+
+			if (!__awake_tracker(s_tracker_))
+				return false;
+
+			return true;
+		}
+
+		bool tls_transport::__async_send(std::list<flow::buffer_ptr> &sendlist, bool notify)
 		{
 			bool need_send_here = false;
 			{

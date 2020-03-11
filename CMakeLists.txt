@@ -22,7 +22,7 @@ ENDIF()
 # Option build with jemalloc (default OFF)
 OPTION(WITH_JEMALLOC "Option build with jemalloc" OFF)
 IF(WITH_JEMALLOC)
-    ADD_DEFINITIONS("-DUSE_JEMALLOC")
+    ADD_DEFINITIONS("-DJEMALLOC_MANGLE")
 ENDIF()
 
 # Option build with iocp, but ignored on linux (default NO)

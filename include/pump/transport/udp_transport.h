@@ -63,7 +63,7 @@ namespace pump {
 			/*********************************************************************************
 			 * Send
 			 ********************************************************************************/
-			bool send(c_block_ptr b, uint32 size, const address &remote_address);
+			virtual bool send(c_block_ptr b, uint32 size, const address &remote_address);
 
 		protected:
 			/*********************************************************************************

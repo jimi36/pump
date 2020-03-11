@@ -42,7 +42,7 @@ namespace pump {
 			if (!__set_start_state(TIMER_STOPPED, TIMER_STARTING))
 				return false;
 
-			overtime_ = timestamp::now_time() + interval_;
+			overtime_ = get_clock_milliseconds() + interval_;
 
 			return true;
 		}

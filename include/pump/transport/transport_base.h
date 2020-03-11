@@ -20,6 +20,7 @@
 #include "pump/service.h"
 #include "pump/poll/channel.h"
 #include "pump/transport/address.h"
+#include "pump/transport/flow/buffer.h"
 
 namespace pump {
 	namespace transport {
@@ -105,8 +106,14 @@ namespace pump {
 			 * This is a asynchronous operation. If notify is set to true, transport will
 			 * notify when the data is sent completely.
 			 ********************************************************************************/
-			virtual bool send(c_block_ptr b, uint32 size, bool notify = false) 
-			{ return false; }
+			virtual bool send(flow::buffer_ptr b, bool notify = false) { return false; }
+			virtual bool send(c_block_ptr b, uint32 size, bool notify = false) { return false; }
+
+			/*********************************************************************************
+			 * Send to remote address
+			 * This is a synchronous operation, just for udp transport.
+			 ********************************************************************************/
+			virtual bool send(c_block_ptr b, uint32 size, const address &remote_address) { return false; }
 
 			/*********************************************************************************
 			 * Get transport type

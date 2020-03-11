@@ -81,6 +81,7 @@ namespace pump {
 			 * This is a asynchronous operation. If notify is set to true, transport will 
 			 * notify when the data is sent completely.
 			 ********************************************************************************/
+			virtual bool send(flow::buffer_ptr b, bool notify = false);
 			virtual bool send(c_block_ptr b, uint32 size, bool notify = false);
 
 			/*********************************************************************************
@@ -141,9 +142,10 @@ namespace pump {
 			void __stop_tracker(poll::channel_tracker_sptr &tracker);
 
 			/*********************************************************************************
-			 * Async write
+			 * Async send
 			 ********************************************************************************/
-			bool __async_write(std::list<flow::buffer_ptr> &sendlist, bool notify);
+			bool __async_send(flow::buffer_ptr b, bool notify);
+			bool __async_send(std::list<flow::buffer_ptr> &sendlist, bool notify);
 
 			/*********************************************************************************
 			 * Send once

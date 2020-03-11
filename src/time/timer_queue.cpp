@@ -33,15 +33,13 @@ namespace pump {
 
 		bool timer_queue::start(const timer_pending_callback &cb)
 		{
-			//assert(cb);
-
 			if (!started_)
 			{
 				started_ = true;
 
 				pending_cb_ = cb;
 
-				next_observe_time_ = timestamp::now_time() + TIMER_DEFAULT_INTERVAL;
+				next_observe_time_ = get_clock_milliseconds() + TIMER_DEFAULT_INTERVAL;
 
 				observer_.reset(new std::thread(
 					function::bind(&timer_queue::__observe_thread, this)
@@ -104,7 +102,7 @@ namespace pump {
 				{
 					std::unique_lock<std::mutex> locker(observer_mx_);
 
-					uint64 now = timestamp::now_time();
+					uint64 now = get_clock_milliseconds();
 					if (next_observe_time_ > now)
 					{
 						observer_cv_.wait_for(
@@ -122,7 +120,7 @@ namespace pump {
 		{
 			std::unique_lock<std::mutex> locker(observer_mx_);
 
-			uint64 now = timestamp::now_time();
+			uint64 now = get_clock_milliseconds();
 			next_observe_time_ = now + TIMER_DEFAULT_INTERVAL;
 
 			auto it = timers_.begin();
