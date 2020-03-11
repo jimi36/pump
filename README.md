@@ -20,12 +20,12 @@ On window, 2017 or higher version VS is required. First create vs project, then 
 ```bash
 mkdir build && cd build
 cmake .. -G "Visual Studio 15 2017 Win64"
-pump_man.sln
+pump_main.sln
 ```
 
 ## Linux
 
-On linux, gcc and g++ is required and must suppert c++11. Build the library:
+On linux, gcc and g++ is required and must support c++11. Build the library:
 
 ```bash
 mkdir build && cd build
@@ -54,7 +54,7 @@ There are tcp and tls acceptors, they have the similar usage.
 #include <pump/transports.h>
 
  class my_acceptor: 
-	public pump::accepted_notifier,
+    public pump::accepted_notifier,
     public std::enable_shared_from_this<my_acceptor>
  {
  protected:
@@ -102,7 +102,7 @@ There are tcp and tls acceptors, they have the similar usage.
 #include <pump/transports.h>
 
  class my_dialer:
-	public pump::dialed_notifier,
+    public pump::dialed_notifier,
     public std::enable_shared_from_this<my_dialer>
  {
  protected:
@@ -156,8 +156,8 @@ There are tcp and tls transports, they have the similar usage.
 ```c++
 #include <pump/transports.h>
 
- class my_transport :
-	public pump::transport_io_notifier,
+ class my_transport:
+    public pump::transport_io_notifier,
     public pump::transport_terminated_notifier,
     public std::enable_shared_from_this<my_transport>
  {
@@ -211,8 +211,8 @@ This is usage of udp transport:
 #include <pump/transports.h>
 
  class my_udp_transport: 
-	public pump::transport_io_notifier,
-	public pump::transport_terminated_notifier,
+    public pump::transport_io_notifier,
+    public pump::transport_terminated_notifier,
     public std::enable_shared_from_this<my_udp_transport>
  {
  protected:

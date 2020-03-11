@@ -36,7 +36,7 @@ PROJECT(pump_main)
 # Library name
 SET(LIBRARY_NAME "pump")
 
-# Define root dir
+# Project root dir
 SET(ROOT_DIR ${PROJECT_SOURCE_DIR})
 
 # Set libraries path
