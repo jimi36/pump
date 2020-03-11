@@ -1,7 +1,16 @@
-# 
+#
+# Export variables:
+#	OUTPUT_TARGET_LIB - output target library
+#
 # Export functions:
 #	build_pump_library()
 #
+
+IF(BUILD_DEBUG)
+	SET(OUTPUT_TARGET_LIB "${LIBRARY_NAME}d")
+ELSE()
+	SET(OUTPUT_TARGET_LIB "${LIBRARY_NAME}")
+endif()
 
 MACRO(build_pump_library)
 	set_complie_flags(${LIB_COMPILE_FLAGS})
@@ -51,6 +60,7 @@ MACRO(build_pump_library)
 			ENDIF()
 		ENDIF()
 	ENDIF()
+	
 	TARGET_LINK_LIBRARIES(${LIBRARY_NAME} ${LINK_LIBS})
 
 	IF(UNIX)
