@@ -19,29 +19,14 @@
 namespace pump {
 	namespace poll {
 
-		channel::channel(int32 fd) :
-			ctx_(nullptr),
-			fd_(fd)
-		{
-		}
-
-		channel::~channel()
-		{
-		}
-
 		void channel::handle_io_event(uint32 event, net::iocp_task_ptr itask)
 		{
 			if (event & IO_EVNET_READ)
 				on_read_event(itask);
-			if (event & IO_EVENT_WRITE)
+			if (event & IO_EVENT_SEND)
 				on_write_event(itask);
 			if (event & IO_EVENT_ERROR)
 				on_error_event();
-		}
-
-		void channel::handle_tracker_event(uint32 on)
-		{
-			on_tracker_event(on);
 		}
 
 	}

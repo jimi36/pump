@@ -44,7 +44,7 @@ namespace pump {
 			/*********************************************************************************
 			 * Deconstructor
 			 ********************************************************************************/
-			virtual ~tls_acceptor();
+			virtual ~tls_acceptor() {}
 
 			/*********************************************************************************
 			 * Start
@@ -92,7 +92,12 @@ namespace pump {
 			/*********************************************************************************
 			 * Set tls credentials
 			 ********************************************************************************/
-			void __set_tls_cert(void_ptr tls_cert);
+			void __set_tls_cert(void_ptr tls_cert) { tls_cert_ = tls_cert; }
+
+			/*********************************************************************************
+			 * Set tls handshake timeout
+			 ********************************************************************************/
+			void __set_tls_handshake_timeout(int64 timeout) { handshake_timeout_ = timeout; }
 
 			/*********************************************************************************
 			 * Open flow
@@ -102,7 +107,7 @@ namespace pump {
 			/*********************************************************************************
 			 * Close flow
 			 ********************************************************************************/
-			void __close_flow();
+			void __close_flow() { flow_.reset(); }
 
 			/*********************************************************************************
 			 * Start tracker
@@ -125,18 +130,15 @@ namespace pump {
 			void __remove_tls_handshaker(tls_handshaker_ptr handshaker);
 
 		private:
-			// GnuTls credentials
+			// GNUTls credentials
 			void_ptr tls_cert_;
-
 			// Listen address
 			address listen_address_;
-
 			// Channel tracker
 			poll::channel_tracker_sptr tracker_;
-
 			// Tls acceptor flow layer
 			flow::flow_tls_acceptor_sptr flow_;
-
+			// GNUTls handshake info
 			int64 handshake_timeout_;
 			std::mutex tls_handshaker_mx_;
 			std::unordered_map<tls_handshaker_ptr, tls_handshaker_sptr> tls_handshakers_;

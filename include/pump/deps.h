@@ -18,51 +18,39 @@
 #define pump_deps_h
 
 #ifdef WIN32
-	#pragma warning(disable:4251)
-	#define WIN32_LEAN_AND_MEAN
-
-	#ifdef _WIN32_WINNT
-		#undef _WIN32_WINNT
-		#define _WIN32_WINNT 0x0600
-	#endif
-#endif
-
-#if defined(WIN32) && defined(pump_EXPORTS)
-#	define LIB_EXPORT __declspec(dllexport)
-#elif defined(WIN32)
-#	define LIB_EXPORT __declspec(dllimport)
-#else
-#	define LIB_EXPORT 
+#	pragma warning(disable:4251)
+#	define WIN32_LEAN_AND_MEAN
 #endif
 
 #ifdef WIN32
-#	define LIB_FORCEINLINE __forceinline
-#else
-#	define LIB_FORCEINLINE __inline__ __attribute__((always_inline))
+#	ifdef _WIN32_WINNT
+#		undef _WIN32_WINNT
+#		define _WIN32_WINNT 0x0600
+#	endif
 #endif
 
 #include <mutex>
 #include <thread>
 #include <atomic>
 #include <memory>
-#include <future>
+//#include <future>
 #include <chrono>  
-#include <string.h>
+//#include <string.h>
 #include <assert.h>
 #include <condition_variable>
 
 #include <map>
-#include <set>
+//#include <set>
 #include <list>
-#include <deque>
+//#include <deque>
 #include <vector>
 #include <string>
-#include <unordered_set>
+//#include <unordered_set>
 #include <unordered_map>
 
 #ifdef WIN32
-#include <time.h>
-#include <process.h>
+//#include <time.h>
+//#include <process.h>
 #include <windows.h>
 #else
 #include <iconv.h>
@@ -92,14 +80,8 @@
 #include <netinet/tcp.h>
 #endif
 
+#include "pump/defs.h"
 #include "pump/types.h"
-
 #include "function/function.h"
-
-#ifdef WIN32
-#define snprintf    sprintf_s
-#define strncpy     strcpy_s
-#define strncasecmp _strnicmp
-#endif
 
 #endif

@@ -23,28 +23,28 @@ namespace pump {
 #define UDP_BUFFER_SIZE 1024*64
 
 			flow_udp::flow_udp():
-				recv_task_(nullptr)
+				read_task_(nullptr)
 			{
 			}
 
 			flow_udp::~flow_udp()
 			{
-				if (recv_task_)
-					net::unlink_iocp_task(recv_task_);
+#if defined(WIN32) && defined(USE_IOCP)
+				if (read_task_)
+					net::unlink_iocp_task(read_task_);
+#endif
 			}
 
 			int32 flow_udp::init(poll::channel_sptr &ch, net::iocp_handler iocp, const address &bind_address)
 			{
-				if (!ch)
-					return FLOW_ERR_ABORT;
-
-				ch_ = ch;
-
+				PUMP_ASSERT_EXPR(ch, ch_ = ch);
+		
 				int32 domain = AF_INET;
 				if (bind_address.is_ipv6())
 					domain = AF_INET6;
 
 #if defined(WIN32) && defined(USE_IOCP)
+				PUMP_ASSERT(iocp);
 				fd_ = net::create_iocp_socket(domain, SOCK_DGRAM, iocp);
 #else
 				fd_ = net::create_socket(domain, SOCK_DGRAM);
@@ -53,11 +53,11 @@ namespace pump {
 					return FLOW_ERR_ABORT;
 
 #if defined(WIN32) && defined(USE_IOCP)
-				recv_task_ = net::new_iocp_task();
-				net::set_iocp_task_fd(recv_task_, fd_);
-				net::set_iocp_task_notifier(recv_task_, ch_);
-				net::set_iocp_task_type(recv_task_, IOCP_TASK_RECV);
-				net::set_iocp_task_buffer(recv_task_, (block_ptr)recv_cache_.data(), (uint32)recv_cache_.size());
+				read_task_ = net::new_iocp_task();
+				net::set_iocp_task_fd(read_task_, fd_);
+				net::set_iocp_task_notifier(read_task_, ch_);
+				net::set_iocp_task_type(read_task_, IOCP_TASK_READ);
+				net::set_iocp_task_buffer(read_task_, (block_ptr)read_cache_.data(), (uint32)read_cache_.size());
 #endif
 				if (!net::set_reuse(fd_, 1) ||
 					!net::set_noblock(fd_, 1) ||
@@ -65,29 +65,30 @@ namespace pump {
 					!net::set_udp_conn_reset(fd_, false))
 					return FLOW_ERR_ABORT;
 
-				recv_cache_.resize(UDP_BUFFER_SIZE);
+				read_cache_.resize(UDP_BUFFER_SIZE);
 
 				return FLOW_ERR_NO;
 			}
 
-			int32 flow_udp::want_to_recv()
+			int32 flow_udp::want_to_read()
 			{
 #if defined(WIN32) && defined(USE_IOCP)
-				net::link_iocp_task(recv_task_);
-				net::reuse_iocp_task(recv_task_);
-				if (!net::post_iocp_read_from(recv_task_))
+				PUMP_ASSERT(read_task_);
+				net::link_iocp_task(read_task_);
+				net::reuse_iocp_task(read_task_);
+				if (!net::post_iocp_read_from(read_task_))
 				{
-					net::unlink_iocp_task(recv_task_);
+					net::unlink_iocp_task(read_task_);
 					return FLOW_ERR_ABORT;
 				}
 #endif
 				return FLOW_ERR_NO;
 			}
 
-			c_block_ptr flow_udp::recv_from(net::iocp_task_ptr itask, int32_ptr size, address_ptr remote_address)
+			c_block_ptr flow_udp::read_from(net::iocp_task_ptr itask, int32_ptr size, address_ptr remote_address)
 			{
 #if defined(WIN32) && defined(USE_IOCP)
-				assert(recv_task_ == itask);
+				PUMP_ASSERT(read_task_ == itask);
 				*size = net::get_iocp_task_processed_size(itask);
 				c_block_ptr buf = net::get_iocp_task_processed_buffer(itask);
 				if (*size > 0)
@@ -100,8 +101,8 @@ namespace pump {
 #else
 				int8 addr[ADDRESS_MAX_LEN];
 				int32 addrlen = ADDRESS_MAX_LEN;
-				block_ptr buf = (block_ptr)recv_cache_.data();
-				*size = net::read_from(fd_, buf, (uint32)recv_cache_.size(), (sockaddr*)addr, &addrlen);
+				block_ptr buf = (block_ptr)read_cache_.data();
+				*size = net::read_from(fd_, buf, (uint32)read_cache_.size(), (sockaddr*)addr, &addrlen);
 				if (size < 0)
 				{
 					switch (net::last_errno())
@@ -123,7 +124,7 @@ namespace pump {
 
 			int32 flow_udp::send_to(c_block_ptr b, uint32 size, const address &remote_addr)
 			{
-				int32 wsize = net::write_to(fd_, b, size, (struct sockaddr*)remote_addr.get(), remote_addr.len());
+				int32 wsize = net::send_to(fd_, b, size, (struct sockaddr*)remote_addr.get(), remote_addr.len());
 				if (wsize < 0)
 				{
 					switch (net::last_errno())

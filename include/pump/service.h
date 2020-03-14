@@ -77,7 +77,7 @@ namespace pump {
 		bool post_channel_event(poll::channel_sptr &ch, uint32 event);
 
 		/*********************************************************************************
-		 * Post task
+		 * Post callback task
 		 ********************************************************************************/
 		void post(const post_task_type &task);
 
@@ -108,23 +108,19 @@ namespace pump {
 		void __do_posted_tasks();
 
 	private:
-		// running state
+		// Running status
 		bool running_;
-
-		// loop poller
+		// Loop poller
 		poll::poller_ptr loop_poller_;
-		// once poller
+		// Once poller
 		poll::poller_ptr once_poller_;
-		// iocp poller
+		// IOCP poller
 		poll::poller_ptr iocp_poller_;
-
-		// task worker
-		std::shared_ptr<std::thread> task_worker_;
-
-		// timer queue
+		// Timer queue
 		time::timer_queue_sptr tqueue_;
-
-		// posted tasks
+		// Callback task worker
+		std::shared_ptr<std::thread> task_worker_;
+		//  Callback tasks
 		bool waiting_for_task_;
 		std::mutex task_mx_;
 		std::condition_variable task_cv_;

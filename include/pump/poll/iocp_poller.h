@@ -54,7 +54,7 @@ namespace pump {
 			/*********************************************************************************
 			 * Add channel tracker
 			 ********************************************************************************/
-			virtual void add_channel_tracker(channel_tracker_sptr &tracker);
+			virtual bool add_channel_tracker(channel_tracker_sptr &tracker);
 
 			/*********************************************************************************
 			 * Remove channel tracker
@@ -83,9 +83,9 @@ namespace pump {
 			void __work_thread();
 
 		private:
-			// iocp hanler
+			// IOCP handler
 			net::iocp_handler iocp_;
-
+			// IOCP worker threads
 			std::vector<std::thread*> workrs_;
 		};
 

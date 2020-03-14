@@ -14,40 +14,35 @@
  * limitations under the License.
  */
 
-#include "pump/transport/flow/flow.h"
+#ifndef pump_defs_h
+#define pump_defs_h
 
-namespace pump {
-	namespace transport {
-		namespace flow {
-
-			flow_base::flow_base() :
-				fd_(-1),
-				ext_(nullptr)
-			{
-			}
-
-			flow_base::~flow_base()
-			{
-				if (ext_)
-					net::delete_net_extension(ext_);
-
-				if (fd_ > 0)
-					net::close(fd_);
-			}
-
-			int32 flow_base::unbind_fd()
-			{
-				int32 fd = fd_; fd_ = -1;
-				return fd;
-			}
-
-			void free_iocp_task(net::iocp_task_ptr itask)
-			{
-#if defined(WIN32) && defined(USE_IOCP)
-				net::unlink_iocp_task(itask);
+#if defined(WIN32) && defined(pump_EXPORTS)
+#	define LIB_EXPORT __declspec(dllexport)
+#elif defined(WIN32)
+#	define LIB_EXPORT __declspec(dllimport)
+#else
+#	define LIB_EXPORT 
 #endif
-			}
 
-		}
-	}
-}
+#ifdef WIN32
+#	define LIB_FORCEINLINE __forceinline
+#else
+#	define LIB_FORCEINLINE __inline__ __attribute__((always_inline))
+#endif
+
+#if 1
+#	define PUMP_ASSERT(x) assert(x)
+#else
+#	define PUMP_ASSERT(x) (void)0
+#endif
+
+#define PUMP_ASSERT_EXPR(x, expr) PUMP_ASSERT(x); expr
+
+#ifdef WIN32
+#	define snprintf sprintf_s
+#	define strncpy strcpy_s
+#	define strncasecmp _strnicmp
+#endif
+
+#endif

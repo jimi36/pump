@@ -103,7 +103,7 @@ namespace pump {
 		/*********************************************************************************
 		 * Read
 		 ********************************************************************************/
-		LIB_EXPORT int32 recv(int32 fd, block_ptr b, uint32 size);
+		LIB_EXPORT int32 read(int32 fd, block_ptr b, uint32 size);
 
 		/*********************************************************************************
 		 * Readfrom
@@ -111,14 +111,14 @@ namespace pump {
 		LIB_EXPORT int32 read_from(int32 fd, block_ptr b, uint32 size, struct sockaddr *addr, int32_ptr addrlen);
 
 		/*********************************************************************************
-		 * Write
+		 * Send
 		 ********************************************************************************/
 		LIB_EXPORT int32 send(int32 fd, c_block_ptr b, uint32 size);
 
 		/*********************************************************************************
-		 * Writeto
+		 * Sendto
 		 ********************************************************************************/
-		LIB_EXPORT int32 write_to(int32 fd, c_block_ptr b, uint32 size, struct sockaddr *addr, int32 addrlen);
+		LIB_EXPORT int32 send_to(int32 fd, c_block_ptr b, uint32 size, struct sockaddr *addr, int32 addrlen);
 
 		/*********************************************************************************
 		 * Poll a socket events

@@ -37,7 +37,7 @@ namespace pump {
 			/*********************************************************************************
 			 * Deconstructor
 			 ********************************************************************************/
-			virtual ~timer_queue();
+			virtual ~timer_queue() {}
 
 			/*********************************************************************************
 			 * Start
@@ -47,12 +47,17 @@ namespace pump {
 			/*********************************************************************************
 			 * Stop
 			 ********************************************************************************/
-			bool stop();
+			void stop();
+
+			/*********************************************************************************
+			 * Wait stopping
+			 ********************************************************************************/
+			void wait_stop();
 
 			/*********************************************************************************
 			 * Add timer
 			 ********************************************************************************/
-			void add_timer(timer_sptr &ptr);
+			bool add_timer(timer_sptr &ptr);
 
 			/*********************************************************************************
 			 * Delete timer
@@ -76,17 +81,18 @@ namespace pump {
 			void __observe();
 
 		private:
-			bool started_;
-
+			// Started status
+			std::atomic_bool started_;
+			// Pending timer callback
 			timer_pending_callback pending_cb_;
-
+			// Next observer time
 			uint64 next_observe_time_;
-
+			// Observer thread
 			std::shared_ptr<std::thread> observer_;
-
+			// Observer condition
 			std::mutex observer_mx_;
 			std::condition_variable observer_cv_;
-
+			// Timers
 			std::multimap<uint64, timer_wptr> timers_;
 		};
 		DEFINE_ALL_POINTER_TYPE(timer_queue);

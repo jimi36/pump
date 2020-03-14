@@ -79,7 +79,7 @@ namespace pump {
 			/*********************************************************************************
 			 * Add channel tracker
 			 ********************************************************************************/
-			virtual void add_channel_tracker(channel_tracker_sptr &tracker);
+			virtual bool add_channel_tracker(channel_tracker_sptr &tracker);
 
 			/*********************************************************************************
 			 * Remove channel tracker
@@ -130,19 +130,20 @@ namespace pump {
 			void __update_channel_trackers();
 
 		protected:
-			bool is_started_;
-
+			// Started status
+			std::atomic_bool started_;
+			// Pop pending channel status
 			bool pop_pending_channel_;
-
+			// Worker thread
 			std::shared_ptr<std::thread> worker_;
-
-			std::mutex tracker_mx_;
-			std::vector<channel_tracker_modifier> tracker_modifiers_;
-
+			// Channel events
 			std::mutex ch_event_mx_;
 			volatile int32 ch_event_cnt_;
 			std::list<channel_event_ptr> ch_events_;
-
+			// Modifying channel trackers
+			std::mutex tracker_mx_;
+			std::vector<channel_tracker_modifier> tracker_modifiers_;
+			// Channel trackers
 			std::unordered_map<channel_tracker_ptr, channel_tracker_sptr> trackers_;
 		};
 

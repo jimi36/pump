@@ -27,15 +27,11 @@ namespace pump {
 		{
 		}
 
-		timer_queue::~timer_queue()
-		{
-		}
-
 		bool timer_queue::start(const timer_pending_callback &cb)
 		{
-			if (!started_)
+			if (!started_.load())
 			{
-				started_ = true;
+				started_.store(true);
 
 				pending_cb_ = cb;
 
@@ -46,40 +42,39 @@ namespace pump {
 				));
 			}
 
-			return started_;
+			return started_.load();
 		}
 
-		bool timer_queue::stop()
+		void timer_queue::stop()
 		{
-			if (started_)
-			{
-				started_ = false;
-
-				observer_cv_.notify_all();
-
-				if (observer_)
-					observer_->join();
-			}
-
-			return true;
+			started_.store(false);
 		}
 
-		void timer_queue::add_timer(timer_sptr &ptr)
+		void timer_queue::wait_stop()
 		{
+			if (observer_)
+				observer_->join();
+		}
+
+		bool timer_queue::add_timer(timer_sptr &ptr)
+		{
+			if (!started_.load())
+				return false;
+
 			std::unique_lock<std::mutex> locker(observer_mx_);
-
 			timers_.insert(std::make_pair(ptr->time(), ptr));
 			if (next_observe_time_ > ptr->time())
 			{
 				next_observe_time_ = timers_.begin()->first;
 				observer_cv_.notify_all();
 			}
+
+			return true;
 		}
 
 		void timer_queue::delete_timer(timer_sptr &ptr)
 		{
 			std::unique_lock<std::mutex> locker(observer_mx_);
-
 			uint64 key = ptr->time();
 			auto beg = timers_.lower_bound(key);
 			auto end = timers_.upper_bound(key);
@@ -97,11 +92,10 @@ namespace pump {
 
 		void timer_queue::__observe_thread()
 		{
-			while (started_)
+			while (1)
 			{
 				{
 					std::unique_lock<std::mutex> locker(observer_mx_);
-
 					uint64 now = get_clock_milliseconds();
 					if (next_observe_time_ > now)
 					{
@@ -109,10 +103,11 @@ namespace pump {
 							locker, std::chrono::milliseconds(next_observe_time_ - now)
 						);
 					}
+					if (!started_.load() && timers_.empty())
+						return;
 				}
 
-				if (started_)
-					__observe();
+				__observe();
 			}
 		}
 

@@ -66,13 +66,10 @@ namespace pump {
 
 		if (tqueue_ != nullptr)
 			tqueue_->start(function::bind(&service::__post_pending_timer, this, _1));
-
 		if (iocp_poller_ != nullptr)
 			iocp_poller_->start();
-
 		if (loop_poller_ != nullptr)
 			loop_poller_->start();
-
 		if (once_poller_ != nullptr)
 			once_poller_->start();
 
@@ -92,13 +89,10 @@ namespace pump {
 
 		if (tqueue_)
 			tqueue_->stop();
-
 		if (iocp_poller_)
 			iocp_poller_->stop();
-
 		if (loop_poller_)
 			loop_poller_->stop();
-
 		if (once_poller_)
 			once_poller_->stop();
 	}
@@ -107,13 +101,12 @@ namespace pump {
 	{
 		if (iocp_poller_)
 			iocp_poller_->wait_stop();
-
 		if (loop_poller_)
 			loop_poller_->wait_stop();
-
 		if (once_poller_)
 			once_poller_->wait_stop();
-
+		if (tqueue_)
+			tqueue_->wait_stop();
 		if (task_worker_)
 			task_worker_->join();
 	}
@@ -129,12 +122,8 @@ namespace pump {
 		else
 			poller = once_poller_;
 #endif
-		if (poller == nullptr)
-			return false;
-
-		poller->add_channel_tracker(tracker);
-
-		return true;
+		PUMP_ASSERT(poller);
+		return poller->add_channel_tracker(tracker);
 	}
 
 	bool service::awake_channel_tracker(poll::channel_tracker_sptr &tracker)
@@ -148,9 +137,7 @@ namespace pump {
 		else
 			poller = once_poller_;
 #endif
-		if (poller == nullptr)
-			return false;
-
+		PUMP_ASSERT(poller);
 		poller->awake_channel_tracker(tracker);
 
 		return true;
@@ -167,9 +154,7 @@ namespace pump {
 		else
 			poller = once_poller_;
 #endif
-		if (poller == nullptr)
-			return false;
-
+		PUMP_ASSERT(poller);
 		poller->remove_channel_tracker(tracker);
 
 		return true;
@@ -182,9 +167,7 @@ namespace pump {
 #else
 		poll::poller_ptr poller = once_poller_;
 #endif
-		if (poller == nullptr)
-			return false;
-
+		PUMP_ASSERT(poller);
 		poller->push_channel_event(ch, event);
 
 		return true;
@@ -204,9 +187,10 @@ namespace pump {
 		time::timer_queue_ptr tq = tqueue_.get();
 		if (tq == nullptr)
 			return false;
-		if (!tr->start())
+
+		if (!tr->start() || !tq->add_timer(tr))
 			return false;
-		tq->add_timer(tr);
+
 		return true;
 	}
 

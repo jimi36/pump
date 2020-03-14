@@ -27,10 +27,6 @@ namespace pump {
 		{
 		}
 
-		tls_acceptor::~tls_acceptor()
-		{
-		}
-
 		bool tls_acceptor::start(
 			void_ptr tls_cert,
 			service_ptr sv,
@@ -38,52 +34,41 @@ namespace pump {
 			const address &listen_address,
 			accepted_notifier_sptr &notifier
 		) {
-#ifdef USE_GNUTLS
 			if (!__set_status(TRANSPORT_INIT, TRANSPORT_STARTING))
 				return false;
 
-			assert(sv);
-			__set_service(sv);
+			PUMP_ASSERT_EXPR(sv, __set_service(sv));
+			PUMP_ASSERT_EXPR(tls_cert, __set_tls_cert(tls_cert));
+			PUMP_ASSERT_EXPR(notifier, __set_notifier(notifier));
 
-			assert(tls_cert);
-			__set_tls_cert(tls_cert);
+			__set_tls_handshake_timeout(handshake_timeout);
 
-			assert(notifier);
-			__set_notifier(notifier);
+			utils::scoped_defer defer([&]() {
+				__close_flow();
+				__stop_tracker();
+				__set_status(TRANSPORT_STARTING, TRANSPORT_ERROR);
+			});
 
-			handshake_timeout_ = handshake_timeout;
+			if (!__open_flow(listen_address))
+				return false;
 
-			{
-				utils::scoped_defer defer([&]() {
-					__close_flow();
-					__stop_tracker();
-					__set_status(TRANSPORT_STARTING, TRANSPORT_ERROR);
-				});
+			if (!__start_tracker())
+				return false;
 
-				if (!__open_flow(listen_address))
-					return false;
+			if (flow_->want_to_accept() != FLOW_ERR_NO)
+				return false;
 
-				if (!__start_tracker())
-					return false;
+			if (!__set_status(TRANSPORT_STARTING, TRANSPORT_STARTED))
+				PUMP_ASSERT(false);
 
-				if (flow_->want_to_accept() != FLOW_ERR_NO)
-					return false;
-
-				if (!__set_status(TRANSPORT_STARTING, TRANSPORT_STARTED))
-					assert(false);
-
-				defer.clear();
-			}
+			defer.clear();
 
 			return true;
-#else
-			return false;
-#endif
 		}
 
 		void tls_acceptor::stop()
 		{
-			if (__set_status(TRANSPORT_STARTING, TRANSPORT_STOPPING))
+			if (__set_status(TRANSPORT_STARTED, TRANSPORT_STOPPING))
 			{
 				__close_flow();
 				__stop_tracker();
@@ -105,16 +90,23 @@ namespace pump {
 			if (fd > 0)
 			{
 				tls_handshaker_ptr handshaker = __create_tls_handshaker();
-				if (!handshaker->init(fd, false, tls_cert_, local_address, remote_address))
-					assert(false);
-				
-				tls_handshaked_notifier_sptr notifier = shared_from_this();
-				if (!handshaker->start(get_service(), handshake_timeout_, notifier))
-					__remove_tls_handshaker(handshaker);
+				if (handshaker)
+				{
+					if (!handshaker->init(fd, false, tls_cert_, local_address, remote_address))
+						PUMP_ASSERT(false);
+
+					tls_handshaked_notifier_sptr notifier = shared_from_this();
+					if (!handshaker->start(get_service(), handshake_timeout_, notifier))
+						__remove_tls_handshaker(handshaker);
+				}
+				else
+				{
+					net::close(fd);
+				}
 			}
 
 			if (flow->want_to_accept() != FLOW_ERR_NO && is_started())
-				assert(false);
+				PUMP_ASSERT(false);
 		}
 
 		void tls_acceptor::on_tracker_event(bool on)
@@ -126,20 +118,23 @@ namespace pump {
 
 			if (tracker_cnt_ == 0)
 			{
-				if (!__set_status(TRANSPORT_STOPPING, TRANSPORT_STOPPED))
-					return;
-
-				do {
+				{
+					// If there ara handshakers doing, we should wait them finished.
 					std::lock_guard<std::mutex> lock(tls_handshaker_mx_);
 					if (!tls_handshakers_.empty())
 						return;
-				} while (false);
+				}
+
+				// This maybe failed. New handshaker maybe created in the period, so
+				// we do the same thing at creating handshaker and remving handshaker 
+				// processes.
+				if (!__set_status(TRANSPORT_STOPPING, TRANSPORT_STOPPED))
+					return;
 
 				auto notifier_locker = __get_notifier<accepted_notifier>();
 				auto notifier = notifier_locker.get();
-				assert(notifier);
-
-				notifier->on_stopped_accepting_callback(get_context());
+				PUMP_ASSERT_EXPR(notifier, 
+					notifier->on_stopped_accepting_callback(get_context()));
 			}
 		}
 
@@ -147,18 +142,19 @@ namespace pump {
 		{
 			tls_handshaker_ptr the_handshaker = (tls_handshaker_ptr)handshaker;
 
-			if (succ)
+			if (succ && is_started())
 			{
-				auto notifier_locker = __get_notifier<accepted_notifier>();
-				auto notifier = notifier_locker.get();
-				assert(notifier);
-
 				auto flow = the_handshaker->unlock_flow();
-				address local_address  = the_handshaker->get_local_address();
+				address local_address = the_handshaker->get_local_address();
 				address remote_address = the_handshaker->get_remote_address();
 				auto transport = tls_transport::create_instance();
-				if (transport->init(flow, local_address, remote_address))
-					notifier->on_accepted_callback(this, transport);
+				if (!transport->init(flow, local_address, remote_address))
+					PUMP_ASSERT(false);
+
+				auto notifier_locker = __get_notifier<accepted_notifier>();
+				auto notifier = notifier_locker.get();
+				PUMP_ASSERT_EXPR(notifier, 
+					notifier->on_accepted_callback(this, transport));
 			}
 
 			__remove_tls_handshaker(the_handshaker);
@@ -169,20 +165,14 @@ namespace pump {
 			__remove_tls_handshaker((tls_handshaker_ptr)handshaker);
 		}
 
-		void tls_acceptor::__set_tls_cert(void_ptr tls_cert)
-		{
-			tls_cert_ = tls_cert;
-		}
-
 		bool tls_acceptor::__open_flow(const address &listen_address)
 		{
-			if (flow_)
-				return false;
-
-			// Create and init flow.
+			// Setup flow.
+			PUMP_ASSERT(!flow_);
 			flow_.reset(new flow::flow_tls_acceptor());
 			poll::channel_sptr ch = shared_from_this();
-			if (flow_->init(ch, get_service()->get_iocp_handler(), listen_address) != FLOW_ERR_NO)
+			net::iocp_handler iocp = get_service()->get_iocp_handler();
+			if (flow_->init(ch, iocp, listen_address) != FLOW_ERR_NO)
 				return false;
 
 			// Set channel fd.
@@ -194,19 +184,12 @@ namespace pump {
 			return true;
 		}
 
-		void tls_acceptor::__close_flow()
-		{
-			flow_.reset();
-		}
-
 		bool tls_acceptor::__start_tracker()
 		{
-			if (tracker_)
-				return false;
-
+			PUMP_ASSERT(!tracker_);
 			poll::channel_sptr ch = shared_from_this();
 			tracker_.reset(new poll::channel_tracker(ch, TRACK_READ, TRACK_MODE_KEPPING));
-			tracker_->track(true);
+			tracker_->set_track_status(true);
 
 			if (!get_service()->add_channel_tracker(tracker_))
 				return false;
@@ -218,36 +201,48 @@ namespace pump {
 
 		void tls_acceptor::__stop_tracker()
 		{
-			assert(tracker_);
+			if (!tracker_)
+				return;
 
-			poll::channel_tracker_sptr tmp;
-			tmp.swap(tracker_);
+			if (!get_service()->remove_channel_tracker(tracker_))
+				PUMP_ASSERT(false);
 
-			get_service()->remove_channel_tracker(tmp);
+			tracker_.reset();
 		}
 
 		tls_handshaker_ptr tls_acceptor::__create_tls_handshaker()
 		{
 			tls_handshaker_sptr handshaker(new tls_handshaker);
-			std::lock_guard<std::mutex> lock(tls_handshaker_mx_);
-			tls_handshakers_[handshaker.get()] = handshaker;
+			{
+				std::lock_guard<std::mutex> lock(tls_handshaker_mx_);
+				tls_handshakers_[handshaker.get()] = handshaker;
+			}
+
+			if (!is_started())
+			{
+				std::lock_guard<std::mutex> lock(tls_handshaker_mx_);
+				tls_handshakers_.erase(handshaker.get());
+				return nullptr;
+			}
+			
 			return handshaker.get();
 		}
 
 		void tls_acceptor::__remove_tls_handshaker(tls_handshaker_ptr handshaker)
 		{
+			bool shuold_notify_stopped = false;
 			{
 				std::lock_guard<std::mutex> lock(tls_handshaker_mx_);
 				tls_handshakers_.erase(handshaker);
+				shuold_notify_stopped = tls_handshakers_.empty();
 			}
 
-			if (__is_status(TRANSPORT_STOPPED))
+			if (shuold_notify_stopped && __set_status(TRANSPORT_STOPPING, TRANSPORT_STOPPED))
 			{
 				auto notifier_locker = __get_notifier<accepted_notifier>();
 				auto notifier = notifier_locker.get();
-				assert(notifier);
-
-				notifier->on_stopped_accepting_callback(get_context());
+				PUMP_ASSERT_EXPR(notifier, 
+					notifier->on_stopped_accepting_callback(get_context()));
 			}
 		}
 

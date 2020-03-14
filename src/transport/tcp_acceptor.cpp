@@ -24,10 +24,6 @@ namespace pump {
 		{
 		}
 
-		tcp_acceptor::~tcp_acceptor()
-		{
-		}
-
 		bool tcp_acceptor::start(
 			service_ptr sv,
 			const address &listen_address,
@@ -36,33 +32,28 @@ namespace pump {
 			if (!__set_status(TRANSPORT_INIT, TRANSPORT_STARTING))
 				return false;
 
-			assert(sv);
-			__set_service(sv);
+			PUMP_ASSERT_EXPR(sv, __set_service(sv));
+			PUMP_ASSERT_EXPR(notifier, __set_notifier(notifier));	
 
-			assert(notifier);
-			__set_notifier(notifier);
+			utils::scoped_defer defer([&]() {
+				__close_flow();
+				__stop_tracker();
+				__set_status(TRANSPORT_STARTING, TRANSPORT_ERROR);
+			});
 
-			{
-				utils::scoped_defer defer([&]() {
-					__close_flow();
-					__stop_tracker();
-					__set_status(TRANSPORT_STARTING, TRANSPORT_ERROR);
-				});
+			if (!__open_flow(listen_address))
+				return false;
 
-				if (!__open_flow(listen_address))
-					return false;
+			if (!__start_tracker())
+				return false;
 
-				if (!__start_tracker())
-					return false;
+			if (flow_->want_to_accept() != FLOW_ERR_NO)
+				return false;
 
-				if (flow_->want_to_accept() != FLOW_ERR_NO)
-					return false;
+			if (!__set_status(TRANSPORT_STARTING, TRANSPORT_STARTED))
+				PUMP_ASSERT(false);
 
-				if (!__set_status(TRANSPORT_STARTING, TRANSPORT_STARTED))
-					assert(false);
-
-				defer.clear();
-			}
+			defer.clear();
 
 			return true;
 		}
@@ -90,18 +81,18 @@ namespace pump {
 			int32 fd = flow->accept(itask, &local_address, &remote_address);
 			if (fd > 0)
 			{
+				auto conn = tcp_transport::create_instance();
+				if (!conn->init(fd, local_address, remote_address))
+					PUMP_ASSERT(false);
+
 				auto notifier_locker = __get_notifier<accepted_notifier>();
 				auto notifier = notifier_locker.get();
-				assert(notifier);
-				
-				auto conn = tcp_transport::create_instance();
-				conn->init(fd, local_address, remote_address);
-
-				notifier->on_accepted_callback(get_context(), conn);
+				PUMP_ASSERT_EXPR(notifier, 
+					notifier->on_accepted_callback(get_context(), conn));
 			}
 
 			if (flow->want_to_accept() != FLOW_ERR_NO && is_started())
-				assert(false);
+				PUMP_ASSERT(false);
 		}
 
 		void tcp_acceptor::on_tracker_event(bool on)
@@ -113,21 +104,20 @@ namespace pump {
 
 			if (tracker_cnt_ == 0)
 			{
-				auto notifier_locker = __get_notifier<accepted_notifier>();
-				auto notifier = notifier_locker.get();
-				assert(notifier);
-
 				if (__set_status(TRANSPORT_STOPPING, TRANSPORT_STOPPED))
-					notifier->on_stopped_accepting_callback(get_context());
+				{
+					auto notifier_locker = __get_notifier<accepted_notifier>();
+					auto notifier = notifier_locker.get();
+					PUMP_ASSERT_EXPR(notifier, 
+						notifier->on_stopped_accepting_callback(get_context()));
+				}
 			}
 		}
 
 		bool tcp_acceptor::__open_flow(const address &listen_address)
 		{
-			if (flow_)
-				return false;
-
-			// Create and init flow.
+			// Setup flow
+			PUMP_ASSERT(!flow_);
 			poll::channel_sptr ch = shared_from_this();
 			flow_.reset(new flow::flow_tcp_acceptor());
 			if (flow_->init(ch, get_service()->get_iocp_handler(), listen_address) != FLOW_ERR_NO)
@@ -142,19 +132,12 @@ namespace pump {
 			return true;
 		}
 
-		void tcp_acceptor::__close_flow()
-		{
-			flow_.reset();
-		}
-
 		bool tcp_acceptor::__start_tracker()
 		{
-			if (tracker_)
-				return false;
-
+			PUMP_ASSERT(!tracker_);
 			poll::channel_sptr ch = shared_from_this();
 			tracker_.reset(new poll::channel_tracker(ch, TRACK_READ, TRACK_MODE_KEPPING));
-			tracker_->track(true);
+			tracker_->set_track_status(true);
 
 			if (!get_service()->add_channel_tracker(tracker_))
 				return false;
@@ -169,10 +152,10 @@ namespace pump {
 			if (!tracker_)
 				return;
 
-			poll::channel_tracker_sptr tmp;
-			tmp.swap(tracker_);
+			if (!get_service()->remove_channel_tracker(tracker_))
+				PUMP_ASSERT(false);
 
-			get_service()->remove_channel_tracker(tmp);
+			tracker_.reset();
 		}
 
 	}

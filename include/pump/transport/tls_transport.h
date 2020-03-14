@@ -81,7 +81,7 @@ namespace pump {
 			 * This is a asynchronous operation. If notify is set to true, transport will 
 			 * notify when the data is sent completely.
 			 ********************************************************************************/
-			virtual bool send(flow::buffer_ptr b, bool notify = false);
+			virtual bool send(transport_buffer_ptr b);
 			virtual bool send(c_block_ptr b, uint32 size, bool notify = false);
 
 			/*********************************************************************************
@@ -122,9 +122,15 @@ namespace pump {
 			tls_transport();
 
 			/*********************************************************************************
+			 * Set terminated notifier
+			 ********************************************************************************/
+			void __set_terminated_notifier(transport_terminated_notifier_sptr &notifier)
+			{ terminated_notifier_ = notifier; }
+
+			/*********************************************************************************
 			 * Close flow
 			 ********************************************************************************/
-			void __close_flow();
+			void __close_flow() { flow_.reset(); }
 
 			/*********************************************************************************
 			 * Start all trackers
@@ -137,15 +143,16 @@ namespace pump {
 			bool __awake_tracker(poll::channel_tracker_sptr &tracker);
 
 			/*********************************************************************************
-			 * Stop write tracker
+			 * Stop tracker
 			 ********************************************************************************/
-			void __stop_tracker(poll::channel_tracker_sptr &tracker);
+			void __stop_read_tracker();
+			void __stop_send_tracker();
 
 			/*********************************************************************************
 			 * Async send
 			 ********************************************************************************/
-			bool __async_send(flow::buffer_ptr b, bool notify);
-			bool __async_send(std::list<flow::buffer_ptr> &sendlist, bool notify);
+			bool __async_send(transport_buffer_ptr b);
+			bool __async_send(std::list<transport_buffer_ptr> &sendlist);
 
 			/*********************************************************************************
 			 * Send once
@@ -168,30 +175,23 @@ namespace pump {
 		private:
 			// Local address
 			address local_address_;
-
 			// Remote address
 			address remote_address_;
 
-			// Channel tracker
+			// Channel trackers
 			poll::channel_tracker_sptr r_tracker_;
 			poll::channel_tracker_sptr s_tracker_;
 
-			// Tls flow layer
+			// Tls flow
 			flow::flow_tls_sptr flow_;
 
 			// The spin mutex is used for protecting sendlist in multithreading. We use spin
 			// mutex because it's more efficient than other mutex in frequently invoked scenarios.
 			utils::spin_mutex sendlist_mx_;
-
 			// When Using tcp transport asynchronous send data, tcp transport will append
 			// data to sendlist at first. And when write event is triggered, tcp transport 
 			// will get data from sendlist to send.
-			std::list<flow::buffer_ptr> sendlist_;
-
-			// When write data with complteted_notify as true, transport will store the last
-			// buffer of buffer list that split from data to this buffer list. When buffer
-			// in the list is sent completed, transport will call send_completed callback.
-			std::vector<void_ptr> sent_notify_list_;
+			std::list<transport_buffer_ptr> sendlist_;
 
 			// Tcp transport will start listening write event when starting. But there is no 
 			// data to send and maybe there is data asynchronous sending at the same time, so

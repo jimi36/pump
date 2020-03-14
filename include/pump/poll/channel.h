@@ -26,9 +26,9 @@ namespace pump {
 		/*********************************************************************************
 		 * IO event
 		 ********************************************************************************/
-		#define	IO_EVENT_NONE  0x00 // none event
-		#define	IO_EVNET_READ  0x01 // read event
-		#define	IO_EVENT_WRITE 0x02 // write event
+		#define	IO_EVENT_NONE  0x00  // none event
+		#define	IO_EVNET_READ  0x01  // read event
+		#define	IO_EVENT_SEND 0x02   // send event
 		#define	IO_EVENT_ERROR 0x04  // error event
 
 		/*********************************************************************************
@@ -48,12 +48,14 @@ namespace pump {
 			/*********************************************************************************
 			 * Constructor
 			 ********************************************************************************/
-			channel(int32 fd = -1);
+			channel(int32 fd = -1): 
+				ctx_(nullptr),
+				fd_(fd) {}
 
 			/*********************************************************************************
 			 * Deconstructor
 			 ********************************************************************************/
-			virtual ~channel();
+			virtual ~channel() {}
 
 			/*********************************************************************************
 			 * Get channel fd
@@ -78,7 +80,7 @@ namespace pump {
 			/*********************************************************************************
 			 * Handle tracker event
 			 ********************************************************************************/
-			void handle_tracker_event(uint32 on);
+			void handle_tracker_event(bool on) { on_tracker_event(on); }
 
 		public:
 			/*********************************************************************************
@@ -114,10 +116,9 @@ namespace pump {
 			virtual void on_tracker_event(bool on) {}
 
 		protected:
-			// channel context
+			// Channel context
 			void_ptr ctx_;
-
-			// channel fd
+			// Channel fd
 			int32 fd_;
 		};
 		DEFINE_ALL_POINTER_TYPE(channel);

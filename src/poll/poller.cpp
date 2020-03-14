@@ -20,7 +20,7 @@ namespace pump {
 	namespace poll {
 
 		poller::poller(bool pop_pending): 
-			is_started_(false),
+			started_(false),
 			pop_pending_channel_(pop_pending),
 			ch_event_cnt_(0)
 		{
@@ -36,13 +36,13 @@ namespace pump {
 
 		bool poller::start()
 		{
-			if (is_started_)
+			if (started_.load())
 				return false;
 
-			is_started_ = true;
+			started_.store(true);
 
 			worker_.reset(new std::thread([&]() {
-				while (is_started_)
+				while (started_.load() || !trackers_.empty())
 				{
 					__handle_channel_events();
 
@@ -57,7 +57,7 @@ namespace pump {
 
 		void poller::stop()
 		{
-			is_started_ = false;
+			started_.store(false);
 		}
 
 		void poller::wait_stop()
@@ -69,28 +69,36 @@ namespace pump {
 			}
 		}
 
-		void poller::add_channel_tracker(channel_tracker_sptr &tracker)
+		bool poller::add_channel_tracker(channel_tracker_sptr &tracker)
 		{
+			if (!started_.load())
+				return false;
+
 			std::lock_guard<std::mutex> locker(tracker_mx_);
-			tracker_modifiers_.push_back(std::move(channel_tracker_modifier(tracker, true)));
+			tracker_modifiers_.push_back(channel_tracker_modifier(tracker, true));
+
+			return true;
 		}
 
 		void poller::remove_channel_tracker(channel_tracker_sptr &tracker)
 		{
 			std::lock_guard<std::mutex> locker(tracker_mx_);
-			tracker_modifiers_.push_back(std::move(channel_tracker_modifier(tracker, false)));
+			tracker_modifiers_.push_back(channel_tracker_modifier(tracker, false));
 		}
 
 		void poller::awake_channel_tracker(channel_tracker_sptr &tracker)
 		{
 			auto ptracker = tracker.get();
-			ptracker->track(true);
+			ptracker->set_track_status(true);
 
 			__awake_channel_tracker(ptracker);
 		}
 
 		void poller::push_channel_event(channel_sptr &c, uint32 event)
 		{
+			if (!started_.load())
+				return;
+
 			auto ev = new channel_event(c, event);
 			std::lock_guard<std::mutex> locker(ch_event_mx_);
 			ch_events_.push_back(ev);
@@ -127,24 +135,23 @@ namespace pump {
 				tracker_modifiers.swap(tracker_modifiers_);
 			}
 
-			for (channel_tracker_modifier &modifier : tracker_modifiers)
+			for (channel_tracker_modifier &modifier: tracker_modifiers)
 			{
 				auto tracker = modifier.tracker.get();
 				auto ch_locker = tracker->get_channel();
 				auto ch = ch_locker.get();
 
-				assert(tracker->get_fd() > 0);
-
 				if (modifier.on)
 				{
 					assert(ch);
+					assert(tracker->get_fd() > 0);
 					if (__add_channel_tracker(tracker))
 						trackers_[tracker] = modifier.tracker;
 				}
 				else 
 				{
-					__remove_channel_tracker(tracker);
-
+					if (tracker->has_fd_ownership())
+						__remove_channel_tracker(tracker);
 					trackers_.erase(tracker);
 				}
 

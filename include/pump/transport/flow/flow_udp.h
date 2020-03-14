@@ -45,18 +45,18 @@ namespace pump {
 				int32 init(poll::channel_sptr &ch, net::iocp_handler iocp, const address &bind_address);
 
 				/*********************************************************************************
-				 * Want to recv
+				 * Want to read
 				 * If using iocp this post an iocp task for receiving, else do nothing.
 				 * Return results:
 				 *     FLOW_ERR_NO    => success
 				 *     FLOW_ERR_ABORT => error
 				 ********************************************************************************/
-				int32 want_to_recv();
+				int32 want_to_read();
 
 				/*********************************************************************************
-				 * Recv from
+				 * Read from
 				 ********************************************************************************/
-				c_block_ptr recv_from(net::iocp_task_ptr itask, int32_ptr size, address_ptr remote_address);
+				c_block_ptr read_from(net::iocp_task_ptr itask, int32_ptr size, address_ptr remote_address);
 
 				/*********************************************************************************
 				 * Send to
@@ -64,10 +64,10 @@ namespace pump {
 				int32 send_to(c_block_ptr b, uint32 size, const address &remote_addr);
 
 			private:
-				// Recv iocp task
-				net::iocp_task_ptr recv_task_;
-				// Recv cache
-				std::string recv_cache_;
+				// Read iocp task
+				net::iocp_task_ptr read_task_;
+				// Read cache
+				std::string read_cache_;
 			};
 			DEFINE_ALL_POINTER_TYPE(flow_udp);
 

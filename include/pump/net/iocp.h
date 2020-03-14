@@ -25,7 +25,7 @@ namespace pump {
 
 		#define IOCP_TASK_NONE    -1
 		#define IOCP_TASK_SEND    0
-		#define IOCP_TASK_RECV    1
+		#define IOCP_TASK_READ    1
 		#define	IOCP_TASK_CONNECT 2
 		#define	IOCP_TASK_ACCEPT  3
 		#define	IOCP_TASK_EVNET   4
@@ -34,13 +34,12 @@ namespace pump {
 		struct iocp_task;
 		DEFINE_RAW_POINTER_TYPE(iocp_task);
 
-		typedef void_ptr  iocp_handler;
+		typedef void_ptr iocp_handler;
 
 		/*********************************************************************************
 		 * Create an iocp task with a link
 		 ********************************************************************************/
 		iocp_task_ptr new_iocp_task();
-
 
 		/*********************************************************************************
 		 * Reuse iocp task
@@ -176,9 +175,9 @@ namespace pump {
 		bool post_iocp_read_from(iocp_task_ptr itask);
 
 		/*********************************************************************************
-		 * Post iocp write
+		 * Post iocp send
 		 ********************************************************************************/
-		bool post_iocp_write(iocp_task_ptr itask);
+		bool post_iocp_send(iocp_task_ptr itask);
 	}
 }
 

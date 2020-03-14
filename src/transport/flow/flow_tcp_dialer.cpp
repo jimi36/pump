@@ -25,21 +25,15 @@ namespace pump {
 			{
 			}
 
-			flow_tcp_dialer::~flow_tcp_dialer()
-			{
-			}
-
 			int32 flow_tcp_dialer::init(poll::channel_sptr &ch, net::iocp_handler iocp, const address &bind_address)
 			{
-				if (!ch)
-					return FLOW_ERR_ABORT;
-
-				ch_ = ch;
-
+				PUMP_ASSERT_EXPR(ch, ch_ = ch);
+	
 				is_ipv6_ = bind_address.is_ipv6();
 				int32 domain = is_ipv6_ ? AF_INET6 : AF_INET;
 
 #if defined(WIN32) && defined(USE_IOCP)
+				PUMP_ASSERT(iocp);
 				fd_ = net::create_iocp_socket(domain, SOCK_STREAM, iocp);
 				if (fd_ == -1)
 					return FLOW_ERR_ABORT;
@@ -69,8 +63,7 @@ namespace pump {
 				net::set_iocp_task_type(itask, IOCP_TASK_CONNECT);
 				if (!net::post_iocp_connect(ext_, itask, connect_address.get(), connect_address.len()))
 				{
-					int32 ec = net::last_errno();
-					if (ec != WSA_IO_PENDING)
+					if (net::last_errno() != WSA_IO_PENDING)
 					{
 						net::unlink_iocp_task(itask);
 						return FLOW_ERR_ABORT;
@@ -92,6 +85,7 @@ namespace pump {
 			int32 flow_tcp_dialer::connect(net::iocp_task_ptr itask, address &local_address, address &remote_address)
 			{
 #if defined(WIN32) && defined(USE_IOCP)
+				PUMP_ASSERT(itask);
 				int32 ec = net::get_iocp_task_ec(itask);
 				net::unlink_iocp_task(itask);
 #else

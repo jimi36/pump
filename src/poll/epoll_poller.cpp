@@ -45,7 +45,7 @@ namespace pump {
 			ev.data.ptr  = tracker;
 			ev.events  = EL_TRI_TYPE;
 			ev.events |= (listen_event & IO_EVNET_READ) ? EL_READ_EVENT : 0;
-			ev.events |= (listen_event & IO_EVENT_WRITE) ? EL_WRITE_EVENT : 0;
+			ev.events |= (listen_event & IO_EVENT_SEND) ? EL_WRITE_EVENT : 0;
 			ev.events |= pop_pending_channel_ ? EPOLLONESHOT : 0;
 			return epoll_ctl(epollfd_, EPOLL_CTL_ADD, tracker->get_fd(), &ev) == 0;
 #else
@@ -62,7 +62,7 @@ namespace pump {
 			ev.data.ptr  = tracker;
 			ev.events  = EL_TRI_TYPE;
 			ev.events |= (listen_event & IO_EVNET_READ) ? EL_READ_EVENT : 0;
-			ev.events |= (listen_event & IO_EVENT_WRITE) ? EL_WRITE_EVENT : 0;
+			ev.events |= (listen_event & IO_EVENT_SEND) ? EL_WRITE_EVENT : 0;
 			ev.events |= pop_pending_channel_ ? EPOLLONESHOT : 0;
 			epoll_ctl(epollfd_, EPOLL_CTL_MOD, tracker->get_fd(), &ev);
 #endif
@@ -112,10 +112,10 @@ namespace pump {
 					if (events_[i].events & EL_READ_EVENT)
 						pending_event |= IO_EVNET_READ;
 					if (events_[i].events & EL_WRITE_EVENT)
-						pending_event |= IO_EVENT_WRITE;
+						pending_event |= IO_EVENT_SEND;
 
 					if (pop_pending_channel_)
-						tracker->track(false);
+						tracker->set_track_status(false);
 
 					if (pending_event != IO_EVENT_NONE)
 						ch->handle_io_event(pending_event, nullptr);

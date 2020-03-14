@@ -77,7 +77,7 @@ namespace pump {
 			 * This is a asynchronous operation. If notify is set to true, transport will 
 			 * notify when the data is sent completely.
 			 ********************************************************************************/
-			virtual bool send(flow::buffer_ptr b, bool notify = false);
+			virtual bool send(transport_buffer_ptr b);
 			virtual bool send(c_block_ptr b, uint32 size, bool notify = false);
 
 			/*********************************************************************************
@@ -118,6 +118,12 @@ namespace pump {
 			tcp_transport();
 
 			/*********************************************************************************
+			 * Set terminated notifier
+			 ********************************************************************************/
+			void __set_terminated_notifier(transport_terminated_notifier_sptr &notifier) 
+			{ terminated_notifier_ = notifier; }
+
+			/*********************************************************************************
 			 * open flow
 			 ********************************************************************************/
 			bool __open_flow(int32 fd);
@@ -125,7 +131,7 @@ namespace pump {
 			/*********************************************************************************
 			 * Close flow
 			 ********************************************************************************/
-			void __close_flow();
+			void __close_flow() { flow_.reset(); }
 
 			/*********************************************************************************
 			 * Start all trackers
@@ -140,13 +146,14 @@ namespace pump {
 			/*********************************************************************************
 			 * Stop tracker
 			 ********************************************************************************/
-			void __stop_tracker(poll::channel_tracker_sptr &tracker);
+			void __stop_read_tracker();
+			void __stop_send_tracker();
 
 			/*********************************************************************************
 			 * Async send
 			 ********************************************************************************/
-			bool __async_send(flow::buffer_ptr b, bool notify);
-			bool __async_send(std::list<flow::buffer_ptr> &sendlist, bool notify);
+			bool __async_send(transport_buffer_ptr b);
+			bool __async_send(std::list<transport_buffer_ptr> &sendlist);
 
 			/*********************************************************************************
 			 * Send once
@@ -166,7 +173,6 @@ namespace pump {
 		private:
 			// Local address
 			address local_address_;
-
 			// Remote address
 			address remote_address_;
 
@@ -183,13 +189,8 @@ namespace pump {
 
 			// When sending data, tcp transport will append the data to sendlist at first. 
 			// On triggering write event, the transport will send buffer in the sendlist.
-			std::list<flow::buffer_ptr> sendlist_;
-
-			// When send data with notify as true, transport will store the last buffer of
-			// the new sendlist of the data for sending. When the new sendlist is sent 
-			// completely, transport will call notify callback.
-			std::vector<void_ptr> sent_notify_list_;
-
+			std::list<transport_buffer_ptr> sendlist_;
+			
 			// Tcp transport will start listening write event when starting. But there are   
 			// no data to send and asynchronous sending data at the same time, so this status
 			// is for this scenario.

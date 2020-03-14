@@ -29,21 +29,22 @@ namespace pump {
 
 			flow_tcp_acceptor::~flow_tcp_acceptor()
 			{
+#if defined(WIN32) && defined(USE_IOCP)
 				if (accept_task_)
 					net::unlink_iocp_task(accept_task_);
+#endif
 			}
 
 			int32 flow_tcp_acceptor::init(poll::channel_sptr &ch, net::iocp_handler iocp, const address &listen_address)
 			{
-				if (!ch)
-					return FLOW_ERR_ABORT;
-
-				ch_ = ch;
+				PUMP_ASSERT_EXPR(ch, ch_ = ch);
 
 				is_ipv6_ = listen_address.is_ipv6();
 				int32 domain = is_ipv6_ ? AF_INET6 : AF_INET;
 
 #if defined(WIN32) && defined(USE_IOCP)
+				PUMP_ASSERT_EXPR(iocp, iocp_ = iocp);
+
 				fd_ = net::create_iocp_socket(domain, SOCK_STREAM, iocp);
 				if (fd_ == -1)
 					return FLOW_ERR_ABORT;
@@ -51,8 +52,6 @@ namespace pump {
 				ext_ = net::new_net_extension(fd_);
 				if (!ext_)
 					return FLOW_ERR_ABORT;
-
-				iocp_ = iocp;
 
 				tmp_cache_.resize(ADDRESS_MAX_LEN * 3);
 
@@ -84,12 +83,11 @@ namespace pump {
 					return FLOW_ERR_ABORT;
 
 				net::link_iocp_task(accept_task_);
-				net::reuse_iocp_task(accept_task_);
+				//net::reuse_iocp_task(accept_task_);
 				net::set_iocp_task_client_fd(accept_task_, client);
 				if (!net::post_iocp_accept(ext_, accept_task_))
 				{
-					int32 ec = net::last_errno();
-					if (ec != ERROR_IO_PENDING)
+					if (net::last_errno() != ERROR_IO_PENDING)
 					{
 						net::close(client);
 						net::unlink_iocp_task(accept_task_);
@@ -103,7 +101,7 @@ namespace pump {
 			int32 flow_tcp_acceptor::accept(net::iocp_task_ptr itask, address_ptr local_address, address_ptr remote_address)
 			{
 #if defined(WIN32) && defined(USE_IOCP)
-				assert(accept_task_ == itask);
+				PUMP_ASSERT(accept_task_ == itask);
 				int32 ec = net::get_iocp_task_ec(itask);
 				int32 client_fd = net::get_iocp_task_client_fd(itask);
 				if (ec != 0 || client_fd == -1)

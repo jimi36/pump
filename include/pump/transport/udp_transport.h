@@ -43,7 +43,7 @@ namespace pump {
 			/*********************************************************************************
 			 * Deconstructor
 			 ********************************************************************************/
-			virtual ~udp_transport();
+			virtual ~udp_transport() {}
 
 			/*********************************************************************************
 			 * Start
@@ -83,6 +83,12 @@ namespace pump {
 			udp_transport();
 
 			/*********************************************************************************
+			 * Set terminated notifier
+			 ********************************************************************************/
+			void __set_terminated_notifier(transport_terminated_notifier_sptr &notifier)
+			{ terminated_notifier_ = notifier; }
+
+			/*********************************************************************************
 			 * Open flow
 			 ********************************************************************************/
 			bool __open_flow(const address &local_address);
@@ -90,7 +96,7 @@ namespace pump {
 			/*********************************************************************************
 			 * Close flow
 			 ********************************************************************************/
-			void __close_flow();
+			void __close_flow() { flow_.reset(); }
 
 			/*********************************************************************************
 			 * Start tracker
@@ -105,13 +111,10 @@ namespace pump {
 		private:
 			// Bind address
 			address bind_address_;
-
-			// Channel tracker
-			poll::channel_tracker_sptr tracker_;
-
 			// Udp flow
 			flow::flow_udp_sptr flow_;
-
+			// Channel tracker
+			poll::channel_tracker_sptr tracker_;
 			// Transport terminated notifier
 			transport_terminated_notifier_wptr terminated_notifier_;
 		};

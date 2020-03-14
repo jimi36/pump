@@ -33,13 +33,9 @@ namespace pump {
 		{
 		}
 
-		timer::~timer()
-		{
-		}
-
 		bool timer::start() 
 		{
-			if (!__set_start_state(TIMER_STOPPED, TIMER_STARTING))
+			if (!__set_status(TIMER_STOPPED, TIMER_STARTING))
 				return false;
 
 			overtime_ = get_clock_milliseconds() + interval_;
@@ -53,11 +49,11 @@ namespace pump {
 
 			while (true)
 			{
-				if (__set_start_state(TIMER_STOPPED, TIMER_STOPPED))
+				if (__set_status(TIMER_STOPPED, TIMER_STOPPED))
 					break;
-				else if (__set_start_state(TIMER_STARTING, TIMER_STOPPED))
+				else if (__set_status(TIMER_STARTING, TIMER_STOPPED))
 					break;
-				else if (__set_start_state(TIMER_PENDING, TIMER_STOPPED))
+				else if (__set_status(TIMER_PENDING, TIMER_STOPPED))
 					break;
 			}
 
@@ -66,17 +62,12 @@ namespace pump {
 
 		void timer::handle_timeout()
 		{
-			if (!__set_start_state(TIMER_STARTING, TIMER_STOPPED))
+			if (!__set_status(TIMER_STARTING, TIMER_STOPPED))
 				return;
 
 			auto notify = notifier_.lock();
 			if (notify)
 				notify->on_timer_timeout(arg_);
-		}
-
-		bool timer::__set_start_state(int32 os, int32 ns)
-		{
-			return status_.compare_exchange_strong(os, ns);
 		}
 
 	}

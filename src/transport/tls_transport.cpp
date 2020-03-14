@@ -35,13 +35,13 @@ namespace pump {
 			const address &local_address,
 			const address &remote_address
 		) {
-			flow_ = flow;
+			PUMP_ASSERT_EXPR(flow, flow_ = flow);
 
-			// Rebind channel to flow. 
+			// Flow rebind channel 
 			poll::channel_sptr ch = shared_from_this();
 			flow_->rebind_channel(ch);
 
-			// Set channel fd.
+			// Set channel fd
 			poll::channel::__set_fd(flow->get_fd());
 
 			local_address_ = local_address;
@@ -61,38 +61,31 @@ namespace pump {
 			if (!__set_status(TRANSPORT_INIT, TRANSPORT_STARTING))
 				return false;
 
-			assert(sv);
-			__set_service(sv);
+			PUMP_ASSERT_EXPR(sv, __set_service(sv));
+			PUMP_ASSERT_EXPR(io_notifier, __set_notifier(io_notifier));
+			PUMP_ASSERT_EXPR(terminated_notifier, __set_terminated_notifier(terminated_notifier));
 
-			assert(io_notifier);
-			__set_notifier(io_notifier);
+			utils::scoped_defer defer([&]() {
+				__close_flow();
+				__stop_read_tracker();
+				__stop_send_tracker();
+				__set_status(TRANSPORT_STARTING, TRANSPORT_ERROR);
+			});
 
-			assert(terminated_notifier);
-			terminated_notifier_ = terminated_notifier;
+			// If using iocp, the transport is ready for sending.
+			if (sv->get_iocp_handler())
+				ready_for_sending_ = true;
 
-			{
-				utils::scoped_defer defer([&]() {
-					__close_flow();
-					__stop_tracker(r_tracker_);
-					__stop_tracker(s_tracker_);
-					__set_status(TRANSPORT_STARTING, TRANSPORT_ERROR);
-				});
+			if (!__start_all_trackers())
+				return false;
 
-				// If iocp handler is valid, the transport is ready for sending.
-				if (sv->get_iocp_handler())
-					ready_for_sending_ = true;
+			if (flow_->want_to_read() != FLOW_ERR_NO)
+				return false;
 
-				if (!__start_all_trackers())
-					return false;
+			if (!__set_status(TRANSPORT_STARTING, TRANSPORT_STARTED))
+				PUMP_ASSERT(false);
 
-				if (flow_->want_to_recv() != FLOW_ERR_NO)
-					return false;
-
-				if (!__set_status(TRANSPORT_STARTING, TRANSPORT_STARTED))
-					assert(false);
-
-				defer.clear();
-			}
+			defer.clear();
 
 			return true;
 		}
@@ -102,8 +95,8 @@ namespace pump {
 			if (!__set_status(TRANSPORT_STARTED, TRANSPORT_STOPPING))
 				return;
 
-			// Stop recv tracker immediately.
-			__stop_tracker(r_tracker_);
+			// Stop read tracker immediately.
+			__stop_read_tracker();
 
 			// If there are no data to send, the transport should be stopped 
 			// immediately. Otherwise the transport should not be stopped until
@@ -112,7 +105,7 @@ namespace pump {
 			if (sendlist_.empty())
 			{
 				__close_flow();
-				__stop_tracker(s_tracker_);
+				__stop_send_tracker();
 			}
 		}
 
@@ -121,44 +114,44 @@ namespace pump {
 			if (__set_status(TRANSPORT_STARTED, TRANSPORT_STOPPING))
 			{
 				__close_flow();
-				__stop_tracker(r_tracker_);
-				__stop_tracker(s_tracker_);
+				__stop_read_tracker();
+				__stop_send_tracker();
 			}
 		}
 
-		bool tls_transport::send(flow::buffer_ptr b, bool notify)
+		bool tls_transport::send(transport_buffer_ptr b)
 		{
-			assert(b && b->data_size() > 0);
+			PUMP_ASSERT(b);
 
 			if (!__is_status(TRANSPORT_STARTED))
 				return false;
 
-			return __async_send(b, notify);
+			return __async_send(b);
 		}
 
 		bool tls_transport::send(c_block_ptr b, uint32 size, bool notify)
 		{
-			if (b == nullptr || size == 0)
+			if (b == nullptr)
 				return false;
 
 			if (!__is_status(TRANSPORT_STARTED))
 				return false;
 
 			uint32 pos = 0;
-			std::list<flow::buffer_ptr> sendlist;
+			std::list<transport_buffer_ptr> sendlist;
 			while (pos < size)
 			{
 				uint32 bsize = MAX_FLOW_BUFFER_SIZE;
 				if (size - pos < MAX_FLOW_BUFFER_SIZE)
 					bsize = size - pos;
 
-				flow::buffer_ptr buffer = new flow::buffer();
+				auto buffer = new transport_buffer();
 				if (!buffer || !buffer->append(b + pos, bsize))
 					break;
 
-				sendlist.push_back(buffer);
-
 				pos += bsize;
+
+				sendlist.push_back(buffer);
 			}
 
 			if (pos != size)
@@ -168,7 +161,9 @@ namespace pump {
 				return false;
 			}
 
-			return __async_send(sendlist, notify);
+			sendlist.back()->set_completed_notify(notify);
+
+			return __async_send(sendlist);
 		}
 
 		void tls_transport::on_read_event(net::iocp_task_ptr itask)
@@ -181,7 +176,7 @@ namespace pump {
 				return;
 			}
 
-			switch (flow->recv_from_net(itask))
+			switch (flow->read_from_net(itask))
 			{
 			case FLOW_ERR_AGAIN:
 			{
@@ -201,7 +196,7 @@ namespace pump {
 				return;
 			}
 
-			if (flow->want_to_recv() != FLOW_ERR_NO && is_started())
+			if (flow->want_to_read() != FLOW_ERR_NO && is_started())
 				__try_doing_disconnected_process();
 		}
 
@@ -218,7 +213,7 @@ namespace pump {
 			switch (flow->send_to_net(itask))
 			{
 			case FLOW_ERR_AGAIN:
-				s_tracker_->track(true);
+				s_tracker_->set_track_status(true);
 				return;
 			case FLOW_ERR_ABORT:
 				__try_doing_disconnected_process();
@@ -234,7 +229,7 @@ namespace pump {
 				__try_doing_disconnected_process();
 				return;
 			case FLOW_ERR_NO:
-				s_tracker_->track(true);
+				s_tracker_->set_track_status(true);
 				return;
 			case FLOW_ERR_NO_DATA:
 				break;
@@ -252,7 +247,7 @@ namespace pump {
 			{
 				auto notifier_locker = terminated_notifier_.lock();
 				auto notifier = notifier_locker.get();
-				assert(notifier);
+				PUMP_ASSERT(notifier);
 
 				if (__set_status(TRANSPORT_DISCONNECTING, TRANSPORT_DISCONNECTED))
 					notifier->on_disconnected_callback(this);
@@ -272,22 +267,14 @@ namespace pump {
 			}
 		}
 
-		void tls_transport::__close_flow()
-		{
-			flow_.reset();
-		}
-
 		bool tls_transport::__start_all_trackers()
 		{
-			if (r_tracker_ || s_tracker_)
-				return false;
-
+			PUMP_ASSERT(!r_tracker_ && !s_tracker_);
 			poll::channel_sptr ch = shared_from_this();
-
 			r_tracker_.reset(new poll::channel_tracker(ch, TRACK_READ, TRACK_MODE_KEPPING));
-			r_tracker_->track(true);
+			r_tracker_->set_track_status(true);
 			s_tracker_.reset(new poll::channel_tracker(ch, TRACK_WRITE, TRACK_MODE_ONCE));
-			s_tracker_->track(true);
+			s_tracker_->set_track_status(true);
 
 			if (!get_service()->add_channel_tracker(s_tracker_) ||
 				!get_service()->add_channel_tracker(r_tracker_))
@@ -300,7 +287,7 @@ namespace pump {
 
 		bool tls_transport::__awake_tracker(poll::channel_tracker_sptr &tracker)
 		{
-			assert(tracker);
+			PUMP_ASSERT(tracker);
 			if (!get_service()->awake_channel_tracker(tracker))
 			{
 				__try_doing_disconnected_process();
@@ -309,18 +296,29 @@ namespace pump {
 			return true;
 		}
 
-		void tls_transport::__stop_tracker(poll::channel_tracker_sptr &tracker)
+		void tls_transport::__stop_read_tracker()
 		{
-			if (!tracker)
+			if (!r_tracker_)
 				return;
 
-			poll::channel_tracker_sptr tmp;
-			tmp.swap(tracker);
+			if (!get_service()->remove_channel_tracker(r_tracker_))
+				PUMP_ASSERT(false);
 
-			get_service()->remove_channel_tracker(tmp);
+			r_tracker_.reset();
 		}
 
-		bool tls_transport::__async_send(flow::buffer_ptr b, bool notify)
+		void tls_transport::__stop_send_tracker()
+		{
+			if (!s_tracker_)
+				return;
+
+			if (!get_service()->remove_channel_tracker(s_tracker_))
+				PUMP_ASSERT(false);
+
+			s_tracker_.reset();
+		}
+
+		bool tls_transport::__async_send(transport_buffer_ptr b)
 		{
 			bool need_send_here = false;
 			{
@@ -332,9 +330,6 @@ namespace pump {
 
 				// Insert new sendlist to the sendlist of transport.
 				sendlist_.push_back(b);
-
-				if (notify)
-					sent_notify_list_.push_back(b);
 			}
 
 			if (!need_send_here)
@@ -354,7 +349,7 @@ namespace pump {
 			return true;
 		}
 
-		bool tls_transport::__async_send(std::list<flow::buffer_ptr> &sendlist, bool notify)
+		bool tls_transport::__async_send(std::list<transport_buffer_ptr> &sendlist)
 		{
 			bool need_send_here = false;
 			{
@@ -366,9 +361,6 @@ namespace pump {
 
 				// Insert new sendlist to the sendlist of transport.
 				sendlist_.insert(sendlist_.end(), sendlist.begin(), sendlist.end());
-
-				if (notify)
-					sent_notify_list_.push_back(sendlist.back());
 			}
 
 			if (!need_send_here)
@@ -409,10 +401,8 @@ namespace pump {
 						break;
 					}
 
-					if (!sent_notify_list_.empty() && sent_notify_list_.back() == front)
+					if (front->need_completed_notify())
 					{
-						sent_notify_list_.pop_back();
-
 						poll::channel_sptr ch = shared_from_this();
 						__post_channel_event(ch, TRANSPORT_SENT_EVENT);
 					}
@@ -431,15 +421,15 @@ namespace pump {
 				if (__is_status(TRANSPORT_STOPPING))
 				{
 					__close_flow();
-					__stop_tracker(s_tracker_);
+					__stop_send_tracker();
 				}
 				return FLOW_ERR_NO_DATA;
 			}
 
 			while (buffer->data_size() > 0)
 			{
-				if (flow->write_to_ssl(buffer) <= 0)
-					assert(false);
+				if (flow->send_to_ssl(buffer) <= 0)
+					PUMP_ASSERT(false);
 			}
 
 			int32 ret = flow->want_to_send();
@@ -454,8 +444,8 @@ namespace pump {
 			if (__set_status(TRANSPORT_STARTED, TRANSPORT_DISCONNECTING))
 			{
 				__close_flow();
-				__stop_tracker(r_tracker_);
-				__stop_tracker(s_tracker_);
+				__stop_read_tracker();
+				__stop_send_tracker();
 			}
 		}
 

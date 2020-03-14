@@ -44,7 +44,7 @@ namespace pump {
 			/*********************************************************************************
 			 * Deconstructor
 			 ********************************************************************************/
-			virtual ~timer();
+			virtual ~timer() {}
 
 			/*********************************************************************************
 			 * Start
@@ -78,25 +78,21 @@ namespace pump {
 
 		private:
 			/*********************************************************************************
-			 * Set Start state implement
+			 * Set status
 			 ********************************************************************************/
-			bool __set_start_state(int32 os, int32 ns);
+			bool __set_status(int32 o, int32 n) { return status_.compare_exchange_strong(o, n); }
 
 		private:
+			// Timer Arg
 			void_ptr arg_;
-
 			// Timer status
 			std::atomic_int status_;
-
 			// Repeated status
 			volatile bool repeated_;
-
 			// Timeout interval ms
 			uint64 interval_;
-
 			// Timeout time ms
 			uint64 overtime_;
-
 			// Timeout notifier
 			timeout_notifier_wptr notifier_;
 		};

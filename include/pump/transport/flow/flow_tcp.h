@@ -45,18 +45,18 @@ namespace pump {
 				int32 init(poll::channel_sptr &ch, int32 fd);
 
 				/*********************************************************************************
-				 * Want to recv
-				 * If using iocp this post an iocp task for receiving, else do nothing.
+				 * Want to read
+				 * If using iocp this post an iocp task for reading, else do nothing.
 				 * Return results:
 				 *     FLOW_ERR_NO    => success
 				 *     FLOW_ERR_ABORT => error
 				 ********************************************************************************/
-				int32 want_to_recv();
+				int32 want_to_read();
 
 				/*********************************************************************************
-				 * Recv
+				 * Read
 				 ********************************************************************************/
-				c_block_ptr recv(net::iocp_task_ptr itask, int32_ptr size);
+				c_block_ptr read(net::iocp_task_ptr itask, int32_ptr size);
 
 				/*********************************************************************************
 				 * Want to send
@@ -89,12 +89,12 @@ namespace pump {
 				}
 
 			private:
-				// Recv iocp task
-				net::iocp_task_ptr recv_task_;
+				// Read iocp task
+				net::iocp_task_ptr read_task_;
 				// Send iocp task
 				net::iocp_task_ptr send_task_;
-				// Recv cache
-				std::string recv_cache_;
+				// Read cache
+				std::string read_cache_;
 				// Send buffer
 				buffer_ptr send_buffer_;
 			};

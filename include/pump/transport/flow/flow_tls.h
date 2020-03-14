@@ -66,22 +66,22 @@ namespace pump {
 				int32 handshake();
 
 				/*********************************************************************************
-				 * Want to recv
-				 * If using iocp this post a iocp task for connecting, else do nothing.
+				 * Want to read
+				 * If using iocp this post a iocp task for reading, else do nothing.
 				 * Return results:
 				 *     FLOW_ERR_NO    => success
 				 *     FLOW_ERR_ABORT => error
 				 ********************************************************************************/
-				int32 want_to_recv();
+				int32 want_to_read();
 
 				/*********************************************************************************
-				 * Recv from net
+				 * Read from net
 				 * Return results:
 				 *     FLOW_ERR_NO    => success
 				 *     FLOW_ERR_AGAIN => no more data on net
 				 *     FLOW_ERR_ABORT => error
 				 ********************************************************************************/
-				int32 recv_from_net(net::iocp_task_ptr itask);
+				int32 read_from_net(net::iocp_task_ptr itask);
 
 				/*********************************************************************************
 				 * Read from ssl
@@ -89,10 +89,10 @@ namespace pump {
 				c_block_ptr read_from_ssl(int32_ptr size);
 
 				/*********************************************************************************
-				 * Write to ssl
-				 * If happened error return -1, Otherwise return size of buffer wrote.
+				 * Send to ssl
+				 * If happened error return -1, Otherwise return size of buffer sent.
 				 ********************************************************************************/
-				int32 write_to_ssl(buffer_ptr wb);
+				int32 send_to_ssl(buffer_ptr wb);
 
 				/*********************************************************************************
 				 * Want to send
@@ -117,7 +117,7 @@ namespace pump {
 				/*********************************************************************************
 				 * Check there are data to send or not
 				 ********************************************************************************/
-				bool has_data_to_send() 
+				bool has_data_to_send() const
 				{ 
 					return net_send_buffer_.data_size() > 0 || !ssl_send_cache_.empty();
 				}
@@ -129,14 +129,14 @@ namespace pump {
 
 			private:
 				/*********************************************************************************
-				 * Read from net recv cache
+				 * Read from net read cache
 				 ********************************************************************************/
-				uint32 __read_from_net_recv_cache(block_ptr b, uint32 maxlen);
+				uint32 __read_from_net_read_cache(block_ptr b, uint32 maxlen);
 
 				/*********************************************************************************
-				 * write to net send cache
+				 * Send to net send cache
 				 ********************************************************************************/
-				void __write_to_net_send_cache(c_block_ptr b, uint32 size);
+				void __send_to_net_send_cache(c_block_ptr b, uint32 size);
 
 				/*********************************************************************************
 				 * Get ssl session
@@ -144,21 +144,19 @@ namespace pump {
 				tls_session_ptr __get_tls_cert() { return session_; }
 
 			private:
+				// Handshaked status
 				bool is_handshaked_;
-
 				// GunTLS session 
 				tls_session_ptr session_;
-
-				// Recv iocp task
-				net::iocp_task_ptr recv_task_;
-				// Net recv cache
-				std::string net_recv_cache_;
-				// Net recv buffer
-				std::string net_recv_buffer_;
+				// Read iocp task
+				net::iocp_task_ptr read_task_;
+				// Net read cache
+				std::string net_read_cache_;
+				// Net read buffer
+				std::string net_read_buffer_;
 				// TLS read buffer
 				std::string ssl_read_buffer_;
-
-				// Recv iocp task
+				// Send iocp task
 				net::iocp_task_ptr send_task_;
 				// Net send buffer
 				buffer net_send_buffer_;

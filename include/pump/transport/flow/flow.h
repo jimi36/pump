@@ -46,10 +46,10 @@ namespace pump {
 				virtual ~flow_base();
 
 				/*********************************************************************************
-				 * Get and unlock fd
-				 * This will return the fd and unlock the fd from the flow.
+				 * Unbind fd
+				 * This will return and unbind the fd from the flow.
 				 ********************************************************************************/
-				int32 get_and_unlock_fd();
+				int32 unbind_fd();
 
 				/*********************************************************************************
 				 * Get fd
@@ -62,14 +62,12 @@ namespace pump {
 				bool is_valid() const { return fd_ > 0; }
 
 			protected:
-				// Transport channel fd
+				// Transport fd
 				int32 fd_;
-
+				// Channel
+				poll::channel_wptr ch_;
 				// Net extension is used for iocp
 				net::net_extension_ptr ext_;
-
-				// Poll channel
-				poll::channel_wptr ch_;
 			};
 			DEFINE_ALL_POINTER_TYPE(flow_base);
 

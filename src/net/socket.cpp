@@ -132,7 +132,7 @@ namespace pump {
 			return (::connect(fd, addr, addrlen) == 0);
 		}
 
-		int32 recv(int32 fd, block_ptr b, uint32 size)
+		int32 read(int32 fd, block_ptr b, uint32 size)
 		{
 			return ::recv(fd, b, size, 0);
 		}
@@ -147,7 +147,7 @@ namespace pump {
 			return ::send(fd, b, size, 0);
 		}
 
-		int32 write_to(int32 fd, c_block_ptr b, uint32 size, struct sockaddr *addr, int32 addrlen)
+		int32 send_to(int32 fd, c_block_ptr b, uint32 size, struct sockaddr *addr, int32 addrlen)
 		{
 			socklen_t len = addrlen;
 			return ::sendto(fd, b, size, 0, addr, len);

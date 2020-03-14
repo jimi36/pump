@@ -64,37 +64,56 @@ namespace pump {
 			TRANSPORT_SENT_EVENT = 0
 		};
 
-		class LIB_EXPORT transport_base:
-			public service_getter,
-			public poll::channel
+		class LIB_EXPORT transport_buffer:
+			public flow::buffer 
 		{
-		protected:
-			friend class flow::flow_base;
-
 		public:
 			/*********************************************************************************
 			 * Constructor
 			 ********************************************************************************/
-			transport_base(transport_type type, service_ptr sv = 0, int32 fd = -1):
+			transport_buffer():
+				completed_notify_(false)
+			{}
+
+			/*********************************************************************************
+			 * Set completed notify status
+			 ********************************************************************************/
+			void set_completed_notify(bool notify) { completed_notify_ = notify; }
+
+			/*********************************************************************************
+			 * Check completed notify status
+			 ********************************************************************************/
+			bool need_completed_notify() const { return completed_notify_; }
+
+		private:
+			bool completed_notify_;
+		};
+		DEFINE_ALL_POINTER_TYPE(transport_buffer);
+
+		class LIB_EXPORT transport_base:
+			public service_getter,
+			public poll::channel
+		{
+		public:
+			/*********************************************************************************
+			 * Constructor
+			 ********************************************************************************/
+			transport_base(transport_type type, service_ptr sv = nullptr, int32 fd = -1):
 				service_getter(sv),
 				poll::channel(fd),
 				tracker_cnt_(0),
 				status_(TRANSPORT_INIT),
-				type_(type)
-			{
-			}
+				type_(type) {}
 
 			/*********************************************************************************
 			 * Deconstructor
 			 ********************************************************************************/
-			virtual ~transport_base()
-			{
-			}
+			virtual ~transport_base() {}
 
 			/*********************************************************************************
-			 * Stop transport
+			 * Stop channel
 			 ********************************************************************************/
-			virtual void stop() = 0;
+			virtual void stop() {}
 
 			/*********************************************************************************
 			 * Force stop
@@ -113,7 +132,8 @@ namespace pump {
 			 * Send to remote address
 			 * This is a synchronous operation, just for udp transport.
 			 ********************************************************************************/
-			virtual bool send(c_block_ptr b, uint32 size, const address &remote_address) { return false; }
+			virtual bool send(c_block_ptr b, uint32 size, const address &remote_address) 
+			{ return false; }
 
 			/*********************************************************************************
 			 * Get transport type
@@ -146,18 +166,14 @@ namespace pump {
 			 * Post channel event
 			 ********************************************************************************/
 			void __post_channel_event(poll::channel_sptr &ch, uint32 event)
-			{
-				get_service()->post_channel_event(ch, event);
-			}
+			{ get_service()->post_channel_event(ch, event); }
 
 			/*********************************************************************************
 			 * Get notifier
 			 ********************************************************************************/
 			template <typename NotifyType>
 			std::shared_ptr<NotifyType> __get_notifier()
-			{
-				return static_pointer_cast<NotifyType>(notifier_.lock());
-			}
+			{ return static_pointer_cast<NotifyType>(notifier_.lock()); }
 
 		protected:
 			// Tracking tracker count
@@ -166,10 +182,8 @@ namespace pump {
 		private:
 			// Transport status
 			std::atomic_uint status_;
-
 			// Transport type
 			transport_type type_;
-
 			// Notifier
 			void_wptr notifier_;
 		};

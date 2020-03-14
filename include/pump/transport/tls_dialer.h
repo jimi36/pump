@@ -46,7 +46,7 @@ namespace pump {
 			/*********************************************************************************
 			 * Deconstructor
 			 ********************************************************************************/
-			virtual ~tls_dialer();
+			virtual ~tls_dialer() {}
 
 			/*********************************************************************************
 			 * Start
@@ -101,7 +101,12 @@ namespace pump {
 			/*********************************************************************************
 			 * Set tls credentials
 			 ********************************************************************************/
-			void __set_tls_cert(void_ptr tls_cert);
+			void __set_tls_cert(void_ptr tls_cert) { tls_cert_ = tls_cert; }
+
+			/*********************************************************************************
+			 * Set tls handshake timeout
+			 ********************************************************************************/
+			void __set_tls_handshake_timeout(int64 timeout) { handshake_timeout_ = timeout; }
 
 			/*********************************************************************************
 			 * Open flow
@@ -111,7 +116,7 @@ namespace pump {
 			/*********************************************************************************
 			 * Close flow
 			 ********************************************************************************/
-			void __close_flow();
+			void __close_flow() { flow_.reset(); }
 
 			/*********************************************************************************
 			 * Start tracker
@@ -126,7 +131,7 @@ namespace pump {
 			/*********************************************************************************
 			 * Start timeout timer
 			 ********************************************************************************/
-			void __start_timer(int64 timeout);
+			bool __start_timer(int64 timeout);
 
 			/*********************************************************************************
 			 * Stop timeout timer
@@ -136,23 +141,17 @@ namespace pump {
 		private:
 			// Bind address
 			address bind_address_;
-
 			// Remote address
 			address connect_address_;
-
-			// Gnutls credentials
+			// GNUTls credentials
 			void_ptr tls_cert_;
-
 			// Connect timeout timer
 			time::timer_sptr timer_;
-
 			// Channel tracker
 			poll::channel_tracker_sptr tracker_;
-
-			// Tls dialer flow layer
+			// GNUTls dialer flow layer
 			flow::flow_tls_dialer_sptr flow_;
-
-			// Tls handshaker
+			// GNUTls handshaker
 			int64 handshake_timeout_;
 			tls_handshaker_sptr handshaker_;
 		};

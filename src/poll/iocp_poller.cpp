@@ -21,7 +21,7 @@ namespace pump {
 
 		iocp_poller::iocp_poller(bool pop_pending) :
 			poller(pop_pending),
-			iocp_(NULL)
+			iocp_(nullptr)
 		{
 #ifdef WIN32
 			iocp_ = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 0);
@@ -39,11 +39,13 @@ namespace pump {
 		bool iocp_poller::start()
 		{
 #ifdef WIN32
-			is_started_ = true;
+			if (started_.load())
+				return false;
+
+			started_.store(true);
 
 			SYSTEM_INFO sys_info;
 			GetSystemInfo(&sys_info);
-
 			for (DWORD i = 0; i < (sys_info.dwNumberOfProcessors * 2); ++i)
 			{
 				std::thread *worker = new std::thread(
@@ -61,7 +63,7 @@ namespace pump {
 		void iocp_poller::stop()
 		{
 #ifdef WIN32
-			is_started_ = false;
+			started_.store(false);
 
 			int32 count = (int32)workrs_.size();
 			for (int32 i = 0; i < count; i++)
@@ -79,14 +81,19 @@ namespace pump {
 #endif
 		}
 
-		void iocp_poller::add_channel_tracker(channel_tracker_sptr &tracker)
+		bool iocp_poller::add_channel_tracker(channel_tracker_sptr &tracker)
 		{
 #ifdef WIN32
+			if (!started_.load())
+				return false;
+
 			auto itask = net::new_iocp_task();
 			net::set_iocp_task_type(itask, IOCP_TASK_TRACKER);
 			net::set_iocp_task_notifier(itask, tracker->get_channel());
-
 			PostQueuedCompletionStatus(iocp_, 1, 1, (LPOVERLAPPED)itask);
+			return true;
+#else
+			return false;
 #endif
 		}
 
@@ -96,7 +103,6 @@ namespace pump {
 			auto itask = net::new_iocp_task();
 			net::set_iocp_task_type(itask, IOCP_TASK_TRACKER);
 			net::set_iocp_task_notifier(itask, tracker->get_channel());
-
 			PostQueuedCompletionStatus(iocp_, 1, 0, (LPOVERLAPPED)itask);
 #endif
 		}
@@ -104,11 +110,15 @@ namespace pump {
 		void iocp_poller::__work_thread()
 		{
 #ifdef WIN32
-			while (is_started_)
+			int32 tracker_cnt = 0;
+			DWORD transferred = 0;
+			ULONG_PTR completion_key = 0;
+			LPOVERLAPPED overlapped = nullptr;
+			while (started_.load() || tracker_cnt > 0)
 			{
-				DWORD transferred = 0;
-				ULONG_PTR completion_key = 0;
-				LPOVERLAPPED overlapped = NULL;
+				transferred = 0;
+				completion_key = 0;
+				overlapped = nullptr;
 				if (GetQueuedCompletionStatus(iocp_, &transferred, &completion_key, (LPOVERLAPPED*)&overlapped, INFINITE) == TRUE)
 				{
 					if (transferred == -1)
@@ -132,28 +142,33 @@ namespace pump {
 					}
 					else if (task_type == IOCP_TASK_TRACKER)
 					{
-						ch->handle_tracker_event(bool(completion_key));
+						bool on = (bool)completion_key;
+						tracker_cnt += on ? 1 : -1;
+						ch->handle_tracker_event(on);
 						net::unlink_iocp_task(itask);
 						continue;
 					}
 
+					/*
 					DWORD flags = 0;
 					DWORD transferred = 0;
 					int32 fd = net::get_iocp_task_fd(itask);
-					if (WSAGetOverlappedResult(fd, overlapped, &transferred, FALSE, &flags) == FALSE)
+					if (::WSAGetOverlappedResult(fd, overlapped, &transferred, FALSE, &flags) == FALSE)
 					{
+						PUMP_ASSERT(false);
 						int32 ec = net::last_errno();
 						net::set_iocp_task_ec(itask, ec);
 						if (ec == WSA_IO_INCOMPLETE)
 							continue;
 					}
+					*/
 
 					net::set_iocp_task_processed_size(itask, transferred);
 
 					int32 event = IO_EVENT_NONE;
 					if (task_type == IOCP_TASK_SEND || task_type == IOCP_TASK_CONNECT)
-						event |= IO_EVENT_WRITE;
-					if (task_type == IOCP_TASK_RECV || task_type == IOCP_TASK_ACCEPT)
+						event |= IO_EVENT_SEND;
+					if (task_type == IOCP_TASK_READ || task_type == IOCP_TASK_ACCEPT)
 						event |= IO_EVNET_READ;
 					ch->handle_io_event(event, itask);
 				}
@@ -177,8 +192,8 @@ namespace pump {
 					int32 task_type = net::get_iocp_task_type(itask);
 					int32 event = IO_EVENT_NONE;
 					if (task_type == IOCP_TASK_SEND || task_type == IOCP_TASK_CONNECT)
-						event |= IO_EVENT_WRITE;
-					if (task_type == IOCP_TASK_RECV || task_type == IOCP_TASK_ACCEPT)
+						event |= IO_EVENT_SEND;
+					if (task_type == IOCP_TASK_READ || task_type == IOCP_TASK_ACCEPT)
 						event |= IO_EVNET_READ;
 					ch->handle_io_event(event, itask);
 				}

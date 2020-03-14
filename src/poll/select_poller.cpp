@@ -57,7 +57,7 @@ namespace pump {
 				int32 listen_event = tracker->get_track_event();
 				if (listen_event & IO_EVNET_READ)
 					FD_SET(fd, &rfds_);
-				if (listen_event & IO_EVENT_WRITE)
+				if (listen_event & IO_EVENT_SEND)
 					FD_SET(fd, &wfds_);
 			}
 
@@ -98,12 +98,12 @@ namespace pump {
 				if (FD_ISSET(fd, &rfds))
 					pending_event |= IO_EVNET_READ;
 				if (FD_ISSET(fd, &wfds))
-					pending_event |= IO_EVENT_WRITE;
+					pending_event |= IO_EVENT_SEND;
 
 				if (pending_event != IO_EVENT_NONE)
 				{
 					if (pop_pending_channel_)
-						tracker->track(false);
+						tracker->set_track_status(false);
 
 					ch->handle_io_event(pending_event, nullptr);
 				}
