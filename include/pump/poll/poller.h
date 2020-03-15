@@ -39,15 +39,15 @@ namespace pump {
 			};
 			DEFINE_ALL_POINTER_TYPE(channel_event);
 
-			struct channel_tracker_modifier
+			struct channel_tracker_event
 			{
-				channel_tracker_modifier(channel_tracker_sptr &t, bool o)
+				channel_tracker_event(channel_tracker_sptr &t, int32 o)
 				{
 					tracker = t;
-					on = o;
+					event = o;
 				}
 				channel_tracker_sptr tracker;
-				bool on;
+				int32 event;
 			};
 
 		public:
@@ -59,7 +59,7 @@ namespace pump {
 			/*********************************************************************************
 			 * Deconstructor
 			 ********************************************************************************/
-			virtual ~poller();
+			virtual ~poller() {}
 
 			/*********************************************************************************
 			 * Start
@@ -138,11 +138,12 @@ namespace pump {
 			std::shared_ptr<std::thread> worker_;
 			// Channel events
 			std::mutex ch_event_mx_;
-			volatile int32 ch_event_cnt_;
-			std::list<channel_event_ptr> ch_events_;
+			std::atomic_bool has_ch_event_;
+			std::vector<channel_event> ch_events_;
 			// Modifying channel trackers
 			std::mutex tracker_mx_;
-			std::vector<channel_tracker_modifier> tracker_modifiers_;
+			std::atomic_bool has_tr_event_;
+			std::vector<channel_tracker_event> tr_events_;
 			// Channel trackers
 			std::unordered_map<channel_tracker_ptr, channel_tracker_sptr> trackers_;
 		};

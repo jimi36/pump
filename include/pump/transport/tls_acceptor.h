@@ -37,8 +37,7 @@ namespace pump {
 			 ********************************************************************************/
 			static tls_acceptor_sptr create_instance()
 			{
-				tls_acceptor_sptr ins(new tls_acceptor);
-				return ins;
+				return tls_acceptor_sptr(new tls_acceptor);
 			}
 
 			/*********************************************************************************
@@ -71,7 +70,7 @@ namespace pump {
 			/*********************************************************************************
 			 * Tracker event callback
 			 ********************************************************************************/
-			virtual void on_tracker_event(bool on);
+			virtual void on_tracker_event(int32 ev);
 
 			/*********************************************************************************
 			 * Tls handshake success callback
@@ -81,7 +80,12 @@ namespace pump {
 			/*********************************************************************************
 			 * Tls handshake timeout callback
 			 ********************************************************************************/
-			virtual void on_handshaked_timeout(transport_base_ptr handshaker);
+			virtual void on_handshaked_timeout_callback(transport_base_ptr handshaker);
+
+			/*********************************************************************************
+			 * Tls handskake stopped callback
+			 ********************************************************************************/
+			virtual void on_stopped_handshaking_callback(transport_base_ptr handshaker);
 
 		private:
 			/*********************************************************************************
@@ -129,6 +133,11 @@ namespace pump {
 			 ********************************************************************************/
 			void __remove_tls_handshaker(tls_handshaker_ptr handshaker);
 
+			/*********************************************************************************
+			 * Stop all tls handshakers
+			 ********************************************************************************/
+			void __stop_all_tls_handshakers();
+
 		private:
 			// GNUTls credentials
 			void_ptr tls_cert_;
@@ -136,7 +145,7 @@ namespace pump {
 			address listen_address_;
 			// Channel tracker
 			poll::channel_tracker_sptr tracker_;
-			// Tls acceptor flow layer
+			// Acceptor flow
 			flow::flow_tls_acceptor_sptr flow_;
 			// GNUTls handshake info
 			int64 handshake_timeout_;

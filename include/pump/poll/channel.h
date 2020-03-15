@@ -75,18 +75,17 @@ namespace pump {
 			/*********************************************************************************
 			 * Handle io event
 			 ********************************************************************************/
-			void handle_io_event(uint32 event, net::iocp_task_ptr itask);
+			void handle_io_event(uint32 ev, net::iocp_task_ptr itask);
+
+			/*********************************************************************************
+			 * Handle channel event
+			 ********************************************************************************/
+			void handle_channel_event(int32 ev) { on_channel_event(ev); }
 
 			/*********************************************************************************
 			 * Handle tracker event
 			 ********************************************************************************/
-			void handle_tracker_event(bool on) { on_tracker_event(on); }
-
-		public:
-			/*********************************************************************************
-			 * Channel event callback
-			 ********************************************************************************/
-			virtual void on_channel_event(uint32 event) {}
+			void handle_tracker_event(int32 ev) { on_tracker_event(ev); }
 
 		protected:
 			/*********************************************************************************
@@ -101,9 +100,9 @@ namespace pump {
 			virtual void on_read_event(net::iocp_task_ptr itask) {}
 
 			/*********************************************************************************
-			 * Write event callback
+			 * Send event callback
 			 ********************************************************************************/
-			virtual void on_write_event(net::iocp_task_ptr itask) {}
+			virtual void on_send_event(net::iocp_task_ptr itask) {}
 
 			/*********************************************************************************
 			 * Error event callback
@@ -111,9 +110,14 @@ namespace pump {
 			virtual void on_error_event() {}
 
 			/*********************************************************************************
+			 * Channel event callback
+			 ********************************************************************************/
+			virtual void on_channel_event(uint32 ev) {}
+
+			/*********************************************************************************
 			 * Tracker event callback
 			 ********************************************************************************/
-			virtual void on_tracker_event(bool on) {}
+			virtual void on_tracker_event(int32 ev) {}
 
 		protected:
 			// Channel context

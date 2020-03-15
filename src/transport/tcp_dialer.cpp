@@ -65,75 +65,93 @@ namespace pump {
 
 		void tcp_dialer::stop()
 		{
-			if (__set_status(TRANSPORT_STARTING, TRANSPORT_STOPPING))
+			// When in started status at the moment, stopping can be done. Then tracker event callback
+			// will be triggered, we can trigger stopped callabck at there.
+			if (__set_status(TRANSPORT_STARTED, TRANSPORT_STOPPING))
 			{
-				__stop_timer();
 				__close_flow();
+				__stop_timer();
 				__stop_tracker();
+				return;
 			}
+			
+			// If in timeout doing status at the moment, it means that dialer is timeout but hasn't 
+			// triggered tracker event callback yet. So we just set stopping status to dialer, and
+			// when tracker event callback triggered, we will trigger stopped callabck at there.
+			if (__set_status(TRANSPORT_TIMEOUT_DOING, TRANSPORT_STOPPING))
+				return;
 		}
 
-		void tcp_dialer::on_write_event(net::iocp_task_ptr itask)
+		void tcp_dialer::on_send_event(net::iocp_task_ptr itask)
 		{
-			if (!__set_status(TRANSPORT_STARTED, TRANSPORT_FINISH))
+			auto flow_locker = flow_;
+			auto flow = flow_locker.get();
+			if (flow == nullptr)
 			{
+				// If flow no existed, it means dialer has be stopped. So we free iocp task and 
+				// return at here.
 				flow::free_iocp_task(itask);
 				return;
 			}
 
-			auto flow_locker = flow_;
-			auto flow = flow_locker.get();
-			PUMP_ASSERT(flow);
-
-			bool success = false;
-			tcp_transport_sptr conn;
 			address local_address, remote_address;
-			int32 code = flow->connect(itask, local_address, remote_address);
-			if (code == 0)
-			{
-				success = true;
+			bool success = (flow->connect(itask, local_address, remote_address) == 0);
 
-				// Dialer flow unbind fd
-				int32 fd = flow->unbind_fd();
-
-				conn = tcp_transport::create_instance();
-				if (!conn->init(fd, local_address, remote_address))
-					PUMP_ASSERT(false);
-			}
+			int32 next_status = success ? TRANSPORT_FINISH : TRANSPORT_ERROR;
+			if (!__set_status(TRANSPORT_STARTED, next_status))
+				return;
 
 			__close_flow();
 			__stop_timer();
 			__stop_tracker();
 
-			auto notifier_locker = __get_notifier<dialed_notifier>();
-			auto notifier = notifier_locker.get();
-			PUMP_ASSERT_EXPR(notifier, 
-				notifier->on_dialed_callback(get_context(), conn, success));
+			if (success)
+			{
+				tcp_transport_sptr conn = tcp_transport::create_instance();
+				if (!conn->init(flow->unbind_fd(), local_address, remote_address))
+					PUMP_ASSERT(false);
+
+				auto notifier_locker = __get_notifier<dialed_notifier>();
+				auto notifier = notifier_locker.get();
+				if (notifier)
+					notifier->on_dialed_callback(get_context(), conn, success);
+			}
 		}
 
-		void tcp_dialer::on_tracker_event(bool on)
+		void tcp_dialer::on_tracker_event(int32 ev)
 		{
-			if (on)
+			if (ev == TRACKER_EVENT_ADD)
 				return;
 
-			tracker_cnt_.fetch_sub(1);
+			if (ev == TRACKER_EVENT_DEL)
+				tracker_cnt_ -= 1;
 
 			if (tracker_cnt_ == 0)
 			{
 				auto notifier_locker = __get_notifier<dialed_notifier>();
 				auto notifier = notifier_locker.get();
-				PUMP_ASSERT(notifier);
 
-				if (__set_status(TRANSPORT_STOPPING, TRANSPORT_STOPPED))
-					notifier->on_stopped_dialing_callback(get_context());
-				else if (__is_status(TRANSPORT_TIMEOUT))
-					notifier->on_dialed_timeout_callback(get_context());
+				if (__is_status(TRANSPORT_ERROR))
+				{
+					if (notifier)
+						notifier->on_dialed_callback(get_context(), tcp_transport_sptr(), false);
+				}
+				else if (__set_status(TRANSPORT_TIMEOUT_DOING, TRANSPORT_TIMEOUT_DONE))
+				{
+					if (notifier)
+						notifier->on_dialed_timeout_callback(get_context());
+				}
+				else if (__set_status(TRANSPORT_STOPPING, TRANSPORT_STOPPED))
+				{
+					if (notifier)
+						notifier->on_stopped_dialing_callback(get_context());
+				}
 			}
 		}
 
 		void tcp_dialer::on_timer_timeout(void_ptr arg)
 		{
-			if (__set_status(TRANSPORT_STARTING, TRANSPORT_TIMEOUT))
+			if (__set_status(TRANSPORT_STARTED, TRANSPORT_TIMEOUT_DOING))
 			{
 				__close_flow();
 				__stop_tracker();

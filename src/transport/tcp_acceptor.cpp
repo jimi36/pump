@@ -60,6 +60,8 @@ namespace pump {
 
 		void tcp_acceptor::stop()
 		{
+			// When in started status at the moment, stopping can be done. Then tracker
+			// event callback will be triggered, we can trigger stopped callabck at there.
 			if (__set_status(TRANSPORT_STARTED, TRANSPORT_STOPPING))
 			{
 				__close_flow();
@@ -73,6 +75,7 @@ namespace pump {
 			auto flow = flow_locker.get();
 			if (flow == nullptr)
 			{
+				// If flow is not existed, it means the acceptor has be stopped.
 				flow::free_iocp_task(itask);
 				return;
 			}
@@ -87,20 +90,27 @@ namespace pump {
 
 				auto notifier_locker = __get_notifier<accepted_notifier>();
 				auto notifier = notifier_locker.get();
-				PUMP_ASSERT_EXPR(notifier, 
-					notifier->on_accepted_callback(get_context(), conn));
+
+				// The acceptor maybe be stopped before this, so we need check it in started 
+				// status or not. And if notifier is already not existed, we only can close the
+				// new tcp connection.
+				if (__is_status(TRANSPORT_STARTED) && notifier)
+					notifier->on_accepted_callback(get_context(), conn);
 			}
 
-			if (flow->want_to_accept() != FLOW_ERR_NO && is_started())
+			// The acceptor maybe be stopped before this, so we also need check it in started 
+			// status or not.
+			if (flow->want_to_accept() != FLOW_ERR_NO && __is_status(TRANSPORT_STARTED))
 				PUMP_ASSERT(false);
 		}
 
-		void tcp_acceptor::on_tracker_event(bool on)
+		void tcp_acceptor::on_tracker_event(int32 ev)
 		{
-			if (on)
+			if (ev == TRACKER_EVENT_ADD)
 				return;
 
-			tracker_cnt_.fetch_sub(1);
+			if (ev == TRACKER_EVENT_DEL)
+				tracker_cnt_ -= 1;
 
 			if (tracker_cnt_ == 0)
 			{
@@ -108,8 +118,8 @@ namespace pump {
 				{
 					auto notifier_locker = __get_notifier<accepted_notifier>();
 					auto notifier = notifier_locker.get();
-					PUMP_ASSERT_EXPR(notifier, 
-						notifier->on_stopped_accepting_callback(get_context()));
+					if (notifier) 
+						notifier->on_stopped_accepting_callback(get_context());
 				}
 			}
 		}
@@ -136,7 +146,7 @@ namespace pump {
 		{
 			PUMP_ASSERT(!tracker_);
 			poll::channel_sptr ch = shared_from_this();
-			tracker_.reset(new poll::channel_tracker(ch, TRACK_READ, TRACK_MODE_KEPPING));
+			tracker_.reset(new poll::channel_tracker(ch, TRACK_READ, TRACK_MODE_LOOP));
 			tracker_->set_track_status(true);
 
 			if (!get_service()->add_channel_tracker(tracker_))

@@ -24,7 +24,7 @@ namespace pump {
 			if (event & IO_EVNET_READ)
 				on_read_event(itask);
 			if (event & IO_EVENT_SEND)
-				on_write_event(itask);
+				on_send_event(itask);
 			if (event & IO_EVENT_ERROR)
 				on_error_event();
 		}

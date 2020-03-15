@@ -36,8 +36,7 @@ namespace pump {
 			 ********************************************************************************/
 			static tcp_acceptor_sptr create_instance()
 			{
-				tcp_acceptor_sptr ins(new tcp_acceptor);
-				return ins;
+				return tcp_acceptor_sptr(new tcp_acceptor);
 			}
 
 			/*********************************************************************************
@@ -68,7 +67,7 @@ namespace pump {
 			/*********************************************************************************
 			 * Tracker event callback
 			 ********************************************************************************/
-			virtual void on_tracker_event(bool on);
+			virtual void on_tracker_event(int32 ev);
 
 		private:
 			/*********************************************************************************
@@ -98,13 +97,11 @@ namespace pump {
 			tcp_acceptor();
 
 		private:
-			// Local address
+			// Listen address
 			address listen_address_;
-
 			// Channel tracker
 			poll::channel_tracker_sptr tracker_;
-
-			// Tcp acceptor flow
+			// Acceptor flow
 			flow::flow_tcp_acceptor_sptr flow_;
 		};
 

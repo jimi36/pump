@@ -39,7 +39,12 @@ namespace pump {
 			/*********************************************************************************
 			 * Constructor
 			 ********************************************************************************/
-			timer(void_ptr arg, timeout_notifier_sptr &notify, uint64 interval, bool repeat = false);
+			timer(
+				void_ptr arg, 
+				timeout_notifier_sptr &notify, 
+				uint64 interval, 
+				bool repeat = false
+			);
 
 			/*********************************************************************************
 			 * Deconstructor

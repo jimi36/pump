@@ -69,7 +69,7 @@ namespace pump {
 			/*********************************************************************************
 			 * Push channel event
 			 ********************************************************************************/
-			virtual void push_channel_event(channel_sptr &c, uint32 event);
+			virtual void push_channel_event(channel_sptr &c, uint32 ev);
 
 			/*********************************************************************************
 			 * Get iocp handler

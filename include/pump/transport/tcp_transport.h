@@ -39,8 +39,7 @@ namespace pump {
 			 ********************************************************************************/
 			static tcp_transport_sptr create_instance()
 			{
-				tcp_transport_sptr ins(new tcp_transport);
-				return ins;
+				return tcp_transport_sptr(new tcp_transport);
 			}
 
 			/*********************************************************************************
@@ -51,7 +50,11 @@ namespace pump {
 			/*********************************************************************************
 			 * Init
 			 ********************************************************************************/
-			bool init(int32 fd, const address &local_address, const address &remote_address);
+			bool init(
+				int32 fd, 
+				const address &local_address, 
+				const address &remote_address
+			);
 
 			/*********************************************************************************
 			 * Start
@@ -74,11 +77,18 @@ namespace pump {
 
 			/*********************************************************************************
 			 * Send
-			 * This is a asynchronous operation. If notify is set to true, transport will 
-			 * notify when the data is sent completely.
+			 ********************************************************************************/
+			virtual bool send(
+				c_block_ptr b, 
+				uint32 size, 
+				bool notify = false
+			);
+
+			/*********************************************************************************
+			 * Send
+			 * After called, the transport got the buffer onwership.
 			 ********************************************************************************/
 			virtual bool send(transport_buffer_ptr b);
-			virtual bool send(c_block_ptr b, uint32 size, bool notify = false);
 
 			/*********************************************************************************
 			 * Get local address
@@ -97,14 +107,14 @@ namespace pump {
 			virtual void on_read_event(net::iocp_task_ptr itask);
 
 			/*********************************************************************************
-			 * Write event callback
+			 * Send event callback
 			 ********************************************************************************/
-			virtual void on_write_event(net::iocp_task_ptr itask);
+			virtual void on_send_event(net::iocp_task_ptr itask);
 
 			/*********************************************************************************
 			 * Tracker event callback
 			 ********************************************************************************/
-			virtual void on_tracker_event(bool on);
+			virtual void on_tracker_event(int32 ev);
 
 			/*********************************************************************************
 			 * Channel event callback
@@ -180,13 +190,11 @@ namespace pump {
 			poll::channel_tracker_sptr r_tracker_;
 			poll::channel_tracker_sptr s_tracker_;
 
-			// Tcp flow layer
+			// Transport flow
 			flow::flow_tcp_sptr flow_;
 
-			// The spin mutex is used for locking sendlist. We use spin mutex because 
-			// it's more efficient than std mutex in frequently invoked scenarios.
+			// Spin mutex used for locking sendlist
 			utils::spin_mutex sendlist_mx_;
-
 			// When sending data, tcp transport will append the data to sendlist at first. 
 			// On triggering write event, the transport will send buffer in the sendlist.
 			std::list<transport_buffer_ptr> sendlist_;

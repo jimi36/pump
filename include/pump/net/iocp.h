@@ -28,7 +28,7 @@ namespace pump {
 		#define IOCP_TASK_READ    1
 		#define	IOCP_TASK_CONNECT 2
 		#define	IOCP_TASK_ACCEPT  3
-		#define	IOCP_TASK_EVNET   4
+		#define	IOCP_TASK_CHANNEL 4
 		#define	IOCP_TASK_TRACKER 5
 
 		struct iocp_task;

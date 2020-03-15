@@ -38,8 +38,7 @@ namespace pump {
 			 ********************************************************************************/
 			static tcp_dialer_sptr create_instance()
 			{
-				tcp_dialer_sptr ins(new tcp_dialer);
-				return ins;
+				return tcp_dialer_sptr(new tcp_dialer);
 			}
 
 			/*********************************************************************************
@@ -65,14 +64,14 @@ namespace pump {
 
 		protected:
 			/*********************************************************************************
-			 * Write event callback
+			 * Send event callback
 			 ********************************************************************************/
-			virtual void on_write_event(net::iocp_task_ptr itask);
+			virtual void on_send_event(net::iocp_task_ptr itask);
 
 			/*********************************************************************************
 			 * Tracker event callback
 			 ********************************************************************************/
-			virtual void on_tracker_event(bool on);
+			virtual void on_tracker_event(int32 ev);
 
 			/*********************************************************************************
 			 * Timeout event callback
@@ -119,17 +118,13 @@ namespace pump {
 		private:
 			// Bind address
 			address bind_address_;
-
 			// Connect address
 			address connect_address_;
-
 			// Connect timeout timer
 			std::shared_ptr<time::timer> timer_;
-
 			// Channel tracker
 			poll::channel_tracker_sptr tracker_;
-
-			// Tcp dialer flow layer
+			// Dialer flow
 			flow::flow_tcp_dialer_sptr flow_;
 		};
 

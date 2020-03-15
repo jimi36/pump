@@ -68,10 +68,13 @@ namespace pump {
 
 		void tls_acceptor::stop()
 		{
+			// When in started status at the moment, stopping can be done, Then tracker event callback
+			// will be triggered, we can trigger stopped callabck at there. 
 			if (__set_status(TRANSPORT_STARTED, TRANSPORT_STOPPING))
 			{
 				__close_flow();
 				__stop_tracker();
+				__stop_all_tls_handshakers();
 			}
 		}
 
@@ -81,6 +84,8 @@ namespace pump {
 			auto flow = flow_locker.get();
 			if (flow == nullptr)
 			{
+				// If flow no existed, it means acceptor has be stopped. So we free iocp task and 
+				// return at here.
 				flow::free_iocp_task(itask);
 				return;
 			}
@@ -92,12 +97,16 @@ namespace pump {
 				tls_handshaker_ptr handshaker = __create_tls_handshaker();
 				if (handshaker)
 				{
+					// If handshaker is started error, handshaked callback will be triggered. So we do nothing
+					// at here when started error. But if acceptor stopped befere here, we shuold stop handshaking.
 					if (!handshaker->init(fd, false, tls_cert_, local_address, remote_address))
 						PUMP_ASSERT(false);
-
 					tls_handshaked_notifier_sptr notifier = shared_from_this();
-					if (!handshaker->start(get_service(), handshake_timeout_, notifier))
-						__remove_tls_handshaker(handshaker);
+					if (handshaker->start(get_service(), handshake_timeout_, notifier))
+					{
+						if (__is_status(TRANSPORT_STOPPING) || __is_status(TRANSPORT_STOPPED))
+							handshaker->stop();
+					}
 				}
 				else
 				{
@@ -105,36 +114,29 @@ namespace pump {
 				}
 			}
 
-			if (flow->want_to_accept() != FLOW_ERR_NO && is_started())
+			// The acceptor maybe be stopped before this, so we also need check it in started 
+			// status or not.
+			if (flow->want_to_accept() != FLOW_ERR_NO && __is_status(TRANSPORT_STARTED))
 				PUMP_ASSERT(false);
 		}
 
-		void tls_acceptor::on_tracker_event(bool on)
+		void tls_acceptor::on_tracker_event(int32 ev)
 		{
-			if (on)
+			if (ev == TRACKER_EVENT_ADD)
 				return;
 
-			tracker_cnt_.fetch_sub(1);
+			if (ev == TRACKER_EVENT_DEL)
+				tracker_cnt_ -= 1;
 
 			if (tracker_cnt_ == 0)
 			{
+				if (__set_status(TRANSPORT_STOPPING, TRANSPORT_STOPPED))
 				{
-					// If there ara handshakers doing, we should wait them finished.
-					std::lock_guard<std::mutex> lock(tls_handshaker_mx_);
-					if (!tls_handshakers_.empty())
-						return;
+					auto notifier_locker = __get_notifier<accepted_notifier>();
+					auto notifier = notifier_locker.get();
+					if (notifier)
+						notifier->on_stopped_accepting_callback(get_context());
 				}
-
-				// This maybe failed. New handshaker maybe created in the period, so
-				// we do the same thing at creating handshaker and remving handshaker 
-				// processes.
-				if (!__set_status(TRANSPORT_STOPPING, TRANSPORT_STOPPED))
-					return;
-
-				auto notifier_locker = __get_notifier<accepted_notifier>();
-				auto notifier = notifier_locker.get();
-				PUMP_ASSERT_EXPR(notifier, 
-					notifier->on_stopped_accepting_callback(get_context()));
 			}
 		}
 
@@ -142,7 +144,7 @@ namespace pump {
 		{
 			tls_handshaker_ptr the_handshaker = (tls_handshaker_ptr)handshaker;
 
-			if (succ && is_started())
+			if (succ && __is_status(TRANSPORT_STARTED))
 			{
 				auto flow = the_handshaker->unlock_flow();
 				address local_address = the_handshaker->get_local_address();
@@ -153,14 +155,19 @@ namespace pump {
 
 				auto notifier_locker = __get_notifier<accepted_notifier>();
 				auto notifier = notifier_locker.get();
-				PUMP_ASSERT_EXPR(notifier, 
-					notifier->on_accepted_callback(this, transport));
+				if(notifier)
+					notifier->on_accepted_callback(this, transport);
 			}
 
 			__remove_tls_handshaker(the_handshaker);
 		}
 
-		void tls_acceptor::on_handshaked_timeout(transport_base_ptr handshaker)
+		void tls_acceptor::on_handshaked_timeout_callback(transport_base_ptr handshaker)
+		{
+			__remove_tls_handshaker((tls_handshaker_ptr)handshaker);
+		}
+
+		void tls_acceptor::on_stopped_handshaking_callback(transport_base_ptr handshaker)
 		{
 			__remove_tls_handshaker((tls_handshaker_ptr)handshaker);
 		}
@@ -188,7 +195,7 @@ namespace pump {
 		{
 			PUMP_ASSERT(!tracker_);
 			poll::channel_sptr ch = shared_from_this();
-			tracker_.reset(new poll::channel_tracker(ch, TRACK_READ, TRACK_MODE_KEPPING));
+			tracker_.reset(new poll::channel_tracker(ch, TRACK_READ, TRACK_MODE_LOOP));
 			tracker_->set_track_status(true);
 
 			if (!get_service()->add_channel_tracker(tracker_))
@@ -217,33 +224,20 @@ namespace pump {
 				std::lock_guard<std::mutex> lock(tls_handshaker_mx_);
 				tls_handshakers_[handshaker.get()] = handshaker;
 			}
-
-			if (!is_started())
-			{
-				std::lock_guard<std::mutex> lock(tls_handshaker_mx_);
-				tls_handshakers_.erase(handshaker.get());
-				return nullptr;
-			}
-			
 			return handshaker.get();
 		}
 
 		void tls_acceptor::__remove_tls_handshaker(tls_handshaker_ptr handshaker)
 		{
-			bool shuold_notify_stopped = false;
-			{
-				std::lock_guard<std::mutex> lock(tls_handshaker_mx_);
-				tls_handshakers_.erase(handshaker);
-				shuold_notify_stopped = tls_handshakers_.empty();
-			}
+			std::lock_guard<std::mutex> lock(tls_handshaker_mx_);
+			tls_handshakers_.erase(handshaker);
+		}
 
-			if (shuold_notify_stopped && __set_status(TRANSPORT_STOPPING, TRANSPORT_STOPPED))
-			{
-				auto notifier_locker = __get_notifier<accepted_notifier>();
-				auto notifier = notifier_locker.get();
-				PUMP_ASSERT_EXPR(notifier, 
-					notifier->on_stopped_accepting_callback(get_context()));
-			}
+		void tls_acceptor::__stop_all_tls_handshakers()
+		{
+			std::lock_guard<std::mutex> lock(tls_handshaker_mx_);
+			for (auto p: tls_handshakers_)
+				p.second->stop();
 		}
 
 	}

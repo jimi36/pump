@@ -28,7 +28,10 @@ namespace pump {
 		#define TRACK_BOTH  (IO_EVNET_READ | IO_EVENT_SEND)
 
 		#define TRACK_MODE_ONCE    0
-		#define TRACK_MODE_KEPPING 1
+		#define TRACK_MODE_LOOP 1
+
+		#define TRACKER_EVENT_DEL 0
+		#define TRACKER_EVENT_ADD 1
 
 		class channel_tracker
 		{
@@ -41,7 +44,6 @@ namespace pump {
 				track_mode_(mode),
 				track_event_(ev),
 				fd_(ch->get_fd()),
-				fd_ownership_(true),
 				ch_(ch)
 			{}
 			
@@ -69,16 +71,6 @@ namespace pump {
 			 * Get fd
 			 ********************************************************************************/
 			int32 get_fd() const { return fd_; }
-
-			/*********************************************************************************
-			 * Set fd ownership
-			 ********************************************************************************/
-			void set_fd_ownership(bool ownership) { fd_ownership_ = ownership; }
-
-			/*********************************************************************************
-			 * Get fd ownership
-			 ********************************************************************************/
-			bool has_fd_ownership() const { return fd_ownership_; }
 			
 			/*********************************************************************************
 			 * Set track event
@@ -104,8 +96,6 @@ namespace pump {
 			int32 track_mode_;
 			// Track fd
 			int32 fd_;
-			// Track fd ownership
-			bool fd_ownership_;
 			// Channel
 			channel_wptr ch_;
 		};

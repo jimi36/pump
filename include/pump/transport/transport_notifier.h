@@ -35,7 +35,7 @@ namespace pump {
 			/*********************************************************************************
 			 * Stopped accepting event callback
 			 ********************************************************************************/
-			virtual void on_stopped_accepting_callback(void_ptr ctx) = 0;
+			virtual void on_stopped_accepting_callback(void_ptr ctx) {}
 		};
 		DEFINE_ALL_POINTER_TYPE(accepted_notifier);
 
@@ -50,12 +50,12 @@ namespace pump {
 			/*********************************************************************************
 			 * Dialed timeout event callback
 			 ********************************************************************************/
-			virtual void on_dialed_timeout_callback(void_ptr ctx) = 0;
+			virtual void on_dialed_timeout_callback(void_ptr ctx) {}
 
 			/*********************************************************************************
 			 * Stopped dial event callback
 			 ********************************************************************************/
-			virtual void on_stopped_dialing_callback(void_ptr ctx) = 0;
+			virtual void on_stopped_dialing_callback(void_ptr ctx) {}
 		};
 		DEFINE_ALL_POINTER_TYPE(dialed_notifier);
 
@@ -63,19 +63,19 @@ namespace pump {
 		{
 		public:
 			/*********************************************************************************
-			 * Recv event callback
+			 * Read event callback
 			 ********************************************************************************/
-			virtual void on_recv_callback(transport_base_ptr transp, c_block_ptr b, int32 size) = 0;
+			virtual void on_read_callback(transport_base_ptr transp, c_block_ptr b, int32 size) {}
 
 			/*********************************************************************************
 			 * Read event callback for udp
 			 ********************************************************************************/
-			virtual void on_recv_callback(transport_base_ptr transp, c_block_ptr b, int32 size, const address &remote_address) = 0;
+			virtual void on_read_callback(transport_base_ptr transp, c_block_ptr b, int32 size, const address &remote) {}
 
 			/*********************************************************************************
 			 * Sent event callback
 			 ********************************************************************************/
-			virtual void on_sent_callback(transport_base_ptr transp) = 0;
+			virtual void on_sent_callback(transport_base_ptr transp) {}
 		};
 		DEFINE_ALL_POINTER_TYPE(transport_io_notifier);
 
@@ -85,12 +85,12 @@ namespace pump {
 			/*********************************************************************************
 			 * Disconnected event callback
 			 ********************************************************************************/
-			virtual void on_disconnected_callback(transport_base_ptr transp) = 0;
+			virtual void on_disconnected_callback(transport_base_ptr transp) {}
 
 			/*********************************************************************************
 			 * Stopped event callback
 			 ********************************************************************************/
-			virtual void on_stopped_callback(transport_base_ptr transp) = 0;
+			virtual void on_stopped_callback(transport_base_ptr transp) {}
 		};
 		DEFINE_ALL_POINTER_TYPE(transport_terminated_notifier);
 

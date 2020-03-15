@@ -38,8 +38,7 @@ namespace pump {
 			 ********************************************************************************/
 			static tls_transport_sptr create_instance()
 			{
-				tls_transport_sptr ins(new tls_transport);
-				return ins;
+				return tls_transport_sptr(new tls_transport);
 			}
 
 			/*********************************************************************************
@@ -78,11 +77,18 @@ namespace pump {
 
 			/*********************************************************************************
 			 * Send
-			 * This is a asynchronous operation. If notify is set to true, transport will 
-			 * notify when the data is sent completely.
+			 ********************************************************************************/
+			virtual bool send(
+				c_block_ptr b, 
+				uint32 size, 
+				bool notify = false
+			);
+
+			/*********************************************************************************
+			 * Send
+			 * After called, the transport got the buffer onwership.
 			 ********************************************************************************/
 			virtual bool send(transport_buffer_ptr b);
-			virtual bool send(c_block_ptr b, uint32 size, bool notify = false);
 
 			/*********************************************************************************
 			 * Get local address
@@ -101,19 +107,19 @@ namespace pump {
 			virtual void on_read_event(net::iocp_task_ptr itask);
 
 			/*********************************************************************************
-			 * Write event callback
+			 * Send event callback
 			 ********************************************************************************/
-			virtual void on_write_event(net::iocp_task_ptr itask);
+			virtual void on_send_event(net::iocp_task_ptr itask);
 
 			/*********************************************************************************
 			 * Tracker event callback
 			 ********************************************************************************/
-			virtual void on_tracker_event(bool on);
+			virtual void on_tracker_event(int32 ev);
 
 			/*********************************************************************************
 			 * Channel event callback
 			 ********************************************************************************/
-			virtual void on_channel_event(uint32 event);
+			virtual void on_channel_event(uint32 ev);
 
 		private:
 			/*********************************************************************************
@@ -185,8 +191,7 @@ namespace pump {
 			// Tls flow
 			flow::flow_tls_sptr flow_;
 
-			// The spin mutex is used for protecting sendlist in multithreading. We use spin
-			// mutex because it's more efficient than other mutex in frequently invoked scenarios.
+			// Spin mutex used for protecting sendlist in multithreading.
 			utils::spin_mutex sendlist_mx_;
 			// When Using tcp transport asynchronous send data, tcp transport will append
 			// data to sendlist at first. And when write event is triggered, tcp transport 

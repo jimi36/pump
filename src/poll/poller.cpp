@@ -22,16 +22,9 @@ namespace pump {
 		poller::poller(bool pop_pending): 
 			started_(false),
 			pop_pending_channel_(pop_pending),
-			ch_event_cnt_(0)
+			has_ch_event_(false),
+			has_tr_event_(false)
 		{
-		}
-
-		poller::~poller()
-		{
-			for (auto ch_event: ch_events_)
-			{
-				delete ch_event;
-			}
 		}
 
 		bool poller::start()
@@ -75,7 +68,8 @@ namespace pump {
 				return false;
 
 			std::lock_guard<std::mutex> locker(tracker_mx_);
-			tracker_modifiers_.push_back(channel_tracker_modifier(tracker, true));
+			tr_events_.push_back(channel_tracker_event(tracker, TRACKER_EVENT_ADD));
+			has_tr_event_ = true;
 
 			return true;
 		}
@@ -83,7 +77,8 @@ namespace pump {
 		void poller::remove_channel_tracker(channel_tracker_sptr &tracker)
 		{
 			std::lock_guard<std::mutex> locker(tracker_mx_);
-			tracker_modifiers_.push_back(channel_tracker_modifier(tracker, false));
+			tr_events_.push_back(channel_tracker_event(tracker, TRACKER_EVENT_DEL));
+			has_tr_event_ = true;
 		}
 
 		void poller::awake_channel_tracker(channel_tracker_sptr &tracker)
@@ -99,64 +94,70 @@ namespace pump {
 			if (!started_.load())
 				return;
 
-			auto ev = new channel_event(c, event);
 			std::lock_guard<std::mutex> locker(ch_event_mx_);
-			ch_events_.push_back(ev);
-			ch_event_cnt_++;
+			ch_events_.push_back(channel_event(c, event));
+			has_ch_event_ = true;
 		}
 
 		void poller::__handle_channel_events()
 		{
-			if (ch_event_cnt_ == 0)
+			if (!has_ch_event_)
 				return;
 
-			std::list<channel_event_ptr> ch_events;
+			std::vector<channel_event> ch_events;
 			{
 				std::lock_guard<std::mutex> locker(ch_event_mx_);
 				ch_events.swap(ch_events_);
-				ch_event_cnt_ = 0;
+				has_ch_event_ = false;
 			}
 
-			for (auto ev: ch_events)
+			for (channel_event &ev: ch_events)
 			{
-				auto ch = ev->ch.lock();
+				auto ch_locker = ev.ch.lock();
+				auto ch = ch_locker.get();
 				if (ch)
-					ch->on_channel_event(ev->event);
-
-				delete ev;
+					ch->handle_channel_event(ev.event);
 			}
 		}
 
 		void poller::__update_channel_trackers()
 		{
-			std::vector<channel_tracker_modifier> tracker_modifiers;
+			if (!has_tr_event_)
+				return;
+
+			std::vector<channel_tracker_event> new_events;
 			{
 				std::lock_guard<std::mutex> locker(tracker_mx_);
-				tracker_modifiers.swap(tracker_modifiers_);
+				new_events.swap(tr_events_);
+				has_tr_event_ = false;
 			}
 
-			for (channel_tracker_modifier &modifier: tracker_modifiers)
+			for (channel_tracker_event &ev: new_events)
 			{
-				auto tracker = modifier.tracker.get();
+				auto tracker = ev.tracker.get();
 				auto ch_locker = tracker->get_channel();
 				auto ch = ch_locker.get();
 
-				if (modifier.on)
+				if (ev.event == TRACKER_EVENT_ADD)
 				{
-					assert(ch);
-					assert(tracker->get_fd() > 0);
+					if (ch == nullptr || tracker->get_fd() <= 0)
+						continue;
+
 					if (__add_channel_tracker(tracker))
-						trackers_[tracker] = modifier.tracker;
+						trackers_[tracker] = ev.tracker;
 				}
-				else 
+				else if (ev.event == TRACKER_EVENT_DEL)
 				{
-					if (tracker->has_fd_ownership())
-						__remove_channel_tracker(tracker);
+					__remove_channel_tracker(tracker);
 					trackers_.erase(tracker);
 				}
 
 				if (ch)
-					ch->handle_tracker_event(modifier.on);
+				{
+					// All tracker opt will trigger tracker event, even if the tracker is not in the 
+					// poller tracker list. But channel of the tracker must be existing.
+					ch->handle_tracker_event(ev.event);
+				}
 			}
 		}
 

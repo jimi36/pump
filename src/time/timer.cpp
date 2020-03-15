@@ -23,7 +23,12 @@ namespace pump {
 		const int32 TIMER_STARTING = 1;
 		const int32 TIMER_PENDING  = 2;
 
-		timer::timer(void_ptr arg, timeout_notifier_sptr &notifier, uint64 interval, bool repeat): 
+		timer::timer(
+			void_ptr arg, 
+			timeout_notifier_sptr &notifier, 
+			uint64 interval, 
+			bool repeat
+		): 
 			arg_(arg),
 			status_(TIMER_STOPPED),
 			repeated_(repeat),

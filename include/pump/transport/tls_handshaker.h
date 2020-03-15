@@ -36,7 +36,12 @@ namespace pump {
 			/*********************************************************************************
 			 * Tls handskake timeout callback
 			 ********************************************************************************/
-			virtual void on_handshaked_timeout(transport_base_ptr handshaker) = 0;
+			virtual void on_handshaked_timeout_callback(transport_base_ptr handshaker) = 0;
+
+			/*********************************************************************************
+			 * Tls handskake stopped callback
+			 ********************************************************************************/
+			virtual void on_stopped_handshaking_callback(transport_base_ptr handshaker) = 0;
 		};
 		DEFINE_ALL_POINTER_TYPE(tls_handshaked_notifier);
 
@@ -70,7 +75,17 @@ namespace pump {
 			/*********************************************************************************
 			 * Start tls handshaker
 			 ********************************************************************************/
-			bool start(service_ptr sv, int64 timeout, tls_handshaked_notifier_sptr &notifier);
+			bool start(
+				service_ptr sv, 
+				int64 timeout, 
+				tls_handshaked_notifier_sptr &notifier
+			);
+			bool start(
+				service_ptr sv, 
+				poll::channel_tracker_sptr &tracker, 
+				int64 timeout, 
+				tls_handshaked_notifier_sptr &notifier
+			);
 
 			/*********************************************************************************
 			 * Stop transport
@@ -99,14 +114,14 @@ namespace pump {
 			virtual void on_read_event(net::iocp_task_ptr itask);
 
 			/*********************************************************************************
-			 * Write event callback
+			 * Send event callback
 			 ********************************************************************************/
-			virtual void on_write_event(net::iocp_task_ptr itask);
+			virtual void on_send_event(net::iocp_task_ptr itask);
 
 			/*********************************************************************************
 			 * Tracker event callback
 			 ********************************************************************************/
-			virtual void on_tracker_event(bool on);
+			virtual void on_tracker_event(int32 ev);
 
 			/*********************************************************************************
 			 * Timer timeout callback
@@ -143,6 +158,7 @@ namespace pump {
 			 * Start tracker
 			 ********************************************************************************/
 			bool __start_tracker();
+			bool __start_tracker(poll::channel_tracker_sptr &tracker);
 
 			/*********************************************************************************
 			 * Stop tracker

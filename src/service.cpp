@@ -117,7 +117,7 @@ namespace pump {
 		poll::poller_ptr poller = iocp_poller_;
 #else
 		poll::poller_ptr poller = nullptr;
-		if (tracker->get_track_mode() == TRACK_MODE_KEPPING)
+		if (tracker->get_track_mode() == TRACK_MODE_LOOP)
 			poller = loop_poller_;
 		else
 			poller = once_poller_;
@@ -132,7 +132,7 @@ namespace pump {
 		poll::poller_ptr poller = iocp_poller_;
 #else
 		poll::poller_ptr poller = nullptr;
-		if (tracker->get_track_mode() == TRACK_MODE_KEPPING)
+		if (tracker->get_track_mode() == TRACK_MODE_LOOP)
 			poller = loop_poller_;
 		else
 			poller = once_poller_;
@@ -149,7 +149,7 @@ namespace pump {
 		poll::poller_ptr poller = iocp_poller_;
 #else
 		poll::poller_ptr poller = nullptr;
-		if (tracker->get_track_mode() == TRACK_MODE_KEPPING)
+		if (tracker->get_track_mode() == TRACK_MODE_LOOP)
 			poller = loop_poller_;
 		else
 			poller = once_poller_;

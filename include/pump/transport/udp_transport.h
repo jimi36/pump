@@ -36,8 +36,7 @@ namespace pump {
 			 ********************************************************************************/
 			static udp_transport_sptr create_instance()
 			{
-				udp_transport_sptr ins(new udp_transport);
-				return ins;
+				return udp_transport_sptr(new udp_transport);
 			}
 
 			/*********************************************************************************
@@ -63,7 +62,11 @@ namespace pump {
 			/*********************************************************************************
 			 * Send
 			 ********************************************************************************/
-			virtual bool send(c_block_ptr b, uint32 size, const address &remote_address);
+			virtual bool send(
+				c_block_ptr b, 
+				uint32 size, 
+				const address &remote_address
+			);
 
 		protected:
 			/*********************************************************************************
@@ -74,7 +77,7 @@ namespace pump {
 			/*********************************************************************************
 			 * Tracker event callback
 			 ********************************************************************************/
-			virtual void on_tracker_event(bool on);
+			virtual void on_tracker_event(int32 ev);
 
 		private:
 			/*********************************************************************************

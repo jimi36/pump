@@ -7,7 +7,8 @@
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
+ * Unless required by applicable
+ law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
@@ -73,84 +74,102 @@ namespace pump {
 
 		void tls_dialer::stop()
 		{
+			// When in started status at the moment, stopping can be done. Then tracker event callback
+			// will be triggered, we can trigger stopped callabck at there.
 			if (__set_status(TRANSPORT_STARTED, TRANSPORT_STOPPING))
 			{
 				__close_flow();
 				__stop_timer();
 				__stop_tracker();
+				return;
 			}
+
+			// If in timeout doing status or handshaking status at the moment, it means that dialer is  
+			// timeout but hasn't triggered event callback yet. So we just set stopping status to 
+			// dialer, and when event callback triggered, we will trigger stopped callabck at there.
+			if (__set_status(TRANSPORT_HANDSHAKING, TRANSPORT_STOPPING) ||
+				__set_status(TRANSPORT_TIMEOUT_DOING, TRANSPORT_STOPPING))
+				return;
 		}
 
-		void tls_dialer::on_write_event(net::iocp_task_ptr itask)
+		void tls_dialer::on_send_event(net::iocp_task_ptr itask)
 		{
-			if (!__set_status(TRANSPORT_STARTED, TRANSPORT_HANDSHAKING))
+			auto flow_locker = flow_;
+			auto flow = flow_locker.get();
+			if (flow == nullptr)
 			{
+				// If flow no existed, it means acceptor has be stopped. So we free iocp task and 
+				// return at here.
 				flow::free_iocp_task(itask);
 				return;
 			}
 
-			utils::scoped_defer defer([&]() {
-				__stop_timer();
-				__close_flow();
-				__stop_tracker();
-			});
-			
-			auto flow_locker = flow_;
-			auto flow = flow_locker.get();
-			PUMP_ASSERT(flow);
+			__stop_timer();
 
-			tls_handshaker_sptr handshaker;
-			bool started_handshaker = false;
 			address local_address, remote_address;
-			int32 code = flow->connect(itask, local_address, remote_address);
-			if (code == 0)
+			if (flow->connect(itask, local_address, remote_address) != 0)
 			{
-				// Tls flow unbind fd
-				int32 fd = flow->unbind_fd();
-
-				handshaker.reset(new tls_handshaker);
-				if (!handshaker->init(fd, true, tls_cert_, local_address, remote_address))
-					PUMP_ASSERT(false);
-
-				tls_handshaked_notifier_sptr notifier = shared_from_this();
-				if (handshaker->start(get_service(), handshake_timeout_, notifier))
+				if (__set_status(TRANSPORT_STARTED, TRANSPORT_ERROR))
 				{
-					// Store handshaker
-					handshaker_ = handshaker;
-					// Tracker free fd ownership
-					tracker_->set_fd_ownership(false);
-					return;
+					__close_flow();
+					__stop_tracker();
 				}
+				return;
 			}
-			
-			__set_status(TRANSPORT_HANDSHAKING, TRANSPORT_ERROR);
-		}
 
-		void tls_dialer::on_tracker_event(bool on)
-		{
-			if (on)
+			if (!__set_status(TRANSPORT_STARTED, TRANSPORT_HANDSHAKING))
 				return;
 
-			tracker_cnt_.fetch_sub(1);
+			__close_flow();
+
+			// If handshaker is started error, handshaked callback will be triggered. So we do nothing
+			// at here when started error. But if dialer stopped befere here, we shuold stop handshaking.
+			handshaker_.reset(new tls_handshaker);
+			if (!handshaker_->init(flow->unbind_fd(), true, tls_cert_, local_address, remote_address))
+				PUMP_ASSERT(false);
+			poll::channel_tracker_sptr tracker(std::move(tracker_));
+			tls_handshaked_notifier_sptr notifier = shared_from_this();
+			if (handshaker_->start(get_service(), tracker, handshake_timeout_, notifier))
+			{
+				if (__is_status(TRANSPORT_STOPPING))
+					handshaker_->stop();
+			}
+		}
+
+		void tls_dialer::on_tracker_event(int32 ev)
+		{
+			if (ev == TRACKER_EVENT_ADD)
+				return;
+
+			if (ev == TRACKER_EVENT_DEL)
+				tracker_cnt_ -= 1;
 
 			if (tracker_cnt_ == 0)
 			{
 				auto notifier_locker = __get_notifier<dialed_notifier>();
 				auto notifier = notifier_locker.get();
-				PUMP_ASSERT(notifier);
 				
 				if (__is_status(TRANSPORT_ERROR))
-					notifier->on_dialed_callback(get_context(), tls_transport_sptr(), false);
-				else if (__is_status(TRANSPORT_TIMEOUT))
-					notifier->on_dialed_timeout_callback(get_context());
+				{
+					if (notifier)
+						notifier->on_dialed_callback(get_context(), tls_transport_sptr(), false);
+				}
+				else if (__set_status(TRANSPORT_TIMEOUT_DOING, TRANSPORT_TIMEOUT_DONE))
+				{
+					if (notifier)
+						notifier->on_dialed_timeout_callback(get_context());
+				}
 				else if (__set_status(TRANSPORT_STOPPING, TRANSPORT_STOPPED))
-					notifier->on_stopped_dialing_callback(get_context());
+				{
+					if (notifier)
+						notifier->on_stopped_dialing_callback(get_context());
+				}
 			}
 		}
 
 		void tls_dialer::on_timer_timeout(void_ptr arg)
 		{
-			if (__set_status(TRANSPORT_STARTING, TRANSPORT_TIMEOUT))
+			if (__set_status(TRANSPORT_STARTED, TRANSPORT_TIMEOUT_DOING))
 			{
 				__close_flow();
 				__stop_tracker();
@@ -159,34 +178,57 @@ namespace pump {
 
 		void tls_dialer::on_handshaked_callback(transport_base_ptr handshaker, bool succ)
 		{
-			if (!__set_status(TRANSPORT_HANDSHAKING, TRANSPORT_FINISH))
-				return;
-
-			handshaker_.reset();
-
-			auto the_handshaker = (tls_handshaker_ptr)handshaker;
-			auto flow = the_handshaker->unlock_flow();
-			auto transp = tls_transport::create_instance();
-			if (!transp->init(flow, the_handshaker->get_local_address(), the_handshaker->get_remote_address()))
-				PUMP_ASSERT(false);
-
 			auto notifier_locker = __get_notifier<dialed_notifier>();
 			auto notifier = notifier_locker.get();
-			PUMP_ASSERT_EXPR(notifier, 
-				notifier->on_dialed_callback(get_context(), transp, true));
+
+			if (__set_status(TRANSPORT_STOPPING, TRANSPORT_STOPPED))
+			{
+				if (notifier)
+					notifier->on_stopped_dialing_callback(get_context());
+			}
+			else if (__set_status(TRANSPORT_HANDSHAKING, TRANSPORT_FINISH))
+			{
+				auto the_handshaker = (tls_handshaker_ptr)handshaker;
+				auto flow = the_handshaker->unlock_flow();
+				auto transp = tls_transport::create_instance();
+				if (!transp->init(flow, the_handshaker->get_local_address(), the_handshaker->get_remote_address()))
+					PUMP_ASSERT(false);
+
+				if (notifier)
+					notifier->on_dialed_callback(get_context(), transp, succ);
+			}
+
+			handshaker_.reset();
 		}
 
-		void tls_dialer::on_handshaked_timeout(transport_base_ptr handshaker)
+		void tls_dialer::on_handshaked_timeout_callback(transport_base_ptr handshaker)
 		{
-			if (!__set_status(TRANSPORT_HANDSHAKING, TRANSPORT_TIMEOUT))
-				return;
-
-			handshaker_.reset();
-
 			auto notifier_locker = __get_notifier<dialed_notifier>();
 			auto notifier = notifier_locker.get();
-			PUMP_ASSERT_EXPR(notifier, 
-				notifier->on_dialed_timeout_callback(get_context()));
+
+			if (__set_status(TRANSPORT_STOPPING, TRANSPORT_STOPPED))
+			{
+				if (notifier)
+					notifier->on_stopped_dialing_callback(get_context());
+			}
+			else if (__set_status(TRANSPORT_HANDSHAKING, TRANSPORT_TIMEOUT_DONE))
+			{
+				if (notifier)
+					notifier->on_dialed_timeout_callback(get_context());
+			}
+
+			handshaker_.reset();
+		}
+
+		void tls_dialer::on_stopped_handshaking_callback(transport_base_ptr handshaker)
+		{
+			if (__set_status(TRANSPORT_STOPPING, TRANSPORT_STOPPED))
+			{
+				auto notifier_locker = __get_notifier<dialed_notifier>();
+				auto notifier = notifier_locker.get();
+				if (notifier)
+					notifier->on_stopped_dialing_callback(get_context());
+			}
 		}
 
 		bool tls_dialer::__open_flow(const address &bind_address)

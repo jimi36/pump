@@ -90,7 +90,7 @@ namespace pump {
 			auto itask = net::new_iocp_task();
 			net::set_iocp_task_type(itask, IOCP_TASK_TRACKER);
 			net::set_iocp_task_notifier(itask, tracker->get_channel());
-			PostQueuedCompletionStatus(iocp_, 1, 1, (LPOVERLAPPED)itask);
+			PostQueuedCompletionStatus(iocp_, 1, TRACKER_EVENT_ADD, (LPOVERLAPPED)itask);
 			return true;
 #else
 			return false;
@@ -103,7 +103,7 @@ namespace pump {
 			auto itask = net::new_iocp_task();
 			net::set_iocp_task_type(itask, IOCP_TASK_TRACKER);
 			net::set_iocp_task_notifier(itask, tracker->get_channel());
-			PostQueuedCompletionStatus(iocp_, 1, 0, (LPOVERLAPPED)itask);
+			PostQueuedCompletionStatus(iocp_, 1, TRACKER_EVENT_DEL, (LPOVERLAPPED)itask);
 #endif
 		}
 
@@ -134,17 +134,17 @@ namespace pump {
 					}
 
 					int32 task_type = net::get_iocp_task_type(itask);
-					if (task_type == IOCP_TASK_EVNET)
+					if (task_type == IOCP_TASK_CHANNEL)
 					{
-						ch->on_channel_event(uint32(completion_key));
+						ch->handle_channel_event(uint32(completion_key));
 						net::unlink_iocp_task(itask);
 						continue;
 					}
 					else if (task_type == IOCP_TASK_TRACKER)
 					{
-						bool on = (bool)completion_key;
-						tracker_cnt += on ? 1 : -1;
-						ch->handle_tracker_event(on);
+						int32 ev = (int32)completion_key;
+						tracker_cnt += (ev == TRACKER_EVENT_ADD) ? 1 : -1;
+						ch->handle_tracker_event(ev);
 						net::unlink_iocp_task(itask);
 						continue;
 					}
@@ -201,14 +201,14 @@ namespace pump {
 #endif
 		}
 
-		void iocp_poller::push_channel_event(channel_sptr &c, uint32 event)
+		void iocp_poller::push_channel_event(channel_sptr &c, uint32 ev)
 		{
 #ifdef WIN32
 			auto itask = net::new_iocp_task();
 			net::set_iocp_task_notifier(itask, c);
-			net::set_iocp_task_type(itask, IOCP_TASK_EVNET);
+			net::set_iocp_task_type(itask, IOCP_TASK_CHANNEL);
 
-			PostQueuedCompletionStatus(iocp_, 1, event, (LPOVERLAPPED)itask);
+			PostQueuedCompletionStatus(iocp_, 1, ev, (LPOVERLAPPED)itask);
 #endif
 		}
 
