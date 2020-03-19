@@ -6,8 +6,8 @@
 
 static service *sv;
 
-static int send_loop = 512;
-static int send_pocket_size = 1024 * 4;
+static int send_loop = 1024;
+static int send_pocket_size = 1024;
 
 class my_tls_dialer :
 	public dialed_notifier,
@@ -76,7 +76,7 @@ public:
 	/*********************************************************************************
 	 * Tls read event callback
 	 ********************************************************************************/
-	virtual void on_recv_callback(transport_base_ptr transp, c_block_ptr b, int32 size)
+	virtual void on_read_callback(transport_base_ptr transp, c_block_ptr b, int32 size)
 	{
 		read_size_ += size;
 		read_pocket_size_ += size;
@@ -95,21 +95,6 @@ public:
 			read_pocket_size_ -= send_pocket_size;
 			send_data();
 		}
-	}
-
-	/*********************************************************************************
-	 * Read event callback for udp
-	 ********************************************************************************/
-	virtual void on_recv_callback(transport_base_ptr transp, c_block_ptr b, int32 size, const address &remote_address)
-	{
-
-	}
-
-	/*********************************************************************************
-	 * Tls data writed completed event callback
-	 ********************************************************************************/
-	virtual void on_sent_callback(transport_base_ptr transp)
-	{
 	}
 
 	/*********************************************************************************
@@ -157,7 +142,7 @@ void start_tls_client(const std::string &ip, uint16 port)
 
 	gnutls_certificate_credentials_t xcred;
 	gnutls_certificate_allocate_credentials(&xcred);
-	//gnutls_certificate_set_x509_system_trust(xcred);
+	gnutls_certificate_set_x509_system_trust(xcred);
 
 	sv = new service;
 	sv->start();
@@ -168,7 +153,7 @@ void start_tls_client(const std::string &ip, uint16 port)
 
 	address bind_address("0.0.0.0", 0);
 	address remote_address(ip, port);
-	librabbit::dialed_notifier_sptr notifier = my_dialed_notifier;
+	pump::dialed_notifier_sptr notifier = my_dialed_notifier;
 	if (!dialer->start(xcred,sv, 0, 0, bind_address, remote_address, notifier))
 	{
 		printf("tls dialer start error\n");

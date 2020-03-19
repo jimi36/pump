@@ -18,7 +18,7 @@ struct transport_context
 	}
 
 	tcp_transport_sptr transport;
-	int32 all_read_size;
+	uint64 all_read_size;
 	int32 read_size;
 	int32 read_pocket_size;
 	int32 last_report_time;
@@ -44,6 +44,8 @@ public:
 	virtual void on_accepted_callback(void_ptr ctx, transport_base_sptr transp)
 	{
 		tcp_transport_sptr transport = static_pointer_cast<tcp_transport>(transp);
+		auto tctx = new transport_context(transport);
+		transport->set_context(tctx);
 
 		transport_io_notifier_sptr io_notifier = shared_from_this();
 		transport_terminated_notifier_sptr terminated_notifier = shared_from_this();
@@ -51,7 +53,7 @@ public:
 		{
 			std::lock_guard<std::mutex> lock(mx_);
 			printf("tcp transport server accepted %d\n", transp->get_fd());
-			transports_[transp.get()] = new transport_context(transport);
+			transports_[transp.get()] = tctx;
 		}
 
 		for (int i = 0; i < send_loop; i++)
@@ -65,55 +67,32 @@ public:
 	 ********************************************************************************/
 	virtual void on_stopped_accepting_callback(void_ptr ctx)
 	{
-
 	}
 
 	/*********************************************************************************
 	 * Tcp read event callback
 	 ********************************************************************************/
-	virtual void on_recv_callback(transport_base_ptr transp, c_block_ptr b, int32 size)
+	virtual void on_read_callback(transport_base_ptr transp, c_block_ptr b, int32 size)
 	{
-		std::lock_guard<std::mutex> lock(mx_);
-		auto it = transports_.find(transp);
-		if (it != transports_.end())
+		transport_context* ctx = (transport_context*)transp->get_context();
+
+		ctx->all_read_size += size;
+		ctx->read_pocket_size += size;
+		ctx->read_size += size;
+
+		if (ctx->last_report_time < ::time(0))
 		{
-			it->second->all_read_size += size;
-			it->second->read_pocket_size += size;
-			it->second->read_size += size;
+			printf("transport[%d] read speed is %fMB/s\n", ctx->idx, (float)ctx->read_size / 1024 / 1024);
 
-			if (it->second->last_report_time < ::time(0))
-			{
-				printf("transport[%d] read speed is %fMB/s\n", it->second->idx, (float)it->second->read_size / 1024 / 1024);
-
-				it->second->read_size = 0;
-				it->second->last_report_time = ::time(0);
-			}
-
-			while (it->second->read_pocket_size >= send_pocket_size)
-			{
-				it->second->read_pocket_size -= send_pocket_size;
-				send_data(it->second->transport.get());
-			}
+			ctx->read_size = 0;
+			ctx->last_report_time = ::time(0);
 		}
-		else
+
+		while (ctx->read_pocket_size >= send_pocket_size)
 		{
-			assert(0);
+			ctx->read_pocket_size -= send_pocket_size;
+			send_data(transp);
 		}
-	}
-
-	/*********************************************************************************
-	 * Read event callback for udp
-	 ********************************************************************************/
-	virtual void on_recv_callback(transport_base_ptr transp, c_block_ptr b, int32 size, const address &remote_address)
-	{
-
-	}
-
-	/*********************************************************************************
-	 * Tcp data writed completed event callback
-	 ********************************************************************************/
-	virtual void on_sent_callback(transport_base_ptr transp)
-	{
 	}
 
 	/*********************************************************************************
@@ -125,7 +104,8 @@ public:
 		auto it = transports_.find(transp);
 		if (it != transports_.end())
 		{
-			printf("tcp transport disconnected all read pocket %d\n", it->second->all_read_size / 4096);
+			printf("tcp transport disconnected all read size %fMB\n", (double)it->second->all_read_size/1024/1024);
+			printf("tcp transport disconnected all read pocket %lld\n", it->second->all_read_size / 4096);
 			delete it->second;
 			transports_.erase(it);
 		}
@@ -145,7 +125,7 @@ public:
 		}
 	}
 
-	void send_data(tcp_transport_ptr transport)
+	void send_data(transport_base_ptr transport)
 	{
 		transport->send(send_data_.data(), send_data_.size());
 	}

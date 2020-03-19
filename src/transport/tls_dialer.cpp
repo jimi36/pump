@@ -188,11 +188,15 @@ namespace pump {
 			}
 			else if (__set_status(TRANSPORT_HANDSHAKING, TRANSPORT_FINISH))
 			{
-				auto the_handshaker = (tls_handshaker_ptr)handshaker;
-				auto flow = the_handshaker->unlock_flow();
-				auto transp = tls_transport::create_instance();
-				if (!transp->init(flow, the_handshaker->get_local_address(), the_handshaker->get_remote_address()))
-					PUMP_ASSERT(false);
+				tls_transport_sptr transp;
+				if (succ)
+				{
+					auto the_handshaker = (tls_handshaker_ptr)handshaker;
+					auto flow = the_handshaker->unlock_flow();
+					transp = tls_transport::create_instance();
+					if (!transp->init(flow, the_handshaker->get_local_address(), the_handshaker->get_remote_address()))
+						PUMP_ASSERT(false);
+				}
 
 				if (notifier)
 					notifier->on_dialed_callback(get_context(), transp, succ);

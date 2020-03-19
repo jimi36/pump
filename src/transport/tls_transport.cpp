@@ -148,8 +148,7 @@ namespace pump {
 
 		bool tls_transport::send(c_block_ptr b, uint32 size, bool notify)
 		{
-			if (b == nullptr)
-				return false;
+			PUMP_ASSERT(b);
 
 			if (!__is_status(TRANSPORT_STARTED))
 				return false;
@@ -195,16 +194,23 @@ namespace pump {
 
 			switch (flow->read_from_net(itask))
 			{
-			case FLOW_ERR_AGAIN:
+			case FLOW_ERR_NO:
 			{
-				int32 size = 0;
-				c_block_ptr b = flow->read_from_ssl(&size);
-				if (size > 0)
+				auto notifier_locker = __get_notifier<transport_io_notifier>();
+				auto notifier = notifier_locker.get();
+				while (true)
 				{
-					auto notifier_locker = __get_notifier<transport_io_notifier>();
-					auto notifier = notifier_locker.get();
-					if (notifier)
-						notifier->on_read_callback(this, b, size);
+					int32 size = 0;
+					c_block_ptr b = flow->read_from_ssl(&size);
+					if (size > 0)
+					{
+						if (notifier)
+							notifier->on_read_callback(this, b, size);
+					}
+					else
+					{
+						break;
+					}
 				}
 				break;
 			}
@@ -213,7 +219,7 @@ namespace pump {
 				return;
 			}
 
-			if (flow->want_to_read() != FLOW_ERR_NO && is_started())
+			if (flow->want_to_read() != FLOW_ERR_NO && __is_status(TRANSPORT_STARTED))
 				__try_doing_disconnected_process();
 		}
 
@@ -446,11 +452,12 @@ namespace pump {
 				return FLOW_ERR_NO_DATA;
 			}
 
-			while (buffer->data_size() > 0)
-			{
+			//if (buffer->data_size() > 0)
+			//{
 				if (flow->send_to_ssl(buffer) <= 0)
 					PUMP_ASSERT(false);
-			}
+			//}
+			PUMP_ASSERT(buffer->data_size() == 0);
 
 			int32 ret = flow->want_to_send();
 			if (ret == FLOW_ERR_NO_DATA)

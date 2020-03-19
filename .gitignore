@@ -3,6 +3,13 @@
 *.a
 *.so
 
-# Build path
+# Include path
+include/*
+!include/pump
+
+# Library path
 lib/*
 !lib/README.md
+
+# Build path
+build

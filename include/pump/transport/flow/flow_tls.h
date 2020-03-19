@@ -117,10 +117,7 @@ namespace pump {
 				/*********************************************************************************
 				 * Check there are data to send or not
 				 ********************************************************************************/
-				bool has_data_to_send() const
-				{ 
-					return net_send_buffer_.data_size() > 0 || !ssl_send_cache_.empty();
-				}
+				bool has_data_to_send() const { return net_send_buffer_.data_size() > 0; }
 
 				/*********************************************************************************
 				 * Check handshaked status
@@ -136,7 +133,8 @@ namespace pump {
 				/*********************************************************************************
 				 * Send to net send cache
 				 ********************************************************************************/
-				void __send_to_net_send_cache(c_block_ptr b, uint32 size);
+				void __send_to_net_send_cache(c_block_ptr tls_buffer, uint32 size)
+				{ net_send_buffer_.append(tls_buffer, size); }
 
 				/*********************************************************************************
 				 * Get ssl session
@@ -146,22 +144,23 @@ namespace pump {
 			private:
 				// Handshaked status
 				bool is_handshaked_;
+
 				// GunTLS session 
 				tls_session_ptr session_;
+
 				// Read iocp task
 				net::iocp_task_ptr read_task_;
-				// Net read cache
-				std::string net_read_cache_;
 				// Net read buffer
+				uint32 net_read_data_size_;
+				uint32 net_read_data_pos_;
 				std::string net_read_buffer_;
 				// TLS read buffer
 				std::string ssl_read_buffer_;
+				
 				// Send iocp task
 				net::iocp_task_ptr send_task_;
 				// Net send buffer
 				buffer net_send_buffer_;
-				// TLS send cache
-				std::string ssl_send_cache_;
 			};
 			DEFINE_ALL_POINTER_TYPE(flow_tls);
 

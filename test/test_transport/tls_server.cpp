@@ -46,6 +46,8 @@ public:
 	virtual void on_accepted_callback(void_ptr ctx, transport_base_sptr transp)
 	{
 		tls_transport_sptr transport = static_pointer_cast<tls_transport>(transp);
+		auto tctx = new transport_context(transport);
+		transport->set_context(tctx);
 
 		transport_io_notifier_sptr io_notifier = shared_from_this();
 		transport_terminated_notifier_sptr terminated_notifier = shared_from_this();
@@ -53,7 +55,7 @@ public:
 		{
 			std::lock_guard<std::mutex> lock(mx_);
 			printf("server tls transport accepted\n");
-			transports_[transp.get()] = new transport_context(transport);
+			transports_[transp.get()] = tctx;
 		}
 
 		for (int i = 0; i < send_loop; i++)
@@ -73,44 +75,26 @@ public:
 	/*********************************************************************************
 	 * Tcp read event callback
 	 ********************************************************************************/
-	virtual void on_recv_callback(transport_base_ptr transp, c_block_ptr b, int32 size)
+	virtual void on_read_callback(transport_base_ptr transp, c_block_ptr b, int32 size)
 	{
-		std::lock_guard<std::mutex> lock(mx_);
-		auto it = transports_.find(transp);
-		if (it != transports_.end())
+		transport_context* ctx = (transport_context*)transp->get_context();
+
+		ctx->read_pocket_size += size;
+		ctx->read_size += size;
+
+		if (ctx->last_report_time < ::time(0))
 		{
-			it->second->read_pocket_size += size;
-			it->second->read_size += size;
-
-			if (it->second->last_report_time < ::time(0))
-			{
-				printf("transport %d read speed is %fMB/s\n", it->second->idx, (float)it->second->read_size / 1024 / 1024);
-				it->second->read_size = it->second->read_size % send_pocket_size;
-
-				it->second->last_report_time = ::time(0);
-			}
-
-			while (it->second->read_pocket_size >= send_pocket_size)
-			{
-				it->second->read_pocket_size -= send_pocket_size;
-				send_data(it->second->transport.get());
-			}
+			printf("transport %d read speed is %fMB/s\n", ctx->idx, (float)ctx->read_size / 1024 / 1024);
+			ctx->read_size = ctx->read_size % send_pocket_size;
+			
+			ctx->last_report_time = ::time(0);
 		}
-	}
 
-	/*********************************************************************************
-	 * Read event callback for udp
-	 ********************************************************************************/
-	virtual void on_recv_callback(transport_base_ptr transp, c_block_ptr b, int32 size, const address &remote_address)
-	{
-
-	}
-
-	/*********************************************************************************
-	 * Tls data writed completed event callback
-	 ********************************************************************************/
-	virtual void on_sent_callback(transport_base_ptr transp)
-	{
+		while (ctx->read_pocket_size >= send_pocket_size)
+		{
+			ctx->read_pocket_size -= send_pocket_size;
+			send_data(transp);
+		}
 	}
 
 	/*********************************************************************************
@@ -142,7 +126,7 @@ public:
 		}
 	}
 
-	void send_data(tls_transport_ptr transport)
+	void send_data(transport_base_ptr transport)
 	{
 		if (!transport->send(send_data_.data(), send_data_.size()))
 			printf("send data error\n");
@@ -172,7 +156,11 @@ void start_tls_server(const std::string &ip, uint16 port, const std::string &cer
 		return;
 	ret = gnutls_certificate_set_x509_key_file(xcred, cert_file.c_str(), key_file.c_str(), GNUTLS_X509_FMT_PEM);
 	if (ret != 0)
+	{
+		auto str = gnutls_strerror(ret);
+		printf("%s\n", str);
 		return;
+	}
 	//gnutls_certificate_set_ocsp_status_request_file(xcred, OCSP_STATUS_FILE, 0);
 
 	sv = new service;

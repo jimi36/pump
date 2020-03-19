@@ -8,25 +8,9 @@ class my_udp_client:
 {
 public:
 	/*********************************************************************************
-	 * Tcp read event callback
-	 ********************************************************************************/
-	virtual void on_recv_callback(transport_base_ptr transp, c_block_ptr b, int32 size)
-	{
-
-	}
-
-	/*********************************************************************************
 	 * Read event callback for udp
 	 ********************************************************************************/
-	virtual void on_recv_callback(transport_base_ptr transp, c_block_ptr b, int32 size, const address &remote_address)
-	{
-
-	}
-
-	/*********************************************************************************
-	 * Sent event callback
-	 ********************************************************************************/
-	virtual void on_sent_callback(transport_base_ptr transp)
+	virtual void on_read_callback(transport_base_ptr transp, c_block_ptr b, int32 size, const address &remote_address)
 	{
 
 	}
@@ -36,7 +20,6 @@ public:
 	 ********************************************************************************/
 	virtual void on_stopped_callback(transport_base_ptr transp)
 	{
-
 	}
 
 	/*********************************************************************************
@@ -44,7 +27,6 @@ public:
 	 ********************************************************************************/
 	virtual void on_disconnected_callback(transport_base_ptr transp)
 	{
-
 	}
 };
 

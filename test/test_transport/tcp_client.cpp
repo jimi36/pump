@@ -2,8 +2,8 @@
 
 static service *sv;
 
-static int send_loop = 512;
-static int send_pocket_size = 1024*4;
+static int send_loop = 1024;
+static int send_pocket_size = 1024;
 
 class my_tcp_dialer :
 	public dialed_notifier,
@@ -46,6 +46,8 @@ public:
 		{
 			send_data();
 		}
+
+		//transport_->stop();
 	}
 
 	/*********************************************************************************
@@ -75,7 +77,7 @@ public:
 	/*********************************************************************************
 	 * Tcp read event callback
 	 ********************************************************************************/
-	virtual void on_recv_callback(transport_base_ptr transp, c_block_ptr b, int32 size)
+	virtual void on_read_callback(transport_base_ptr transp, c_block_ptr b, int32 size)
 	{
 		read_size_ += size;
 		read_pocket_size_ += size;
@@ -101,37 +103,26 @@ public:
 	}
 
 	/*********************************************************************************
-	 * Read event callback for udp
-	 ********************************************************************************/
-	virtual void on_recv_callback(transport_base_ptr transp, c_block_ptr b, int32 size, const address &remote_address)
-	{
-
-	}
-
-	/*********************************************************************************
-	 * Tcp data writed completed event callback
-	 ********************************************************************************/
-	virtual void on_sent_callback(transport_base_ptr transp)
-	{
-	}
-
-	/*********************************************************************************
 	 * Tcp disconnected event callback
 	 ********************************************************************************/
+	/*
 	virtual void on_disconnected_callback(transport_base_ptr transp)
 	{
 		printf("client tcp transport disconnected read msg %d\n", all_read_size_ / 4096);
 		transport_.reset();
 	}
+	*/
 
 	/*********************************************************************************
 	 * Tcp stopped event callback
 	 ********************************************************************************/
+	/*
 	virtual void on_stopped_callback(transport_base_ptr transp)
 	{
 		printf("client tcp transport stopped\n");
 		transport_.reset();
 	}
+	*/
 
 	void set_dialer(tcp_dialer_sptr d)
 	{
@@ -176,12 +167,6 @@ void start_tcp_client(const std::string &ip, uint16 port)
 	if (!dialer->start(sv, 0, bind_address, connect_address, notifier))
 	{
 		printf("tcp dialer start error\n");
-	}
-
-	while (getchar())
-	{
-		my_dialed_notifier->send_data();
-		printf("c send\n");
 	}
 
 	sv->wait_stop();

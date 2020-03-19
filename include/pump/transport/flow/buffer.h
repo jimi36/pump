@@ -103,8 +103,7 @@ namespace pump {
 				 ********************************************************************************/
 				uint32 data_size() const
 				{
-					uint32 size = (uint32)raw_.size();
-					return size - rpos_;
+					return (uint32)raw_.size() - rpos_;
 				}
 
 			private:

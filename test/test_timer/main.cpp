@@ -28,6 +28,7 @@ public:
 	virtual void on_timer_timeout(void *arg)
 	{
 		printf("timeout event pending %d\n", time(0));
+		sv_->stop();
 	}
 
 private:
@@ -42,8 +43,6 @@ int main(int argc, const char **argv)
 
 	std::shared_ptr<Timeout> t1(new Timeout(sv));
 	t1->start();
-	std::shared_ptr<Timeout> t2(new Timeout(sv));
-	t2->start();
 
 	sv->wait_stop();
 
