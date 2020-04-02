@@ -31,6 +31,14 @@
 #	define LIB_FORCEINLINE __inline__ __attribute__((always_inline))
 #endif
 
+#if '\x01\x02' == 0x0102
+#	define BIG_ENDIAN
+#elif '\x01\x02' == 0x0201
+#	define LITTLE_ENDIAN
+#else
+#	error "WTF? What endian do I meet?"
+#endif
+
 #if 1
 #	define PUMP_ASSERT(x) assert(x)
 #else

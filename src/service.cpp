@@ -97,16 +97,16 @@ namespace pump {
 			once_poller_->stop();
 	}
 
-	void service::wait_stop()
+	void service::wait_stopped()
 	{
 		if (iocp_poller_)
-			iocp_poller_->wait_stop();
+			iocp_poller_->wait_stopped();
 		if (loop_poller_)
-			loop_poller_->wait_stop();
+			loop_poller_->wait_stopped();
 		if (once_poller_)
-			once_poller_->wait_stop();
+			once_poller_->wait_stopped();
 		if (tqueue_)
-			tqueue_->wait_stop();
+			tqueue_->wait_stopped();
 		if (task_worker_)
 			task_worker_->join();
 	}
@@ -117,7 +117,7 @@ namespace pump {
 		poll::poller_ptr poller = iocp_poller_;
 #else
 		poll::poller_ptr poller = nullptr;
-		if (tracker->get_track_mode() == TRACK_MODE_LOOP)
+		if (tracker->get_mode() == TRACK_MODE_LOOP)
 			poller = loop_poller_;
 		else
 			poller = once_poller_;
@@ -126,36 +126,53 @@ namespace pump {
 		return poller->add_channel_tracker(tracker);
 	}
 
-	bool service::awake_channel_tracker(poll::channel_tracker_sptr &tracker)
-	{
-#if defined(WIN32) && defined(USE_IOCP)
-		poll::poller_ptr poller = iocp_poller_;
-#else
-		poll::poller_ptr poller = nullptr;
-		if (tracker->get_track_mode() == TRACK_MODE_LOOP)
-			poller = loop_poller_;
-		else
-			poller = once_poller_;
-#endif
-		PUMP_ASSERT(poller);
-		poller->awake_channel_tracker(tracker);
-
-		return true;
-	}
-
 	bool service::remove_channel_tracker(poll::channel_tracker_sptr &tracker)
 	{
 #if defined(WIN32) && defined(USE_IOCP)
 		poll::poller_ptr poller = iocp_poller_;
 #else
 		poll::poller_ptr poller = nullptr;
-		if (tracker->get_track_mode() == TRACK_MODE_LOOP)
+		if (tracker->get_mode() == TRACK_MODE_LOOP)
 			poller = loop_poller_;
 		else
 			poller = once_poller_;
 #endif
 		PUMP_ASSERT(poller);
 		poller->remove_channel_tracker(tracker);
+
+		return true;
+	}
+
+	bool service::pause_channel_tracker(poll::channel_tracker_ptr tracker)
+	{
+#if defined(WIN32) && defined(USE_IOCP)
+		poll::poller_ptr poller = iocp_poller_;
+#else
+		poll::poller_ptr poller = nullptr;
+		if (tracker->get_mode() == TRACK_MODE_LOOP)
+			poller = loop_poller_;
+		else
+			poller = once_poller_;
+#endif
+		PUMP_ASSERT(poller);
+		poller->pause_channel_tracker(tracker);
+
+		return true;
+	}
+
+	bool service::awake_channel_tracker(poll::channel_tracker_ptr tracker)
+	{
+#if defined(WIN32) && defined(USE_IOCP)
+		poll::poller_ptr poller = iocp_poller_;
+#else
+		poll::poller_ptr poller = nullptr;
+		if (tracker->get_mode() == TRACK_MODE_LOOP)
+			poller = loop_poller_;
+		else
+			poller = once_poller_;
+#endif
+		PUMP_ASSERT(poller);
+		poller->awake_channel_tracker(tracker);
 
 		return true;
 	}
@@ -198,15 +215,6 @@ namespace pump {
 	{
 		if (tr)
 			tr->stop();
-	}
-
-	net::iocp_handler service::get_iocp_handler() const
-	{
-		if (iocp_poller_ == nullptr)
-			return nullptr;
-
-		poll::iocp_poller_ptr poller = (poll::iocp_poller_ptr)iocp_poller_;
-		return poller->get_iocp_handler();
 	}
 
 	void service::__post_pending_timer(time::timer_wptr &tr)

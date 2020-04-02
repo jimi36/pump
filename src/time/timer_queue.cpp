@@ -50,7 +50,7 @@ namespace pump {
 			started_.store(false);
 		}
 
-		void timer_queue::wait_stop()
+		void timer_queue::wait_stopped()
 		{
 			if (observer_)
 				observer_->join();

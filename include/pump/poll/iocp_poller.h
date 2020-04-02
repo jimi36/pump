@@ -49,7 +49,7 @@ namespace pump {
 			/*********************************************************************************
 			 * Wait stopping
 			 ********************************************************************************/
-			virtual void wait_stop();
+			virtual void wait_stopped();
 
 			/*********************************************************************************
 			 * Add channel tracker
@@ -62,19 +62,19 @@ namespace pump {
 			virtual void remove_channel_tracker(channel_tracker_sptr &tracker);
 
 			/*********************************************************************************
+			 * Pause channel tracker
+			 ********************************************************************************/
+			virtual void pause_channel_tracker(channel_tracker_ptr tracker);
+
+			/*********************************************************************************
 			 * Awake channel tracker
 			 ********************************************************************************/
-			virtual void awake_channel_tracker(channel_tracker_sptr &tracker) {}
+			virtual void awake_channel_tracker(channel_tracker_ptr tracker) {}
 
 			/*********************************************************************************
 			 * Push channel event
 			 ********************************************************************************/
 			virtual void push_channel_event(channel_sptr &c, uint32 ev);
-
-			/*********************************************************************************
-			 * Get iocp handler
-			 ********************************************************************************/
-			net::iocp_handler get_iocp_handler() const { return iocp_; }
 
 		protected:
 			/*********************************************************************************

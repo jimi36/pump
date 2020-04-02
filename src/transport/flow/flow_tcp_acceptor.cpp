@@ -22,7 +22,6 @@ namespace pump {
 
 			flow_tcp_acceptor::flow_tcp_acceptor():
 				is_ipv6_(false),
-				iocp_(nullptr),
 				accept_task_(nullptr)
 			{
 			}
@@ -35,7 +34,7 @@ namespace pump {
 #endif
 			}
 
-			int32 flow_tcp_acceptor::init(poll::channel_sptr &ch, net::iocp_handler iocp, const address &listen_address)
+			int32 flow_tcp_acceptor::init(poll::channel_sptr &ch, const address &listen_address)
 			{
 				PUMP_ASSERT_EXPR(ch, ch_ = ch);
 
@@ -43,9 +42,7 @@ namespace pump {
 				int32 domain = is_ipv6_ ? AF_INET6 : AF_INET;
 
 #if defined(WIN32) && defined(USE_IOCP)
-				PUMP_ASSERT_EXPR(iocp, iocp_ = iocp);
-
-				fd_ = net::create_iocp_socket(domain, SOCK_STREAM, iocp);
+				fd_ = net::create_iocp_socket(domain, SOCK_STREAM, net::get_iocp_handler());
 				if (fd_ == -1)
 					return FLOW_ERR_ABORT;
 
@@ -78,7 +75,7 @@ namespace pump {
 			{
 #if defined(WIN32) && defined (USE_IOCP)
 				int32 domain = is_ipv6_ ? AF_INET6 : AF_INET;
-				int32 client = net::create_iocp_socket(domain, SOCK_STREAM, iocp_);
+				int32 client = net::create_iocp_socket(domain, SOCK_STREAM, net::get_iocp_handler());
 				if (client == -1)
 					return FLOW_ERR_ABORT;
 

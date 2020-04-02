@@ -42,7 +42,7 @@ namespace pump {
 				 *     FLOW_ERR_NO    => success
 				 *     FLOW_ERR_ABORT => error
 				 ********************************************************************************/
-				int32 init(poll::channel_sptr &ch, net::iocp_handler iocp, const address &bind_address);
+				int32 init(poll::channel_sptr &ch, const address &bind_address);
 
 				/*********************************************************************************
 				 * Want to connect

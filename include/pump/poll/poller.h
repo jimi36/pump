@@ -72,9 +72,9 @@ namespace pump {
 			virtual void stop();
 
 			/*********************************************************************************
-			 * Wait stopping
+			 * Wait stopped
 			 ********************************************************************************/
-			virtual void wait_stop();
+			virtual void wait_stopped();
 
 			/*********************************************************************************
 			 * Add channel tracker
@@ -87,9 +87,14 @@ namespace pump {
 			virtual void remove_channel_tracker(channel_tracker_sptr &tracker);
 
 			/*********************************************************************************
+			 * Pause channel tracker
+			 ********************************************************************************/
+			virtual void pause_channel_tracker(channel_tracker_ptr tracker);
+
+			/*********************************************************************************
 			 * Awake channel tracker
 			 ********************************************************************************/
-			virtual void awake_channel_tracker(channel_tracker_sptr &tracker);
+			virtual void awake_channel_tracker(channel_tracker_ptr tracker);
 
 			/*********************************************************************************
 			 * Push channel event
@@ -106,6 +111,11 @@ namespace pump {
 			 * Remove append channel for derived class
 			 ********************************************************************************/
 			virtual void __remove_channel_tracker(channel_tracker_ptr tracker) {}
+
+			/*********************************************************************************
+			 * Pause channel tracker for derived class
+			 ********************************************************************************/
+			virtual void __pause_channel_tracker(channel_tracker_ptr tracker) {}
 
 			/*********************************************************************************
 			 * Awake channel tracker for derived class

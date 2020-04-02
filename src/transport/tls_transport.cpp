@@ -41,7 +41,7 @@ namespace pump {
 			poll::channel_sptr ch = shared_from_this();
 			flow_->rebind_channel(ch);
 
-			// Set channel fd
+			// Set channel FD
 			poll::channel::__set_fd(flow->get_fd());
 
 			local_address_ = local_address;
@@ -73,13 +73,13 @@ namespace pump {
 			});
 
 			// If using iocp, the transport is ready for sending.
-			if (sv->get_iocp_handler())
+			if (net::get_iocp_handler())
 				ready_for_sending_ = true;
 
 			if (!__start_all_trackers())
 				return false;
 
-			if (flow_->want_to_read() != FLOW_ERR_NO)
+			if (flow_->beg_read_task() != FLOW_ERR_NO)
 				return false;
 
 			if (!__set_status(TRANSPORT_STARTING, TRANSPORT_STARTED))
@@ -92,23 +92,27 @@ namespace pump {
 
 		void tls_transport::stop()
 		{
-			// When in started status at the moment, stopping can be done. Then tracker event callback
-			// will be triggered, we can trigger stopped callabck at there.
-			if (__set_status(TRANSPORT_STARTED, TRANSPORT_STOPPING))
+			while (__is_status(TRANSPORT_STARTED) || __is_status(TRANSPORT_PAUSED))
 			{
-				// At first, stopping read tracker immediately.
-				__stop_read_tracker();
-
-				// If there are no data to send, the transport should be stopped immediately. Otherwise
-				// the transport should not be stopped until all data sent completely.
-				std::lock_guard<utils::spin_mutex> locker(sendlist_mx_);
-				if (sendlist_.empty())
+				// When in started status at the moment, stopping can be done. Then tracker event callback
+				// will be triggered, we can trigger stopped callabck at there.
+				if (__set_status(TRANSPORT_STARTED, TRANSPORT_STOPPING) ||
+					__set_status(TRANSPORT_PAUSED, TRANSPORT_STOPPING))
 				{
-					__stop_send_tracker();
-					__close_flow();
-				}
+					// At first, stopping read tracker immediately.
+					__stop_read_tracker();
 
-				return;
+					// If there are no data to send, the transport should be stopped immediately. Otherwise
+					// the transport should not be stopped until all data sent completely.
+					std::lock_guard<utils::spin_mutex> locker(sendlist_mx_);
+					if (sendlist_.empty())
+					{
+						__stop_send_tracker();
+						__close_flow();
+					}
+
+					return;
+				}
 			}
 
 			// If in disconnecting status at the moment, it means transport is disconnected but hasn't
@@ -120,13 +124,18 @@ namespace pump {
 
 		void tls_transport::force_stop()
 		{
-			// When in started status at the moment, stopping can be done. Then tracker event callback
-			// will be triggered, we can trigger stopped callabck at there.
-			if (__set_status(TRANSPORT_STARTED, TRANSPORT_STOPPING))
+			while (__is_status(TRANSPORT_STARTED) || __is_status(TRANSPORT_PAUSED))
 			{
-				__close_flow();
-				__stop_read_tracker();
-				__stop_send_tracker();
+				// When in started status at the moment, stopping can be done. Then tracker event callback
+				// will be triggered, we can trigger stopped callabck at there.
+				if (__set_status(TRANSPORT_STARTED, TRANSPORT_STOPPING) ||
+					__set_status(TRANSPORT_PAUSED, TRANSPORT_STOPPING))
+				{
+					__close_flow();
+					__stop_read_tracker();
+					__stop_send_tracker();
+					return;
+				}
 			}
 
 			// If in disconnecting status at the moment, it means transport is disconnected but hasn't
@@ -134,6 +143,43 @@ namespace pump {
 			// when tracker event callback triggered, we will trigger stopped callabck at there.
 			if (__set_status(TRANSPORT_DISCONNECTING, TRANSPORT_STOPPING))
 				return;
+		}
+
+		bool tls_transport::restart()
+		{
+			auto flow_locker = flow_;
+			auto flow = flow_locker.get();
+			if (!flow)
+				return false;
+
+			if (__set_status(TRANSPORT_PAUSED, TRANSPORT_STARTED))
+			{
+				if (flow->beg_read_task() == FLOW_ERR_ABORT)
+				{
+					__try_doing_disconnected_process();
+					return false;
+				}
+
+				return __awake_tracker(r_tracker_);
+			}
+				
+			return false;
+		}
+
+		bool tls_transport::pause()
+		{
+			auto flow_locker = flow_;
+			auto flow = flow_locker.get();
+			if (flow == nullptr)
+				return false;
+
+			if (__set_status(TRANSPORT_STARTED, TRANSPORT_PAUSED))
+			{
+				flow->cancel_read_task();
+				return __pause_tracker(r_tracker_);
+			}
+
+			return false;
 		}
 
 		bool tls_transport::send(transport_buffer_ptr b)
@@ -188,7 +234,7 @@ namespace pump {
 			auto flow = flow_locker.get();
 			if (flow == nullptr)
 			{
-				flow::free_iocp_task(itask);
+				flow::free_task(itask);
 				return;
 			}
 
@@ -202,16 +248,14 @@ namespace pump {
 				{
 					int32 size = 0;
 					c_block_ptr b = flow->read_from_ssl(&size);
-					if (size > 0)
-					{
-						if (notifier)
-							notifier->on_read_callback(this, b, size);
-					}
-					else
-					{
+					if (size <= 0)
 						break;
-					}
+
+					if (notifier)
+						notifier->on_read_callback(this, b, size);
 				}
+				flow->end_read_task();
+
 				break;
 			}
 			case FLOW_ERR_ABORT:
@@ -219,7 +263,7 @@ namespace pump {
 				return;
 			}
 
-			if (flow->want_to_read() != FLOW_ERR_NO && __is_status(TRANSPORT_STARTED))
+			if (__is_status(TRANSPORT_STARTED) && flow->beg_read_task() == FLOW_ERR_ABORT)
 				__try_doing_disconnected_process();
 		}
 
@@ -227,16 +271,16 @@ namespace pump {
 		{
 			auto flow_locker = flow_;
 			auto flow = flow_locker.get();
-			if (flow == nullptr)
+			if (!flow)
 			{
-				flow::free_iocp_task(itask);
+				flow::free_task(itask);
 				return;
 			}
 
 			switch (flow->send_to_net(itask))
 			{
 			case FLOW_ERR_AGAIN:
-				s_tracker_->set_track_status(true);
+				__awake_tracker(s_tracker_);
 				return;
 			case FLOW_ERR_ABORT:
 				__try_doing_disconnected_process();
@@ -252,7 +296,7 @@ namespace pump {
 				__try_doing_disconnected_process();
 				return;
 			case FLOW_ERR_NO:
-				s_tracker_->set_track_status(true);
+				__awake_tracker(s_tracker_);
 				return;
 			case FLOW_ERR_NO_DATA:
 				break;
@@ -301,10 +345,7 @@ namespace pump {
 			PUMP_ASSERT(!r_tracker_ && !s_tracker_);
 			poll::channel_sptr ch = shared_from_this();
 			r_tracker_.reset(new poll::channel_tracker(ch, TRACK_READ, TRACK_MODE_LOOP));
-			r_tracker_->set_track_status(true);
 			s_tracker_.reset(new poll::channel_tracker(ch, TRACK_WRITE, TRACK_MODE_ONCE));
-			s_tracker_->set_track_status(true);
-
 			if (!get_service()->add_channel_tracker(s_tracker_) ||
 				!get_service()->add_channel_tracker(r_tracker_))
 				return false;
@@ -314,10 +355,22 @@ namespace pump {
 			return true;
 		}
 
-		bool tls_transport::__awake_tracker(poll::channel_tracker_sptr &tracker)
+		bool tls_transport::__awake_tracker(poll::channel_tracker_sptr tracker)
 		{
-			PUMP_ASSERT(tracker);
-			if (!get_service()->awake_channel_tracker(tracker))
+			if (!tracker)
+				return false;
+
+			if (!get_service()->awake_channel_tracker(tracker.get()))
+				PUMP_ASSERT(false);
+			return true;
+		}
+
+		bool tls_transport::__pause_tracker(poll::channel_tracker_sptr tracker)
+		{
+			if (!tracker)
+				return false;
+
+			if (!get_service()->pause_channel_tracker(tracker.get()))
 				PUMP_ASSERT(false);
 			return true;
 		}
@@ -394,7 +447,7 @@ namespace pump {
 
 			auto flow_locker = flow_;
 			auto flow = flow_locker.get();
-			if (flow == nullptr)
+			if (!flow)
 				return false;
 
 			if (__send_once(flow) == FLOW_ERR_ABORT)
@@ -452,11 +505,8 @@ namespace pump {
 				return FLOW_ERR_NO_DATA;
 			}
 
-			//if (buffer->data_size() > 0)
-			//{
-				if (flow->send_to_ssl(buffer) <= 0)
-					PUMP_ASSERT(false);
-			//}
+			if (flow->send_to_ssl(buffer) <= 0)
+				PUMP_ASSERT(false);
 			PUMP_ASSERT(buffer->data_size() == 0);
 
 			int32 ret = flow->want_to_send();
@@ -468,7 +518,8 @@ namespace pump {
 
 		void tls_transport::__try_doing_disconnected_process()
 		{
-			if (__set_status(TRANSPORT_STARTED, TRANSPORT_DISCONNECTING))
+			if (__set_status(TRANSPORT_STARTED, TRANSPORT_DISCONNECTING) ||
+				__set_status(TRANSPORT_PAUSED, TRANSPORT_DISCONNECTING))
 			{
 				__close_flow();
 				__stop_read_tracker();

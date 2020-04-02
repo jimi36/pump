@@ -39,8 +39,6 @@ namespace pump {
 		protected:
 			/*********************************************************************************
 			 * Poll
-			 * actives is saving active channels
-			 * timeout is polling timeout time, if set as -1, then no wait
 			 ********************************************************************************/
 			virtual void __poll(int32 timeout);
 

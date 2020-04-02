@@ -42,7 +42,7 @@ namespace pump {
 				 *     FLOW_ERR_NO    => success
 				 *     FLOW_ERR_ABORT => error
 				 ********************************************************************************/
-				int32 init(poll::channel_sptr &ch, net::iocp_handler iocp, const address &listen_address);
+				int32 init(poll::channel_sptr &ch, const address &listen_address);
 
 				/*********************************************************************************
 				 * Want to accept
@@ -61,8 +61,6 @@ namespace pump {
 			private:
 				// Local address
 				bool is_ipv6_;
-				// IOCP handler
-				net::iocp_handler iocp_;
 				// IOCP accept task
 				net::iocp_task_ptr accept_task_;
 				// This buffer is for iocp

@@ -50,7 +50,12 @@ namespace pump {
 				 *     FLOW_ERR_NO    => success
 				 *     FLOW_ERR_ABORT => error
 				 ********************************************************************************/
-				int32 init(poll::channel_sptr &ch, int32 fd, void_ptr tls_cert, bool is_client);
+				int32 init(
+					poll::channel_sptr &ch, 
+					int32 fd, 
+					void_ptr tls_cert, 
+					bool is_client
+				);
 
 				/*********************************************************************************
 				 * Rebind channel
@@ -66,13 +71,25 @@ namespace pump {
 				int32 handshake();
 
 				/*********************************************************************************
-				 * Want to read
-				 * If using iocp this post a iocp task for reading, else do nothing.
+				 * Begin read task
+				 * If using IOCP this post a IOCP task for reading, else do nothing.
 				 * Return results:
+				 *     FLOW_ERR_BUSY  => busy for read
 				 *     FLOW_ERR_NO    => success
 				 *     FLOW_ERR_ABORT => error
 				 ********************************************************************************/
-				int32 want_to_read();
+				int32 beg_read_task();
+
+				/*********************************************************************************
+				 * Cancel read
+				 * If using IOCP this cancel posted IOCP task for reading, else do nothing.
+				 ********************************************************************************/
+				void cancel_read_task();
+
+				/*********************************************************************************
+				 * End read task
+				 ********************************************************************************/
+				void end_read_task();
 
 				/*********************************************************************************
 				 * Read from net
@@ -144,11 +161,10 @@ namespace pump {
 			private:
 				// Handshaked status
 				bool is_handshaked_;
-
-				// GunTLS session 
+				// GNUTLS session 
 				tls_session_ptr session_;
-
-				// Read iocp task
+				// Read task for IOCP
+				std::atomic_flag read_flag_;
 				net::iocp_task_ptr read_task_;
 				// Net read buffer
 				uint32 net_read_data_size_;

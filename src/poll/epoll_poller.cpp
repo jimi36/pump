@@ -64,11 +64,20 @@ namespace pump {
 			ev.events |= (listen_event & IO_EVNET_READ) ? EL_READ_EVENT : 0;
 			ev.events |= (listen_event & IO_EVENT_SEND) ? EL_WRITE_EVENT : 0;
 			ev.events |= pop_pending_channel_ ? EPOLLONESHOT : 0;
-			epoll_ctl(epollfd_, EPOLL_CTL_MOD, tracker->get_fd(), &ev);
+			//epoll_ctl(epollfd_, EPOLL_CTL_MOD, tracker->get_fd(), &ev);
+			epoll_ctl(epollfd_, EPOLL_CTL_ADD, tracker->get_fd(), &ev);
 #endif
 		}
 
 		void epoll_poller::__remove_channel_tracker(channel_tracker_ptr tracker)
+		{
+#ifndef WIN32
+			struct epoll_event ev;
+			epoll_ctl(epollfd_, EPOLL_CTL_DEL, tracker->get_fd(), &ev);
+#endif
+		}
+
+		void epoll_poller::__pause_channel_tracker(channel_tracker_ptr tracker)
 		{
 #ifndef WIN32
 			struct epoll_event ev;
@@ -115,13 +124,10 @@ namespace pump {
 						pending_event |= IO_EVENT_SEND;
 
 					if (pop_pending_channel_)
-						tracker->set_track_status(false);
+						tracker->set_tracking(false);
 
 					if (pending_event != IO_EVENT_NONE)
 						ch->handle_io_event(pending_event, nullptr);
-
-					if (pop_pending_channel_ && tracker->is_tracking())
-						__awake_channel_tracker(tracker);
 				}
 			}
 #endif

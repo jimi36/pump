@@ -82,11 +82,9 @@ namespace pump {
 		{
 			auto flow_locker = flow_;
 			auto flow = flow_locker.get();
-			if (flow == nullptr)
+			if (!flow)
 			{
-				// If flow no existed, it means acceptor has be stopped. So we free iocp task and 
-				// return at here.
-				flow::free_iocp_task(itask);
+				flow::free_task(itask);
 				return;
 			}
 
@@ -114,8 +112,7 @@ namespace pump {
 				}
 			}
 
-			// The acceptor maybe be stopped before this, so we also need check it in started 
-			// status or not.
+			// The acceptor maybe be stopped before this, so we need check it status. 
 			if (flow->want_to_accept() != FLOW_ERR_NO && __is_status(TRANSPORT_STARTED))
 				PUMP_ASSERT(false);
 		}
@@ -174,18 +171,17 @@ namespace pump {
 
 		bool tls_acceptor::__open_flow(const address &listen_address)
 		{
-			// Setup flow.
+			// Setup flow
 			PUMP_ASSERT(!flow_);
 			flow_.reset(new flow::flow_tls_acceptor());
 			poll::channel_sptr ch = shared_from_this();
-			net::iocp_handler iocp = get_service()->get_iocp_handler();
-			if (flow_->init(ch, iocp, listen_address) != FLOW_ERR_NO)
+			if (flow_->init(ch, listen_address) != FLOW_ERR_NO)
 				return false;
 
-			// Set channel fd.
+			// Set channel FD
 			channel::__set_fd(flow_->get_fd());
 
-			// Save listen address.
+			// Save listen address
 			listen_address_ = listen_address;
 
 			return true;
@@ -196,8 +192,6 @@ namespace pump {
 			PUMP_ASSERT(!tracker_);
 			poll::channel_sptr ch = shared_from_this();
 			tracker_.reset(new poll::channel_tracker(ch, TRACK_READ, TRACK_MODE_LOOP));
-			tracker_->set_track_status(true);
-
 			if (!get_service()->add_channel_tracker(tracker_))
 				return false;
 

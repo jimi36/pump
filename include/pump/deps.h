@@ -33,24 +33,19 @@
 #include <thread>
 #include <atomic>
 #include <memory>
-//#include <future>
 #include <chrono>  
-//#include <string.h>
 #include <assert.h>
 #include <condition_variable>
 
 #include <map>
-//#include <set>
 #include <list>
-//#include <deque>
 #include <vector>
 #include <string>
-//#include <unordered_set>
 #include <unordered_map>
 
+#include <regex>
+
 #ifdef WIN32
-//#include <time.h>
-//#include <process.h>
 #include <windows.h>
 #else
 #include <iconv.h>

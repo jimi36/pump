@@ -50,11 +50,7 @@ namespace pump {
 			/*********************************************************************************
 			 * Init
 			 ********************************************************************************/
-			bool init(
-				int32 fd, 
-				const address &local_address, 
-				const address &remote_address
-			);
+			bool init(int32 fd, const address &local_address, const address &remote_address);
 
 			/*********************************************************************************
 			 * Start
@@ -76,29 +72,36 @@ namespace pump {
 			virtual void force_stop();
 
 			/*********************************************************************************
-			 * Send
+			 * Restart
+			 * After paused success, this will restart transport.
 			 ********************************************************************************/
-			virtual bool send(
-				c_block_ptr b, 
-				uint32 size, 
-				bool notify = false
-			);
+			virtual bool restart();
+
+			/*********************************************************************************
+			 * Pause
+			 ********************************************************************************/
+			virtual bool pause();
 
 			/*********************************************************************************
 			 * Send
-			 * After called, the transport got the buffer onwership.
+			 ********************************************************************************/
+			virtual bool send(c_block_ptr b, uint32 size, bool notify = false);
+
+			/*********************************************************************************
+			 * Send
+			 * After sent, the buffer has moved ownership to transport.
 			 ********************************************************************************/
 			virtual bool send(transport_buffer_ptr b);
 
 			/*********************************************************************************
 			 * Get local address
 			 ********************************************************************************/
-			const address& get_local_address() const { return local_address_; }
+			virtual const address& get_local_address() const { return local_address_; }
 
 			/*********************************************************************************
 			 * Get remote address
 			 ********************************************************************************/
-			const address& get_remote_address() const { return remote_address_; }
+			virtual const address& get_remote_address() const { return remote_address_; }
 
 		protected:
 			/*********************************************************************************
@@ -151,7 +154,12 @@ namespace pump {
 			/*********************************************************************************
 			 * Awake tracker
 			 ********************************************************************************/
-			bool __awake_tracker(poll::channel_tracker_sptr &tracker);
+			bool __awake_tracker(poll::channel_tracker_sptr tracker);
+
+			/*********************************************************************************
+			 * Pause tracker
+			 ********************************************************************************/
+			bool __pause_tracker(poll::channel_tracker_sptr tracker);
 
 			/*********************************************************************************
 			 * Stop tracker

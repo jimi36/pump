@@ -45,13 +45,24 @@ namespace pump {
 				int32 init(poll::channel_sptr &ch, int32 fd);
 
 				/*********************************************************************************
-				 * Want to read
-				 * If using iocp this post an iocp task for reading, else do nothing.
+				 * Begin read task
+				 * If using IOCP this post an IOCP task for reading, else do nothing.
 				 * Return results:
 				 *     FLOW_ERR_NO    => success
 				 *     FLOW_ERR_ABORT => error
 				 ********************************************************************************/
-				int32 want_to_read();
+				int32 beg_read_task();
+
+				/*********************************************************************************
+				 * End read task
+				 ********************************************************************************/
+				void end_read_task();
+
+				/*********************************************************************************
+				 * Cancel read task
+				 * If using IOCP this cancel posted IOCP task for reading, else do nothing.
+				 ********************************************************************************/
+				void cancel_read_task();
 
 				/*********************************************************************************
 				 * Read
@@ -60,7 +71,7 @@ namespace pump {
 
 				/*********************************************************************************
 				 * Want to send
-				 * If using iocp this post an iocp task for sending, else this try sending data.
+				 * If using IOCP this post an IOCP task for sending, else this try sending data.
 				 * Return results:
 				 *     FLOW_ERR_NO    => success
 				 *     FLOW_ERR_ABORT => error
@@ -89,9 +100,10 @@ namespace pump {
 				}
 
 			private:
-				// Read iocp task
+				// Read task for IOCP
+				std::atomic_flag read_flag_;
 				net::iocp_task_ptr read_task_;
-				// Send iocp task
+				// Send task for IOCP
 				net::iocp_task_ptr send_task_;
 				// Read cache
 				std::string read_cache_;

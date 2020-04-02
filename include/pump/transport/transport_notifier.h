@@ -45,7 +45,11 @@ namespace pump {
 			/*********************************************************************************
 			 * Dialed event callback
 			 ********************************************************************************/
-			virtual void on_dialed_callback(void_ptr ctx, transport_base_sptr transp, bool succ) = 0;
+			virtual void on_dialed_callback(
+				void_ptr ctx, 
+				transport_base_sptr transp, 
+				bool succ
+			) = 0;
 
 			/*********************************************************************************
 			 * Dialed timeout event callback
@@ -65,12 +69,21 @@ namespace pump {
 			/*********************************************************************************
 			 * Read event callback
 			 ********************************************************************************/
-			virtual void on_read_callback(transport_base_ptr transp, c_block_ptr b, int32 size) {}
+			virtual void on_read_callback(
+				transport_base_ptr transp, 
+				c_block_ptr b, 
+				int32 size
+			) {}
 
 			/*********************************************************************************
 			 * Read event callback for udp
 			 ********************************************************************************/
-			virtual void on_read_callback(transport_base_ptr transp, c_block_ptr b, int32 size, const address &remote) {}
+			virtual void on_read_callback(
+				transport_base_ptr transp, 
+				c_block_ptr b, 
+				int32 size, 
+				const address &remote
+			) {}
 
 			/*********************************************************************************
 			 * Sent event callback

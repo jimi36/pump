@@ -25,7 +25,7 @@ namespace pump {
 			{
 			}
 
-			int32 flow_tcp_dialer::init(poll::channel_sptr &ch, net::iocp_handler iocp, const address &bind_address)
+			int32 flow_tcp_dialer::init(poll::channel_sptr &ch, const address &bind_address)
 			{
 				PUMP_ASSERT_EXPR(ch, ch_ = ch);
 	
@@ -33,8 +33,7 @@ namespace pump {
 				int32 domain = is_ipv6_ ? AF_INET6 : AF_INET;
 
 #if defined(WIN32) && defined(USE_IOCP)
-				PUMP_ASSERT(iocp);
-				fd_ = net::create_iocp_socket(domain, SOCK_STREAM, iocp);
+				fd_ = net::create_iocp_socket(domain, SOCK_STREAM, net::get_iocp_handler());
 				if (fd_ == -1)
 					return FLOW_ERR_ABORT;
 

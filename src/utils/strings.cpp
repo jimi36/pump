@@ -19,26 +19,6 @@
 namespace pump {
 	namespace utils {
 
-		uint8 dec_to_hexchar(uint8 n)
-		{
-			if (n >= 0 && n <= 9)
-				return uint8('0') + n;
-			else if (n >= 10 && n <= 15)
-				return uint8('A') + n - 10;
-			return 0;
-		}
-
-		uint8 hexchar_to_dec(uint8 c)
-		{
-			if (c >= '0' && c <= '9')
-				return uint8(c - '0');
-			else if (c >= 'a' && c <= 'f')
-				return (uint8(c - 'a') + 10);
-			else if (c >= 'A' && c <= 'F')
-				return (uint8(c - 'A') + 10);
-			return 0;
-		}
-
 		bool gbk_to_utf8(const std::string &src, std::string &des)
 		{
 #ifdef WIN32
@@ -101,24 +81,35 @@ namespace pump {
 			return true;
 		}
 
-		const int8* find_sub_string(const int8 *str1, const int8 *str2, int32 max_len)
-		{
-			int32 len1 = (int32)strlen(str1);
-			int32 len2 = (int32)strlen(str2);
-			if (len2 == 0 || len1 < len2)
-				return nullptr;
-			
-			max_len = (max_len > len1) ? len1 : max_len;
+		std::string join_strings(
+			const std::vector<std::string> &srcs, 
+			const std::string &sep
+		) {
+			std::string ret;
 
-			while (max_len >= len2)
-			{
-				if (memcmp(str1, str2, len2) == 0)
-					return str1;
-				max_len--;
-				str1++;
-			}
+			if (srcs.empty())
+				return ret;
 
-			return nullptr;
+			auto beg = srcs.begin();
+			ret = *(beg++);
+
+			for (; beg != srcs.end(); beg++)
+				ret += sep + *beg;
+
+			return std::move(ret);
+		}
+
+		void split_string(
+			const std::string &src, 
+			const std::string &sep, 
+			std::vector<std::string> &ret
+		) {
+			std::regex regx(sep);
+			ret.insert(
+				ret.end(), 
+				std::sregex_token_iterator(src.begin(), src.end(), regx, -1),
+				std::sregex_token_iterator()
+			);
 		}
 
 	}

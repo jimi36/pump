@@ -62,6 +62,16 @@ namespace pump {
 			 ********************************************************************************/
 			virtual void stop();
 
+			/*********************************************************************************
+			 * Get local address
+			 ********************************************************************************/
+			virtual const address& get_local_address() const { return bind_address_; }
+
+			/*********************************************************************************
+			 * Get remote address
+			 ********************************************************************************/
+			virtual const address& get_remote_address() const { return peer_address_; }
+
 		protected:
 			/*********************************************************************************
 			 * Send event callback
@@ -118,9 +128,9 @@ namespace pump {
 		private:
 			// Bind address
 			address bind_address_;
-			// Connect address
-			address connect_address_;
-			// Connect timeout timer
+			// Peer address
+			address peer_address_;
+			// Connect timer
 			std::shared_ptr<time::timer> timer_;
 			// Channel tracker
 			poll::channel_tracker_sptr tracker_;

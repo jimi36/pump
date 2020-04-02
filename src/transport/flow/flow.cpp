@@ -41,7 +41,7 @@ namespace pump {
 				return fd;
 			}
 
-			void free_iocp_task(net::iocp_task_ptr itask)
+			void free_task(net::iocp_task_ptr itask)
 			{
 #if defined(WIN32) && defined(USE_IOCP)
 				net::unlink_iocp_task(itask);

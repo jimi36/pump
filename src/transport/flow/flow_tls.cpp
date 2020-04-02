@@ -73,6 +73,7 @@ namespace pump {
 				net_read_data_pos_(0),
 				send_task_(nullptr)
 			{
+				read_flag_.clear();
 			}
 
 			flow_tls::~flow_tls()
@@ -92,11 +93,15 @@ namespace pump {
 #endif
 			}
 
-			int32 flow_tls::init(poll::channel_sptr &ch, int32 fd, void_ptr tls_cert, bool is_client)
-			{
+			int32 flow_tls::init(
+				poll::channel_sptr &ch, 
+				int32 fd, 
+				void_ptr tls_cert, 
+				bool is_client
+			) {
 #ifdef USE_GNUTLS
-				PUMP_ASSERT_EXPR(fd > 0, fd_ = fd);
 				PUMP_ASSERT_EXPR(ch, ch_ = ch);
+				PUMP_ASSERT_EXPR(fd > 0, fd_ = fd);
 
 				PUMP_ASSERT(!session_);
 				session_ = new tls_session();
@@ -178,10 +183,13 @@ namespace pump {
 #endif
 			}
 
-			int32 flow_tls::want_to_read()
+			int32 flow_tls::beg_read_task()
 			{
 #ifdef USE_GNUTLS
 #	if defined(WIN32) && defined (USE_IOCP)
+				if (read_flag_.test_and_set())
+					return FLOW_ERR_BUSY;
+
 				PUMP_ASSERT(read_task_);
 				net::link_iocp_task(read_task_);
 				//net::reuse_iocp_task(read_task_);
@@ -194,6 +202,24 @@ namespace pump {
 				return FLOW_ERR_NO;
 #else
 				return FLOW_ERR_ABORT;
+#endif
+			}
+
+			void flow_tls::cancel_read_task()
+			{
+#ifdef USE_GNUTLS
+#	if defined(WIN32) && defined (USE_IOCP)
+				//net::cancel_iocp_task(net::get_iocp_handler(), read_task_);
+#	endif
+#endif
+			}
+
+			void flow_tls::end_read_task()
+			{
+#ifdef USE_GNUTLS
+#	if defined(WIN32) && defined (USE_IOCP)
+				read_flag_.clear();
+#	endif
 #endif
 			}
 

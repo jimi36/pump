@@ -37,6 +37,7 @@ namespace pump {
 			TRANSPORT_INIT      = 0,
 			TRANSPORT_STARTING,
 			TRANSPORT_STARTED,
+			TRANSPORT_PAUSED,
 			TRANSPORT_STOPPING,
 			TRANSPORT_STOPPED,
 			TRANSPORT_DISCONNECTING,
@@ -122,12 +123,27 @@ namespace pump {
 			virtual void force_stop() { stop(); }
 
 			/*********************************************************************************
+			 * Restart
+			 * After paused success, this will restart transport.
+			 ********************************************************************************/
+			virtual bool restart() { return false; }
+
+			/*********************************************************************************
+			 * Pause
+			 ********************************************************************************/
+			virtual bool pause() { return false; }
+
+			/*********************************************************************************
 			 * Send
-			 * This is a asynchronous operation. If notify is set to true, transport will
-			 * notify when the data is sent completely.
+			 * If notify is setted, transport will notify when the data is sent completely.
+			 ********************************************************************************/
+			virtual bool send(c_block_ptr b, uint32 size, bool notify = false) { return false; }
+
+			/*********************************************************************************
+			 * Send
+			 * After sent, the buffer has moved ownership to transport.
 			 ********************************************************************************/
 			virtual bool send(flow::buffer_ptr b, bool notify = false) { return false; }
-			virtual bool send(c_block_ptr b, uint32 size, bool notify = false) { return false; }
 
 			/*********************************************************************************
 			 * Send to remote address
@@ -135,6 +151,24 @@ namespace pump {
 			 ********************************************************************************/
 			virtual bool send(c_block_ptr b, uint32 size, const address &remote_address) 
 			{ return false; }
+
+			/*********************************************************************************
+			 * Get local address
+			 ********************************************************************************/
+			virtual const address& get_local_address() const 
+			{
+				static address no_addr;
+				return no_addr; 
+			}
+
+			/*********************************************************************************
+			 * Get remote address
+			 ********************************************************************************/
+			virtual const address& get_remote_address() const
+			{
+				static address no_addr;
+				return no_addr;
+			}
 
 			/*********************************************************************************
 			 * Get transport type
@@ -174,7 +208,7 @@ namespace pump {
 			 ********************************************************************************/
 			template <typename NotifyType>
 			std::shared_ptr<NotifyType> __get_notifier()
-			{ return static_pointer_cast<NotifyType>(notifier_.lock()); }
+			{ return std::move(static_pointer_cast<NotifyType>(notifier_.lock())); }
 
 		protected:
 			// Tracking tracker count

@@ -37,6 +37,11 @@ namespace pump {
 		typedef void_ptr iocp_handler;
 
 		/*********************************************************************************
+		 * Get iocp handler
+		 ********************************************************************************/
+		iocp_handler get_iocp_handler();
+
+		/*********************************************************************************
 		 * Create an iocp task with a link
 		 ********************************************************************************/
 		iocp_task_ptr new_iocp_task();
@@ -95,7 +100,7 @@ namespace pump {
 		/*********************************************************************************
 		 * Get iocp task notify
 		 ********************************************************************************/
-		void_wptr get_iocp_task_notifier(iocp_task_ptr itask);
+		void_sptr get_iocp_task_notifier(iocp_task_ptr itask);
 
 		/*********************************************************************************
 		 * Set iocp task error code
@@ -125,7 +130,7 @@ namespace pump {
 		/*********************************************************************************
 		 * Get iocp task processed buffer
 		 ********************************************************************************/
-		block_ptr get_iocp_task_processed_buffer(iocp_task_ptr itask);
+		block_ptr get_iocp_task_processed_buffer(iocp_task_ptr itask, int32_ptr size);
 
 		/*********************************************************************************
 		 * Get iocp task remote address for udp reading from
@@ -178,6 +183,11 @@ namespace pump {
 		 * Post iocp send
 		 ********************************************************************************/
 		bool post_iocp_send(iocp_task_ptr itask);
+
+		/*********************************************************************************
+		 * Cancel posted iocp task
+		 ********************************************************************************/
+		void cancel_iocp_task(iocp_handler iocp, iocp_task_ptr itask);
 	}
 }
 

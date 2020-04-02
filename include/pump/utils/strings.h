@@ -23,16 +23,6 @@ namespace pump {
 	namespace utils {
 
 		/*********************************************************************************
-		 * Transform dec number to hex char
-		 ********************************************************************************/
-		LIB_EXPORT uint8 dec_to_hexchar(uint8 n);
-
-		/*********************************************************************************
-		 * Transform hex char to dec number
-		 ********************************************************************************/
-		LIB_EXPORT uint8 hexchar_to_dec(uint8 c);
-
-		/*********************************************************************************
 		 * Transform gbk to utf8
 		 ********************************************************************************/
 		LIB_EXPORT bool gbk_to_utf8(const std::string &src, std::string &des);
@@ -43,9 +33,21 @@ namespace pump {
 		LIB_EXPORT bool utf8_to_gbk(const std::string &src, std::string &des);
 
 		/*********************************************************************************
-		 * Find substring postion in string
+		 * Join strings
 		 ********************************************************************************/
-		LIB_EXPORT const int8* find_sub_string(const int8 *str1, const int8 *str2, int32 max_len);
+		LIB_EXPORT std::string join_strings(
+			const std::vector<std::string> &srcs, 
+			const std::string &sep
+		);
+
+		/*********************************************************************************
+		 * Split string
+		 ********************************************************************************/
+		LIB_EXPORT void split_string(
+			const std::string &src, 
+			const std::string &sep, 
+			std::vector<std::string> &rets
+		);
 
 	}
 }

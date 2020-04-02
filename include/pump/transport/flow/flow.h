@@ -29,8 +29,9 @@ namespace pump {
 
 			#define FLOW_ERR_NO      0
 			#define	FLOW_ERR_ABORT   1
-			#define FLOW_ERR_AGAIN   2
-			#define FLOW_ERR_NO_DATA 3
+			#define FLOW_ERR_BUSY    2
+			#define FLOW_ERR_AGAIN   3
+			#define FLOW_ERR_NO_DATA 4
 
 			class flow_base
 			{
@@ -62,16 +63,16 @@ namespace pump {
 				bool is_valid() const { return fd_ > 0; }
 
 			protected:
-				// Transport fd
+				// FD
 				int32 fd_;
 				// Channel
 				poll::channel_wptr ch_;
-				// Net extension is used for iocp
+				// Net extension for ICOP
 				net::net_extension_ptr ext_;
 			};
 			DEFINE_ALL_POINTER_TYPE(flow_base);
 
-			void free_iocp_task(net::iocp_task_ptr itask);
+			void free_task(net::iocp_task_ptr itask);
 
 		}
 	}

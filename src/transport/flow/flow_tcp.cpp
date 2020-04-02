@@ -25,6 +25,7 @@ namespace pump {
 				send_task_(nullptr),
 				send_buffer_(nullptr)
 			{
+				read_flag_.clear();
 			}
 
 			flow_tcp::~flow_tcp()
@@ -55,12 +56,14 @@ namespace pump {
 				return FLOW_ERR_NO;
 			}
 
-			int32 flow_tcp::want_to_read()
+			int32 flow_tcp::beg_read_task()
 			{
 #if defined(WIN32) && defined(USE_IOCP)
-				PUMP_ASSERT(read_task_);
+				if (read_flag_.test_and_set())
+					return FLOW_ERR_BUSY;
+
 				net::link_iocp_task(read_task_);
-				net::reuse_iocp_task(read_task_);
+				//net::reuse_iocp_task(read_task_);
 				if (!net::post_iocp_read(read_task_))
 				{
 					net::unlink_iocp_task(read_task_);
@@ -70,12 +73,25 @@ namespace pump {
 				return FLOW_ERR_NO;
 			}
 
+			void flow_tcp::end_read_task()
+			{
+#if defined(WIN32) && defined(USE_IOCP)
+				read_flag_.clear();
+#endif
+			}
+
+			void flow_tcp::cancel_read_task()
+			{
+#if defined(WIN32) && defined(USE_IOCP)
+				//net::cancel_iocp_task(net::get_iocp_handler(), read_task_);
+#endif
+			}
+
 			c_block_ptr flow_tcp::read(net::iocp_task_ptr itask, int32_ptr size)
 			{
 #if defined(WIN32) && defined(USE_IOCP)
-				PUMP_ASSERT(read_task_ == itask);
-				*size = net::get_iocp_task_processed_size(itask);
-				c_block_ptr b = net::get_iocp_task_processed_buffer(itask);
+				//*size = net::get_iocp_task_processed_size(itask);
+				c_block_ptr b = net::get_iocp_task_processed_buffer(itask, size);
 				net::unlink_iocp_task(itask);
 #else
 				block_ptr b = (block_ptr)read_cache_.data();
@@ -103,9 +119,8 @@ namespace pump {
 				send_buffer_ = sb;
 
 #if defined(WIN32) && defined(USE_IOCP)
-				PUMP_ASSERT(send_task_);
 				net::link_iocp_task(send_task_);
-				net::reuse_iocp_task(send_task_);
+				//net::reuse_iocp_task(send_task_);
 				net::set_iocp_task_buffer(send_task_, (block_ptr)send_buffer_->data(), send_buffer_->data_size());
 				if (!net::post_iocp_send(send_task_))
 				{
@@ -137,7 +152,6 @@ namespace pump {
 			int32 flow_tcp::send(net::iocp_task_ptr itask)
 			{
 #if defined(WIN32) && defined(USE_IOCP)
-				PUMP_ASSERT(send_task_ == itask);
 				int32 size = net::get_iocp_task_processed_size(itask);
 				net::unlink_iocp_task(itask);
 				if (size <= 0)

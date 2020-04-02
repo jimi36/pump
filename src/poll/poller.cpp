@@ -53,7 +53,7 @@ namespace pump {
 			started_.store(false);
 		}
 
-		void poller::wait_stop()
+		void poller::wait_stopped()
 		{
 			if (worker_)
 			{
@@ -66,6 +66,8 @@ namespace pump {
 		{
 			if (!started_.load())
 				return false;
+
+			tracker->set_tracking(true);
 
 			std::lock_guard<std::mutex> locker(tracker_mx_);
 			tr_events_.push_back(channel_tracker_event(tracker, TRACKER_EVENT_ADD));
@@ -81,12 +83,20 @@ namespace pump {
 			has_tr_event_ = true;
 		}
 
-		void poller::awake_channel_tracker(channel_tracker_sptr &tracker)
+		void poller::pause_channel_tracker(channel_tracker_ptr tracker)
 		{
-			auto ptracker = tracker.get();
-			ptracker->set_track_status(true);
+			PUMP_ASSERT(tracker);
+			tracker->set_tracking(false);
 
-			__awake_channel_tracker(ptracker);
+			__pause_channel_tracker(tracker);
+		}
+
+		void poller::awake_channel_tracker(channel_tracker_ptr tracker)
+		{
+			PUMP_ASSERT(tracker);
+			tracker->set_tracking(true);
+
+			__awake_channel_tracker(tracker);
 		}
 
 		void poller::push_channel_event(channel_sptr &c, uint32 event)

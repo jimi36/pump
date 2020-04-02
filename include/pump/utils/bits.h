@@ -14,100 +14,100 @@
  * limitations under the License.
  */
 
-#ifndef pump_transport_tcp_acceptor_h
-#define pump_transport_tcp_acceptor_h
+#ifndef pump_utils_bits_h
+#define pump_utils_bits_h
 
-#include "pump/transport/tcp_transport.h"
-#include "pump/transport/flow/flow_tcp_acceptor.h"
+#include "pump/deps.h"
 
 namespace pump {
-	namespace transport {
+	namespace utils {
 
-		class tcp_acceptor;
-		DEFINE_ALL_POINTER_TYPE(tcp_acceptor);
-
-		class LIB_EXPORT tcp_acceptor :
-			public transport_base,
-			public std::enable_shared_from_this<tcp_acceptor>
+		class LIB_EXPORT bits_reader
 		{
 		public:
 			/*********************************************************************************
-			 * Create instance
+			 * Constructor
 			 ********************************************************************************/
-			static tcp_acceptor_sptr create_instance()
-			{
-				return tcp_acceptor_sptr(new tcp_acceptor);
-			}
+			bits_reader(c_uint8_ptr b, uint32 size);
 
 			/*********************************************************************************
 			 * Deconstructor
 			 ********************************************************************************/
-			virtual ~tcp_acceptor() {}
+			~bits_reader() {}
 
 			/*********************************************************************************
-			 * Start accepter
+			 * Read into integer
 			 ********************************************************************************/
-			bool start(
-				service_ptr sv,
-				const address &listen_address,
-				accepted_notifier_sptr &notifier
-			);
+			bool read(uint32 bc, uint8_ptr val);
+			bool read(uint32 bc, uint16_ptr val);
+			bool read(uint32 bc, uint32_ptr val);
+			bool read(uint32 bc, uint64_ptr val);
 
 			/*********************************************************************************
-			 * Stop accepter
+			 * Get used bit count
 			 ********************************************************************************/
-			virtual void stop();
-
-			/*********************************************************************************
-			 * Get local address
-			 ********************************************************************************/
-			virtual const address& get_local_address() const { return listen_address_; }
-
-		protected:
-			/*********************************************************************************
-			 * Read event callback
-			 ********************************************************************************/
-			virtual void on_read_event(net::iocp_task_ptr itask);
-
-			/*********************************************************************************
-			 * Tracker event callback
-			 ********************************************************************************/
-			virtual void on_tracker_event(int32 ev);
+			uint32 used_bc() const { return used_bc_;}
 
 		private:
 			/*********************************************************************************
-			 * Open flow
+			 * Read one byte
+			 * Bit count has to be less than 8.
 			 ********************************************************************************/
-			bool __open_flow(const address &listen_address);
-
-			/*********************************************************************************
-			 * Close flow
-			 ********************************************************************************/
-			void __close_flow() { flow_.reset(); }
-
-			/*********************************************************************************
-			 * Start tracker
-			 ********************************************************************************/
-			bool __start_tracker();
-
-			/*********************************************************************************
-			 * Stop tracker
-			 ********************************************************************************/
-			void __stop_tracker();
+			uint8 __read_from_byte(uint32 bc);
 
 		private:
+			// Left bit count
+			uint32 left_bc_;
+			// Used bit count
+			uint32 used_bc_;
+			// All bit count
+			uint32 all_bc_;
+			// Current byte pos
+			c_uint8_ptr byte_pos_;
+		};
+
+		class LIB_EXPORT bits_writer
+		{
+		public:
 			/*********************************************************************************
 			 * Constructor
 			 ********************************************************************************/
-			tcp_acceptor();
+			bits_writer(uint8_ptr b, uint32 size);
+
+			/*********************************************************************************
+			 * Deconstructor
+			 ********************************************************************************/
+			~bits_writer() {}
+
+			/*********************************************************************************
+			 * Write integer
+			 ********************************************************************************/
+			bool write(uint32 bc, uint8 val);
+			bool write(uint32 bc, uint16 val);
+			bool write(uint32 bc, uint32 val);
+			bool write(uint32 bc, uint64 val);
+
+			/*********************************************************************************
+			 * Get used bit count
+			 ********************************************************************************/
+			uint32 used_bc() const { return used_bc_; }
 
 		private:
-			// Listen address
-			address listen_address_;
-			// Channel tracker
-			poll::channel_tracker_sptr tracker_;
-			// Acceptor flow
-			flow::flow_tcp_acceptor_sptr flow_;
+			/*********************************************************************************
+			 * Read one byte
+			 * Bit count has to be less than 8
+			 ********************************************************************************/
+			void __write_to_byte(uint32 bc, uint8 val);
+
+		private:
+			// Left bit count
+			uint32 left_bc_;
+			// Used bit count
+			uint32 used_bc_;
+			// All bit count
+			uint32 all_bc_;
+			// Current byte pos
+			uint8_ptr byte_pos_;
 		};
 
 	}

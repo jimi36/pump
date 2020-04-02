@@ -27,7 +27,7 @@ namespace pump {
 		#define TRACK_WRITE (IO_EVENT_SEND)
 		#define TRACK_BOTH  (IO_EVNET_READ | IO_EVENT_SEND)
 
-		#define TRACK_MODE_ONCE    0
+		#define TRACK_MODE_ONCE 0
 		#define TRACK_MODE_LOOP 1
 
 		#define TRACKER_EVENT_DEL 0
@@ -41,19 +41,19 @@ namespace pump {
 			 ********************************************************************************/
 			channel_tracker(channel_sptr &ch, int32 ev, int32 mode):
 				is_tracking_(false),
-				track_mode_(mode),
-				track_event_(ev),
+				mode_(mode),
+				event_(ev),
 				fd_(ch->get_fd()),
 				ch_(ch)
 			{}
 			
 			/*********************************************************************************
-			 * Set track status
+			 * Set tracking status
 			 ********************************************************************************/
-			void set_track_status(bool on) { is_tracking_ = on; }
+			void set_tracking(bool on) { is_tracking_ = on; }
 			
 			/*********************************************************************************
-			 * Get track status
+			 * Get tracking status
 			 ********************************************************************************/
 			bool is_tracking() const { return is_tracking_; }
 			
@@ -75,25 +75,25 @@ namespace pump {
 			/*********************************************************************************
 			 * Set track event
 			 ********************************************************************************/
-			void set_track_event(int32 ev) { track_event_ = ev; }
+			void set_event(int32 ev) { event_ = ev; }
 
 			/*********************************************************************************
 			 * Get track event
 			 ********************************************************************************/
-			int32 get_track_event() const { return track_event_; }
+			int32 get_event() const { return event_; }
 
 			/*********************************************************************************
 			 * Get track mode
 			 ********************************************************************************/
-			int32 get_track_mode() const { return track_mode_; }
+			int32 get_mode() const { return mode_; }
 			
 		private:
-			// Track status
+			// Status
 			bool is_tracking_;
-			// Track event
-			int32 track_event_;
 			// Track mode
-			int32 track_mode_;
+			int32 mode_;
+			// Track event
+			int32 event_;
 			// Track fd
 			int32 fd_;
 			// Channel

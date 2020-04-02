@@ -23,8 +23,6 @@ namespace pump {
 		const int32 TLS_HANDSHAKE_DOING = 1;
 		const int32 TLS_HANDSHAKE_ERROR = 2;
 
-		const int32 TLS_HANDSHAKE_TIMEOUT_EVENT = 0;
-
 		tls_handshaker::tls_handshaker() :
 			transport_base(TLS_HANDSHAKER, nullptr, -1)
 		{
@@ -101,7 +99,7 @@ namespace pump {
 				__set_status(TRANSPORT_STARTING, TRANSPORT_ERROR);
 			});
 
-			if (!__start_tracker(tracker))
+			if (!__restart_tracker(tracker))
 				return false;
 
 			if (!__start_timer(timeout))
@@ -134,9 +132,9 @@ namespace pump {
 		{
 			auto flow_locker = flow_;
 			auto flow = flow_locker.get();
-			if (flow == nullptr)
+			if (!flow)
 			{
-				flow::free_iocp_task(itask);
+				flow::free_task(itask);
 				return;
 			}
 
@@ -150,8 +148,15 @@ namespace pump {
 				}
 				return;
 			}
+
+			flow->end_read_task();
+
+			auto tracker_locker = tracker_;
+			auto tracker = tracker_locker.get();
+			if (!tracker)
+				return;
 			
-			switch (__process_handshake(flow))
+			switch (__process_handshake(flow, tracker))
 			{
 			case TLS_HANDSHAKE_DONE:
 				if (__set_status(TRANSPORT_STARTED, TRANSPORT_FINISH))
@@ -161,7 +166,7 @@ namespace pump {
 				}
 				break;
 			case TLS_HANDSHAKE_DOING:
-				tracker_->set_track_status(true);
+				__awake_tracker(tracker);
 				break;
 			default:
 				if (__set_status(TRANSPORT_STARTED, TRANSPORT_ERROR))
@@ -180,7 +185,15 @@ namespace pump {
 			auto flow = flow_locker.get();
 			if (flow == nullptr)
 			{
-				flow::free_iocp_task(itask);
+				flow::free_task(itask);
+				return;
+			}
+
+			auto tracker_locker = tracker_;
+			auto tracker = tracker_locker.get();
+			if (!tracker)
+			{
+				flow::free_task(itask);
 				return;
 			}
 
@@ -197,14 +210,14 @@ namespace pump {
 				return;
 			}
 			case FLOW_ERR_AGAIN:
-				tracker_->set_track_status(true);
+				__awake_tracker(tracker);
 				return;
 			case FLOW_ERR_NO_DATA:
 			case FLOW_ERR_NO:
 				break;
 			}
-				
-			switch (__process_handshake(flow))
+			
+			switch (__process_handshake(flow, tracker))
 			{
 			case TLS_HANDSHAKE_DONE:
 				if (__set_status(TRANSPORT_STARTED, TRANSPORT_FINISH))
@@ -214,7 +227,7 @@ namespace pump {
 				}
 				break;
 			case TLS_HANDSHAKE_DOING:
-				tracker_->set_track_status(true);
+				__awake_tracker(tracker);
 				break;
 			default:
 				if (__set_status(TRANSPORT_STARTED, TRANSPORT_ERROR))
@@ -286,14 +299,16 @@ namespace pump {
 			if (flow_->init(ch, fd, tls_cert, is_client) != FLOW_ERR_NO)
 				return false;
 
-			// Set channel fd
+			// Set channel FD
 			poll::channel::__set_fd(fd);
 
 			return true;
 		}
 
-		int32 tls_handshaker::__process_handshake(flow::flow_tls_ptr flow)
-		{
+		int32 tls_handshaker::__process_handshake(
+			flow::flow_tls_ptr flow, 
+			poll::channel_tracker_ptr tracker
+		) {
 			if (flow->handshake() != FLOW_ERR_NO)
 				return TLS_HANDSHAKE_ERROR;
 
@@ -304,7 +319,7 @@ namespace pump {
 				case FLOW_ERR_ABORT:
 					return TLS_HANDSHAKE_ERROR;
 				case FLOW_ERR_NO:
-					tracker_->set_track_event(TRACK_WRITE);
+					tracker->set_event(TRACK_WRITE);
 					return TLS_HANDSHAKE_DOING;
 				case FLOW_ERR_NO_DATA:
 					PUMP_ASSERT(false);
@@ -315,10 +330,10 @@ namespace pump {
 
 			if (!flow->is_handshaked())
 			{
-				if (flow->want_to_read() != FLOW_ERR_NO)
+				if (flow->beg_read_task() != FLOW_ERR_NO)
 					return TLS_HANDSHAKE_ERROR;
 
-				tracker_->set_track_event(TRACK_READ);
+				tracker->set_event(TRACK_READ);
 
 				return TLS_HANDSHAKE_DOING;
 			}
@@ -349,35 +364,32 @@ namespace pump {
 			PUMP_ASSERT(!tracker_);
 			poll::channel_sptr ch = shared_from_this();
 			tracker_.reset(new poll::channel_tracker(ch, TRACK_NONE, TRACK_MODE_ONCE));
-			tracker_->set_track_status(true);
-
-			if (__process_handshake(flow_.get()) == TLS_HANDSHAKE_ERROR)
-				return false;
-
 			if (!get_service()->add_channel_tracker(tracker_))
 				return false;
 
 			tracker_cnt_.fetch_add(1);
 
+			if (__process_handshake(flow_.get(), tracker_.get()) == TLS_HANDSHAKE_ERROR)
+				return false;
+
 			return true;
 		}
 
-		bool tls_handshaker::__start_tracker(poll::channel_tracker_sptr &tracker)
+		bool tls_handshaker::__restart_tracker(poll::channel_tracker_sptr &tracker)
 		{
-			PUMP_ASSERT(tracker->get_track_mode() == TRACK_MODE_ONCE);
+			PUMP_ASSERT(tracker->get_mode() == TRACK_MODE_ONCE);
 			PUMP_ASSERT_EXPR(tracker, tracker_ = tracker);
 
 			poll::channel_sptr ch = shared_from_this();
 			tracker_->set_channel(ch);
 			
-			if (__process_handshake(flow_.get()) == TLS_HANDSHAKE_ERROR)
-				return false;
-
-			tracker_->set_track_status(true);
-			if (!get_service()->awake_channel_tracker(tracker_))
+			if (!get_service()->awake_channel_tracker(tracker_.get()))
 				PUMP_ASSERT(false);
 
 			tracker_cnt_.fetch_add(1);
+
+			if (__process_handshake(flow_.get(), tracker_.get()) == TLS_HANDSHAKE_ERROR)
+				return false;
 
 			return true;
 		}
@@ -391,6 +403,12 @@ namespace pump {
 				PUMP_ASSERT(false);
 
 			tracker_.reset();
+		}
+
+		void tls_handshaker::__awake_tracker(poll::channel_tracker_ptr tracker)
+		{
+			if (!get_service()->awake_channel_tracker(tracker))
+				PUMP_ASSERT(false);
 		}
 
 	}

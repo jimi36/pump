@@ -15,6 +15,7 @@
  */
 
 #include "pump/init.h"
+#include "pump/net/iocp.h"
 
 #ifdef USE_GNUTLS
 extern "C" {
@@ -71,6 +72,10 @@ namespace pump {
 		::WSACleanup();
 #else
 		setup_signal(SIGPIPE, 0, SIG_DFL);
+#endif
+
+#if defined(WIN32) && defined(USE_IOCP)
+		CloseHandle(net::get_iocp_handler());
 #endif
 
 #ifdef USE_GNUTLS

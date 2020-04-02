@@ -96,11 +96,9 @@ namespace pump {
 		{
 			auto flow_locker = flow_;
 			auto flow = flow_locker.get();
-			if (flow == nullptr)
+			if (!flow)
 			{
-				// If flow no existed, it means acceptor has be stopped. So we free iocp task and 
-				// return at here.
-				flow::free_iocp_task(itask);
+				flow::free_task(itask);
 				return;
 			}
 
@@ -241,13 +239,13 @@ namespace pump {
 			PUMP_ASSERT(!flow_);
 			flow_.reset(new flow::flow_tcp_dialer());
 			poll::channel_sptr ch = shared_from_this();
-			if (flow_->init(ch, get_service()->get_iocp_handler(), bind_address) != FLOW_ERR_NO)
+			if (flow_->init(ch, bind_address) != FLOW_ERR_NO)
 				return false;
 
-			// Set channel fd.
+			// Set channel FD
 			poll::channel::__set_fd(flow_->get_fd());
 
-			// Save bind address.
+			// Save bind address
 			bind_address_ = bind_address;
 
 			return true;
@@ -258,8 +256,6 @@ namespace pump {
 			PUMP_ASSERT(!tracker_);
 			poll::channel_sptr ch = shared_from_this();
 			tracker_.reset(new poll::channel_tracker(ch, TRACK_WRITE, TRACK_MODE_ONCE));
-			tracker_->set_track_status(true);
-
 			if (!get_service()->add_channel_tracker(tracker_))
 				return false;
 

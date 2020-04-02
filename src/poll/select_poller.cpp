@@ -54,7 +54,7 @@ namespace pump {
 				if (maxfd < fd)
 					maxfd = fd;
 
-				int32 listen_event = tracker->get_track_event();
+				int32 listen_event = tracker->get_event();
 				if (listen_event & IO_EVNET_READ)
 					FD_SET(fd, &rfds_);
 				if (listen_event & IO_EVENT_SEND)
@@ -92,7 +92,7 @@ namespace pump {
 				}
 
 				int32 fd = tracker->get_fd();
-				assert(fd == ch->get_fd() || !"the fd of channel tracker must be equal to the fd of current channel");
+				PUMP_ASSERT(fd == ch->get_fd());
 
 				uint32 pending_event = IO_EVENT_NONE;
 				if (FD_ISSET(fd, &rfds))
@@ -100,10 +100,10 @@ namespace pump {
 				if (FD_ISSET(fd, &wfds))
 					pending_event |= IO_EVENT_SEND;
 
-				if (pending_event != IO_EVENT_NONE)
+				if (pending_event != IO_EVENT_NONE && tracker->is_tracking())
 				{
 					if (pop_pending_channel_)
-						tracker->set_track_status(false);
+						tracker->set_tracking(false);
 
 					ch->handle_io_event(pending_event, nullptr);
 				}

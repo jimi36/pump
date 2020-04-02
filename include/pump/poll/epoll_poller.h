@@ -54,14 +54,17 @@ namespace pump {
 			virtual void __remove_channel_tracker(channel_tracker_ptr tracker);
 
 			/*********************************************************************************
+			 * Pause channel tracker for derived class
+			 ********************************************************************************/
+			virtual void __pause_channel_tracker(channel_tracker_ptr tracker);
+
+			/*********************************************************************************
 			 * Awake channel tracker for derived class
 			 ********************************************************************************/
 			virtual void __awake_channel_tracker(channel_tracker_ptr tracker);
 
 			/*********************************************************************************
 			 * Poll
-			 * actives is saving active channels
-			 * timeout is polling timeout time, if set as -1, then no wait
 			 ********************************************************************************/
 			virtual void __poll(int32 timeout);
 

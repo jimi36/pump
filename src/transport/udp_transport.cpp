@@ -50,7 +50,7 @@ namespace pump {
 			if (!__start_tracker())
 				return false;
 
-			if (flow_->want_to_read() != FLOW_ERR_NO)
+			if (flow_->beg_read_task() != FLOW_ERR_NO)
 				return false;
 
 			if (!__set_status(TRANSPORT_STARTING, TRANSPORT_STARTED))
@@ -63,11 +63,58 @@ namespace pump {
 
 		void udp_transport::stop()
 		{
-			if (__set_status(TRANSPORT_STARTED, TRANSPORT_STOPPING))
+			while (__is_status(TRANSPORT_STARTED) || __is_status(TRANSPORT_PAUSED))
 			{
-				__close_flow();
-				__stop_tracker();
+				if (__set_status(TRANSPORT_STARTED, TRANSPORT_STOPPING) ||
+					__set_status(TRANSPORT_PAUSED, TRANSPORT_STOPPING))
+				{
+					__close_flow();
+					__stop_tracker();
+					return;
+				}
 			}
+		}
+
+		bool udp_transport::restart()
+		{
+			auto flow_locker = flow_;
+			auto flow = flow_locker.get();
+			if (flow == nullptr)
+				return false;
+
+			if (__set_status(TRANSPORT_PAUSED, TRANSPORT_STARTED))
+			{
+				int32 ret = flow->beg_read_task();
+				if (ret != FLOW_ERR_NO || ret != FLOW_ERR_BUSY)
+				{
+					if (__set_status(TRANSPORT_STARTED, TRANSPORT_ERROR))
+					{
+						__close_flow();
+						__stop_tracker();
+					}
+					return false;
+				}
+
+				return __awake_tracker();
+			}
+				
+			return false;
+		}
+
+		bool udp_transport::pause()
+		{
+			auto flow_locker = flow_;
+			auto flow = flow_locker.get();
+			if (flow == nullptr)
+				return false;
+
+			if (__set_status(TRANSPORT_STARTED, TRANSPORT_PAUSED))
+			{
+				flow->cancel_read_task();
+				return __pause_tracker();
+			}
+
+			return false;
 		}
 
 		bool udp_transport::send(
@@ -94,22 +141,24 @@ namespace pump {
 			auto flow = flow_locker.get();
 			if (flow == nullptr)
 			{
-				flow::free_iocp_task(itask);
+				flow::free_task(itask);
 				return;
 			}
 
-			int32 size;
-			address remote_address;
-			c_block_ptr b = flow->read_from(itask, &size, &remote_address);
+			address addr;
+			int32 size = 0;
+			c_block_ptr b = flow->read_from(itask, &size, &addr);
 			if (size <= 0)
 				return;
 
 			auto notifier_locker = __get_notifier<transport_io_notifier>();
 			auto notifier = notifier_locker.get();
 			if (notifier)
-				notifier->on_read_callback(this, b, size, remote_address);
+				notifier->on_read_callback(this, b, size, addr);
 
-			if (flow->want_to_read() != FLOW_ERR_NO)
+			flow->end_read_task();
+
+			if (__is_status(TRANSPORT_STARTED) && flow->beg_read_task() == FLOW_ERR_ABORT)
 			{
 				if (__set_status(TRANSPORT_STARTED, TRANSPORT_ERROR))
 				{
@@ -142,7 +191,7 @@ namespace pump {
 			PUMP_ASSERT(!flow_);
 			flow_.reset(new flow::flow_udp());
 			poll::channel_sptr ch = shared_from_this();
-			if (flow_->init(ch, get_service()->get_iocp_handler(), local_address) != FLOW_ERR_NO)
+			if (flow_->init(ch, local_address) != FLOW_ERR_NO)
 				return false;
 
 			// Set channel fd
@@ -159,8 +208,6 @@ namespace pump {
 			PUMP_ASSERT(!tracker_);
 			poll::channel_sptr ch = shared_from_this();
 			tracker_.reset(new poll::channel_tracker(ch, TRACK_READ, TRACK_MODE_LOOP));
-			tracker_->set_track_status(true);
-
 			if (!get_service()->add_channel_tracker(tracker_))
 				return false;
 
@@ -178,6 +225,26 @@ namespace pump {
 				PUMP_ASSERT(false);
 
 			tracker_.reset();
+		}
+
+		bool udp_transport::__awake_tracker()
+		{
+			if (!tracker_)
+				return false;
+
+			if (!get_service()->awake_channel_tracker(tracker_.get()))
+				PUMP_ASSERT(false);
+			return true;
+		}
+
+		bool udp_transport::__pause_tracker()
+		{
+			if (!tracker_)
+				return false;
+
+			if (!get_service()->pause_channel_tracker(tracker_.get()))
+				PUMP_ASSERT(false);
+			return true;
 		}
 
 	}

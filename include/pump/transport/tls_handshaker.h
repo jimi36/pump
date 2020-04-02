@@ -100,12 +100,12 @@ namespace pump {
 			/*********************************************************************************
 			 * Get local address
 			 ********************************************************************************/
-			const address& get_local_address() const { return local_address_; }
+			virtual const address& get_local_address() const { return local_address_; }
 
 			/*********************************************************************************
 			 * Start remote address
 			 ********************************************************************************/
-			const address& get_remote_address() const { return remote_address_; }
+			virtual const address& get_remote_address() const { return remote_address_; }
 
 		protected:
 			/*********************************************************************************
@@ -142,7 +142,10 @@ namespace pump {
 			/*********************************************************************************
 			 * Process handshake
 			 ********************************************************************************/
-			int32 __process_handshake(flow::flow_tls_ptr flow);
+			int32 __process_handshake(
+				flow::flow_tls_ptr flow, 
+				poll::channel_tracker_ptr tracker
+			);
 
 			/*********************************************************************************
 			 * Start handshaking timer
@@ -156,14 +159,25 @@ namespace pump {
 
 			/*********************************************************************************
 			 * Start tracker
+			 * This will create new tracker and start it.
 			 ********************************************************************************/
 			bool __start_tracker();
-			bool __start_tracker(poll::channel_tracker_sptr &tracker);
+
+			/*********************************************************************************
+			 * Start tracker
+			 * This will use the specified tracker and awake it.
+			 ********************************************************************************/
+			bool __restart_tracker(poll::channel_tracker_sptr &tracker);
 
 			/*********************************************************************************
 			 * Stop tracker
 			 ********************************************************************************/
 			void __stop_tracker();
+
+			/*********************************************************************************
+			 * Awake tracker
+			 ********************************************************************************/
+			void __awake_tracker(poll::channel_tracker_ptr tracker);
 
 		private:
 			// Local address

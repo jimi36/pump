@@ -65,6 +65,16 @@ namespace pump {
 			 ********************************************************************************/
 			virtual void stop();
 
+			/*********************************************************************************
+			 * Get local address
+			 ********************************************************************************/
+			virtual const address& get_local_address() const { return bind_address_; }
+
+			/*********************************************************************************
+			 * Get remote address
+			 ********************************************************************************/
+			virtual const address& get_remote_address() const { return peer_address_; }
+
 		protected:
 			/*********************************************************************************
 			 * Send event callback
@@ -146,7 +156,7 @@ namespace pump {
 			// Bind address
 			address bind_address_;
 			// Remote address
-			address connect_address_;
+			address peer_address_;
 			// GnuTls credentials
 			void_ptr tls_cert_;
 			// Connect timeout timer

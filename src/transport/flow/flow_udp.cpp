@@ -25,6 +25,7 @@ namespace pump {
 			flow_udp::flow_udp():
 				read_task_(nullptr)
 			{
+				read_flag_.clear();
 			}
 
 			flow_udp::~flow_udp()
@@ -35,7 +36,7 @@ namespace pump {
 #endif
 			}
 
-			int32 flow_udp::init(poll::channel_sptr &ch, net::iocp_handler iocp, const address &bind_address)
+			int32 flow_udp::init(poll::channel_sptr &ch, const address &bind_address)
 			{
 				PUMP_ASSERT_EXPR(ch, ch_ = ch);
 		
@@ -44,8 +45,7 @@ namespace pump {
 					domain = AF_INET6;
 
 #if defined(WIN32) && defined(USE_IOCP)
-				PUMP_ASSERT(iocp);
-				fd_ = net::create_iocp_socket(domain, SOCK_DGRAM, iocp);
+				fd_ = net::create_iocp_socket(domain, SOCK_DGRAM, net::get_iocp_handler());
 #else
 				fd_ = net::create_socket(domain, SOCK_DGRAM);
 #endif
@@ -70,9 +70,12 @@ namespace pump {
 				return FLOW_ERR_NO;
 			}
 
-			int32 flow_udp::want_to_read()
+			int32 flow_udp::beg_read_task()
 			{
 #if defined(WIN32) && defined(USE_IOCP)
+				if (read_flag_.test_and_set())
+					return FLOW_ERR_BUSY;
+
 				PUMP_ASSERT(read_task_);
 				net::link_iocp_task(read_task_);
 				net::reuse_iocp_task(read_task_);
@@ -85,12 +88,29 @@ namespace pump {
 				return FLOW_ERR_NO;
 			}
 
-			c_block_ptr flow_udp::read_from(net::iocp_task_ptr itask, int32_ptr size, address_ptr remote_address)
+			void flow_udp::end_read_task()
 			{
 #if defined(WIN32) && defined(USE_IOCP)
+				read_flag_.clear();
+#endif
+			}
+
+			void flow_udp::cancel_read_task()
+			{
+#if defined(WIN32) && defined(USE_IOCP)
+				//net::cancel_iocp_task(net::get_iocp_handler(), read_task_);
+#endif
+			}
+
+			c_block_ptr flow_udp::read_from(
+				net::iocp_task_ptr itask, 
+				int32_ptr size, 
+				address_ptr remote_address
+			) {
+#if defined(WIN32) && defined(USE_IOCP)
 				PUMP_ASSERT(read_task_ == itask);
-				*size = net::get_iocp_task_processed_size(itask);
-				c_block_ptr buf = net::get_iocp_task_processed_buffer(itask);
+				//*size = net::get_iocp_task_processed_size(itask);
+				c_block_ptr buf = net::get_iocp_task_processed_buffer(itask, size);
 				if (*size > 0)
 				{
 					int32 addrlen = 0;

@@ -23,22 +23,18 @@ namespace pump {
 			poller(pop_pending),
 			iocp_(nullptr)
 		{
-#ifdef WIN32
-			iocp_ = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 0);
+#if defined (WIN32) && defined (USE_IOCP)
+			iocp_ = net::get_iocp_handler();
 #endif
 		}
 
 		iocp_poller::~iocp_poller()
 		{
-#ifdef WIN32
-			if (iocp_)
-				CloseHandle(iocp_);
-#endif
 		}
 
 		bool iocp_poller::start()
 		{
-#ifdef WIN32
+#if defined(WIN32) && defined(USE_IOCP)
 			if (started_.load())
 				return false;
 
@@ -62,7 +58,7 @@ namespace pump {
 
 		void iocp_poller::stop()
 		{
-#ifdef WIN32
+#if defined(WIN32) && defined(USE_IOCP)
 			started_.store(false);
 
 			int32 count = (int32)workrs_.size();
@@ -71,9 +67,9 @@ namespace pump {
 #endif
 		}
 
-		void iocp_poller::wait_stop()
+		void iocp_poller::wait_stopped()
 		{
-#ifdef WIN32
+#if defined(WIN32) && defined(USE_IOCP)
 			int32 count = (int32)workrs_.size();
 			for (int32 i = 0; i < count; i++)
 				workrs_[i]->join();
@@ -83,7 +79,7 @@ namespace pump {
 
 		bool iocp_poller::add_channel_tracker(channel_tracker_sptr &tracker)
 		{
-#ifdef WIN32
+#if defined(WIN32) && defined(USE_IOCP)
 			if (!started_.load())
 				return false;
 
@@ -99,7 +95,7 @@ namespace pump {
 
 		void iocp_poller::remove_channel_tracker(channel_tracker_sptr &tracker)
 		{
-#ifdef WIN32
+#if defined(WIN32) && defined(USE_IOCP)
 			auto itask = net::new_iocp_task();
 			net::set_iocp_task_type(itask, IOCP_TASK_TRACKER);
 			net::set_iocp_task_notifier(itask, tracker->get_channel());
@@ -107,94 +103,100 @@ namespace pump {
 #endif
 		}
 
+		void iocp_poller::pause_channel_tracker(channel_tracker_ptr tracker)
+		{
+		}
+
 		void iocp_poller::__work_thread()
 		{
-#ifdef WIN32
+#if defined(WIN32) && defined(USE_IOCP)
 			int32 tracker_cnt = 0;
 			DWORD transferred = 0;
 			ULONG_PTR completion_key = 0;
-			LPOVERLAPPED overlapped = nullptr;
-			while (started_.load() || tracker_cnt > 0)
-			{
-				transferred = 0;
-				completion_key = 0;
-				overlapped = nullptr;
-				if (GetQueuedCompletionStatus(iocp_, &transferred, &completion_key, (LPOVERLAPPED*)&overlapped, INFINITE) == TRUE)
-				{
-					if (transferred == -1)
-						continue;
 
-					auto itask = (net::iocp_task_ptr)overlapped;
-					auto ch_locker = static_pointer_cast<channel>(net::get_iocp_task_notifier(itask).lock());
-					auto ch = ch_locker.get();
-					if (ch == nullptr)
+			int32 task_type = 0;
+			net::iocp_task_ptr itask = nullptr;
+
+			while (tracker_cnt > 0 || started_.load())
+			{
+				if (GetQueuedCompletionStatus(iocp_, &transferred, &completion_key, (LPOVERLAPPED*)&itask, INFINITE) == TRUE)
+				{
+					PUMP_ASSERT(transferred >= 0);
+
+					auto ch_locker = net::get_iocp_task_notifier(itask);
+					auto ch = (channel_ptr)ch_locker.get();
+					if (!ch)
 					{
 						net::unlink_iocp_task(itask);
 						continue;
 					}
 
-					int32 task_type = net::get_iocp_task_type(itask);
+					int32 event = IO_EVENT_NONE;
+					task_type = net::get_iocp_task_type(itask);
+					if (task_type == IOCP_TASK_SEND || task_type == IOCP_TASK_CONNECT)
+						event |= IO_EVENT_SEND;
+					else if (task_type == IOCP_TASK_READ || task_type == IOCP_TASK_ACCEPT)
+						event |= IO_EVNET_READ;
+
+					if (event != IO_EVENT_NONE)
+					{
+						/*
+						DWORD flags = 0;
+						DWORD transferred = 0;
+						int32 fd = net::get_iocp_task_fd(itask);
+						if (::WSAGetOverlappedResult(fd, overlapped, &transferred, FALSE, &flags) == FALSE)
+						{
+							PUMP_ASSERT(false);
+							int32 ec = net::last_errno();
+							net::set_iocp_task_ec(itask, ec);
+							if (ec == WSA_IO_INCOMPLETE)
+								continue;
+						}
+						*/
+
+						net::set_iocp_task_processed_size(itask, transferred);
+
+						ch->handle_io_event(event, itask);
+
+						continue;
+					}
+
 					if (task_type == IOCP_TASK_CHANNEL)
 					{
 						ch->handle_channel_event(uint32(completion_key));
-						net::unlink_iocp_task(itask);
-						continue;
 					}
 					else if (task_type == IOCP_TASK_TRACKER)
 					{
 						int32 ev = (int32)completion_key;
 						tracker_cnt += (ev == TRACKER_EVENT_ADD) ? 1 : -1;
 						ch->handle_tracker_event(ev);
+					}
+
+					net::unlink_iocp_task(itask);
+				}
+				else
+				{
+					if (!itask)
+						continue;
+
+					auto ch_locker = net::get_iocp_task_notifier(itask);
+					auto ch = (channel_ptr)ch_locker.get();
+					if (!ch)
+					{
 						net::unlink_iocp_task(itask);
 						continue;
 					}
 
-					/*
-					DWORD flags = 0;
-					DWORD transferred = 0;
-					int32 fd = net::get_iocp_task_fd(itask);
-					if (::WSAGetOverlappedResult(fd, overlapped, &transferred, FALSE, &flags) == FALSE)
-					{
-						PUMP_ASSERT(false);
-						int32 ec = net::last_errno();
-						net::set_iocp_task_ec(itask, ec);
-						if (ec == WSA_IO_INCOMPLETE)
-							continue;
-					}
-					*/
-
-					net::set_iocp_task_processed_size(itask, transferred);
-
 					int32 event = IO_EVENT_NONE;
+					task_type = net::get_iocp_task_type(itask);
 					if (task_type == IOCP_TASK_SEND || task_type == IOCP_TASK_CONNECT)
 						event |= IO_EVENT_SEND;
 					if (task_type == IOCP_TASK_READ || task_type == IOCP_TASK_ACCEPT)
 						event |= IO_EVNET_READ;
-					ch->handle_io_event(event, itask);
-				}
-				else
-				{
-					auto itask = (net::iocp_task_ptr)overlapped;
-					if (itask == nullptr)
-						continue;
-
-					auto ch_locker = static_pointer_cast<channel>(net::get_iocp_task_notifier(itask).lock());
-					auto ch = ch_locker.get();
-					if (ch == nullptr)
-					{
-						net::unlink_iocp_task(itask);
-						continue;
-					}
 
 					net::set_iocp_task_processed_size(itask, 0);
 					net::set_iocp_task_ec(itask, net::last_errno());
 
-					int32 task_type = net::get_iocp_task_type(itask);
-					int32 event = IO_EVENT_NONE;
-					if (task_type == IOCP_TASK_SEND || task_type == IOCP_TASK_CONNECT)
-						event |= IO_EVENT_SEND;
-					if (task_type == IOCP_TASK_READ || task_type == IOCP_TASK_ACCEPT)
-						event |= IO_EVNET_READ;
 					ch->handle_io_event(event, itask);
 				}
 			}
@@ -203,7 +205,7 @@ namespace pump {
 
 		void iocp_poller::push_channel_event(channel_sptr &c, uint32 ev)
 		{
-#ifdef WIN32
+#if defined(WIN32) && defined(USE_IOCP)
 			auto itask = net::new_iocp_task();
 			net::set_iocp_task_notifier(itask, c);
 			net::set_iocp_task_type(itask, IOCP_TASK_CHANNEL);
