@@ -64,6 +64,7 @@ namespace pump {
 #endif
 				if (!net::set_reuse(fd_, 1) ||
 					!net::set_noblock(fd_, 1) ||
+					!net::set_nodelay(fd_, 1) ||
 					!net::bind(fd_, (sockaddr*)listen_address.get(), listen_address.len()) ||
 					!net::listen(fd_))
 					return FLOW_ERR_ABORT;
@@ -134,7 +135,8 @@ namespace pump {
 				net::local_address(client_fd, (sockaddr*)tmp_cache_.data(), &addrlen);
 				local_address->set((sockaddr*)tmp_cache_.data(), addrlen);
 #endif
-				if (!net::set_noblock(client_fd, 1))
+				if (!net::set_noblock(client_fd, 1) ||
+					!net::set_nodelay(client_fd, 1))
 				{
 					net::close(client_fd);
 					return -1;

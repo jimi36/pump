@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#include "pump/utils/strings.h"
 #include "pump/transport/address.h"
 
 namespace pump {

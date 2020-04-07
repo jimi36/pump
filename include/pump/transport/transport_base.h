@@ -208,7 +208,7 @@ namespace pump {
 			 ********************************************************************************/
 			template <typename NotifyType>
 			std::shared_ptr<NotifyType> __get_notifier()
-			{ return std::move(static_pointer_cast<NotifyType>(notifier_.lock())); }
+			{ return std::move(std::static_pointer_cast<NotifyType>(notifier_.lock())); }
 
 		protected:
 			// Tracking tracker count

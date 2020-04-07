@@ -80,13 +80,8 @@ namespace pump {
 
 		void tls_acceptor::on_read_event(net::iocp_task_ptr itask)
 		{
-			auto flow_locker = flow_;
-			auto flow = flow_locker.get();
-			if (!flow)
-			{
-				flow::free_task(itask);
-				return;
-			}
+			PUMP_LOCK_SPOINTER_EXPR(flow, flow_, false, 
+				flow::free_task(itask); return);
 
 			address local_address, remote_address;
 			int32 fd = flow->accept(itask, &local_address, &remote_address);
@@ -129,10 +124,8 @@ namespace pump {
 			{
 				if (__set_status(TRANSPORT_STOPPING, TRANSPORT_STOPPED))
 				{
-					auto notifier_locker = __get_notifier<accepted_notifier>();
-					auto notifier = notifier_locker.get();
-					if (notifier)
-						notifier->on_stopped_accepting_callback(get_context());
+					PUMP_LOCK_SPOINTER_EXPR(notifier, __get_notifier<accepted_notifier>(), true,
+						notifier->on_stopped_accepting_callback(get_context()));
 				}
 			}
 		}
@@ -150,10 +143,8 @@ namespace pump {
 				if (!transport->init(flow, local_address, remote_address))
 					PUMP_ASSERT(false);
 
-				auto notifier_locker = __get_notifier<accepted_notifier>();
-				auto notifier = notifier_locker.get();
-				if(notifier)
-					notifier->on_accepted_callback(this, transport);
+				PUMP_LOCK_SPOINTER_EXPR(notifier, __get_notifier<accepted_notifier>(), true,
+					notifier->on_accepted_callback(this, transport));
 			}
 
 			__remove_tls_handshaker(the_handshaker);

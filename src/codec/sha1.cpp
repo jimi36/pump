@@ -169,7 +169,6 @@ namespace pump {
 #endif
 		}
 
-
 		/* sha1_init - Initialize new context */
 
 		void sha1_init(SHA1_CTX *ctx)

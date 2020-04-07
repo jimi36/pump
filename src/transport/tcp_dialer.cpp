@@ -84,13 +84,8 @@ namespace pump {
 
 		void tcp_dialer::on_send_event(net::iocp_task_ptr itask)
 		{
-			auto flow_locker = flow_;
-			auto flow = flow_locker.get();
-			if (!flow)
-			{
-				flow::free_task(itask);
-				return;
-			}
+			PUMP_LOCK_SPOINTER_EXPR(flow, flow_, false,
+				flow::free_task(itask); return);
 
 			address local_address, remote_address;
 			bool success = (flow->connect(itask, local_address, remote_address) == 0);
@@ -109,10 +104,8 @@ namespace pump {
 				if (!conn->init(flow->unbind_fd(), local_address, remote_address))
 					PUMP_ASSERT(false);
 
-				auto notifier_locker = __get_notifier<dialed_notifier>();
-				auto notifier = notifier_locker.get();
-				if (notifier)
-					notifier->on_dialed_callback(get_context(), conn, success);
+				PUMP_LOCK_SPOINTER_EXPR(notifier, __get_notifier<dialed_notifier>(), true,
+					notifier->on_dialed_callback(get_context(), conn, success));
 			}
 		}
 
@@ -126,23 +119,20 @@ namespace pump {
 
 			if (tracker_cnt_ == 0)
 			{
-				auto notifier_locker = __get_notifier<dialed_notifier>();
-				auto notifier = notifier_locker.get();
-
 				if (__is_status(TRANSPORT_ERROR))
 				{
-					if (notifier)
-						notifier->on_dialed_callback(get_context(), tcp_transport_sptr(), false);
+					PUMP_LOCK_SPOINTER_EXPR(notifier, __get_notifier<dialed_notifier>(), true, 
+						notifier->on_dialed_callback(get_context(), tcp_transport_sptr(), false));
 				}
 				else if (__set_status(TRANSPORT_TIMEOUT_DOING, TRANSPORT_TIMEOUT_DONE))
 				{
-					if (notifier)
-						notifier->on_dialed_timeout_callback(get_context());
+					PUMP_LOCK_SPOINTER_EXPR(notifier, __get_notifier<dialed_notifier>(), true,
+						notifier->on_dialed_timeout_callback(get_context()));
 				}
 				else if (__set_status(TRANSPORT_STOPPING, TRANSPORT_STOPPED))
 				{
-					if (notifier)
-						notifier->on_stopped_dialing_callback(get_context());
+					PUMP_LOCK_SPOINTER_EXPR(notifier, __get_notifier<dialed_notifier>(), true,
+						notifier->on_stopped_dialing_callback(get_context()));
 				}
 			}
 		}

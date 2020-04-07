@@ -41,7 +41,7 @@ namespace pump {
 
 					__update_channel_trackers();
 
-					__poll(3);
+					__poll(5);
 				}
 			}));
 
@@ -145,12 +145,13 @@ namespace pump {
 			for (channel_tracker_event &ev: new_events)
 			{
 				auto tracker = ev.tracker.get();
-				auto ch_locker = tracker->get_channel();
-				auto ch = ch_locker.get();
+
+				PUMP_LOCK_SPOINTER_EXPR(ch, tracker->get_channel(), false,
+					continue);
 
 				if (ev.event == TRACKER_EVENT_ADD)
 				{
-					if (ch == nullptr || tracker->get_fd() <= 0)
+					if (tracker->get_fd() <= 0)
 						continue;
 
 					if (__add_channel_tracker(tracker))
@@ -162,12 +163,9 @@ namespace pump {
 					trackers_.erase(tracker);
 				}
 
-				if (ch)
-				{
-					// All tracker opt will trigger tracker event, even if the tracker is not in the 
-					// poller tracker list. But channel of the tracker must be existing.
-					ch->handle_tracker_event(ev.event);
-				}
+				// All tracker opt will trigger tracker event, even if the tracker is not in the 
+				// poller tracker list. But channel of the tracker must be existing.
+				ch->handle_tracker_event(ev.event);
 			}
 		}
 

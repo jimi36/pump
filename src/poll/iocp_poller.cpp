@@ -121,15 +121,12 @@ namespace pump {
 			{
 				if (GetQueuedCompletionStatus(iocp_, &transferred, &completion_key, (LPOVERLAPPED*)&itask, INFINITE) == TRUE)
 				{
-					PUMP_ASSERT(transferred >= 0);
-
-					auto ch_locker = net::get_iocp_task_notifier(itask);
-					auto ch = (channel_ptr)ch_locker.get();
-					if (!ch)
-					{
-						net::unlink_iocp_task(itask);
+					if (!itask)
 						continue;
-					}
+
+					PUMP_LOCK_SPOINTER_EXPR(void_ch, net::get_iocp_task_notifier(itask), false,
+						net::unlink_iocp_task(itask); continue);
+					auto ch = (channel_ptr)void_ch;
 
 					int32 event = IO_EVENT_NONE;
 					task_type = net::get_iocp_task_type(itask);
@@ -179,13 +176,9 @@ namespace pump {
 					if (!itask)
 						continue;
 
-					auto ch_locker = net::get_iocp_task_notifier(itask);
-					auto ch = (channel_ptr)ch_locker.get();
-					if (!ch)
-					{
-						net::unlink_iocp_task(itask);
-						continue;
-					}
+					PUMP_LOCK_SPOINTER_EXPR(void_ch, net::get_iocp_task_notifier(itask), false,
+						net::unlink_iocp_task(itask); continue);
+					auto ch = (channel_ptr)void_ch;
 
 					int32 event = IO_EVENT_NONE;
 					task_type = net::get_iocp_task_type(itask);

@@ -77,10 +77,8 @@ namespace pump {
 
 		bool udp_transport::restart()
 		{
-			auto flow_locker = flow_;
-			auto flow = flow_locker.get();
-			if (flow == nullptr)
-				return false;
+			PUMP_LOCK_SPOINTER_EXPR(flow, flow_, false,
+				return false);
 
 			if (__set_status(TRANSPORT_PAUSED, TRANSPORT_STARTED))
 			{
@@ -103,10 +101,8 @@ namespace pump {
 
 		bool udp_transport::pause()
 		{
-			auto flow_locker = flow_;
-			auto flow = flow_locker.get();
-			if (flow == nullptr)
-				return false;
+			PUMP_LOCK_SPOINTER_EXPR(flow, flow_, false,
+				return false);
 
 			if (__set_status(TRANSPORT_STARTED, TRANSPORT_PAUSED))
 			{
@@ -124,10 +120,8 @@ namespace pump {
 		) {
 			PUMP_ASSERT(b);
 
-			auto flow_locker = flow_;
-			auto flow = flow_locker.get();
-			if (flow == nullptr)
-				return false;
+			PUMP_LOCK_SPOINTER_EXPR(flow, flow_, false,
+				return false);
 
 			if (flow->send_to(b, size, remote_address) <= 0)
 				return false;
@@ -137,13 +131,8 @@ namespace pump {
 
 		void udp_transport::on_read_event(net::iocp_task_ptr itask)
 		{
-			auto flow_locker = flow_;
-			auto flow = flow_locker.get();
-			if (flow == nullptr)
-			{
-				flow::free_task(itask);
-				return;
-			}
+			PUMP_LOCK_SPOINTER_EXPR(flow, flow_, false,
+				flow::free_task(itask); return);
 
 			address addr;
 			int32 size = 0;
@@ -178,10 +167,8 @@ namespace pump {
 
 			if (tracker_cnt_ == 0)
 			{
-				auto notifier_locker = terminated_notifier_.lock();
-				auto notifier = notifier_locker.get();
-				if(notifier)
-					notifier->on_stopped_callback(this);
+				PUMP_LOCK_WPOINTER_EXPR(notifier, terminated_notifier_, true,
+					notifier->on_stopped_callback(this));
 			}
 		}
 
@@ -234,6 +221,7 @@ namespace pump {
 
 			if (!get_service()->awake_channel_tracker(tracker_.get()))
 				PUMP_ASSERT(false);
+
 			return true;
 		}
 
@@ -244,6 +232,7 @@ namespace pump {
 
 			if (!get_service()->pause_channel_tracker(tracker_.get()))
 				PUMP_ASSERT(false);
+
 			return true;
 		}
 

@@ -1,6 +1,7 @@
 #include "tcp_transport_test.h"
 
 static service *sv;
+static service *sv1;
 
 static int send_loop = 0;
 static int send_pocket_size = 1024*4;
@@ -43,7 +44,7 @@ public:
 	 ********************************************************************************/
 	virtual void on_accepted_callback(void_ptr ctx, transport_base_sptr transp)
 	{
-		tcp_transport_sptr transport = static_pointer_cast<tcp_transport>(transp);
+		tcp_transport_sptr transport = std::static_pointer_cast<tcp_transport>(transp);
 		auto tctx = new transport_context(transport);
 		transport->set_context(tctx);
 
@@ -130,6 +131,18 @@ public:
 		transport->send(send_data_.data(), send_data_.size());
 	}
 
+	void set_on(bool on)
+	{
+		std::lock_guard<std::mutex> lock(mx_);
+		for (auto t : transports_)
+		{
+			if (on)
+				t.second->transport->restart();
+			else
+				t.second->transport->pause();
+		}
+	}
+
 private:
 	std::string send_data_;
 
@@ -144,7 +157,11 @@ void start_tcp_server(const std::string &ip, uint16 port)
 	sv = new service;
 	sv->start();
 
-	my_accpeted_notifier.reset(new my_tcp_acceptor);
+	sv1 = new service;
+	sv1->start();
+
+	my_tcp_acceptor *my_acceptor = new my_tcp_acceptor;
+	my_accpeted_notifier.reset(my_acceptor);
 
 	address listen_address(ip, port);
 	tcp_acceptor_sptr acceptor = tcp_acceptor::create_instance();
@@ -153,5 +170,12 @@ void start_tcp_server(const std::string &ip, uint16 port)
 		printf("tcp acceptor start error\n");
 	}
 
-	sv->wait_stop();
+	bool on = true;
+	while (getchar())
+	{
+		on = !on;
+		my_acceptor->set_on(on);
+	}
+
+	sv->wait_stopped();
 }

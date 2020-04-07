@@ -22,8 +22,8 @@ namespace pump {
 #ifdef WIN32
 		void_ptr get_extension_function(int32 fd, const GUID *which_fn)
 		{
-			void_ptr ptr = nullptr;
 			DWORD bytes = 0;
+			void_ptr ptr = nullptr;
 			WSAIoctl(fd, SIO_GET_EXTENSION_FUNCTION_POINTER,
 				(GUID*)which_fn, sizeof(*which_fn), &ptr, sizeof(ptr), &bytes, nullptr, nullptr);
 
@@ -59,10 +59,10 @@ namespace pump {
 			if (accept_ex == nullptr || get_accepted_addrs == nullptr || connect_ex == nullptr)
 				return nullptr;
 
-			net_extension_ptr ext = new net_extension;
+			auto ext = new net_extension;
 			ext->accept_ex = accept_ex;
-			ext->get_accepted_addrs = get_accepted_addrs;
 			ext->connect_ex = connect_ex;
+			ext->get_accepted_addrs = get_accepted_addrs;
 
 			return ext;
 #else

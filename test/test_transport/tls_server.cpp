@@ -45,7 +45,7 @@ public:
 	 ********************************************************************************/
 	virtual void on_accepted_callback(void_ptr ctx, transport_base_sptr transp)
 	{
-		tls_transport_sptr transport = static_pointer_cast<tls_transport>(transp);
+		tls_transport_sptr transport = std::static_pointer_cast<tls_transport>(transp);
 		auto tctx = new transport_context(transport);
 		transport->set_context(tctx);
 
@@ -175,7 +175,7 @@ void start_tls_server(const std::string &ip, uint16 port, const std::string &cer
 		printf("tls acceptor start error\n");
 	}
 
-	sv->wait_stop();
+	sv->wait_stopped();
 #endif
 }
 

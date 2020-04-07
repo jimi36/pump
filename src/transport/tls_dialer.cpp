@@ -94,13 +94,8 @@ namespace pump {
 
 		void tls_dialer::on_send_event(net::iocp_task_ptr itask)
 		{
-			auto flow_locker = flow_;
-			auto flow = flow_locker.get();
-			if (!flow)
-			{
-				flow::free_task(itask);
-				return;
-			}
+			PUMP_LOCK_SPOINTER_EXPR(flow, flow_, false, 
+				flow::free_task(itask); return);
 
 			__stop_timer();
 
@@ -125,6 +120,7 @@ namespace pump {
 			handshaker_.reset(new tls_handshaker);
 			if (!handshaker_->init(flow->unbind_fd(), true, tls_cert_, local_address, remote_address))
 				PUMP_ASSERT(false);
+
 			poll::channel_tracker_sptr tracker(std::move(tracker_));
 			tls_handshaked_notifier_sptr notifier = shared_from_this();
 			if (handshaker_->start(get_service(), tracker, handshake_timeout_, notifier))
@@ -143,24 +139,21 @@ namespace pump {
 				tracker_cnt_ -= 1;
 
 			if (tracker_cnt_ == 0)
-			{
-				auto notifier_locker = __get_notifier<dialed_notifier>();
-				auto notifier = notifier_locker.get();
-				
+			{				
 				if (__is_status(TRANSPORT_ERROR))
 				{
-					if (notifier)
-						notifier->on_dialed_callback(get_context(), tls_transport_sptr(), false);
+					PUMP_LOCK_SPOINTER_EXPR(notifier, __get_notifier<dialed_notifier>(), true,
+						notifier->on_dialed_callback(get_context(), tls_transport_sptr(), false));
 				}
 				else if (__set_status(TRANSPORT_TIMEOUT_DOING, TRANSPORT_TIMEOUT_DONE))
 				{
-					if (notifier)
-						notifier->on_dialed_timeout_callback(get_context());
+					PUMP_LOCK_SPOINTER_EXPR(notifier, __get_notifier<dialed_notifier>(), true,
+						notifier->on_dialed_timeout_callback(get_context()));
 				}
 				else if (__set_status(TRANSPORT_STOPPING, TRANSPORT_STOPPED))
 				{
-					if (notifier)
-						notifier->on_stopped_dialing_callback(get_context());
+					PUMP_LOCK_SPOINTER_EXPR(notifier, __get_notifier<dialed_notifier>(), true,
+						notifier->on_stopped_dialing_callback(get_context()));
 				}
 			}
 		}
@@ -176,13 +169,10 @@ namespace pump {
 
 		void tls_dialer::on_handshaked_callback(transport_base_ptr handshaker, bool succ)
 		{
-			auto notifier_locker = __get_notifier<dialed_notifier>();
-			auto notifier = notifier_locker.get();
-
 			if (__set_status(TRANSPORT_STOPPING, TRANSPORT_STOPPED))
 			{
-				if (notifier)
-					notifier->on_stopped_dialing_callback(get_context());
+				PUMP_LOCK_SPOINTER_EXPR(notifier, __get_notifier<dialed_notifier>(), true,
+					notifier->on_stopped_dialing_callback(get_context()));
 			}
 			else if (__set_status(TRANSPORT_HANDSHAKING, TRANSPORT_FINISH))
 			{
@@ -196,8 +186,8 @@ namespace pump {
 						PUMP_ASSERT(false);
 				}
 
-				if (notifier)
-					notifier->on_dialed_callback(get_context(), transp, succ);
+				PUMP_LOCK_SPOINTER_EXPR(notifier, __get_notifier<dialed_notifier>(), true,
+					notifier->on_dialed_callback(get_context(), transp, succ));
 			}
 
 			handshaker_.reset();
@@ -205,18 +195,15 @@ namespace pump {
 
 		void tls_dialer::on_handshaked_timeout_callback(transport_base_ptr handshaker)
 		{
-			auto notifier_locker = __get_notifier<dialed_notifier>();
-			auto notifier = notifier_locker.get();
-
 			if (__set_status(TRANSPORT_STOPPING, TRANSPORT_STOPPED))
 			{
-				if (notifier)
-					notifier->on_stopped_dialing_callback(get_context());
+				PUMP_LOCK_SPOINTER_EXPR(notifier, __get_notifier<dialed_notifier>(), true,
+					notifier->on_stopped_dialing_callback(get_context()));
 			}
 			else if (__set_status(TRANSPORT_HANDSHAKING, TRANSPORT_TIMEOUT_DONE))
 			{
-				if (notifier)
-					notifier->on_dialed_timeout_callback(get_context());
+				PUMP_LOCK_SPOINTER_EXPR(notifier, __get_notifier<dialed_notifier>(), true,
+					notifier->on_dialed_timeout_callback(get_context()));
 			}
 
 			handshaker_.reset();
@@ -226,10 +213,8 @@ namespace pump {
 		{
 			if (__set_status(TRANSPORT_STOPPING, TRANSPORT_STOPPED))
 			{
-				auto notifier_locker = __get_notifier<dialed_notifier>();
-				auto notifier = notifier_locker.get();
-				if (notifier)
-					notifier->on_stopped_dialing_callback(get_context());
+				PUMP_LOCK_SPOINTER_EXPR(notifier, __get_notifier<dialed_notifier>(), true,
+					notifier->on_stopped_dialing_callback(get_context()));
 			}
 		}
 

@@ -29,7 +29,7 @@
 namespace pump {
 	namespace poll {
 
-		class LIB_EXPORT epoll_poller: public poller
+		class epoll_poller: public poller
 		{
 		public:
 			/*********************************************************************************

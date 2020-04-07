@@ -103,19 +103,10 @@ namespace pump {
 				auto it = trackers_.find(tracker);
 				if (it != trackers_.end())
 				{
-					auto ch_locker = tracker->get_channel();
-					auto ch = ch_locker.get();
-
-					// If the channel is already not existed, the channel tracker should be distroied at here.
-					if (ch == nullptr)
-					{
-						// Stop listening from epoll.
-						struct epoll_event ev;
-						epoll_ctl(epollfd_, EPOLL_CTL_DEL, tracker->get_fd(), &ev);
-
-						trackers_.erase(it);
-						continue;
-					}
+					// Epoll will automatically deltete closed fd.
+					// If channel already not existed, channel tracker should be removed.
+					PUMP_LOCK_SPOINTER_EXPR(ch, tracker->get_channel(), false,
+						trackers_.erase(beg++); continue);
 
 					int32 pending_event = IO_EVENT_NONE;
 					if (events_[i].events & EL_READ_EVENT)

@@ -67,5 +67,5 @@ void start_udp_client(const std::string &ip, uint16 port)
 
 	send(transport, ip, port);
 
-	sv->wait_stop();
+	sv->wait_stopped();
 }

@@ -186,7 +186,7 @@ namespace pump {
 		void_sptr get_iocp_task_notifier(iocp_task_ptr itask)
 		{
 #if defined(WIN32) && defined(USE_IOCP)
-			return std::move(itask->ch_notifier.lock());
+			return itask->ch_notifier.lock();
 #else
 			return void_sptr();
 #endif
@@ -232,7 +232,7 @@ namespace pump {
 #endif
 		}
 
-		block_ptr get_iocp_task_processed_buffer(iocp_task_ptr itask, int32_ptr size)
+		block_ptr get_iocp_task_processed_data(iocp_task_ptr itask, int32_ptr size)
 		{
 #if defined(WIN32) && defined(USE_IOCP)
 			*size = itask->processed_size;

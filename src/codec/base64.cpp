@@ -10,12 +10,17 @@ namespace pump {
 		inline void a4_to_a3(block_ptr a3, block_ptr a4);
 		inline block b64_lookup(block c);
 
-		inline static int32 encoded_length(size_t length) 
+		inline static uint32 encoded_length(size_t length) 
 		{
 			return (length + 2 - ((length + 2) % 3)) / 3 * 4;
 		}
 
-		inline static int32 encoded_length(const std::string &in) 
+		inline static uint32 encoded_length(const std::string &in) 
+		{
+			return encoded_length(in.length());
+		}
+
+		uint32 base64_encode_length(const std::string &in)
 		{
 			return encoded_length(in.length());
 		}
@@ -30,7 +35,8 @@ namespace pump {
 			int32 input_len = in.size();
 			std::string::const_iterator input = in.begin();
 
-			out.resize(encoded_length(in));
+			if (out.size() < encoded_length(in))
+				return false;
 
 			while (input_len--) 
 			{
@@ -70,7 +76,7 @@ namespace pump {
 			return (enc_len == out.size());
 		}
 
-		static int32 decoded_length(const std::string &in) 
+		static uint32 decoded_length(const std::string &in) 
 		{
 			int32 eq_cnt = 0;
 			int32 n = in.size();
@@ -83,6 +89,11 @@ namespace pump {
 			return ((6 * n) / 8) - eq_cnt;
 		}
 
+		uint32 base64_decode_length(const std::string &in)
+		{
+			return decoded_length(in);
+		}
+
 		bool base64_decode(const std::string &in, std::string &out) 
 		{
 			int32 i = 0, j = 0;
@@ -93,7 +104,8 @@ namespace pump {
 			int32 input_len = in.size();
 			std::string::const_iterator input = in.begin();
 
-			out.resize(decoded_length(in));
+			if (out.size() < decoded_length(in))
+				return false;
 
 			while (input_len--) 
 			{

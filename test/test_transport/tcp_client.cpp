@@ -3,7 +3,7 @@
 static service *sv;
 
 static int send_loop = 1024;
-static int send_pocket_size = 1024;
+static int send_pocket_size = 1024*4;
 
 class my_tcp_dialer :
 	public dialed_notifier,
@@ -33,7 +33,7 @@ public:
 			return;
 		}		
 
-		transport_ = static_pointer_cast<tcp_transport>(transp);
+		transport_ = std::static_pointer_cast<tcp_transport>(transp);
 
 		transport_io_notifier_sptr io_notifier = shared_from_this();
 		transport_terminated_notifier_sptr terminated_notifier = shared_from_this();
@@ -105,24 +105,20 @@ public:
 	/*********************************************************************************
 	 * Tcp disconnected event callback
 	 ********************************************************************************/
-	/*
 	virtual void on_disconnected_callback(transport_base_ptr transp)
 	{
 		printf("client tcp transport disconnected read msg %d\n", all_read_size_ / 4096);
 		transport_.reset();
 	}
-	*/
 
 	/*********************************************************************************
 	 * Tcp stopped event callback
 	 ********************************************************************************/
-	/*
 	virtual void on_stopped_callback(transport_base_ptr transp)
 	{
 		printf("client tcp transport stopped\n");
 		transport_.reset();
 	}
-	*/
 
 	void set_dialer(tcp_dialer_sptr d)
 	{
@@ -158,7 +154,8 @@ void start_tcp_client(const std::string &ip, uint16 port)
 
 	tcp_dialer_sptr dialer = tcp_dialer::create_instance();
 
-	my_dialed_notifier.reset(new my_tcp_dialer);
+	my_tcp_dialer *my_tcp = new my_tcp_dialer;
+	my_dialed_notifier.reset(my_tcp);
 	my_dialed_notifier->set_dialer(dialer);
 
 	address bind_address("0.0.0.0", 0);
@@ -169,5 +166,5 @@ void start_tcp_client(const std::string &ip, uint16 port)
 		printf("tcp dialer start error\n");
 	}
 
-	sv->wait_stop();
+	sv->wait_stopped();
 }

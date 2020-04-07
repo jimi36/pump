@@ -46,7 +46,8 @@ namespace pump {
 #endif
 				if (!net::set_reuse(fd_, 1) ||
 					!net::set_noblock(fd_, 1) ||
-					!net::set_keeplive(fd_, 3, 3) ||
+					!net::set_nodelay(fd_, 1) ||
+					//!net::set_keeplive(fd_, 3, 3) ||
 					!net::bind(fd_, (sockaddr*)bind_address.get(), bind_address.len()))
 					return FLOW_ERR_ABORT;
 

@@ -49,7 +49,7 @@ namespace pump {
 
 				int32 fd = tracker->get_fd();
 				if (!is_selectable(fd))
-					assert(false);
+					PUMP_ASSERT(false);
 
 				if (maxfd < fd)
 					maxfd = fd;
@@ -81,15 +81,10 @@ namespace pump {
 			while (beg != trackers_.end())
 			{
 				auto tracker = beg->second.get();
-				auto ch_locker = tracker->get_channel();
-				auto ch = ch_locker.get();
 
-				// If the channel is already not existed, the channel tracker should be distroied at here.
-				if (ch == nullptr)
-				{
-					trackers_.erase(beg++);
-					continue;
-				}
+				// If channel already not existed, channel tracker should be removed.
+				PUMP_LOCK_SPOINTER_EXPR(ch, tracker->get_channel(), false,
+					trackers_.erase(beg++); continue);
 
 				int32 fd = tracker->get_fd();
 				PUMP_ASSERT(fd == ch->get_fd());

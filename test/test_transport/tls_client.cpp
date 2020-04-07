@@ -34,7 +34,7 @@ public:
 			return;
 		}
 
-		transport_ = static_pointer_cast<tls_transport>(transp);
+		transport_ = std::static_pointer_cast<tls_transport>(transp);
 
 		transport_io_notifier_sptr io_notifier = shared_from_this();
 		transport_terminated_notifier_sptr terminated_notifier = shared_from_this();
@@ -159,6 +159,6 @@ void start_tls_client(const std::string &ip, uint16 port)
 		printf("tls dialer start error\n");
 	}
 
-	sv->wait_stop();
+	sv->wait_stopped();
 #endif
 }

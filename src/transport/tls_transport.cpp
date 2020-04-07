@@ -147,10 +147,8 @@ namespace pump {
 
 		bool tls_transport::restart()
 		{
-			auto flow_locker = flow_;
-			auto flow = flow_locker.get();
-			if (!flow)
-				return false;
+			PUMP_LOCK_SPOINTER_EXPR(flow, flow_, false,
+				return false);
 
 			if (__set_status(TRANSPORT_PAUSED, TRANSPORT_STARTED))
 			{
@@ -168,10 +166,8 @@ namespace pump {
 
 		bool tls_transport::pause()
 		{
-			auto flow_locker = flow_;
-			auto flow = flow_locker.get();
-			if (flow == nullptr)
-				return false;
+			PUMP_LOCK_SPOINTER_EXPR(flow, flow_, false,
+				return false);
 
 			if (__set_status(TRANSPORT_STARTED, TRANSPORT_PAUSED))
 			{
@@ -230,13 +226,8 @@ namespace pump {
 
 		void tls_transport::on_read_event(net::iocp_task_ptr itask)
 		{
-			auto flow_locker = flow_;
-			auto flow = flow_locker.get();
-			if (flow == nullptr)
-			{
-				flow::free_task(itask);
-				return;
-			}
+			PUMP_LOCK_SPOINTER_EXPR(flow, flow_, false,
+				flow::free_task(itask); return);
 
 			switch (flow->read_from_net(itask))
 			{
@@ -269,13 +260,8 @@ namespace pump {
 
 		void tls_transport::on_send_event(net::iocp_task_ptr itask)
 		{
-			auto flow_locker = flow_;
-			auto flow = flow_locker.get();
-			if (!flow)
-			{
-				flow::free_task(itask);
-				return;
-			}
+			PUMP_LOCK_SPOINTER_EXPR(flow, flow_, false,
+				flow::free_task(itask); return);
 
 			switch (flow->send_to_net(itask))
 			{
@@ -313,18 +299,15 @@ namespace pump {
 
 			if (tracker_cnt_ == 0)
 			{
-				auto notifier_locker = terminated_notifier_.lock();
-				auto notifier = notifier_locker.get();
-
 				if (__set_status(TRANSPORT_DISCONNECTING, TRANSPORT_DISCONNECTED))
 				{
-					if (notifier)
-						notifier->on_disconnected_callback(this);
+					PUMP_LOCK_WPOINTER_EXPR(notifier, terminated_notifier_, true,
+						notifier->on_disconnected_callback(this));
 				}
 				else if (__set_status(TRANSPORT_STOPPING, TRANSPORT_STOPPED))
 				{
-					if (notifier)
-						notifier->on_stopped_callback(this);
+					PUMP_LOCK_WPOINTER_EXPR(notifier, terminated_notifier_, true,
+						notifier->on_stopped_callback(this));
 				}
 			}
 		}
@@ -333,10 +316,8 @@ namespace pump {
 		{
 			if (ev == TRANSPORT_SENT_EVENT)
 			{
-				auto notifier_locker = __get_notifier<transport_io_notifier>();
-				auto notifier = notifier_locker.get();
-				if (notifier)
-					notifier->on_sent_callback(this);
+				PUMP_LOCK_SPOINTER_EXPR(notifier, __get_notifier<transport_io_notifier>(), true,
+					notifier->on_sent_callback(this));
 			}
 		}
 
@@ -362,6 +343,7 @@ namespace pump {
 
 			if (!get_service()->awake_channel_tracker(tracker.get()))
 				PUMP_ASSERT(false);
+
 			return true;
 		}
 
@@ -372,6 +354,7 @@ namespace pump {
 
 			if (!get_service()->pause_channel_tracker(tracker.get()))
 				PUMP_ASSERT(false);
+
 			return true;
 		}
 
@@ -414,10 +397,8 @@ namespace pump {
 			if (!need_send_here)
 				return true;
 
-			auto flow_locker = flow_;
-			auto flow = flow_locker.get();
-			if (flow == nullptr)
-				return false;
+			PUMP_LOCK_SPOINTER_EXPR(flow, flow_, false,
+				return false);
 
 			if (__send_once(flow) == FLOW_ERR_ABORT)
 				return false;
@@ -445,10 +426,8 @@ namespace pump {
 			if (!need_send_here)
 				return true;
 
-			auto flow_locker = flow_;
-			auto flow = flow_locker.get();
-			if (!flow)
-				return false;
+			PUMP_LOCK_SPOINTER_EXPR(flow, flow_, false,
+				return false);
 
 			if (__send_once(flow) == FLOW_ERR_ABORT)
 				return false;

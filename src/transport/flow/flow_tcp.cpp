@@ -91,7 +91,7 @@ namespace pump {
 			{
 #if defined(WIN32) && defined(USE_IOCP)
 				//*size = net::get_iocp_task_processed_size(itask);
-				c_block_ptr b = net::get_iocp_task_processed_buffer(itask, size);
+				c_block_ptr b = net::get_iocp_task_processed_data(itask, size);
 				net::unlink_iocp_task(itask);
 #else
 				block_ptr b = (block_ptr)read_cache_.data();
@@ -115,8 +115,7 @@ namespace pump {
 
 			int32 flow_tcp::want_to_send(buffer_ptr sb)
 			{
-				PUMP_ASSERT(sb);
-				send_buffer_ = sb;
+				PUMP_ASSERT_EXPR(sb, send_buffer_ = sb);
 
 #if defined(WIN32) && defined(USE_IOCP)
 				net::link_iocp_task(send_task_);

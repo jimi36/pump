@@ -45,7 +45,26 @@
 #	define PUMP_ASSERT(x) (void)0
 #endif
 
-#define PUMP_ASSERT_EXPR(x, expr) PUMP_ASSERT(x); expr
+#define PUMP_ASSERT_EXPR(x, expr) \
+	PUMP_ASSERT(x); expr
+
+#define PUMP_LOCK_SPOINTER(p, sp) \
+	auto p##_locker = sp; \
+	auto p = p##_locker.get()
+
+#define PUMP_LOCK_SPOINTER_EXPR(p, sp, b, expr) \
+	PUMP_LOCK_SPOINTER(p, sp); \
+	if ((!!p) == b) {expr;} \
+	void(0)
+
+#define PUMP_LOCK_WPOINTER(p, wp) \
+	auto p##_locker = wp.lock(); \
+	auto p = p##_locker.get()
+
+#define PUMP_LOCK_WPOINTER_EXPR(p, wp, b, expr) \
+	PUMP_LOCK_WPOINTER(p, wp); \
+	if ((!!p) == b) {expr;} \
+	void(0)
 
 #ifdef WIN32
 #	define snprintf sprintf_s

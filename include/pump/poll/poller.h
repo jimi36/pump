@@ -23,7 +23,7 @@
 namespace pump {
 	namespace poll {
 
-		class LIB_EXPORT poller
+		class poller
 		{
 		protected:
 			struct channel_event

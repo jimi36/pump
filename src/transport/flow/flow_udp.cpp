@@ -110,7 +110,7 @@ namespace pump {
 #if defined(WIN32) && defined(USE_IOCP)
 				PUMP_ASSERT(read_task_ == itask);
 				//*size = net::get_iocp_task_processed_size(itask);
-				c_block_ptr buf = net::get_iocp_task_processed_buffer(itask, size);
+				c_block_ptr buf = net::get_iocp_task_processed_data(itask, size);
 				if (*size > 0)
 				{
 					int32 addrlen = 0;

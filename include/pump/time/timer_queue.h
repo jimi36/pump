@@ -23,7 +23,7 @@
 namespace pump {
 	namespace time {
 
-		class LIB_EXPORT timer_queue
+		class timer_queue
 		{
 		protected:
 			typedef function::function<void(timer_wptr&)> timer_pending_callback;

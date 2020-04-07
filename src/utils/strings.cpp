@@ -22,10 +22,10 @@ namespace pump {
 		bool gbk_to_utf8(const std::string &src, std::string &des)
 		{
 #ifdef WIN32
-			std::wstring wstr(MultiByteToWideChar(CP_ACP, 0, src.c_str(), -1, NULL, 0), wchar_t(0));
+			std::wstring wstr(MultiByteToWideChar(CP_ACP, 0, src.c_str(), -1, NULL, 0) - 1, wchar_t(0));
 			MultiByteToWideChar(CP_ACP, 0, src.c_str(), -1, (wchar_t*)wstr.data(), (int32)wstr.size());
 
-			std::string str(WideCharToMultiByte(CP_UTF8, 0, (wchar_t*)wstr.data(), -1, NULL, 0, NULL, NULL), char(0));
+			std::string str(WideCharToMultiByte(CP_UTF8, 0, (wchar_t*)wstr.data(), -1, NULL, 0, NULL, NULL) - 1, char(0));
 			WideCharToMultiByte(CP_UTF8, 0, (wchar_t*)wstr.data(), -1, (char*)str.data(), (int32)str.size(), NULL, NULL);
 
 			des.append(str.data(), str.size());
@@ -53,10 +53,10 @@ namespace pump {
 		bool utf8_to_gbk(const std::string &src, std::string &des)
 		{
 #ifdef WIN32
-			std::wstring wstr(MultiByteToWideChar(CP_UTF8, 0, src.c_str(), -1, NULL, 0) + 1, wchar_t(0));
+			std::wstring wstr(MultiByteToWideChar(CP_UTF8, 0, src.c_str(), -1, NULL, 0), wchar_t(0));
 			MultiByteToWideChar(CP_UTF8, 0, (LPCSTR)src.c_str(), -1, (wchar_t*)wstr.data(), (int32)wstr.size() - 1);
 
-			std::string str(WideCharToMultiByte(CP_ACP, 0, wstr.data(), -1, NULL, 0, NULL, NULL) + 1, 0);
+			std::string str(WideCharToMultiByte(CP_ACP, 0, wstr.data(), -1, NULL, 0, NULL, NULL), 0);
 			WideCharToMultiByte(CP_ACP, 0, wstr.data(), -1, (char*)str.data(), (int32)str.size() - 1, NULL, NULL);
 
 			des.append(str.data(), str.size() - 1);

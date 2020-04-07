@@ -128,9 +128,9 @@ namespace pump {
 		int32 get_iocp_task_processed_size(iocp_task_ptr itask);
 
 		/*********************************************************************************
-		 * Get iocp task processed buffer
+		 * Get iocp task processed data
 		 ********************************************************************************/
-		block_ptr get_iocp_task_processed_buffer(iocp_task_ptr itask, int32_ptr size);
+		block_ptr get_iocp_task_processed_data(iocp_task_ptr itask, int32_ptr size);
 
 		/*********************************************************************************
 		 * Get iocp task remote address for udp reading from

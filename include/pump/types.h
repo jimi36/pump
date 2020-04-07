@@ -23,9 +23,7 @@
 
 #define DEFINE_SMART_POINTER_TYPE(class_name) \
 	typedef std::weak_ptr<class_name> class_name##_wptr; \
-	typedef const std::weak_ptr<class_name> c_##class_name##_wptr; \
-	typedef std::shared_ptr<class_name> class_name##_sptr; \
-	typedef const std::shared_ptr<class_name> c_##class_name##_sptr;
+	typedef std::shared_ptr<class_name> class_name##_sptr;
 
 #define DEFINE_ALL_POINTER_TYPE(class_name) \
 	DEFINE_RAW_POINTER_TYPE(class_name) \
@@ -76,11 +74,6 @@ namespace pump {
 
 	DEFINE_ALL_POINTER_TYPE(void);
 
-	template <typename ClassSrc, typename ClassDes>
-	std::shared_ptr<ClassDes> static_pointer_cast(const std::shared_ptr<ClassSrc> &sptr)
-	{
-		return std::move(std::static_pointer_cast<ClassDes>(sptr));
-	}
 }
 
 #endif

@@ -130,13 +130,8 @@ namespace pump {
 
 		void tls_handshaker::on_read_event(net::iocp_task_ptr itask)
 		{
-			auto flow_locker = flow_;
-			auto flow = flow_locker.get();
-			if (!flow)
-			{
-				flow::free_task(itask);
-				return;
-			}
+			PUMP_LOCK_SPOINTER_EXPR(flow, flow_, false, 
+				flow::free_task(itask); return);
 
 			if (flow->read_from_net(itask) == FLOW_ERR_ABORT)
 			{
@@ -151,10 +146,8 @@ namespace pump {
 
 			flow->end_read_task();
 
-			auto tracker_locker = tracker_;
-			auto tracker = tracker_locker.get();
-			if (!tracker)
-				return;
+			PUMP_LOCK_SPOINTER_EXPR(tracker, tracker_, false,
+				return);
 			
 			switch (__process_handshake(flow, tracker))
 			{
@@ -181,21 +174,11 @@ namespace pump {
 
 		void tls_handshaker::on_send_event(net::iocp_task_ptr itask)
 		{
-			auto flow_locker = flow_;
-			auto flow = flow_locker.get();
-			if (flow == nullptr)
-			{
-				flow::free_task(itask);
-				return;
-			}
+			PUMP_LOCK_SPOINTER_EXPR(flow, flow_, false,
+				flow::free_task(itask); return);
 
-			auto tracker_locker = tracker_;
-			auto tracker = tracker_locker.get();
-			if (!tracker)
-			{
-				flow::free_task(itask);
-				return;
-			}
+			PUMP_LOCK_SPOINTER_EXPR(tracker, tracker_, false,
+				flow::free_task(itask); return);
 
 			switch (flow->send_to_net(itask))
 			{
@@ -250,33 +233,30 @@ namespace pump {
 
 			if (tracker_cnt_ == 0)
 			{
-				auto notifier_locker = __get_notifier<tls_handshaked_notifier>();
-				auto notifier = notifier_locker.get();
-
 				if (__is_status(TRANSPORT_FINISH))
 				{
-					if (notifier)
-						notifier->on_handshaked_callback(this, true);
+					PUMP_LOCK_SPOINTER_EXPR(notifier, __get_notifier<tls_handshaked_notifier>(), true,
+						notifier->on_handshaked_callback(this, true));
 				}
 				else if (__is_status(TRANSPORT_ERROR))
 				{
-					if (notifier)
-						notifier->on_handshaked_callback(this, false);
+					PUMP_LOCK_SPOINTER_EXPR(notifier, __get_notifier<tls_handshaked_notifier>(), true,
+						notifier->on_handshaked_callback(this, false));
 				}
 				else if (__set_status(TRANSPORT_TIMEOUT_DOING, TRANSPORT_TIMEOUT_DONE))
 				{
-					if (notifier)
-						notifier->on_handshaked_timeout_callback(this);
+					PUMP_LOCK_SPOINTER_EXPR(notifier, __get_notifier<tls_handshaked_notifier>(), true,
+						notifier->on_handshaked_timeout_callback(this));
 				}
 				else if (__set_status(TRANSPORT_DISCONNECTING, TRANSPORT_DISCONNECTED))
 				{
-					if (notifier)
-						notifier->on_handshaked_callback(this, false);
+					PUMP_LOCK_SPOINTER_EXPR(notifier, __get_notifier<tls_handshaked_notifier>(), true,
+						notifier->on_handshaked_callback(this, false));
 				}
 				else if (__set_status(TRANSPORT_STOPPING, TRANSPORT_STOPPED))
 				{
-					if (notifier)
-						notifier->on_stopped_handshaking_callback(this);
+					PUMP_LOCK_SPOINTER_EXPR(notifier, __get_notifier<tls_handshaked_notifier>(), true,
+						notifier->on_stopped_handshaking_callback(this));
 				}
 			}
 		}

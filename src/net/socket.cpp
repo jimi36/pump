@@ -137,8 +137,13 @@ namespace pump {
 			return ::recv(fd, b, size, 0);
 		}
 
-		int32 read_from(int32 fd, block_ptr b, uint32 size, struct sockaddr *addr, int32_ptr addrlen)
-		{
+		int32 read_from(
+			int32 fd, 
+			block_ptr b, 
+			uint32 size, 
+			struct sockaddr *addr, 
+			int32_ptr addrlen
+		) {
 			return ::recvfrom(fd, b, size, 0, (struct sockaddr*)addr, (socklen_t*)addrlen);
 		}
 
@@ -147,8 +152,13 @@ namespace pump {
 			return ::send(fd, b, size, 0);
 		}
 
-		int32 send_to(int32 fd, c_block_ptr b, uint32 size, struct sockaddr *addr, int32 addrlen)
-		{
+		int32 send_to(
+			int32 fd, 
+			c_block_ptr b, 
+			uint32 size, 
+			struct sockaddr *addr, 
+			int32 addrlen
+		) {
 			socklen_t len = addrlen;
 			return ::sendto(fd, b, size, 0, addr, len);
 		}
@@ -233,8 +243,12 @@ namespace pump {
 			return "";
 		}
 
-		bool string_to_address(const std::string& ip, uint16 port, struct sockaddr *addr, int32_ptr addrlen)
-		{
+		bool string_to_address(
+			const std::string& ip, 
+			uint16 port, 
+			struct sockaddr *addr, 
+			int32_ptr addrlen
+		) {
 			addrinfo hints;
 			addrinfo *res = nullptr;
 
