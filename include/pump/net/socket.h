@@ -27,7 +27,8 @@ namespace pump {
 		/*********************************************************************************
 		 * Create socket file descriptor
 		 ********************************************************************************/
-		int32 create_socket(int32 domain, int32 type);
+		LIB_FORCEINLINE int32 create_socket(int32 domain, int32 type)
+		{ return (int32)::socket(domain, type, 0); }
 
 		/*********************************************************************************
 		 * Set nonblock flag
@@ -42,12 +43,18 @@ namespace pump {
 		/*********************************************************************************
 		 * Set receive buffer size
 		 ********************************************************************************/
-		bool set_recv_buf(int32 fd, int32 size);
+		LIB_FORCEINLINE bool set_recv_buf(int32 fd, int32 size)
+		{
+			return ::setsockopt(fd, SOL_SOCKET, SO_RCVBUF, (c_block_ptr)&size, sizeof(int32)) == 0;
+		}
 
 		/*********************************************************************************
 		 * Set send buffer size
 		 ********************************************************************************/
-		bool set_send_buf(int32 fd, int32 size);
+		LIB_FORCEINLINE bool set_send_buf(int32 fd, int32 size)
+		{
+			return ::setsockopt(fd, SOL_SOCKET, SO_SNDBUF, (c_block_ptr)&size, sizeof(int32)) == 0;
+		}
 
 		/*********************************************************************************
 		 * Set tcp keeplive
@@ -57,12 +64,18 @@ namespace pump {
 		/*********************************************************************************
 		 * Set reuse address
 		 ********************************************************************************/
-		bool set_reuse(int32 fd, int32 reuse);
+		LIB_FORCEINLINE bool set_reuse(int32 fd, int32 reuse)
+		{
+			return ::setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (c_block_ptr)&reuse, sizeof(reuse)) == 0;
+		}
 
 		/*********************************************************************************
 		 * Set tcp no delay
 		 ********************************************************************************/
-		bool set_nodelay(int32 fd, int32 nodelay);
+		LIB_FORCEINLINE bool set_nodelay(int32 fd, int32 nodelay)
+		{
+			return ::setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, (c_block_ptr)&nodelay, sizeof(nodelay)) == 0;
+		}
 
 		/*********************************************************************************
 		 * Update connect context
@@ -78,17 +91,20 @@ namespace pump {
 		/*********************************************************************************
 		 * Bind address
 		 ********************************************************************************/
-		bool bind(int32 fd, struct sockaddr *addr, int32 addrlen);
+		LIB_FORCEINLINE bool bind(int32 fd, struct sockaddr *addr, int32 addrlen)
+		{ return ::bind(fd, addr, addrlen) == 0;}
 
 		/*********************************************************************************
 		 * Listen socket
 		 ********************************************************************************/
-		bool listen(int32 fd, int32 backlog = 65535);
+		LIB_FORCEINLINE bool listen(int32 fd, int32 backlog = 65535)
+		{ return (::listen(fd, backlog) == 0); }
 
 		/*********************************************************************************
 		 * Accept socket
 		 ********************************************************************************/
-		int32 accept(int32 fd, struct sockaddr *addr, int32_ptr addrlen);
+		LIB_FORCEINLINE int32 accept(int32 fd, struct sockaddr *addr, int32_ptr addrlen)
+		{ return (int32)::accept(fd, addr, (socklen_t*)addrlen); }
 
 		/*********************************************************************************
 		 * Connect
@@ -98,23 +114,23 @@ namespace pump {
 		/*********************************************************************************
 		 * Read
 		 ********************************************************************************/
-		int32 read(int32 fd, block_ptr b, uint32 size);
+		int32 read(int32 fd, block_ptr b, int32 size);
 
 		/*********************************************************************************
 		 * Readfrom
 		 ********************************************************************************/
 		int32 read_from(
-			int32 fd, 
-			block_ptr b, 
-			uint32 size, 
-			struct sockaddr *addr, 
+			int32 fd,
+			block_ptr b,
+			int32 size,
+			struct sockaddr *addr,
 			int32_ptr addrlen
 		);
 
 		/*********************************************************************************
 		 * Send
 		 ********************************************************************************/
-		int32 send(int32 fd, c_block_ptr b, uint32 size);
+		int32 send(int32 fd, c_block_ptr b, int32 size);
 
 		/*********************************************************************************
 		 * Sendto
@@ -122,7 +138,7 @@ namespace pump {
 		int32 send_to(
 			int32 fd, 
 			c_block_ptr b, 
-			uint32 size, 
+			int32 size, 
 			struct sockaddr *addr, 
 			int32 addrlen
 		);
@@ -135,12 +151,13 @@ namespace pump {
 		/*********************************************************************************
 		 * Close the ability of writing
 		 ********************************************************************************/
-		void shutdown(int32 fd);
+		LIB_FORCEINLINE void shutdown(int32 fd)
+		{ ::shutdown(fd, 0); }
 
 		/*********************************************************************************
 		 * Close socket
 		 ********************************************************************************/
-		LIB_EXPORT bool close(int32 fd);
+		bool close(int32 fd);
 
 		/*********************************************************************************
 		 * Get socket error
@@ -155,12 +172,20 @@ namespace pump {
 		/*********************************************************************************
 		 * Get local address of the socket
 		 ********************************************************************************/
-		bool local_address(int32 fd, struct sockaddr *addr, int32_ptr addrlen);
+		LIB_FORCEINLINE bool local_address(
+			int32 fd, 
+			struct sockaddr *addr, 
+			int32_ptr addrlen
+		) { return ::getsockname(fd, addr, (socklen_t*)addrlen) == 0; }
 
 		/*********************************************************************************
 		 * Get remote address of the socket
 		 ********************************************************************************/
-		bool remote_address(int32 fd, struct sockaddr *addr, int32_ptr addrlen);
+		LIB_FORCEINLINE bool remote_address(
+			int32 fd, 
+			struct sockaddr *addr, 
+			int32_ptr addrlen
+		) { return ::getpeername(fd, addr, (socklen_t*)addrlen) == 0; }
 
 		/*********************************************************************************
 		 * Transfrom address to string

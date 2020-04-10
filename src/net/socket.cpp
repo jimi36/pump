@@ -19,11 +19,6 @@
 namespace pump {
 	namespace net {
 
-		int32 create_socket(int32 domain, int32 type)
-		{
-			return (int32)::socket(domain, type, 0);
-		}
-
 		bool set_noblock(int32 fd, int32 noblock)
 		{
 #ifdef WIN32
@@ -44,22 +39,11 @@ namespace pump {
 			return (::setsockopt(fd, SOL_SOCKET, SO_LINGER, (const int8*)&lgr, sizeof(lgr)) == 0);
 		}
 
-		bool set_recv_buf(int32 fd, int32 size)
-		{
-			return (::setsockopt(fd, SOL_SOCKET, SO_RCVBUF, (const char*)&size, sizeof(int32)) == 0);
-		}
-
-		bool set_send_buf(int32 fd, int32 size)
-		{
-			return (::setsockopt(fd, SOL_SOCKET, SO_SNDBUF, (const char*)&size, sizeof(int32)) == 0);
-		}
-
 		bool set_keeplive(int32 fd, int32 keeplive, int32 keepinterval)
 		{
 			int32 on = 1;
 			if (::setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, (const char*)&on, sizeof(on)) == -1)
 				return false;
-
 #ifdef WIN32
 			DWORD bytes = 0;
 			struct tcp_keepalive keepalive;
@@ -76,16 +60,6 @@ namespace pump {
 				return false;
 #endif
 			return true;
-		}
-
-		bool set_reuse(int32 fd, int32 reuse)
-		{
-			return (::setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (const char*)&reuse, sizeof(reuse)) == 0);
-		}
-
-		bool set_nodelay(int32 fd, int32 nodelay)
-		{
-			return (::setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, (const char*)&nodelay, sizeof(nodelay)) == 0);
 		}
 
 		bool update_connect_context(int32 fd)
@@ -112,55 +86,84 @@ namespace pump {
 			return true;
 		}
 
-		bool bind(int32 fd, struct sockaddr *addr, int32 addrlen)
-		{
-			return (::bind(fd, addr, addrlen) == 0);
-		}
-
-		bool listen(int32 fd, int32 backlog)
-		{
-			return (::listen(fd, backlog) == 0);
-		}
-
-		int32 accept(int32 fd, struct sockaddr *addr, int32_ptr addrlen)
-		{
-			return (int32)::accept(fd, addr, (socklen_t*)addrlen);
-		}
-
 		bool connect(int32 fd, struct sockaddr *addr, int32 addrlen)
 		{
-			return (::connect(fd, addr, addrlen) == 0);
+			if (::connect(fd, addr, addrlen) != 0)
+			{
+				int32 ec = net::last_errno();
+				if (ec != LANE_EALREADY &&
+					ec != LANE_EWOULDBLOCK &&
+					ec != LANE_EINPROGRESS)
+					return false;
+			}
+			return true;
 		}
 
-		int32 read(int32 fd, block_ptr b, uint32 size)
+		int32 read(int32 fd, block_ptr b, int32 size)
 		{
-			return ::recv(fd, b, size, 0);
+			size = ::recv(fd, b, size, 0);
+			if (size < 0)
+			{
+				int32 ec = net::last_errno();
+				if (ec == LANE_EINPROGRESS || ec == LANE_EWOULDBLOCK)
+					size = -1;
+				else
+					size = 0;
+			}
+			return size;
 		}
 
 		int32 read_from(
-			int32 fd, 
-			block_ptr b, 
-			uint32 size, 
-			struct sockaddr *addr, 
+			int32 fd,
+			block_ptr b,
+			int32 size,
+			struct sockaddr *addr,
 			int32_ptr addrlen
 		) {
-			return ::recvfrom(fd, b, size, 0, (struct sockaddr*)addr, (socklen_t*)addrlen);
+			size = ::recvfrom(fd, b, size, 0, (struct sockaddr*)addr, (socklen_t*)addrlen);
+			if (size < 0)
+			{
+				int32 ec = net::last_errno();
+				if (ec == LANE_EINPROGRESS || ec == LANE_EWOULDBLOCK)
+					size = -1;
+				else
+					size = 0;
+			}
+			return size;
 		}
 
-		int32 send(int32 fd, c_block_ptr b, uint32 size)
+		int32 send(int32 fd, c_block_ptr b, int32 size)
 		{
-			return ::send(fd, b, size, 0);
+			size = ::send(fd, b, size, 0);
+			if (size < 0)
+			{
+				int32 ec = net::last_errno();
+				if (ec == LANE_EINPROGRESS || ec == LANE_EWOULDBLOCK)
+					size = -1;
+				else
+					size = 0;
+			}
+			return size;
 		}
 
 		int32 send_to(
 			int32 fd, 
 			c_block_ptr b, 
-			uint32 size, 
+			int32 size, 
 			struct sockaddr *addr, 
 			int32 addrlen
 		) {
 			socklen_t len = addrlen;
-			return ::sendto(fd, b, size, 0, addr, len);
+			size = ::sendto(fd, b, size, 0, addr, len);
+			if (size < 0)
+			{
+				int32 ec = net::last_errno();
+				if (ec == LANE_EINPROGRESS || ec == LANE_EWOULDBLOCK)
+					size = -1;
+				else
+					size = 0;
+			}
+			return size;
 		}
 
 		int32 poll(struct pollfd *pfds, int32 count, int32 timeout)
@@ -171,11 +174,6 @@ namespace pump {
 			return ::poll(pfds, count, timeout);
 #endif
 
-		}
-
-		void shutdown(int32 fd)
-		{
-			::shutdown(fd, 0);
 		}
 
 		bool close(int32 fd)
@@ -207,16 +205,6 @@ namespace pump {
 #else
 			return errno;
 #endif
-		}
-
-		bool local_address(int32 fd, struct sockaddr *addr, int32_ptr addrlen)
-		{
-			return (::getsockname(fd, addr, (socklen_t*)addrlen) == 0);
-		}
-
-		bool remote_address(int32 fd, struct sockaddr *addr, int32_ptr addrlen)
-		{
-			return (::getpeername(fd, addr, (socklen_t*)addrlen) == 0);
 		}
 
 		std::string address_to_string(struct sockaddr *addr, int32 addrlen)

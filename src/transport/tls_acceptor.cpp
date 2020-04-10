@@ -81,7 +81,7 @@ namespace pump {
 		void tls_acceptor::on_read_event(net::iocp_task_ptr itask)
 		{
 			PUMP_LOCK_SPOINTER_EXPR(flow, flow_, false, 
-				flow::free_task(itask); return);
+				return);
 
 			address local_address, remote_address;
 			int32 fd = flow->accept(itask, &local_address, &remote_address);

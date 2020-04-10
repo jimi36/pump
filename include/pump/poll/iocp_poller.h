@@ -64,7 +64,7 @@ namespace pump {
 			/*********************************************************************************
 			 * Pause channel tracker
 			 ********************************************************************************/
-			virtual void pause_channel_tracker(channel_tracker_ptr tracker);
+			virtual void pause_channel_tracker(channel_tracker_ptr tracker) {}
 
 			/*********************************************************************************
 			 * Awake channel tracker

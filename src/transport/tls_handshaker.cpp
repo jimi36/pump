@@ -131,7 +131,7 @@ namespace pump {
 		void tls_handshaker::on_read_event(net::iocp_task_ptr itask)
 		{
 			PUMP_LOCK_SPOINTER_EXPR(flow, flow_, false, 
-				flow::free_task(itask); return);
+				return);
 
 			if (flow->read_from_net(itask) == FLOW_ERR_ABORT)
 			{
@@ -175,10 +175,10 @@ namespace pump {
 		void tls_handshaker::on_send_event(net::iocp_task_ptr itask)
 		{
 			PUMP_LOCK_SPOINTER_EXPR(flow, flow_, false,
-				flow::free_task(itask); return);
+				return);
 
 			PUMP_LOCK_SPOINTER_EXPR(tracker, tracker_, false,
-				flow::free_task(itask); return);
+				return);
 
 			switch (flow->send_to_net(itask))
 			{

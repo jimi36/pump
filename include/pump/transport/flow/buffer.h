@@ -37,79 +37,46 @@ namespace pump {
 				/*********************************************************************************
 				 * Append
 				 ********************************************************************************/
-				bool append(c_block_ptr b, uint32 size)
-				{
-					if (!b || size == 0)
-						return false;
-
-					if (rpos_ != 0 && rpos_ == (uint32)raw_.size())
-						reset();
-
-					raw_.append(b, size);
-
-					return true;
-				}
+				bool append(c_block_ptr b, int32 size);
 
 				/*********************************************************************************
 				 * Reset
 				 ********************************************************************************/
-				void reset()
-				{
-					rpos_ = 0;
-					raw_.clear();
-				}
+				LIB_FORCEINLINE void reset()
+				{ rpos_ = 0; raw_.clear(); }
 
 				/*********************************************************************************
 				 * Shift
 				 ********************************************************************************/
-				bool shift(uint32 size)
-				{
-					if (size == 0 || raw_.size() < rpos_ + size)
-						return false;
-					rpos_ += size;
-					return true;
-				}
+				bool shift(int32 size);
 
 				/*********************************************************************************
 				 * Get buffer raw ptr
 				 ********************************************************************************/
-				c_block_ptr raw() const
-				{
-					if (raw_.empty())
-						return nullptr;
-					return (c_block_ptr)raw_.data();
-				}
+				LIB_FORCEINLINE c_block_ptr raw() const
+				{ return raw_.empty() ? nullptr : (c_block_ptr)raw_.data(); }
 
 				/*********************************************************************************
 				 * Get buffer raw size
 				 ********************************************************************************/
-				uint32 raw_size() const 
-				{ 
-					return (uint32)raw_.size(); 
-				}
+				LIB_FORCEINLINE int32 raw_size() const
+				{  return (int32)raw_.size(); }
 
 				/*********************************************************************************
 				 * Get data ptr
 				 ********************************************************************************/
-				c_block_ptr data() const 
-				{
-					if (raw_.empty())
-						return nullptr;
-					return raw_.data() + rpos_;
-				}
+				LIB_FORCEINLINE c_block_ptr data() const
+				{ return raw_.empty() ? nullptr : raw_.data() + rpos_; }
 
 				/*********************************************************************************
 				 * Get data size
 				 ********************************************************************************/
-				uint32 data_size() const
-				{
-					return (uint32)raw_.size() - rpos_;
-				}
+				LIB_FORCEINLINE int32 data_size() const
+				{ return (int32)raw_.size() - rpos_; }
 
 			private:
+				int32 rpos_;
 				std::string raw_;
-
-				uint32 rpos_;
 			};
 			DEFINE_ALL_POINTER_TYPE(buffer);
 

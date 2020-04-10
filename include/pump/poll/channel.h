@@ -60,38 +60,44 @@ namespace pump {
 			/*********************************************************************************
 			 * Get channel fd
 			 ********************************************************************************/
-			int32 get_fd() const { return fd_; }
+			LIB_FORCEINLINE int32 get_fd() const { return fd_; }
 
 			/*********************************************************************************
 			 * Get channel context
 			 ********************************************************************************/
-			void_ptr get_context() const { return ctx_; }
+			LIB_FORCEINLINE void_ptr get_context() const { return ctx_; }
 
 			/*********************************************************************************
 			 * Set context
 			 ********************************************************************************/
-			void set_context(void_ptr ctx) { ctx_ = ctx; }
+			LIB_FORCEINLINE void set_context(void_ptr ctx) { ctx_ = ctx; }
 
 			/*********************************************************************************
 			 * Handle io event
 			 ********************************************************************************/
-			void handle_io_event(uint32 ev, net::iocp_task_ptr itask);
+			LIB_FORCEINLINE void handle_io_event(uint32 ev, net::iocp_task_ptr itask)
+			{
+				if (ev & IO_EVNET_READ)
+					on_read_event(itask);
+				if (ev & IO_EVENT_SEND)
+					on_send_event(itask);
+			}
 
 			/*********************************************************************************
 			 * Handle channel event
 			 ********************************************************************************/
-			void handle_channel_event(int32 ev) { on_channel_event(ev); }
+			LIB_FORCEINLINE void handle_channel_event(int32 ev) { on_channel_event(ev); }
 
 			/*********************************************************************************
 			 * Handle tracker event
 			 ********************************************************************************/
-			void handle_tracker_event(int32 ev) { on_tracker_event(ev); }
+			LIB_FORCEINLINE void handle_tracker_event(int32 ev) { on_tracker_event(ev); }
 
 		protected:
 			/*********************************************************************************
 			 * Set channel fd
 			 ********************************************************************************/
-			void __set_fd(int32 fd) { fd_ = fd; }
+			LIB_FORCEINLINE void __set_fd(int32 fd) { fd_ = fd; }
 
 		protected:
 			/*********************************************************************************

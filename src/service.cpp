@@ -145,35 +145,31 @@ namespace pump {
 
 	bool service::pause_channel_tracker(poll::channel_tracker_ptr tracker)
 	{
-#if defined(WIN32) && defined(USE_IOCP)
-		poll::poller_ptr poller = iocp_poller_;
-#else
+#ifndef USE_IOCP
 		poll::poller_ptr poller = nullptr;
 		if (tracker->get_mode() == TRACK_MODE_LOOP)
 			poller = loop_poller_;
 		else
 			poller = once_poller_;
-#endif
+
 		PUMP_ASSERT(poller);
 		poller->pause_channel_tracker(tracker);
-
+#endif
 		return true;
 	}
 
 	bool service::awake_channel_tracker(poll::channel_tracker_ptr tracker)
 	{
-#if defined(WIN32) && defined(USE_IOCP)
-		poll::poller_ptr poller = iocp_poller_;
-#else
+#ifndef USE_IOCP
 		poll::poller_ptr poller = nullptr;
 		if (tracker->get_mode() == TRACK_MODE_LOOP)
 			poller = loop_poller_;
 		else
 			poller = once_poller_;
-#endif
+
 		PUMP_ASSERT(poller);
 		poller->awake_channel_tracker(tracker);
-
+#endif
 		return true;
 	}
 

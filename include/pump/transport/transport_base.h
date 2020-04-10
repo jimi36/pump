@@ -80,12 +80,14 @@ namespace pump {
 			/*********************************************************************************
 			 * Set completed notify status
 			 ********************************************************************************/
-			void set_completed_notify(bool notify) { completed_notify_ = notify; }
+			LIB_FORCEINLINE void set_completed_notify(bool notify) 
+			{ completed_notify_ = notify; }
 
 			/*********************************************************************************
 			 * Check completed notify status
 			 ********************************************************************************/
-			bool need_completed_notify() const { return completed_notify_; }
+			LIB_FORCEINLINE bool need_completed_notify() const 
+			{ return completed_notify_; }
 
 		private:
 			bool completed_notify_;
@@ -173,41 +175,45 @@ namespace pump {
 			/*********************************************************************************
 			 * Get transport type
 			 ********************************************************************************/
-			transport_type get_type() const { return type_; }
+			LIB_FORCEINLINE transport_type get_type() const 
+			{ return type_; }
 
 			/*********************************************************************************
 			 * Get started status
 			 ********************************************************************************/
-			bool is_started() { return __is_status(TRANSPORT_STARTED); }
+			LIB_FORCEINLINE bool is_started() 
+			{ return __is_status(TRANSPORT_STARTED); }
 
 		protected:
 			/*********************************************************************************
 			 * Set channel status
 			 ********************************************************************************/
-			bool __set_status(uint32 o, uint32 n) 
+			LIB_FORCEINLINE bool __set_status(uint32 o, uint32 n)
 			{ return status_.compare_exchange_strong(o, n); }
 
 			/*********************************************************************************
 			 * Check transport is in status
 			 ********************************************************************************/
-			bool __is_status(uint32 status) { return status_.load() == status; }
+			LIB_FORCEINLINE bool __is_status(uint32 status) 
+			{ return status_.load() == status; }
 
 			/*********************************************************************************
 			 * Set notifier
 			********************************************************************************/
-			void __set_notifier(void_wptr notifier) { notifier_ = notifier; }
+			LIB_FORCEINLINE void __set_notifier(void_wptr notifier) 
+			{ notifier_ = notifier; }
 
 			/*********************************************************************************
 			 * Post channel event
 			 ********************************************************************************/
-			void __post_channel_event(poll::channel_sptr &ch, uint32 event)
+			LIB_FORCEINLINE void __post_channel_event(poll::channel_sptr &ch, uint32 event)
 			{ get_service()->post_channel_event(ch, event); }
 
 			/*********************************************************************************
 			 * Get notifier
 			 ********************************************************************************/
 			template <typename NotifyType>
-			std::shared_ptr<NotifyType> __get_notifier()
+			LIB_FORCEINLINE std::shared_ptr<NotifyType> __get_notifier()
 			{ return std::move(std::static_pointer_cast<NotifyType>(notifier_.lock())); }
 
 		protected:

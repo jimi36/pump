@@ -21,8 +21,17 @@ namespace pump {
 		namespace flow {
 
 			flow_tcp_dialer::flow_tcp_dialer(): 
-				is_ipv6_(false)
+				is_ipv6_(false),
+				dial_task_(nullptr)
 			{
+			}
+
+			flow_tcp_dialer::~flow_tcp_dialer()
+			{
+#if defined(WIN32) && defined(USE_IOCP)
+				if (dial_task_)
+					net::unlink_iocp_task(dial_task_);
+#endif
 			}
 
 			int32 flow_tcp_dialer::init(poll::channel_sptr &ch, const address &bind_address)
@@ -40,6 +49,11 @@ namespace pump {
 				ext_ = net::new_net_extension(fd_);
 				if (!ext_)
 					return FLOW_ERR_ABORT;
+
+				dial_task_ = net::new_iocp_task();
+				net::set_iocp_task_fd(dial_task_, fd_);
+				net::set_iocp_task_notifier(dial_task_, ch_);
+				net::set_iocp_task_type(dial_task_, IOCP_TASK_CONNECT);
 #else
 				if ((fd_ = net::create_socket(domain, SOCK_STREAM)) == -1)
 					return FLOW_ERR_ABORT;
@@ -57,37 +71,23 @@ namespace pump {
 			int32 flow_tcp_dialer::want_to_connect(const address &connect_address)
 			{
 #if defined(WIN32) && defined(USE_IOCP)
-				auto itask = net::new_iocp_task();
-				net::set_iocp_task_fd(itask, fd_);
-				net::set_iocp_task_notifier(itask, ch_);
-				net::set_iocp_task_type(itask, IOCP_TASK_CONNECT);
-				if (!net::post_iocp_connect(ext_, itask, connect_address.get(), connect_address.len()))
-				{
-					if (net::last_errno() != WSA_IO_PENDING)
-					{
-						net::unlink_iocp_task(itask);
-						return FLOW_ERR_ABORT;
-					}
-				}
+				if (!net::post_iocp_connect(ext_, dial_task_, connect_address.get(), connect_address.len()))
+					return FLOW_ERR_ABORT;
 #else
 				if (!net::connect(fd_, (sockaddr*)connect_address.get(), connect_address.len()))
-				{
-					int32 ec = net::last_errno();
-					if (ec != LANE_EALREADY &&
-						ec != LANE_EWOULDBLOCK &&
-						ec != LANE_EINPROGRESS)
-						return FLOW_ERR_ABORT;
-				}
+					return FLOW_ERR_ABORT;
 #endif
 				return FLOW_ERR_NO;
 			}
 
-			int32 flow_tcp_dialer::connect(net::iocp_task_ptr itask, address &local_address, address &remote_address)
-			{
+			int32 flow_tcp_dialer::connect(
+				net::iocp_task_ptr itask, 
+				address &local_address, 
+				address &remote_address
+			) {
 #if defined(WIN32) && defined(USE_IOCP)
 				PUMP_ASSERT(itask);
 				int32 ec = net::get_iocp_task_ec(itask);
-				net::unlink_iocp_task(itask);
 #else
 				int32 ec = net::get_socket_error(fd_);
 #endif

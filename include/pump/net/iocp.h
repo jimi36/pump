@@ -115,7 +115,7 @@ namespace pump {
 		/*********************************************************************************
 		 * Set iocp task buffer
 		 ********************************************************************************/
-		void set_iocp_task_buffer(iocp_task_ptr itask, block_ptr b, uint32 size);
+		void set_iocp_task_buffer(iocp_task_ptr itask, block_ptr b, int32 size);
 
 		/*********************************************************************************
 		 * Set iocp task processed size

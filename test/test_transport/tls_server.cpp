@@ -21,7 +21,7 @@ struct transport_context
 	}
 
 	tls_transport_sptr transport;
-	int32 read_size;
+	uint64 read_size;
 	int32 read_pocket_size;
 	int32 last_report_time;
 	int32 idx;
@@ -82,14 +82,6 @@ public:
 		ctx->read_pocket_size += size;
 		ctx->read_size += size;
 
-		if (ctx->last_report_time < ::time(0))
-		{
-			printf("transport %d read speed is %fMB/s\n", ctx->idx, (float)ctx->read_size / 1024 / 1024);
-			ctx->read_size = ctx->read_size % send_pocket_size;
-			
-			ctx->last_report_time = ::time(0);
-		}
-
 		while (ctx->read_pocket_size >= send_pocket_size)
 		{
 			ctx->read_pocket_size -= send_pocket_size;
@@ -106,7 +98,8 @@ public:
 		auto it = transports_.find(transp);
 		if (it != transports_.end())
 		{
-			printf("server tls transport disconnected\n");
+			printf("tls transport disconnected all read size %fMB\n", (double)it->second->read_size / 1024 / 1024);
+			printf("tls transport disconnected all read pocket %lld\n", it->second->read_size / 4096);
 			delete it->second;
 			transports_.erase(it);
 		}
@@ -121,7 +114,8 @@ public:
 		auto it = transports_.find(transp);
 		if (it != transports_.end())
 		{
-			printf("server tls transport stopped\n");
+			printf("tls transport disconnected all read size %fMB\n", (double)it->second->read_size / 1024 / 1024);
+			printf("tls transport disconnected all read pocket %llu\n", it->second->read_size / 4096);
 			delete it->second;
 		}
 	}

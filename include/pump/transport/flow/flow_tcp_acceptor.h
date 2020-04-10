@@ -56,10 +56,14 @@ namespace pump {
 				/*********************************************************************************
 				 * Accept
 				 ********************************************************************************/
-				int32 accept(net::iocp_task_ptr itask, address_ptr local_address, address_ptr remote_address);
+				int32 accept(
+					net::iocp_task_ptr itask, 
+					address_ptr local_address, 
+					address_ptr remote_address
+				);
 
 			private:
-				// Local address
+				// IPV6
 				bool is_ipv6_;
 				// IOCP accept task
 				net::iocp_task_ptr accept_task_;

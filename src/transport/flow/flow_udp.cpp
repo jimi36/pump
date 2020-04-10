@@ -77,13 +77,8 @@ namespace pump {
 					return FLOW_ERR_BUSY;
 
 				PUMP_ASSERT(read_task_);
-				net::link_iocp_task(read_task_);
-				net::reuse_iocp_task(read_task_);
 				if (!net::post_iocp_read_from(read_task_))
-				{
-					net::unlink_iocp_task(read_task_);
 					return FLOW_ERR_ABORT;
-				}
 #endif
 				return FLOW_ERR_NO;
 			}
@@ -108,8 +103,7 @@ namespace pump {
 				address_ptr remote_address
 			) {
 #if defined(WIN32) && defined(USE_IOCP)
-				PUMP_ASSERT(read_task_ == itask);
-				//*size = net::get_iocp_task_processed_size(itask);
+				//PUMP_ASSERT(read_task_ == itask);
 				c_block_ptr buf = net::get_iocp_task_processed_data(itask, size);
 				if (*size > 0)
 				{
@@ -117,25 +111,11 @@ namespace pump {
 					sockaddr *addr = net::get_iocp_task_remote_address(itask, &addrlen);
 					remote_address->set(addr, addrlen);
 				}
-				net::unlink_iocp_task(itask);
 #else
 				int8 addr[ADDRESS_MAX_LEN];
 				int32 addrlen = ADDRESS_MAX_LEN;
 				block_ptr buf = (block_ptr)read_cache_.data();
 				*size = net::read_from(fd_, buf, (uint32)read_cache_.size(), (sockaddr*)addr, &addrlen);
-				if (size < 0)
-				{
-					switch (net::last_errno())
-					{
-					case LANE_EINPROGRESS:
-					case LANE_EWOULDBLOCK:
-						*size = -1;
-						break;
-					default:
-						*size = 0;
-						break;
-					}
-				}
 
 				remote_address->set((sockaddr*)addr, addrlen);
 #endif
@@ -144,21 +124,7 @@ namespace pump {
 
 			int32 flow_udp::send_to(c_block_ptr b, uint32 size, const address &remote_addr)
 			{
-				int32 wsize = net::send_to(fd_, b, size, (struct sockaddr*)remote_addr.get(), remote_addr.len());
-				if (wsize < 0)
-				{
-					switch (net::last_errno())
-					{
-					case LANE_EINPROGRESS:
-					case LANE_EWOULDBLOCK:
-						wsize = -1;
-						break;
-					default:
-						wsize = 0;
-						break;
-					}
-				}
-				return wsize;
+				return net::send_to(fd_, b, size, (struct sockaddr*)remote_addr.get(), remote_addr.len());
 			}
 
 		}

@@ -18,6 +18,7 @@
 #define pump_poll_poller_h
 
 #include "pump/net/socket.h"
+#include "pump/utils/spin_mutex.h"
 #include "pump/poll/channel_tracker.h"
 
 namespace pump {
@@ -142,20 +143,28 @@ namespace pump {
 		protected:
 			// Started status
 			std::atomic_bool started_;
+
 			// Pop pending channel status
 			bool pop_pending_channel_;
+
 			// Worker thread
 			std::shared_ptr<std::thread> worker_;
+
 			// Channel events
 			std::mutex ch_event_mx_;
+			//utils::spin_mutex ch_event_mx_;
 			std::atomic_bool has_ch_event_;
 			std::vector<channel_event> ch_events_;
+
 			// Modifying channel trackers
 			std::mutex tracker_mx_;
+			//utils::spin_mutex tracker_mx_;
 			std::atomic_bool has_tr_event_;
 			std::vector<channel_tracker_event> tr_events_;
+
 			// Channel trackers
-			std::unordered_map<channel_tracker_ptr, channel_tracker_sptr> trackers_;
+			std::map<channel_tracker_ptr, channel_tracker_sptr> trackers_;
+			//std::unordered_map<channel_tracker_ptr, channel_tracker_sptr> trackers_;
 		};
 
 		DEFINE_ALL_POINTER_TYPE(poller);

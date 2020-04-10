@@ -85,7 +85,7 @@ namespace pump {
 		void tcp_dialer::on_send_event(net::iocp_task_ptr itask)
 		{
 			PUMP_LOCK_SPOINTER_EXPR(flow, flow_, false,
-				flow::free_task(itask); return);
+				return);
 
 			address local_address, remote_address;
 			bool success = (flow->connect(itask, local_address, remote_address) == 0);

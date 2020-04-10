@@ -7,7 +7,7 @@
 static service *sv;
 
 static int send_loop = 1024;
-static int send_pocket_size = 1024;
+static int send_pocket_size = 1024*4;
 
 class my_tls_dialer :
 	public dialed_notifier,
@@ -81,15 +81,6 @@ public:
 		read_size_ += size;
 		read_pocket_size_ += size;
 
-		int64 now = ::time(0);
-		if (last_report_time_ < now)
-		{
-			printf("client read speed is %fMB/s\n", (float)read_size_ / 1024 / 1024);
-
-			read_size_ = 0;
-			last_report_time_ = now;
-		}
-
 		while (read_pocket_size_ >= send_pocket_size)
 		{
 			read_pocket_size_ -= send_pocket_size;
@@ -120,7 +111,12 @@ public:
 			printf("send data error\n");
 	}
 
-private:
+	void set_dialer(tls_dialer_sptr dialer)
+	{
+		dialer_ = dialer;
+	}
+
+public:
 	int32 read_size_;
 	int32 read_pocket_size_;
 	int64 last_report_time_;
@@ -128,9 +124,29 @@ private:
 	std::string send_data_;
 
 	tls_transport_sptr transport_;
+
+	tls_dialer_sptr dialer_;
 };
 
-static std::shared_ptr<my_tls_dialer> my_dialed_notifier;
+static int count = 10;
+
+static std::vector< std::shared_ptr<my_tls_dialer>> my_dialers;
+
+class tls_time_report :
+	public timeout_notifier
+{
+protected:
+	virtual void on_timer_timeout(void_ptr arg)
+	{
+		int read_size = 0;
+		for (int i = 0; i < count; i++)
+		{
+			read_size += my_dialers[i]->read_size_;
+			my_dialers[i]->read_size_ = 0;
+		}
+		printf("client read speed is %fMB/s\n", (float)read_size / 1024 / 1024);
+	}
+};
 
 void start_tls_client(const std::string &ip, uint16 port)
 {
@@ -147,17 +163,28 @@ void start_tls_client(const std::string &ip, uint16 port)
 	sv = new service;
 	sv->start();
 
-	tls_dialer_sptr dialer = tls_dialer::create_instance();
-
-	my_dialed_notifier.reset(new my_tls_dialer);
-
-	address bind_address("0.0.0.0", 0);
-	address remote_address(ip, port);
-	pump::dialed_notifier_sptr notifier = my_dialed_notifier;
-	if (!dialer->start(xcred,sv, 0, 0, bind_address, remote_address, notifier))
+	for (int i = 0; i < count; i++)
 	{
-		printf("tls dialer start error\n");
+		tls_dialer_sptr dialer = tls_dialer::create_instance();
+
+		std::shared_ptr<my_tls_dialer> my_dialer(new my_tls_dialer);
+		my_dialer->set_dialer(dialer);
+
+		my_dialers.push_back(my_dialer);
+
+		address bind_address("0.0.0.0", 0);
+		address remote_address(ip, port);
+		pump::dialed_notifier_sptr notifier = my_dialer;
+		if (!dialer->start(xcred, sv, 0, 0, bind_address, remote_address, notifier))
+		{
+			printf("tls dialer start error\n");
+		}
 	}
+
+	timeout_notifier_sptr notifier(new tls_time_report);
+	timer_sptr t(new timer(0, notifier, 1000, true));
+
+	sv->start_timer(t);
 
 	sv->wait_stopped();
 #endif

@@ -42,8 +42,7 @@ namespace pump {
 			public:
 				LIB_FORCEINLINE static ssize_t data_pull(gnutls_transport_ptr_t ptr, void_ptr data, size_t maxlen)
 				{
-					PUMP_ASSERT(ptr);
-					int32 size = flow_tls_ptr(ptr)->__read_from_net_read_cache((block_ptr)data, (uint32)maxlen);
+					int32 size = flow_tls_ptr(ptr)->__read_from_net_read_cache((block_ptr)data, (int32)maxlen);
 					if (size == 0)
 						return -1;
 					
@@ -52,9 +51,7 @@ namespace pump {
 
 				LIB_FORCEINLINE static ssize_t data_push(gnutls_transport_ptr_t ptr, c_void_ptr data, size_t len)
 				{
-					PUMP_ASSERT(ptr);
-					flow_tls_ptr(ptr)->__send_to_net_send_cache((c_block_ptr)data, (uint32)len);
-
+					flow_tls_ptr(ptr)->__send_to_net_send_cache((c_block_ptr)data, (int32)len);
 					return len;
 				}
 
@@ -71,6 +68,10 @@ namespace pump {
 				read_task_(nullptr),
 				net_read_data_size_(0),
 				net_read_data_pos_(0),
+				net_read_cache_raw_size_(0),
+				net_read_cache_raw_(nullptr),
+				ssl_read_cache_raw_size_(0),
+				ssl_read_cache_raw_(nullptr),
 				send_task_(nullptr)
 			{
 				read_flag_.clear();
@@ -124,14 +125,19 @@ namespace pump {
 				// Set the callback that allows GnuTls to Get error if PULL or PUSH function error
 				gnutls_transport_set_errno_function(session_->session, ssl_net_layer::get_error);
 				
-				ssl_read_buffer_.resize(MAX_FLOW_BUFFER_SIZE);
-				net_read_buffer_.resize(MAX_FLOW_BUFFER_SIZE*2);
+				ssl_read_cache_.resize(MAX_FLOW_BUFFER_SIZE);
+				ssl_read_cache_raw_size_ = ssl_read_cache_.size();
+				ssl_read_cache_raw_ = (block_ptr)ssl_read_cache_.data();
+
+				net_read_cache_.resize(MAX_FLOW_BUFFER_SIZE*2);
+				net_read_cache_raw_size_ = net_read_cache_.size();
+				net_read_cache_raw_ = (block_ptr)net_read_cache_.data();
 
 				read_task_ = net::new_iocp_task();
 				net::set_iocp_task_fd(read_task_, fd_);
 				net::set_iocp_task_notifier(read_task_, ch_);
 				net::set_iocp_task_type(read_task_, IOCP_TASK_READ);
-				net::set_iocp_task_buffer(read_task_, (block_ptr)net_read_buffer_.data(), (uint32)net_read_buffer_.size());
+				net::set_iocp_task_buffer(read_task_, net_read_cache_raw_, net_read_cache_raw_size_);
 
 				send_task_ = net::new_iocp_task();
 				net::set_iocp_task_fd(send_task_, fd_);
@@ -190,14 +196,9 @@ namespace pump {
 				if (read_flag_.test_and_set())
 					return FLOW_ERR_BUSY;
 
-				PUMP_ASSERT(read_task_);
-				net::link_iocp_task(read_task_);
-				//net::reuse_iocp_task(read_task_);
+				//PUMP_ASSERT(read_task_);
 				if (!net::post_iocp_read(read_task_))
-				{
-					net::unlink_iocp_task(read_task_);
 					return FLOW_ERR_ABORT;
-				}
 #	endif
 				return FLOW_ERR_NO;
 #else
@@ -227,54 +228,43 @@ namespace pump {
 			{
 #ifdef USE_GNUTLS
 #	if defined(WIN32) && defined(USE_IOCP)
-				PUMP_ASSERT(read_task_ == itask);
 				int32 size = net::get_iocp_task_processed_size(itask);
-				net::unlink_iocp_task(itask);
-				if (size <= 0)
-					return FLOW_ERR_ABORT;
 #	else
-				int32 size = net::read(fd_, (block_ptr)net_read_buffer_.data(), (uint32)net_read_buffer_.size());
-				if (size <= 0)
-				{
-					switch (net::last_errno())
-					{
-					case LANE_EINPROGRESS:
-					case LANE_EWOULDBLOCK:
-						return FLOW_ERR_AGAIN;
-					default:
-						return FLOW_ERR_ABORT;
-					}
-				}
+				int32 size = net::read(fd_, net_read_cache_raw_, net_read_cache_raw_size_);
 #	endif
-				net_read_data_size_ = size;
-				net_read_data_pos_ = 0;
-
-				return FLOW_ERR_NO;
-#else
-				return FLOW_ERR_ABORT;
+				if (size > 0)
+				{
+					net_read_data_pos_ = 0;
+					net_read_data_size_ = size;
+					return FLOW_ERR_NO;
+				}
+				else if (size < 0)
+				{
+					return FLOW_ERR_AGAIN;
+				}
 #endif
+				return FLOW_ERR_ABORT;
 			}
 
 			c_block_ptr flow_tls::read_from_ssl(int32_ptr size)
 			{
 #ifdef USE_GNUTLS
-				*size = (int32)gnutls_read(session_->session, (int8_ptr)ssl_read_buffer_.data(), ssl_read_buffer_.size());
-				return ssl_read_buffer_.data();
+				*size = (int32)gnutls_read(session_->session, ssl_read_cache_raw_, ssl_read_cache_raw_size_);
 #else
 				*size = -1;
-				return nullptr;
 #endif
+				return ssl_read_cache_raw_;
 			}
 
-			uint32 flow_tls::__read_from_net_read_cache(block_ptr b, uint32 maxlen)
+			uint32 flow_tls::__read_from_net_read_cache(block_ptr b, int32 maxlen)
 			{
 #ifdef USE_GNUTLS
 				// Get suitable size to read
-				uint32 size = net_read_data_size_ > maxlen ? maxlen : net_read_data_size_;
+				int32 size = net_read_data_size_ > maxlen ? maxlen : net_read_data_size_;
 				if (size > 0)
 				{
 					// Copy read data to buffer.
-					memcpy(b, net_read_buffer_.data() + net_read_data_pos_, size);
+					memcpy(b, net_read_cache_raw_ + net_read_data_pos_, size);
 					net_read_data_pos_ += size;
 					net_read_data_size_ -= size;
 				}
@@ -300,42 +290,29 @@ namespace pump {
 			int32 flow_tls::want_to_send()
 			{
 #ifdef USE_GNUTLS
-				if (net_send_buffer_.data_size() == 0)
-					return FLOW_ERR_NO_DATA;
+				//if (net_send_buffer_.data_size() == 0)
+				//	PUMP_ASSERT(false);
 				
 #	if defined(WIN32) && defined(USE_IOCP)
-				PUMP_ASSERT(send_task_);
-				net::link_iocp_task(send_task_);
-				//net::reuse_iocp_task(send_task_);
+				//PUMP_ASSERT(send_task_);
 				net::set_iocp_task_buffer(send_task_, (int8_ptr)net_send_buffer_.data(), net_send_buffer_.data_size());
-				if (!net::post_iocp_send(send_task_))
-				{
-					net::unlink_iocp_task(send_task_);
-					return FLOW_ERR_ABORT;
-				}
-				return FLOW_ERR_NO;
+				if (net::post_iocp_send(send_task_))
+					return FLOW_ERR_NO;
 #	else
 				int32 size = net::send(fd_, net_send_buffer_.data(), net_send_buffer_.data_size());
-				if (size <= 0)
+				if (size > 0)
 				{
-					switch (net::last_errno())
-					{
-					case LANE_EINPROGRESS:
-					case LANE_EWOULDBLOCK:
-						return FLOW_ERR_NO;
-					default:
-						return FLOW_ERR_ABORT;
-					}
+					if (!net_send_buffer_.shift(size))
+						PUMP_ASSERT(false);
+					return FLOW_ERR_NO;
 				}
-
-				if (!net_send_buffer_.shift(size))
-					PUMP_ASSERT(false);
-
-				return FLOW_ERR_NO;
+				else if (size < 0)
+				{
+					return FLOW_ERR_NO;
+				}
 #	endif
-#else
-				return FLOW_ERR_ABORT;
 #endif
+				return FLOW_ERR_ABORT;
 			}
 
 			int32 flow_tls::send_to_net(net::iocp_task_ptr itask)
@@ -345,38 +322,42 @@ namespace pump {
 					return FLOW_ERR_NO_DATA;
 
 #	if defined(WIN32) && defined(USE_IOCP)
-				assert(send_task_ == itask);
 				int32 size = net::get_iocp_task_processed_size(itask);
-				net::unlink_iocp_task(itask);
-				if (size <= 0)
-					return FLOW_ERR_ABORT;
+				if (size > 0)
+				{
+					if (!net_send_buffer_.shift(size))
+						PUMP_ASSERT(false);
+
+					if (net_send_buffer_.data_size() == 0)
+					{
+						net_send_buffer_.reset();
+						return FLOW_ERR_NO;
+					}
+					
+					net::set_iocp_task_buffer(send_task_, (block_ptr)net_send_buffer_.data(), net_send_buffer_.data_size());
+					if (net::post_iocp_send(send_task_))
+						return FLOW_ERR_AGAIN;
+				}
 #	else
 				int32 size = net::send(fd_, net_send_buffer_.data(), net_send_buffer_.data_size());
-				if (size < 0)
+				if (size > 0)
 				{
-					switch (net::last_errno())
-					{
-					case LANE_EINPROGRESS:
-					case LANE_EWOULDBLOCK:
+					if (!net_send_buffer_.shift(size))
+						PUMP_ASSERT(false);
+
+					if (net_send_buffer_.data_size() > 0)
 						return FLOW_ERR_AGAIN;
-					default:
-						return FLOW_ERR_ABORT;
-					}
-				}
-#	endif
-				if (!net_send_buffer_.shift(size))
-					PUMP_ASSERT(false);
 
-				if (net_send_buffer_.data_size() > 0)
-					return FLOW_ERR_AGAIN;
-
-				if (net_send_buffer_.data_size() == 0)
 					net_send_buffer_.reset();
-
-				return FLOW_ERR_NO;
-#else
-				return FLOW_ERR_ABORT;
+					return FLOW_ERR_NO;
+				}
+				else if (size < 0)
+				{
+					return FLOW_ERR_AGAIN;
+				}
+#	endif		
 #endif
+				return FLOW_ERR_ABORT;
 			}
 
 		}

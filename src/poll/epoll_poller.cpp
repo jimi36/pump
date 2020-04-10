@@ -100,26 +100,22 @@ namespace pump {
 			for (int32 i = 0; i < count; ++i)
 			{
 				auto tracker = (channel_tracker_ptr)events_[i].data.ptr;
-				auto it = trackers_.find(tracker);
-				if (it != trackers_.end())
-				{
-					// Epoll will automatically deltete closed fd.
-					// If channel already not existed, channel tracker should be removed.
-					PUMP_LOCK_SPOINTER_EXPR(ch, tracker->get_channel(), false,
-						trackers_.erase(beg++); continue);
+				
+				// Epoll will automatically deltete closed fd.
+				// If channel already not existed, channel tracker should be removed.
+				PUMP_LOCK_SPOINTER_EXPR(ch, tracker->get_channel(), false,
+					trackers_.erase(tracker); continue);
 
-					int32 pending_event = IO_EVENT_NONE;
-					if (events_[i].events & EL_READ_EVENT)
-						pending_event |= IO_EVNET_READ;
-					if (events_[i].events & EL_WRITE_EVENT)
-						pending_event |= IO_EVENT_SEND;
+				int32 pending_event = IO_EVENT_NONE;
+				if (events_[i].events & EL_READ_EVENT)
+					pending_event |= IO_EVNET_READ;
+				if (events_[i].events & EL_WRITE_EVENT)
+					pending_event |= IO_EVENT_SEND;
 
-					if (pop_pending_channel_)
-						tracker->set_tracking(false);
+				if (pop_pending_channel_)
+					tracker->set_tracking(false);
 
-					if (pending_event != IO_EVENT_NONE)
-						ch->handle_io_event(pending_event, nullptr);
-				}
+				ch->handle_io_event(pending_event, nullptr);
 			}
 #endif
 		}

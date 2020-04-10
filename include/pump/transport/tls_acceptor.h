@@ -101,12 +101,14 @@ namespace pump {
 			/*********************************************************************************
 			 * Set tls credentials
 			 ********************************************************************************/
-			void __set_tls_cert(void_ptr tls_cert) { tls_cert_ = tls_cert; }
+			LIB_FORCEINLINE void __set_tls_cert(void_ptr tls_cert) 
+			{ tls_cert_ = tls_cert; }
 
 			/*********************************************************************************
 			 * Set tls handshake timeout
 			 ********************************************************************************/
-			void __set_tls_handshake_timeout(int64 timeout) { handshake_timeout_ = timeout; }
+			LIB_FORCEINLINE void __set_tls_handshake_timeout(int64 timeout) 
+			{ handshake_timeout_ = timeout; }
 
 			/*********************************************************************************
 			 * Open flow
@@ -116,7 +118,8 @@ namespace pump {
 			/*********************************************************************************
 			 * Close flow
 			 ********************************************************************************/
-			void __close_flow() { flow_.reset(); }
+			LIB_FORCEINLINE void __close_flow() 
+			{ flow_.reset(); }
 
 			/*********************************************************************************
 			 * Start tracker

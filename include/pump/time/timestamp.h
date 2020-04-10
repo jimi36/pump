@@ -50,17 +50,20 @@ namespace pump {
 			/*********************************************************************************
 			 * Increase time value
 			 ********************************************************************************/
-			void increase(uint64 ms) { ms_ += std::chrono::milliseconds(ms); }
+			LIB_FORCEINLINE void increase(uint64 ms) 
+			{ ms_ += std::chrono::milliseconds(ms); }
 
 			/*********************************************************************************
 			 * Reduce time value
 			 ********************************************************************************/
-			void reduce(uint64 ms) { ms_ -= std::chrono::milliseconds(ms); }
+			LIB_FORCEINLINE void reduce(uint64 ms) 
+			{ ms_ -= std::chrono::milliseconds(ms); }
 
 			/*********************************************************************************
 			 * Set the time value
 			 ********************************************************************************/
-			void set(uint64 ms) { ms_ = std::chrono::milliseconds(ms); }
+			LIB_FORCEINLINE void set(uint64 ms) 
+			{ ms_ = std::chrono::milliseconds(ms); }
 
 			/*********************************************************************************
 			 * Get the time value
@@ -92,44 +95,33 @@ namespace pump {
 			/*********************************************************************************
 			 * Create now timestamp
 			 ********************************************************************************/
-			static timestamp now()
-			{
-				return timestamp(now_time());
-			}
+			LIB_FORCEINLINE static timestamp now()
+			{ return timestamp(now_time()); }
 
 		public:
 			/*********************************************************************************
 			 * Overwrite operator =
 			 ********************************************************************************/
 			timestamp& operator =(const timestamp& ts)
-			{
-				ms_ = ts.ms_;
-				return *this;
-			}
+			{ ms_ = ts.ms_; return *this; }
 
 			/*********************************************************************************
 			 * Overwrite operator <
 			 ********************************************************************************/
 			bool operator <(const timestamp& ts)
-			{
-				return ms_ < ts.ms_;
-			}
+			{ return ms_ < ts.ms_; }
 
 			/*********************************************************************************
 			 * Overwrite operator <=
 			 ********************************************************************************/
 			bool operator <=(const timestamp& ts)
-			{
-				return ms_ <= ts.ms_;
-			}
+			{ return ms_ <= ts.ms_; }
 
 			/*********************************************************************************
 			 * Overwrite operator ==
 			 ********************************************************************************/
 			bool operator ==(const timestamp& ts)
-			{
-				return ms_ == ts.ms_;
-			}
+			{ return ms_ == ts.ms_; }
 
 		private:
 			std::chrono::milliseconds ms_;

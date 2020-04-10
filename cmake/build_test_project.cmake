@@ -6,7 +6,9 @@
 MACRO(build_test_project NAME)
 	set_complie_flags(${EXE_COMPILE_FLAGS})
 
-	FILE(GLOB COM_SOURCES ${ROOT_DIR}/*.cpp)
+	IF(JEMALLOC_LIBRARY)
+		FILE(GLOB COM_SOURCES ${ROOT_DIR}/*.cpp)
+	ENDIF()
 	FILE(GLOB_RECURSE SOURCES ${ROOT_DIR}/test/${NAME}/*)
 
 	IF(WIN32)

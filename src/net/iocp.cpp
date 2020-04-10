@@ -208,11 +208,11 @@ namespace pump {
 #endif
 		}
 
-		void set_iocp_task_buffer(iocp_task_ptr itask, block_ptr b, uint32 size)
+		void set_iocp_task_buffer(iocp_task_ptr itask, block_ptr b, int32 size)
 		{
 #if defined(WIN32) && defined(USE_IOCP)
 			itask->buf.buf = b;
-			itask->buf.len = size;
+			itask->buf.len = (uint32)size;
 #endif
 		}
 
@@ -270,16 +270,21 @@ namespace pump {
 		bool post_iocp_accept(net_extension_ptr ext, iocp_task_ptr itask)
 		{
 #if defined(WIN32) && defined(USE_IOCP)
-			LPFN_ACCEPTEX accept_ex = (LPFN_ACCEPTEX)get_accpet_ex_func(ext);
+			auto accept_ex = (LPFN_ACCEPTEX)get_accpet_ex_func(ext);
 			if (!accept_ex)
 				return false;
 
-			DWORD bytes = 0;
-			DWORD addrlen = sizeof(sockaddr_in) + 16;
-			if (accept_ex(itask->fd, itask->un.client_fd, itask->buf.buf, 0, addrlen, addrlen, &bytes, &(itask->ol)) == FALSE)
-				return false;
+			itask->add_link();
+			{
+				DWORD bytes = 0;
+				DWORD addrlen = sizeof(sockaddr_in) + 16;
+				if (accept_ex(itask->fd, itask->un.client_fd, itask->buf.buf, 0, addrlen, addrlen, &bytes, &(itask->ol)) == TRUE ||
+					net::last_errno() == ERROR_IO_PENDING)
+					return true;
+			}
+			itask->sub_link();
 
-			return true;
+			return false;
 #else
 			return false;
 #endif
@@ -317,27 +322,35 @@ namespace pump {
 			int32 addrlen
 		) {
 #if defined(WIN32) && defined(USE_IOCP)
-			LPFN_CONNECTEX connect_ex = (LPFN_CONNECTEX)get_connect_ex_func(ext);
-			if (!connect_ex || connect_ex(itask->fd, addr, addrlen, NULL, 0, NULL, &(itask->ol)) == FALSE)
+			auto connect_ex = (LPFN_CONNECTEX)get_connect_ex_func(ext);
+			if (!connect_ex)
 				return false;
 
-			if (setsockopt(itask->fd, SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT, NULL, 0) != 0)
-				return false;
-
-			return true;
-#else
-			return false;
+			itask->add_link();
+			{
+				if (connect_ex(itask->fd, addr, addrlen, NULL, 0, NULL, &(itask->ol)) == TRUE &&
+					setsockopt(itask->fd, SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT, NULL, 0) == 0)
+					return true;
+				if (net::last_errno() == WSA_IO_PENDING)
+					return true;
+			}
+			itask->sub_link();
 #endif
+			return false;
 		}
 
 		bool post_iocp_read(iocp_task_ptr itask)
 		{
 #if defined(WIN32) && defined(USE_IOCP)
-			DWORD flags = 0;
-			if (::WSARecv(itask->fd, &itask->buf, 1, NULL, &flags, &(itask->ol), NULL) == SOCKET_ERROR &&
-				net::last_errno() != WSA_IO_PENDING)
-				return false;
-			return true;
+			itask->add_link();
+			{
+				DWORD flags = 0;
+				if (::WSARecv(itask->fd, &itask->buf, 1, NULL, &flags, &(itask->ol), NULL) != SOCKET_ERROR ||
+					net::last_errno() == WSA_IO_PENDING)
+					return true;
+			}
+			itask->sub_link();
+			return false;
 #else
 			return false;
 #endif
@@ -346,27 +359,29 @@ namespace pump {
 		bool post_iocp_read_from(iocp_task_ptr itask)
 		{
 #if defined(WIN32) && defined(USE_IOCP)
-			DWORD flags = 0;
-			itask->un.ip.addr_len = sizeof(itask->un.ip.addr);
-			if (::WSARecvFrom(itask->fd, &itask->buf, 1, NULL, &flags, (sockaddr*)itask->un.ip.addr, &itask->un.ip.addr_len, &itask->ol, NULL) == SOCKET_ERROR &&
-				net::last_errno() != WSA_IO_PENDING)
-				return false;
-			return true;
-#else
-			return false;
+			itask->add_link();
+			{
+				DWORD flags = 0;
+				itask->un.ip.addr_len = sizeof(itask->un.ip.addr);
+				if (::WSARecvFrom(itask->fd, &itask->buf, 1, NULL, &flags, (sockaddr*)itask->un.ip.addr, &itask->un.ip.addr_len, &itask->ol, NULL) != SOCKET_ERROR ||
+					net::last_errno() == WSA_IO_PENDING)
+					return true;
+			}
+			itask->sub_link();
 #endif
+			return false;
 		}
 
 		bool post_iocp_send(iocp_task_ptr itask)
 		{
 #if defined(WIN32) && defined(USE_IOCP)
-			if (::WSASend(itask->fd, &itask->buf, 1, NULL, 0, (WSAOVERLAPPED*)&itask->ol, NULL) == SOCKET_ERROR && 
-				net::last_errno() != WSA_IO_PENDING)
-				return false;
-			return true;
-#else
-			return false;
+			itask->add_link();
+			if (::WSASend(itask->fd, &itask->buf, 1, NULL, 0, (WSAOVERLAPPED*)&itask->ol, NULL) != SOCKET_ERROR || 
+				net::last_errno() == WSA_IO_PENDING)
+				return true;
+			itask->sub_link();
 #endif
+			return false;
 		}
 
 		void cancel_iocp_task(iocp_handler iocp, iocp_task_ptr itask)

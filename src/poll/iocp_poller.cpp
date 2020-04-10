@@ -103,10 +103,6 @@ namespace pump {
 #endif
 		}
 
-		void iocp_poller::pause_channel_tracker(channel_tracker_ptr tracker)
-		{
-		}
-
 		void iocp_poller::__work_thread()
 		{
 #if defined(WIN32) && defined(USE_IOCP)
@@ -154,22 +150,20 @@ namespace pump {
 						net::set_iocp_task_processed_size(itask, transferred);
 
 						ch->handle_io_event(event, itask);
-
-						continue;
 					}
-
-					if (task_type == IOCP_TASK_CHANNEL)
+					else
 					{
-						ch->handle_channel_event(uint32(completion_key));
+						if (task_type == IOCP_TASK_CHANNEL)
+						{
+							ch->handle_channel_event(uint32(completion_key));
+						}
+						else if (task_type == IOCP_TASK_TRACKER)
+						{
+							int32 ev = (int32)completion_key;
+							tracker_cnt += (ev == TRACKER_EVENT_ADD) ? 1 : -1;
+							ch->handle_tracker_event(ev);
+						}
 					}
-					else if (task_type == IOCP_TASK_TRACKER)
-					{
-						int32 ev = (int32)completion_key;
-						tracker_cnt += (ev == TRACKER_EVENT_ADD) ? 1 : -1;
-						ch->handle_tracker_event(ev);
-					}
-
-					net::unlink_iocp_task(itask);
 				}
 				else
 				{
@@ -192,6 +186,8 @@ namespace pump {
 
 					ch->handle_io_event(event, itask);
 				}
+
+				net::unlink_iocp_task(itask);
 			}
 #endif
 		}

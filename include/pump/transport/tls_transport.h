@@ -18,7 +18,8 @@
 #define pump_transport_tls_transport_h
 
 #include "pump/utils/features.h"
-#include "pump/utils/spin_mutex.h"
+#include "pump/utils/freelock.h"
+
 #include "pump/transport/flow/flow_tls.h"
 #include "pump/transport/transport_notifier.h"
 
@@ -99,7 +100,7 @@ namespace pump {
 			 * Send
 			 * After called, the transport got the buffer onwership.
 			 ********************************************************************************/
-			virtual bool send(transport_buffer_ptr b);
+			virtual bool send(flow::buffer_ptr b);
 
 			/*********************************************************************************
 			 * Get local address
@@ -141,13 +142,15 @@ namespace pump {
 			/*********************************************************************************
 			 * Set terminated notifier
 			 ********************************************************************************/
-			void __set_terminated_notifier(transport_terminated_notifier_sptr &notifier)
-			{ terminated_notifier_ = notifier; }
+			LIB_FORCEINLINE void __set_terminated_notifier(
+				transport_terminated_notifier_sptr &notifier
+			) { terminated_notifier_ = notifier; }
 
 			/*********************************************************************************
 			 * Close flow
 			 ********************************************************************************/
-			void __close_flow() { flow_.reset(); }
+			LIB_FORCEINLINE void __close_flow() 
+			{ flow_.reset(); }
 
 			/*********************************************************************************
 			 * Start all trackers
@@ -173,8 +176,7 @@ namespace pump {
 			/*********************************************************************************
 			 * Async send
 			 ********************************************************************************/
-			bool __async_send(transport_buffer_ptr b);
-			bool __async_send(std::list<transport_buffer_ptr> &sendlist);
+			bool __async_send(flow::buffer_ptr b);
 
 			/*********************************************************************************
 			 * Send once
@@ -193,7 +195,6 @@ namespace pump {
 			 ********************************************************************************/
 			void __clear_send_pockets();
 
-
 		private:
 			// Local address
 			address local_address_;
@@ -207,17 +208,13 @@ namespace pump {
 			// Tls flow
 			flow::flow_tls_sptr flow_;
 
-			// Spin mutex used for protecting sendlist in multithreading.
-			utils::spin_mutex sendlist_mx_;
-			// When Using tcp transport asynchronous send data, tcp transport will append
-			// data to sendlist at first. And when write event is triggered, tcp transport 
-			// will get data from sendlist to send.
-			std::list<transport_buffer_ptr> sendlist_;
+			// When sending data, transport will append buffer to sendlist at first. On triggering send
+			// event, transport will send buffer in the sendlist.
+			utils::freelock_list<flow::buffer_ptr> sendlist_;
 
-			// Tcp transport will start listening write event when starting. But there is no 
-			// data to send and maybe there is data asynchronous sending at the same time, so
-			// this status is for this scenario.
-			volatile bool ready_for_sending_;
+			// Transport will start listening send event when starting. But there are maybe no data to
+			// send and asynchronous sending data at the same time, so this status is for this scenario.
+			std::atomic_flag is_sending_;
 
 			// Transport terminated notifier
 			transport_terminated_notifier_wptr terminated_notifier_;

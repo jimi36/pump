@@ -34,7 +34,7 @@ namespace pump {
 				/*********************************************************************************
 				 * Deconstructor
 				 ********************************************************************************/
-				virtual ~flow_tcp_dialer() {}
+				virtual ~flow_tcp_dialer();
 
 				/*********************************************************************************
 				 * Init
@@ -57,10 +57,17 @@ namespace pump {
 				 * Connect
 				 * Return socket error code.
 				 ********************************************************************************/
-				int32 connect(net::iocp_task_ptr itask, address &local_address, address &remote_address);
+				int32 connect(
+					net::iocp_task_ptr itask, 
+					address &local_address, 
+					address &remote_address
+				);
 
 			private:
+				// IPV6
 				bool is_ipv6_;
+				// IOCP dial task
+				net::iocp_task_ptr dial_task_;
 			};
 			DEFINE_ALL_POINTER_TYPE(flow_tcp_dialer);
 

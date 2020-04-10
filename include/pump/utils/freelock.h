@@ -19,15 +19,20 @@
 
 #include "pump/deps.h"
 
-namespace librabbit {
+namespace pump {
 	namespace utils {
 
-		template <typename ELEM_T, uint32 Q_SIZE = 1024>
+		template <typename ELEM_T>
 		class freelock_array
 		{
 		public:
-			freelock_array() : write_index_(0), read_index_(0), max_read_index_(0)
+			freelock_array(uint32 size):
+				size_(size),
+				write_index_(0), 
+				read_index_(0), 
+				max_read_index_(0)
 			{
+				array_ = new ELEM_T[size];
 			}
 			
 			virtual ~freelock_array()
@@ -48,13 +53,9 @@ namespace librabbit {
 				uint32 cur_write_index = write_index_.load();
 
 				if (cur_write_index >= cur_read_index)
-				{
 					return (cur_write_index - cur_read_index);
-				}
 				else
-				{
-					return (Q_SIZE + cur_write_index - cur_read_index);
-				}
+					return (size_ + cur_write_index - cur_read_index);
 			}
 
 			/// @brief push an element at the tail of the queue
@@ -72,14 +73,17 @@ namespace librabbit {
 					if (count_to_index(cur_write_index + 1) == count_to_index(read_index_.load()))
 						return false;
 
-				} while (!write_index_.compare_exchange_strong(cur_write_index, cur_write_index + 1));
-				//while (!thread::atomic_bool_cas(&write_index_, cur_write_index, (cur_write_index + 1)));
+					if (write_index_.compare_exchange_strong(cur_write_index, cur_write_index + 1))
+						break;
+
+					cur_write_index++;
+
+				} while (1);
 
 				array_[count_to_index(cur_write_index)] = data;
 
 				uint32 cur_max_read_index = max_read_index_.load();
 				while (!max_read_index_.compare_exchange_strong(cur_max_read_index, cur_max_read_index + 1));
-				// while (!thread::atomic_bool_cas(&max_read_index_, cur_max_read_index, (cur_max_read_index + 1)));
 
 				return true;
 			}
@@ -102,8 +106,9 @@ namespace librabbit {
 					data = array_[count_to_index(cur_read_index)];
 
 					if (read_index_.compare_exchange_strong(cur_read_index, cur_read_index + 1))
-					//if (thread::atomic_bool_cas(&read_index_, cur_read_index, (cur_read_index + 1)))
 						return true;
+
+					cur_read_index++;
 
 				} while (1); // keep looping to try again!
 
@@ -114,17 +119,52 @@ namespace librabbit {
 				return false;
 			}
 
-		private:
-			/// @brief calculate the index in the circular array that corresponds
-			/// to a particular "count" value
-			inline uint32 count_to_index(uint32 count)
+			bool peek(ELEM_T &data)
 			{
-				return (count % Q_SIZE);
+				uint32 cur_read_index = read_index_.load();
+				do
+				{
+					// the queue is empty or
+					// a producer thread has allocate space in the queue but is 
+					// waiting to commit the data into it
+					if (count_to_index(cur_read_index) == count_to_index(max_read_index_.load()))
+						return false;
+
+					data = array_[count_to_index(cur_read_index)];
+
+					if (read_index_.compare_exchange_strong(cur_read_index, cur_read_index))
+						return true;
+
+					cur_read_index++;
+
+				} while (1); // keep looping to try again!
+
+				// Something went wrong. it shouldn't be possible to reach here
+				assert(0);
+
+				// Add this return statement to avoid compiler warnings
+				return false;
+			}
+
+			LIB_FORCEINLINE uint32 capacity()
+			{
+				return size_;
 			}
 
 		private:
+			/// @brief calculate the index in the circular array that corresponds
+			/// to a particular "count" value
+			LIB_FORCEINLINE uint32 count_to_index(uint32 count)
+			{
+				return (count % size_);
+			}
+
+		private:
+			/// Max size
+			uint32 size_;
+
 			/// @brief array to keep the elements
-			ELEM_T array_[Q_SIZE];
+			ELEM_T *array_;
 
 			/// @brief where a new element will be inserted
 			// volatile uint32 write_index_;
@@ -146,6 +186,141 @@ namespace librabbit {
 			std::atomic_uint32_t max_read_index_;
 		};
 
+
+		template <typename ELEM_T>
+		class freelock_list
+		{
+		public:
+			freelock_list(uint32 size):
+				array_(nullptr),
+				array_locker_(false),
+				pending_cnt_(0)
+			{
+				array_ = new freelock_array<ELEM_T>(size);
+			}
+
+			~freelock_list()
+			{
+				if (array_)
+					delete array_;
+			}
+
+			bool push(const ELEM_T &data)
+			{
+				while (array_locker_.load());
+
+				pending_cnt_.fetch_add(1);
+
+				if (array_locker_.load())
+				{
+					pending_cnt_.fetch_sub(1);
+					while (array_locker_.load());
+					pending_cnt_.fetch_add(1);
+				}
+
+				while (!array_->push(data))
+				{
+					bool b = false;
+					if (array_locker_.compare_exchange_strong(b, true))
+					{
+						while (pending_cnt_.load() != 1);
+						__new_array();
+						array_locker_ = false;
+					}
+					else
+					{
+						pending_cnt_.fetch_sub(1);
+						while (array_locker_.load());
+						pending_cnt_.fetch_add(1);
+					}
+				}
+
+				pending_cnt_.fetch_sub(1);
+
+				return true;
+			}
+
+			bool pop(ELEM_T &data)
+			{
+				while (array_locker_.load());
+
+				pending_cnt_.fetch_add(1);
+
+				if (array_locker_.load())
+				{
+					pending_cnt_.fetch_sub(1);
+					while (array_locker_.load());
+					pending_cnt_.fetch_add(1);
+				}
+
+				bool ret = array_->pop(data);
+
+				pending_cnt_.fetch_sub(1);
+
+				return ret;
+			}
+
+			bool peek(ELEM_T &data)
+			{
+				while (array_locker_.load());
+
+				pending_cnt_.fetch_add(1);
+
+				if (array_locker_.load())
+				{
+					pending_cnt_.fetch_sub(1);
+					while (array_locker_.load());
+					pending_cnt_.fetch_add(1);
+				}
+
+				bool ret = array_->peek(data);
+
+				pending_cnt_.fetch_sub(1);
+
+				return ret;
+			}
+
+			uint32 size()
+			{
+				while (array_locker_.load());
+
+				pending_cnt_.fetch_add(1);
+
+				if (array_locker_.load())
+				{
+					pending_cnt_.fetch_sub(1);
+					while (array_locker_.load());
+					pending_cnt_.fetch_add(1);
+				}
+
+				uint32 size = array_->size();
+
+				pending_cnt_.fetch_sub(1);
+
+				return size;
+			}
+
+		private:
+			void __new_array()
+			{
+				freelock_array<ELEM_T> *new_array = new freelock_array<ELEM_T>(array_->capacity()*2);
+
+				ELEM_T data;
+				while (array_->pop(data))
+				{
+					new_array->push(data);
+				}
+
+				array_ = new_array;
+			}
+
+		private:
+			freelock_array<ELEM_T> *array_;
+
+			std::atomic_bool array_locker_;
+
+			std::atomic_uint32_t pending_cnt_;
+		};
 	}
 }
 

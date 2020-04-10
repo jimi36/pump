@@ -134,47 +134,59 @@ namespace pump {
 				/*********************************************************************************
 				 * Check there are data to send or not
 				 ********************************************************************************/
-				bool has_data_to_send() const { return net_send_buffer_.data_size() > 0; }
+				LIB_FORCEINLINE bool has_data_to_send() const 
+				{ return net_send_buffer_.data_size() > 0; }
 
 				/*********************************************************************************
 				 * Check handshaked status
 				 ********************************************************************************/
-				bool is_handshaked() const { return is_handshaked_; }
+				LIB_FORCEINLINE bool is_handshaked() const 
+				{ return is_handshaked_; }
 
 			private:
 				/*********************************************************************************
 				 * Read from net read cache
 				 ********************************************************************************/
-				uint32 __read_from_net_read_cache(block_ptr b, uint32 maxlen);
+				uint32 __read_from_net_read_cache(block_ptr b, int32 maxlen);
 
 				/*********************************************************************************
 				 * Send to net send cache
 				 ********************************************************************************/
-				void __send_to_net_send_cache(c_block_ptr tls_buffer, uint32 size)
+				LIB_FORCEINLINE void __send_to_net_send_cache(c_block_ptr tls_buffer, int32 size)
 				{ net_send_buffer_.append(tls_buffer, size); }
 
 				/*********************************************************************************
 				 * Get ssl session
 				 ********************************************************************************/
-				tls_session_ptr __get_tls_cert() { return session_; }
+				LIB_FORCEINLINE tls_session_ptr __get_tls_cert() 
+				{ return session_; }
 
 			private:
 				// Handshaked status
 				bool is_handshaked_;
+
 				// GNUTLS session 
 				tls_session_ptr session_;
-				// Read task for IOCP
+
+				// IOCP read task
 				std::atomic_flag read_flag_;
 				net::iocp_task_ptr read_task_;
-				// Net read buffer
-				uint32 net_read_data_size_;
-				uint32 net_read_data_pos_;
-				std::string net_read_buffer_;
-				// TLS read buffer
-				std::string ssl_read_buffer_;
+
+				// Net read cache
+				int32 net_read_data_pos_;
+				int32 net_read_data_size_;
+				int32 net_read_cache_raw_size_;
+				block_ptr net_read_cache_raw_;
+				std::string net_read_cache_;
+
+				// TLS read cache
+				int32 ssl_read_cache_raw_size_;
+				block_ptr ssl_read_cache_raw_;
+				std::string ssl_read_cache_;
 				
-				// Send iocp task
+				// IOCP send task
 				net::iocp_task_ptr send_task_;
+
 				// Net send buffer
 				buffer net_send_buffer_;
 			};

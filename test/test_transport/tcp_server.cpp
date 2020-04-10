@@ -3,7 +3,7 @@
 static service *sv;
 static service *sv1;
 
-static int send_loop = 0;
+static int send_loop = 1024;
 static int send_pocket_size = 1024*4;
 
 struct transport_context
@@ -27,7 +27,7 @@ struct transport_context
 
 };
 
-class my_tcp_acceptor: 
+class my_tcp_acceptor :
 	public accepted_notifier,
 	public transport_io_notifier,
 	public transport_terminated_notifier,
@@ -81,13 +81,7 @@ public:
 		ctx->read_pocket_size += size;
 		ctx->read_size += size;
 
-		if (ctx->last_report_time < ::time(0))
-		{
-			printf("transport[%d] read speed is %fMB/s\n", ctx->idx, (float)ctx->read_size / 1024 / 1024);
-
-			ctx->read_size = 0;
-			ctx->last_report_time = ::time(0);
-		}
+		//assert(size == 4096);
 
 		while (ctx->read_pocket_size >= send_pocket_size)
 		{

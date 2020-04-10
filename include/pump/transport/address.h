@@ -48,28 +48,30 @@ namespace pump {
 			/*********************************************************************************
 			 * Get address struct
 			 ********************************************************************************/
-			struct sockaddr* get() { return (struct sockaddr*)addr_; }
-			const struct sockaddr* get() const { return (const struct sockaddr*)addr_; }
+			LIB_FORCEINLINE struct sockaddr* get() 
+			{ return (struct sockaddr*)addr_; }
+			LIB_FORCEINLINE const struct sockaddr* get() const 
+			{ return (const struct sockaddr*)addr_; }
 
 			/*********************************************************************************
 			 * Set and Get address struct size
 			 ********************************************************************************/
-			int32 len() const { return addrlen_; }
+			LIB_FORCEINLINE int32 len() const { return addrlen_; }
 
 			/*********************************************************************************
 			 * Get port
 			 ********************************************************************************/
-			uint16 port() const { return port_; }
+			LIB_FORCEINLINE uint16 port() const { return port_; }
 
 			/*********************************************************************************
 			 * Get ip
 			 ********************************************************************************/
-			const std::string& ip() const { return ip_; }
+			LIB_FORCEINLINE const std::string& ip() const { return ip_; }
 
 			/*********************************************************************************
 			 * Is ipv6 or not
 			 ********************************************************************************/
-			bool is_ipv6() const { return is_v6_; }
+			LIB_FORCEINLINE bool is_ipv6() const { return is_v6_; }
 
 			/*********************************************************************************
 			 * Address to string

@@ -21,8 +21,9 @@ namespace pump {
 
 		tls_transport::tls_transport() :
 			transport_base(TLS_TRANSPORT, nullptr, -1),
-			ready_for_sending_(false)
+			sendlist_(1024)
 		{
+			is_sending_.clear();
 		}
 
 		tls_transport::~tls_transport()
@@ -73,8 +74,8 @@ namespace pump {
 			});
 
 			// If using iocp, the transport is ready for sending.
-			if (net::get_iocp_handler())
-				ready_for_sending_ = true;
+			if (!net::get_iocp_handler())
+				is_sending_.test_and_set();
 
 			if (!__start_all_trackers())
 				return false;
@@ -102,10 +103,7 @@ namespace pump {
 					// At first, stopping read tracker immediately.
 					__stop_read_tracker();
 
-					// If there are no data to send, the transport should be stopped immediately. Otherwise
-					// the transport should not be stopped until all data sent completely.
-					std::lock_guard<utils::spin_mutex> locker(sendlist_mx_);
-					if (sendlist_.empty())
+					if (sendlist_.size() == 0)
 					{
 						__stop_send_tracker();
 						__close_flow();
@@ -178,7 +176,7 @@ namespace pump {
 			return false;
 		}
 
-		bool tls_transport::send(transport_buffer_ptr b)
+		bool tls_transport::send(flow::buffer_ptr b)
 		{
 			PUMP_ASSERT(b);
 
@@ -195,46 +193,26 @@ namespace pump {
 			if (!__is_status(TRANSPORT_STARTED))
 				return false;
 
-			uint32 pos = 0;
-			std::list<transport_buffer_ptr> sendlist;
-			while (pos < size)
+			auto buffer = new flow::buffer;
+			if (!buffer || !buffer->append(b, size))
 			{
-				uint32 bsize = MAX_FLOW_BUFFER_SIZE;
-				if (size - pos < MAX_FLOW_BUFFER_SIZE)
-					bsize = size - pos;
-
-				auto buffer = new transport_buffer();
-				if (!buffer || !buffer->append(b + pos, bsize))
-					break;
-
-				pos += bsize;
-
-				sendlist.push_back(buffer);
-			}
-
-			if (pos != size)
-			{
-				for (auto buffer : sendlist)
-					delete buffer;
+				delete buffer;
 				return false;
 			}
 
-			sendlist.back()->set_completed_notify(notify);
-
-			return __async_send(sendlist);
+			return __async_send(buffer);
 		}
 
 		void tls_transport::on_read_event(net::iocp_task_ptr itask)
 		{
 			PUMP_LOCK_SPOINTER_EXPR(flow, flow_, false,
-				flow::free_task(itask); return);
+				return);
 
 			switch (flow->read_from_net(itask))
 			{
 			case FLOW_ERR_NO:
 			{
-				auto notifier_locker = __get_notifier<transport_io_notifier>();
-				auto notifier = notifier_locker.get();
+				PUMP_LOCK_SPOINTER(notifier, __get_notifier<transport_io_notifier>());
 				while (true)
 				{
 					int32 size = 0;
@@ -261,31 +239,31 @@ namespace pump {
 		void tls_transport::on_send_event(net::iocp_task_ptr itask)
 		{
 			PUMP_LOCK_SPOINTER_EXPR(flow, flow_, false,
-				flow::free_task(itask); return);
+				return);
 
 			switch (flow->send_to_net(itask))
 			{
+			case FLOW_ERR_NO_DATA:
+			case FLOW_ERR_NO:
+				break;
 			case FLOW_ERR_AGAIN:
 				__awake_tracker(s_tracker_);
 				return;
 			case FLOW_ERR_ABORT:
 				__try_doing_disconnected_process();
 				return;
-			case FLOW_ERR_NO_DATA:
-			case FLOW_ERR_NO:
-				break;
 			}
 
 			switch (__send_once(flow))
 			{
-			case FLOW_ERR_ABORT:
-				__try_doing_disconnected_process();
-				return;
 			case FLOW_ERR_NO:
 				__awake_tracker(s_tracker_);
 				return;
 			case FLOW_ERR_NO_DATA:
 				break;
+			case FLOW_ERR_ABORT:
+				__try_doing_disconnected_process();
+				return;
 			}
 		}
 
@@ -380,50 +358,13 @@ namespace pump {
 			s_tracker_.reset();
 		}
 
-		bool tls_transport::__async_send(transport_buffer_ptr b)
+		bool tls_transport::__async_send(flow::buffer_ptr b)
 		{
-			bool need_send_here = false;
-			{
-				std::lock_guard<utils::spin_mutex> locker(sendlist_mx_);
+			sendlist_.push(b);
 
-				// If sendlist is empty currently and the transport is ready for 
-				// sending, we should send right now.
-				need_send_here = sendlist_.empty() && ready_for_sending_;
-
-				// Insert new sendlist to the sendlist of transport.
-				sendlist_.push_back(b);
-			}
-
-			if (!need_send_here)
-				return true;
-
-			PUMP_LOCK_SPOINTER_EXPR(flow, flow_, false,
-				return false);
-
-			if (__send_once(flow) == FLOW_ERR_ABORT)
-				return false;
-
-			if (!__awake_tracker(s_tracker_))
-				return false;
-
-			return true;
-		}
-
-		bool tls_transport::__async_send(std::list<transport_buffer_ptr> &sendlist)
-		{
-			bool need_send_here = false;
-			{
-				std::lock_guard<utils::spin_mutex> locker(sendlist_mx_);
-
-				// If sendlist is empty currently and the transport is ready for 
-				// sending, we should send right now.
-				need_send_here = sendlist_.empty() && ready_for_sending_;
-
-				// Insert new sendlist to the sendlist of transport.
-				sendlist_.insert(sendlist_.end(), sendlist.begin(), sendlist.end());
-			}
-
-			if (!need_send_here)
+			flow::buffer_ptr buffer = nullptr;
+			sendlist_.peek(buffer);
+			if (buffer != b || is_sending_.test_and_set())
 				return true;
 
 			PUMP_LOCK_SPOINTER_EXPR(flow, flow_, false,
@@ -441,58 +382,56 @@ namespace pump {
 		int32 tls_transport::__send_once(flow::flow_tls_ptr flow)
 		{
 			flow::buffer_ptr buffer = nullptr;
+			while (true)
 			{
-				std::lock_guard<utils::spin_mutex> locker(sendlist_mx_);
+				if (!sendlist_.peek(buffer))
+					break;
 
-				if (!ready_for_sending_)
-					ready_for_sending_ = true;
-
-				while (true)
+				if (buffer->data_size() > 0)
 				{
-					if (sendlist_.empty())
-						break;
+					if (flow->send_to_ssl(buffer) <= 0)
+						PUMP_ASSERT(false);
+					PUMP_ASSERT(buffer->data_size() == 0);
 
-					auto front = sendlist_.front();
-					if (front->data_size() > 0)
-					{
-						buffer = front;
-						break;
-					}
-
-					if (front->need_completed_notify())
-					{
-						poll::channel_sptr ch = shared_from_this();
-						__post_channel_event(ch, TRANSPORT_SENT_EVENT);
-					}
-
-					sendlist_.pop_front();
-					delete front;
+					int32 ret = flow->want_to_send();
+					if (ret == FLOW_ERR_NO_DATA)
+						ret = FLOW_ERR_NO;
+					return ret;
 				}
+
+				sendlist_.pop(buffer);
+
+				delete buffer;
 			}
 
-			if (buffer == nullptr)
+			is_sending_.clear();
+
+			if (sendlist_.peek(buffer))
 			{
-				// If the transport is in stopping status and no data to send, the flow
-				// should be closed and the send tracker should be stopped. By the way 
-				// the recv tracker no need to be stopped, beacuse it is already stopped.
-				// Then the transport will be stopped,
-				if (__is_status(TRANSPORT_STOPPING))
+				if (!is_sending_.test_and_set())
 				{
-					__close_flow();
-					__stop_send_tracker();
+					if (flow->send_to_ssl(buffer) <= 0)
+						PUMP_ASSERT(false);
+					PUMP_ASSERT(buffer->data_size() == 0);
+
+					int32 ret = flow->want_to_send();
+					if (ret == FLOW_ERR_NO_DATA)
+						ret = FLOW_ERR_NO;
+					return ret;
 				}
 				return FLOW_ERR_NO_DATA;
 			}
 
-			if (flow->send_to_ssl(buffer) <= 0)
-				PUMP_ASSERT(false);
-			PUMP_ASSERT(buffer->data_size() == 0);
+			// If the transport is in stopping status and no data to send, the flow should be closed
+			// and the send tracker should be stopped. By the way the recv tracker no need to be 
+			// stopped, beacuse it is already stopped. Then the transport will be stopped,
+			if (__is_status(TRANSPORT_STOPPING))
+			{
+				__close_flow();
+				__stop_send_tracker();
+			}
 
-			int32 ret = flow->want_to_send();
-			if (ret == FLOW_ERR_NO_DATA)
-				ret = FLOW_ERR_NO;
-
-			return ret;
+			return FLOW_ERR_NO_DATA;
 		}
 
 		void tls_transport::__try_doing_disconnected_process()
@@ -508,12 +447,11 @@ namespace pump {
 
 		void tls_transport::__clear_send_pockets()
 		{
-			std::lock_guard<utils::spin_mutex> locker(sendlist_mx_);
-			for (auto buffer : sendlist_)
+			flow::buffer_ptr buffer = nullptr;
+			while (sendlist_.pop(buffer))
 			{
 				delete buffer;
 			}
-			sendlist_.clear();
 		}
 
 	}

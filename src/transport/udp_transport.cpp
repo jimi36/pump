@@ -132,7 +132,7 @@ namespace pump {
 		void udp_transport::on_read_event(net::iocp_task_ptr itask)
 		{
 			PUMP_LOCK_SPOINTER_EXPR(flow, flow_, false,
-				flow::free_task(itask); return);
+				return);
 
 			address addr;
 			int32 size = 0;

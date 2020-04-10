@@ -104,8 +104,9 @@ namespace pump {
 			/*********************************************************************************
 			 * Set terminated notifier
 			 ********************************************************************************/
-			void __set_terminated_notifier(transport_terminated_notifier_sptr &notifier)
-			{ terminated_notifier_ = notifier; }
+			LIB_FORCEINLINE void __set_terminated_notifier(
+				transport_terminated_notifier_sptr &notifier
+			) { terminated_notifier_ = notifier; }
 
 			/*********************************************************************************
 			 * Open flow
@@ -115,7 +116,8 @@ namespace pump {
 			/*********************************************************************************
 			 * Close flow
 			 ********************************************************************************/
-			void __close_flow() { flow_.reset(); }
+			LIB_FORCEINLINE void __close_flow() 
+			{ flow_.reset(); }
 
 			/*********************************************************************************
 			 * Start tracker

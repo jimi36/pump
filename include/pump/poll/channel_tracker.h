@@ -50,42 +50,43 @@ namespace pump {
 			/*********************************************************************************
 			 * Set tracking status
 			 ********************************************************************************/
-			void set_tracking(bool on) { is_tracking_ = on; }
+			LIB_FORCEINLINE void set_tracking(bool on) { is_tracking_ = on; }
 			
 			/*********************************************************************************
 			 * Get tracking status
 			 ********************************************************************************/
-			bool is_tracking() const { return is_tracking_; }
+			LIB_FORCEINLINE bool is_tracking() const { return is_tracking_; }
 			
 			/*********************************************************************************
 			 * Set channel
 			 ********************************************************************************/
-			void set_channel(channel_sptr &ch) { ch_ = ch; fd_ = ch->get_fd(); }
+			LIB_FORCEINLINE void set_channel(channel_sptr &ch) 
+			{ ch_ = ch; fd_ = ch->get_fd(); }
 
 			/*********************************************************************************
 			 * Get channel
 			 ********************************************************************************/
-			channel_sptr get_channel() { return ch_.lock(); }
+			LIB_FORCEINLINE channel_sptr get_channel() { return ch_.lock(); }
 			
 			/*********************************************************************************
 			 * Get fd
 			 ********************************************************************************/
-			int32 get_fd() const { return fd_; }
+			LIB_FORCEINLINE int32 get_fd() const { return fd_; }
 			
 			/*********************************************************************************
 			 * Set track event
 			 ********************************************************************************/
-			void set_event(int32 ev) { event_ = ev; }
+			LIB_FORCEINLINE void set_event(int32 ev) { event_ = ev; }
 
 			/*********************************************************************************
 			 * Get track event
 			 ********************************************************************************/
-			int32 get_event() const { return event_; }
+			LIB_FORCEINLINE int32 get_event() const { return event_; }
 
 			/*********************************************************************************
 			 * Get track mode
 			 ********************************************************************************/
-			int32 get_mode() const { return mode_; }
+			LIB_FORCEINLINE int32 get_mode() const { return mode_; }
 			
 		private:
 			// Status

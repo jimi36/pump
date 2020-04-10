@@ -91,22 +91,21 @@ namespace pump {
 				/*********************************************************************************
 				 * Check there are data to send or not
 				 ********************************************************************************/
-				bool has_data_to_send()
-				{
-					if (send_buffer_ == nullptr || 
-						send_buffer_->data_size() == 0)
-						return false;
-					return true;
-				}
+				bool has_data_to_send();
 
 			private:
-				// Read task for IOCP
+				// IOCP read task
 				std::atomic_flag read_flag_;
 				net::iocp_task_ptr read_task_;
-				// Send task for IOCP
-				net::iocp_task_ptr send_task_;
+
 				// Read cache
+				int32 net_read_cache_raw_size_;
+				block_ptr net_read_cache_raw_;
 				std::string read_cache_;
+
+				// IOCP send task
+				net::iocp_task_ptr send_task_;
+
 				// Send buffer
 				buffer_ptr send_buffer_;
 			};

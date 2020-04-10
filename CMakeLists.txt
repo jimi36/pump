@@ -6,7 +6,7 @@ IF(UNIX)
 ENDIF()
 
 # Option build with gnutls (default OFF)
-OPTION(WITH_GNUTLS "Option build with gnutls" ON)
+OPTION(WITH_GNUTLS "Option build with gnutls" OFF)
 IF(WITH_GNUTLS)
 	ADD_DEFINITIONS("-DUSE_GNUTLS")
 ENDIF()

@@ -74,18 +74,19 @@ namespace pump {
 			/*********************************************************************************
 			 * Get starting state
 			 ********************************************************************************/
-			bool is_started() const { return status_.load() == 1; }
+			LIB_FORCEINLINE bool is_started() const { return status_.load() == 1; }
 
 			/*********************************************************************************
 			 * Get repeated status
 			 ********************************************************************************/
-			bool is_repeated() const { return repeated_; }
+			LIB_FORCEINLINE bool is_repeated() const { return repeated_; }
 
 		private:
 			/*********************************************************************************
 			 * Set status
 			 ********************************************************************************/
-			bool __set_status(int32 o, int32 n) { return status_.compare_exchange_strong(o, n); }
+			LIB_FORCEINLINE bool __set_status(int32 o, int32 n) 
+			{ return status_.compare_exchange_strong(o, n); }
 
 		private:
 			// Timer Arg

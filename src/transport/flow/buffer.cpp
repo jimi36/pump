@@ -20,6 +20,26 @@ namespace pump {
 	namespace transport {
 		namespace flow {
 
+			bool buffer::append(c_block_ptr b, int32 size)
+			{
+				if (!b || size == 0)
+					return false;
+
+				if (rpos_ != 0 && rpos_ == (int32)raw_.size())
+					reset();
+
+				raw_.append(b, size);
+
+				return true;
+			}
+
+			bool buffer::shift(int32 size)
+			{
+				if ((int32)raw_.size() < rpos_ + size)
+					return false;
+				rpos_ += size;
+				return true;
+			}
 
 		}
 	}

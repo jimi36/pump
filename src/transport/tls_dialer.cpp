@@ -95,7 +95,7 @@ namespace pump {
 		void tls_dialer::on_send_event(net::iocp_task_ptr itask)
 		{
 			PUMP_LOCK_SPOINTER_EXPR(flow, flow_, false, 
-				flow::free_task(itask); return);
+				return);
 
 			__stop_timer();
 

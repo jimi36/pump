@@ -2,6 +2,7 @@
 
 static service *sv;
 
+static int max_send_cont = 1024 * 256;
 static int send_loop = 1024;
 static int send_pocket_size = 1024*4;
 
@@ -14,11 +15,11 @@ class my_tcp_dialer :
 public:
 	my_tcp_dialer()
 	{
-		rw_cnt = 0;
 		read_size_ = 0;
 		read_pocket_size_ = 0;
 		all_read_size_ = 0;
 		last_report_time_ = 0;
+		max_send_count_ = max_send_cont;
 		send_data_.resize(send_pocket_size);
 	}
 
@@ -46,8 +47,6 @@ public:
 		{
 			send_data();
 		}
-
-		//transport_->stop();
 	}
 
 	/*********************************************************************************
@@ -83,23 +82,16 @@ public:
 		read_pocket_size_ += size;
 		all_read_size_ += size;
 
-		//assert(size == send_pocket_size);
-
-		int64 now = ::time(0);
-		if (last_report_time_ < now)
-		{
-			printf("client read wait %d speed is %fMB/s\n", rw_cnt.load(), (float)read_size_ / 1024 / 1024);
-
-			read_size_ = 0;
-			last_report_time_ = now;
-		}
+		//assert(size == 4096);
 
 		while (read_pocket_size_ >= send_pocket_size)
 		{
-			rw_cnt.fetch_sub(1);
-			send_data();
 			read_pocket_size_ -= send_pocket_size;
+			send_data();
 		}
+
+		//if (all_read_size_ / 4096 == max_send_cont);
+		//	transp->stop();
 	}
 
 	/*********************************************************************************
@@ -116,7 +108,7 @@ public:
 	 ********************************************************************************/
 	virtual void on_stopped_callback(transport_base_ptr transp)
 	{
-		printf("client tcp transport stopped\n");
+		printf("client tcp transport stopped read msg %d\n", all_read_size_ / 4096);
 		transport_.reset();
 	}
 
@@ -127,44 +119,75 @@ public:
 
 	void send_data()
 	{
-		rw_cnt.fetch_add(1);
+		//if (max_send_count_ == 0)
+		//	return;
+
 		transport_->send(send_data_.data(), send_data_.size());
+
+		max_send_count_--;
 	}
 
-private:
-	int32 read_size_;
+public:
+	volatile int32 read_size_;
 	int32 read_pocket_size_;
 	int32 all_read_size_;
 	int64 last_report_time_;
+
+	int64 max_send_count_;
 
 	std::string send_data_;
 
 	tcp_dialer_sptr dialer_;
 	tcp_transport_sptr transport_;
-
-	std::atomic_int rw_cnt;
 };
 
-static std::shared_ptr<my_tcp_dialer> my_dialed_notifier;
+static int count = 1;
+
+static std::vector< std::shared_ptr<my_tcp_dialer>> my_dialers;
+
+class time_report:
+	public timeout_notifier
+{
+protected:
+	virtual void on_timer_timeout(void_ptr arg)
+	{
+		int read_size = 0;
+		for (int i = 0; i < count; i++)
+		{
+			read_size += my_dialers[i]->read_size_;
+			my_dialers[i]->read_size_ = 0;
+		}
+		printf("client read speed is %fMB/s\n", (float)read_size / 1024 / 1024);
+	}
+};
 
 void start_tcp_client(const std::string &ip, uint16 port)
 {
 	sv = new service;
 	sv->start();
 
-	tcp_dialer_sptr dialer = tcp_dialer::create_instance();
-
-	my_tcp_dialer *my_tcp = new my_tcp_dialer;
-	my_dialed_notifier.reset(my_tcp);
-	my_dialed_notifier->set_dialer(dialer);
-
-	address bind_address("0.0.0.0", 0);
-	address connect_address(ip, port);
-	pump::dialed_notifier_sptr notifier = my_dialed_notifier;
-	if (!dialer->start(sv, 0, bind_address, connect_address, notifier))
+	for (int i = 0; i < count; i++)
 	{
-		printf("tcp dialer start error\n");
+		tcp_dialer_sptr dialer = tcp_dialer::create_instance();
+
+		std::shared_ptr<my_tcp_dialer> my_dialer(new my_tcp_dialer);
+		my_dialer->set_dialer(dialer);
+
+		my_dialers.push_back(my_dialer);
+
+		address bind_address("0.0.0.0", 0);
+		address connect_address(ip, port);
+		pump::dialed_notifier_sptr notifier = my_dialer;
+		if (!dialer->start(sv, 0, bind_address, connect_address, notifier))
+		{
+			printf("tcp dialer start error\n");
+		}
 	}
+
+	timeout_notifier_sptr notifier(new time_report);
+	timer_sptr t(new timer(0, notifier, 1000, true));
+
+	sv->start_timer(t);
 
 	sv->wait_stopped();
 }

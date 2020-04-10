@@ -41,7 +41,7 @@ namespace pump {
 
 					__update_channel_trackers();
 
-					__poll(5);
+					__poll(3);
 				}
 			}));
 
@@ -70,6 +70,7 @@ namespace pump {
 			tracker->set_tracking(true);
 
 			std::lock_guard<std::mutex> locker(tracker_mx_);
+			//std::lock_guard<utils::spin_mutex> locker(tracker_mx_);
 			tr_events_.push_back(channel_tracker_event(tracker, TRACKER_EVENT_ADD));
 			has_tr_event_ = true;
 
@@ -79,6 +80,7 @@ namespace pump {
 		void poller::remove_channel_tracker(channel_tracker_sptr &tracker)
 		{
 			std::lock_guard<std::mutex> locker(tracker_mx_);
+			//std::lock_guard<utils::spin_mutex> locker(tracker_mx_);
 			tr_events_.push_back(channel_tracker_event(tracker, TRACKER_EVENT_DEL));
 			has_tr_event_ = true;
 		}
@@ -105,6 +107,7 @@ namespace pump {
 				return;
 
 			std::lock_guard<std::mutex> locker(ch_event_mx_);
+			//std::lock_guard<utils::spin_mutex> locker(ch_event_mx_);
 			ch_events_.push_back(channel_event(c, event));
 			has_ch_event_ = true;
 		}
@@ -117,6 +120,7 @@ namespace pump {
 			std::vector<channel_event> ch_events;
 			{
 				std::lock_guard<std::mutex> locker(ch_event_mx_);
+				//std::lock_guard<utils::spin_mutex> locker(ch_event_mx_);
 				ch_events.swap(ch_events_);
 				has_ch_event_ = false;
 			}
@@ -138,6 +142,7 @@ namespace pump {
 			std::vector<channel_tracker_event> new_events;
 			{
 				std::lock_guard<std::mutex> locker(tracker_mx_);
+				//std::lock_guard<utils::spin_mutex> locker(tracker_mx_);
 				new_events.swap(tr_events_);
 				has_tr_event_ = false;
 			}

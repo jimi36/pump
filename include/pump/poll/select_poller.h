@@ -54,10 +54,8 @@ namespace pump {
 
 			struct timeval tv_;
 
-#ifdef WIN32
 			std::mutex mx_;
 			std::condition_variable cv_;
-#endif
 		};
 
 	}

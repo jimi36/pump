@@ -80,31 +80,27 @@ namespace pump {
 				if (client == -1)
 					return FLOW_ERR_ABORT;
 
-				net::link_iocp_task(accept_task_);
-				//net::reuse_iocp_task(accept_task_);
 				net::set_iocp_task_client_fd(accept_task_, client);
 				if (!net::post_iocp_accept(ext_, accept_task_))
 				{
-					if (net::last_errno() != ERROR_IO_PENDING)
-					{
-						net::close(client);
-						net::unlink_iocp_task(accept_task_);
-						return FLOW_ERR_ABORT;
-					}
+					net::close(client);
+					return FLOW_ERR_ABORT;
 				}
 #endif
 				return FLOW_ERR_NO;
 			}
 
-			int32 flow_tcp_acceptor::accept(net::iocp_task_ptr itask, address_ptr local_address, address_ptr remote_address)
-			{
+			int32 flow_tcp_acceptor::accept(
+				net::iocp_task_ptr itask, 
+				address_ptr local_address, 
+				address_ptr remote_address
+			) {
 #if defined(WIN32) && defined(USE_IOCP)
-				PUMP_ASSERT(accept_task_ == itask);
+				//PUMP_ASSERT(accept_task_ == itask);
 				int32 ec = net::get_iocp_task_ec(itask);
 				int32 client_fd = net::get_iocp_task_client_fd(itask);
 				if (ec != 0 || client_fd == -1)
 				{
-					net::unlink_iocp_task(itask);
 					net::close(client_fd);
 					return -1;
 				}
@@ -115,7 +111,6 @@ namespace pump {
 				int32 rlen = sizeof(sockaddr_in);
 				if (!net::get_iocp_accepted_address(ext_, itask, &local, &llen, &remote, &rlen))
 				{
-					net::unlink_iocp_task(itask);
 					net::close(client_fd);
 					return -1;
 				}
@@ -123,7 +118,6 @@ namespace pump {
 				remote_address->set(remote, rlen);
 
 				net::set_iocp_task_client_fd(itask, 0);
-				net::unlink_iocp_task(itask);
 #else
 				int32 addrlen = ADDRESS_MAX_LEN;
 				int32 client_fd = net::accept(fd_, (struct sockaddr*)tmp_cache_.data(), &addrlen);
