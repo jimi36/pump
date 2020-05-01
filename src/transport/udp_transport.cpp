@@ -20,34 +20,32 @@
 namespace pump {
 	namespace transport {
 
-		udp_transport::udp_transport() :
-			transport_base(UDP_TRANSPORT, nullptr, -1)
+		udp_transport::udp_transport(const address &local_address):
+			base_transport(UDP_TRANSPORT, nullptr, -1)
 		{
+			local_address_ = local_address;
 		}
 
 		bool udp_transport::start(
 			service_ptr sv,
-			const address &bind_address,
-			transport_io_notifier_sptr &io_notifier,
-			transport_terminated_notifier_sptr &terminated_notifier
+			const transport_callbacks &cbs
 		) {
 			if (!__set_status(TRANSPORT_INIT, TRANSPORT_STARTING))
 				return false;
 
 			PUMP_ASSERT_EXPR(sv, __set_service(sv));
-			PUMP_ASSERT_EXPR(io_notifier, __set_notifier(io_notifier));
-			PUMP_ASSERT_EXPR(terminated_notifier, __set_terminated_notifier(terminated_notifier));
+			PUMP_ASSERT_EXPR(cbs.read_from_cb && cbs.stopped_cb, cbs_ = cbs);
 
 			utils::scoped_defer defer([&]() {
 				__close_flow();
-				__stop_tracker();
+				__stop_read_tracker();
 				__set_status(TRANSPORT_STARTING, TRANSPORT_ERROR);
 			});
 
-			if (!__open_flow(bind_address))
+			if (!__open_flow())
 				return false;
 
-			if (!__start_tracker())
+			if (!__start_read_tracker())
 				return false;
 
 			if (flow_->beg_read_task() != FLOW_ERR_NO)
@@ -69,7 +67,7 @@ namespace pump {
 					__set_status(TRANSPORT_PAUSED, TRANSPORT_STOPPING))
 				{
 					__close_flow();
-					__stop_tracker();
+					__stop_read_tracker();
 					return;
 				}
 			}
@@ -82,18 +80,17 @@ namespace pump {
 
 			if (__set_status(TRANSPORT_PAUSED, TRANSPORT_STARTED))
 			{
-				int32 ret = flow->beg_read_task();
-				if (ret != FLOW_ERR_NO || ret != FLOW_ERR_BUSY)
+				if (flow->beg_read_task() == FLOW_ERR_ABORT)
 				{
 					if (__set_status(TRANSPORT_STARTED, TRANSPORT_ERROR))
 					{
 						__close_flow();
-						__stop_tracker();
+						__stop_read_tracker();
 					}
 					return false;
 				}
 
-				return __awake_tracker();
+				return __awake_tracker(r_tracker_);
 			}
 				
 			return false;
@@ -107,7 +104,7 @@ namespace pump {
 			if (__set_status(TRANSPORT_STARTED, TRANSPORT_PAUSED))
 			{
 				flow->cancel_read_task();
-				return __pause_tracker();
+				return __pause_tracker(r_tracker_);
 			}
 
 			return false;
@@ -123,7 +120,7 @@ namespace pump {
 			PUMP_LOCK_SPOINTER_EXPR(flow, flow_, false,
 				return false);
 
-			if (flow->send_to(b, size, remote_address) <= 0)
+			if (flow->send(b, size, remote_address) <= 0)
 				return false;
 
 			return true;
@@ -140,10 +137,7 @@ namespace pump {
 			if (size <= 0)
 				return;
 
-			auto notifier_locker = __get_notifier<transport_io_notifier>();
-			auto notifier = notifier_locker.get();
-			if (notifier)
-				notifier->on_read_callback(this, b, size, addr);
+			cbs_.read_from_cb(b, size, addr);
 
 			flow->end_read_task();
 
@@ -152,7 +146,7 @@ namespace pump {
 				if (__set_status(TRANSPORT_STARTED, TRANSPORT_ERROR))
 				{
 					__close_flow();
-					__stop_tracker();
+					__stop_read_tracker();
 				}
 			}
 		}
@@ -166,72 +160,33 @@ namespace pump {
 				tracker_cnt_ -= 1;
 
 			if (tracker_cnt_ == 0)
-			{
-				PUMP_LOCK_WPOINTER_EXPR(notifier, terminated_notifier_, true,
-					notifier->on_stopped_callback(this));
-			}
+				cbs_.stopped_cb();
 		}
 
-		bool udp_transport::__open_flow(const address &local_address)
+		bool udp_transport::__open_flow()
 		{
 			// Setup flow.
 			PUMP_ASSERT(!flow_);
 			flow_.reset(new flow::flow_udp());
 			poll::channel_sptr ch = shared_from_this();
-			if (flow_->init(ch, local_address) != FLOW_ERR_NO)
+			if (flow_->init(ch, local_address_) != FLOW_ERR_NO)
 				return false;
 
 			// Set channel fd
 			poll::channel::__set_fd(flow_->get_fd());
 
-			// Save local address
-			bind_address_ = local_address;
-
 			return true;
 		}
 
-		bool udp_transport::__start_tracker()
+		bool udp_transport::__start_read_tracker()
 		{
-			PUMP_ASSERT(!tracker_);
+			PUMP_ASSERT(!r_tracker_);
 			poll::channel_sptr ch = shared_from_this();
-			tracker_.reset(new poll::channel_tracker(ch, TRACK_READ, TRACK_MODE_LOOP));
-			if (!get_service()->add_channel_tracker(tracker_))
+			r_tracker_.reset(new poll::channel_tracker(ch, TRACK_READ, TRACK_MODE_LOOP));
+			if (!get_service()->add_channel_tracker(r_tracker_))
 				return false;
 
 			tracker_cnt_.fetch_add(1);
-
-			return true;
-		}
-
-		void udp_transport::__stop_tracker()
-		{
-			if (!tracker_)
-				return;
-
-			if (!get_service()->remove_channel_tracker(tracker_))
-				PUMP_ASSERT(false);
-
-			tracker_.reset();
-		}
-
-		bool udp_transport::__awake_tracker()
-		{
-			if (!tracker_)
-				return false;
-
-			if (!get_service()->awake_channel_tracker(tracker_.get()))
-				PUMP_ASSERT(false);
-
-			return true;
-		}
-
-		bool udp_transport::__pause_tracker()
-		{
-			if (!tracker_)
-				return false;
-
-			if (!get_service()->pause_channel_tracker(tracker_.get()))
-				PUMP_ASSERT(false);
 
 			return true;
 		}

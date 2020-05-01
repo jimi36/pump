@@ -44,6 +44,7 @@
 #include <unordered_map>
 
 #include <regex>
+#include <future>
 
 #ifdef WIN32
 #include <windows.h>
@@ -76,6 +77,7 @@
 #endif
 
 #include "pump/defs.h"
+#include "pump/win32.h"
 #include "pump/types.h"
 #include "function/function.h"
 

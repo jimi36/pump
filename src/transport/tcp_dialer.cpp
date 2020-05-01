@@ -19,23 +19,21 @@
 namespace pump {
 	namespace transport {
 
-		tcp_dialer::tcp_dialer() :
-			transport_base(TCP_DIALER, nullptr, -1)
+		tcp_dialer::tcp_dialer(
+			const address &local_address,
+			const address &remote_address,
+			int64 connect_timeout
+		) : base_dialer(TCP_DIALER, local_address, remote_address, connect_timeout)
 		{
 		}
 
-		bool tcp_dialer::start(
-			service_ptr sv,
-			int64 timeout,
-			const address &bind_address,
-			const address &peer_address,
-			dialed_notifier_sptr &notifier
-		) {
+		bool tcp_dialer::start(service_ptr sv, const dialer_callbacks &cbs) 
+		{
 			if (!__set_status(TRANSPORT_INIT, TRANSPORT_STARTING))
 				return false;
 
 			PUMP_ASSERT_EXPR(sv, __set_service(sv));
-			PUMP_ASSERT_EXPR(notifier, __set_notifier(notifier));
+			PUMP_ASSERT_EXPR(cbs.dialed_cb && cbs.stopped_cb && cbs.timeout_cb, cbs_ = cbs);
 
 			utils::scoped_defer defer([&]() {
 				__close_flow();
@@ -43,16 +41,16 @@ namespace pump {
 				__set_status(TRANSPORT_STARTING, TRANSPORT_ERROR);
 			});
 
-			if (!__open_flow(bind_address))
+			if (!__open_flow())
 				return false;
 
-			if (!__start_tracker())
+			if (!__start_tracker((poll::channel_sptr)shared_from_this()))
 				return false;
 
-			if (flow_->want_to_connect(peer_address) != FLOW_ERR_NO)
+			if (flow_->want_to_connect(remote_address_) != FLOW_ERR_NO)
 				return false;
 
-			if (!__start_timer(timeout))
+			if (!__start_connect_timer(function::bind(&tcp_dialer::on_timeout, shared_from_this())))
 				return false;
 
 			if (!__set_status(TRANSPORT_STARTING, TRANSPORT_STARTED))
@@ -70,8 +68,8 @@ namespace pump {
 			if (__set_status(TRANSPORT_STARTED, TRANSPORT_STOPPING))
 			{
 				__close_flow();
-				__stop_timer();
 				__stop_tracker();
+				__stop_connect_timer();
 				return;
 			}
 			
@@ -95,116 +93,105 @@ namespace pump {
 				return;
 
 			__close_flow();
-			__stop_timer();
 			__stop_tracker();
+			__stop_connect_timer();
 
+			tcp_transport_sptr conn;
 			if (success)
 			{
-				tcp_transport_sptr conn = tcp_transport::create_instance();
+				conn = tcp_transport::create_instance();
 				if (!conn->init(flow->unbind_fd(), local_address, remote_address))
 					PUMP_ASSERT(false);
-
-				PUMP_LOCK_SPOINTER_EXPR(notifier, __get_notifier<dialed_notifier>(), true,
-					notifier->on_dialed_callback(get_context(), conn, success));
 			}
+
+			cbs_.dialed_cb(conn, success);
 		}
 
-		void tcp_dialer::on_tracker_event(int32 ev)
+		void tcp_dialer::on_timeout(tcp_dialer_wptr wptr)
 		{
-			if (ev == TRACKER_EVENT_ADD)
-				return;
+			PUMP_LOCK_WPOINTER_EXPR(dialer, wptr, false,
+				return);
 
-			if (ev == TRACKER_EVENT_DEL)
-				tracker_cnt_ -= 1;
-
-			if (tracker_cnt_ == 0)
+			if (dialer->__set_status(TRANSPORT_STARTED, TRANSPORT_TIMEOUT_DOING))
 			{
-				if (__is_status(TRANSPORT_ERROR))
-				{
-					PUMP_LOCK_SPOINTER_EXPR(notifier, __get_notifier<dialed_notifier>(), true, 
-						notifier->on_dialed_callback(get_context(), tcp_transport_sptr(), false));
-				}
-				else if (__set_status(TRANSPORT_TIMEOUT_DOING, TRANSPORT_TIMEOUT_DONE))
-				{
-					PUMP_LOCK_SPOINTER_EXPR(notifier, __get_notifier<dialed_notifier>(), true,
-						notifier->on_dialed_timeout_callback(get_context()));
-				}
-				else if (__set_status(TRANSPORT_STOPPING, TRANSPORT_STOPPED))
-				{
-					PUMP_LOCK_SPOINTER_EXPR(notifier, __get_notifier<dialed_notifier>(), true,
-						notifier->on_stopped_dialing_callback(get_context()));
-				}
+				dialer->__close_flow();
+				dialer->__stop_tracker();
 			}
 		}
 
-		void tcp_dialer::on_timer_timeout(void_ptr arg)
-		{
-			if (__set_status(TRANSPORT_STARTED, TRANSPORT_TIMEOUT_DOING))
-			{
-				__close_flow();
-				__stop_tracker();
-			}
-		}
-
-		bool tcp_dialer::__open_flow(const address &bind_address)
+		bool tcp_dialer::__open_flow()
 		{
 			// Setup flow
 			PUMP_ASSERT(!flow_);
 			flow_.reset(new flow::flow_tcp_dialer());
 			poll::channel_sptr ch = shared_from_this();
-			if (flow_->init(ch, bind_address) != FLOW_ERR_NO)
+			if (flow_->init(ch, local_address_) != FLOW_ERR_NO)
 				return false;
 
 			// Set channel FD
 			poll::channel::__set_fd(flow_->get_fd());
 
-			// Save bind address
-			bind_address_ = bind_address;
-
 			return true;
 		}
 
-		bool tcp_dialer::__start_tracker()
+		tcp_sync_dialer::tcp_sync_dialer()
 		{
-			PUMP_ASSERT(!tracker_);
-			poll::channel_sptr ch = shared_from_this();
-			tracker_.reset(new poll::channel_tracker(ch, TRACK_WRITE, TRACK_MODE_ONCE));
-			if (!get_service()->add_channel_tracker(tracker_))
-				return false;
-
-			tracker_cnt_.fetch_add(1);
-
-			return true;
 		}
 
-		void tcp_dialer::__stop_tracker()
-		{
-			if (!tracker_)
-				return;
+		base_transport_sptr tcp_sync_dialer::dial(
+			service_ptr sv,
+			const address &local_address,
+			const address &remote_address,
+			int64 connect_timeout
+		) {
+			base_transport_sptr transp;
 
-			if (!get_service()->remove_channel_tracker(tracker_))
-				PUMP_ASSERT(false);
+			if (dialer_)
+				return transp;
 
-			tracker_.reset();
+			dialer_callbacks cbs;
+			cbs.dialed_cb = function::bind(&tcp_sync_dialer::on_dialed_callback, 
+				shared_from_this(), _1, _2);
+			cbs.timeout_cb = function::bind(&tcp_sync_dialer::on_timeout_callback,
+				shared_from_this());
+			cbs.stopped_cb = function::bind(&tcp_sync_dialer::on_stopped_callback);
+
+			dialer_ = tcp_dialer::create_instance(local_address, remote_address, connect_timeout);
+			if (!dialer_->start(sv, cbs))
+			{
+				dialer_.reset();
+				return transp;
+			}
+
+			auto future = dial_promise_.get_future();
+			transp = future.get();
+
+			return transp;
 		}
 
-		bool tcp_dialer::__start_timer(int64 timeout)
-		{
-			if (timeout <= 0)
-				return true;
-
-			PUMP_ASSERT(!timer_);
-			time::timeout_notifier_sptr notifier = shared_from_this();
-			timer_.reset(new time::timer(nullptr, notifier, timeout));
-
-			return get_service()->start_timer(timer_);
+		void tcp_sync_dialer::on_dialed_callback(
+			tcp_sync_dialer_wptr wptr,
+			base_transport_sptr transp,
+			bool succ
+		) {
+			PUMP_LOCK_WPOINTER_EXPR(dialer, wptr, true,
+				dialer->dial_promise_.set_value(transp));
 		}
 
-		void tcp_dialer::__stop_timer()
+		void tcp_sync_dialer::on_timeout_callback(tcp_sync_dialer_wptr wptr) 
 		{
-			if (timer_)
-				timer_->stop();
+			PUMP_LOCK_WPOINTER_EXPR(dialer, wptr, true,
+				dialer->dial_promise_.set_value(base_transport_sptr()));
 		}
 
+		void tcp_sync_dialer::on_stopped_callback()
+		{
+			PUMP_ASSERT(false);
+		}
+
+		void tcp_sync_dialer::__reset()
+		{
+			dialer_.reset();
+		}
 	}
 }

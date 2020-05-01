@@ -14,118 +14,102 @@
  * limitations under the License.
  */
 
-#ifndef pump_time_timestamp_h
-#define pump_time_timestamp_h
+#ifndef pump_transport_dialer_h
+#define pump_transport_dialer_h
 
-#include "pump/deps.h"
+#include "pump/transport/base_transport.h"
 
 namespace pump {
-	namespace time {
+	namespace transport {
 
-		/*********************************************************************************
-		 * Get clock microsecond, just for calculating time difference
-		 ********************************************************************************/
-		LIB_EXPORT extern uint64 get_clock_microsecond();
-
-		/*********************************************************************************
-		 * Get clock milliseconds, just for calculating time difference
-		 ********************************************************************************/
-		LIB_EXPORT extern uint64 get_clock_milliseconds();
-
-		class LIB_EXPORT timestamp
+		class LIB_EXPORT base_dialer :
+			public base_channel
 		{
 		public:
 			/*********************************************************************************
 			 * Constructor
 			 ********************************************************************************/
-			timestamp()
+			base_dialer(
+				transport_type type,
+				const address &local_address,
+				const address &remote_address,
+				int64 connect_timeout
+			) : base_channel(type, nullptr, -1),
+				local_address_(local_address),
+				remote_address_(remote_address),
+				connect_timeout_(connect_timeout)
+			{}
+
+			/*********************************************************************************
+			 * Deconstructor
+			 ********************************************************************************/
+			virtual ~base_dialer() = default;
+
+			/*********************************************************************************
+			 * Start
+			 ********************************************************************************/
+			virtual bool start(service_ptr sv, const dialer_callbacks &cbs) = 0;
+
+			/*********************************************************************************
+			 * Stop
+			 ********************************************************************************/
+			virtual void stop() = 0;
+
+			/*********************************************************************************
+			 * Get local address
+			 ********************************************************************************/
+			const address& get_local_address() const
 			{
-				ms_ = std::chrono::milliseconds(now_time());
+				return local_address_;
 			}
-			timestamp(uint64 ms)
+
+			/*********************************************************************************
+			 * Get remote address
+			 ********************************************************************************/
+			const address& get_remote_address() const
 			{
-				ms_ = std::chrono::milliseconds(ms);
+				return remote_address_;
 			}
 
+		protected:
 			/*********************************************************************************
-			 * Increase time value
+			 * Tracker event callback
 			 ********************************************************************************/
-			LIB_FORCEINLINE void increase(uint64 ms) 
-			{ ms_ += std::chrono::milliseconds(ms); }
+			virtual void on_tracker_event(int32 ev) override;
+
+		protected:
+			/*********************************************************************************
+			 * Start tracker
+			 ********************************************************************************/
+			bool __start_tracker(poll::channel_sptr &ch);
 
 			/*********************************************************************************
-			 * Reduce time value
+			 * Stop tracker
 			 ********************************************************************************/
-			LIB_FORCEINLINE void reduce(uint64 ms) 
-			{ ms_ -= std::chrono::milliseconds(ms); }
+			void __stop_tracker();
 
 			/*********************************************************************************
-			 * Set the time value
+			 * Start connect timer
 			 ********************************************************************************/
-			LIB_FORCEINLINE void set(uint64 ms) 
-			{ ms_ = std::chrono::milliseconds(ms); }
+			bool __start_connect_timer(const time::timer_callback &cb);
 
 			/*********************************************************************************
-			 * Get the time value
+			 * Stop connect timer
 			 ********************************************************************************/
-			LIB_FORCEINLINE uint64 time() const 
-			{ return ms_.count(); }
+			void __stop_connect_timer();
 
-			/*********************************************************************************
-			 * Get time string as YY-MM-DD hh:mm:ss:ms
-			 ********************************************************************************/
-			std::string to_string() const;
-
-			/*********************************************************************************
-			 * Get time string
-			 * YY as year
-			 * MM as mouth
-			 * DD as day
-			 * hh as hour
-			 * mm as minute
-			 * ss as second
-			 * ms as millsecond
-			 ********************************************************************************/
-			std::string format(const std::string &format) const;
-
-			/*********************************************************************************
-			 * Get now milliseconds
-			 ********************************************************************************/
-			static uint64 now_time();
-
-			/*********************************************************************************
-			 * Create now timestamp
-			 ********************************************************************************/
-			LIB_FORCEINLINE static timestamp now()
-			{ return timestamp(now_time()); }
-
-		public:
-			/*********************************************************************************
-			 * Overwrite operator =
-			 ********************************************************************************/
-			timestamp& operator =(const timestamp& ts)
-			{ ms_ = ts.ms_; return *this; }
-
-			/*********************************************************************************
-			 * Overwrite operator <
-			 ********************************************************************************/
-			bool operator <(const timestamp& ts)
-			{ return ms_ < ts.ms_; }
-
-			/*********************************************************************************
-			 * Overwrite operator <=
-			 ********************************************************************************/
-			bool operator <=(const timestamp& ts)
-			{ return ms_ <= ts.ms_; }
-
-			/*********************************************************************************
-			 * Overwrite operator ==
-			 ********************************************************************************/
-			bool operator ==(const timestamp& ts)
-			{ return ms_ == ts.ms_; }
-
-		private:
-			std::chrono::milliseconds ms_;
+		protected:
+			// Local address
+			address local_address_;
+			// Remote address
+			address remote_address_;
+			// Connect timer
+			int64 connect_timeout_;
+			std::shared_ptr<time::timer> connect_timer_;
+			// Channel tracker
+			poll::channel_tracker_sptr tracker_;
+			// Dialer callbacks
+			dialer_callbacks cbs_;
 		};
 
 	}

@@ -122,7 +122,7 @@ namespace pump {
 				return buf;
 			}
 
-			int32 flow_udp::send_to(c_block_ptr b, uint32 size, const address &remote_addr)
+			int32 flow_udp::send(c_block_ptr b, uint32 size, const address &remote_addr)
 			{
 				return net::send_to(fd_, b, size, (struct sockaddr*)remote_addr.get(), remote_addr.len());
 			}

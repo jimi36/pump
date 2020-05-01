@@ -21,8 +21,10 @@ namespace pump {
 	namespace transport {
 
 		tcp_transport::tcp_transport() :
-			transport_base(TCP_TRANSPORT, nullptr, -1),
-			sendlist_(1024)
+			base_transport(TCP_TRANSPORT, nullptr, -1),
+			sendlist_(1024),
+			sendlist_size_(0),
+			cur_send_buffer_(nullptr)
 		{
 			is_sending_.clear();
 		}
@@ -43,11 +45,8 @@ namespace pump {
 			return true;
 		}
 
-		bool tcp_transport::start(
-			service_ptr sv,
-			transport_io_notifier_sptr &io_notifier,
-			transport_terminated_notifier_sptr &terminated_notifier
-		) {
+		bool tcp_transport::start(service_ptr sv, const transport_callbacks &cbs)
+		{
 			if (!flow_)
 				return false;
 
@@ -55,8 +54,7 @@ namespace pump {
 				return false;
 
 			PUMP_ASSERT_EXPR(sv, __set_service(sv));
-			PUMP_ASSERT_EXPR(io_notifier, __set_notifier(io_notifier));
-			PUMP_ASSERT_EXPR(terminated_notifier, __set_terminated_notifier(terminated_notifier));
+			PUMP_ASSERT_EXPR(cbs.read_cb && cbs.disconnected_cb && cbs.stopped_cb, cbs_ = cbs);
 
 			// If use iocp, the transport is ready for sending.
 			if (!net::get_iocp_handler())
@@ -69,7 +67,7 @@ namespace pump {
 				__set_status(TRANSPORT_STARTING, TRANSPORT_ERROR);
 			});
 
-			if (!__start_all_trackers())
+			if (!__start_all_trackers((poll::channel_sptr)shared_from_this()))
 				return false;
 
 			if (flow_->beg_read_task() == FLOW_ERR_ABORT)
@@ -95,7 +93,7 @@ namespace pump {
 					// At first, stopping read tracker immediately
 					__stop_read_tracker();
 
-					if (sendlist_.size() == 0)
+					if (sendlist_size_.load() == 0)
 					{
 						__stop_send_tracker();
 						__close_flow();
@@ -178,15 +176,15 @@ namespace pump {
 			return __async_send(b);
 		}
 
-		bool tcp_transport::send(c_block_ptr b, uint32 size, bool notify)
+		bool tcp_transport::send(c_block_ptr b, uint32 size)
 		{
 			PUMP_ASSERT(b);
 
 			if (!__is_status(TRANSPORT_STARTED))
 				return false;
 
-			auto buffer = new transport_buffer();
-			if (!buffer || !buffer->append(b, size))
+			auto buffer = new flow::buffer;
+			if (!buffer->append(b, size))
 			{
 				delete buffer;
 				return false;
@@ -204,8 +202,7 @@ namespace pump {
 			c_block_ptr b = flow->read(itask, &size);
 			if (size > 0)
 			{
-				PUMP_LOCK_SPOINTER_EXPR(notifier, __get_notifier<transport_io_notifier>(), true,
-					notifier->on_read_callback(this, b, size));
+				cbs_.read_cb(b, size);
 
 				flow->end_read_task();
 
@@ -249,38 +246,6 @@ namespace pump {
 			}
 		}
 
-		void tcp_transport::on_tracker_event(int32 ev)
-		{
-			if (ev == TRACKER_EVENT_ADD)
-				return;
-
-			if (ev == TRACKER_EVENT_DEL)
-				tracker_cnt_ -= 1;
-
-			if (tracker_cnt_ == 0)
-			{
-				if (__set_status(TRANSPORT_DISCONNECTING, TRANSPORT_DISCONNECTED))
-				{
-					PUMP_LOCK_WPOINTER_EXPR(notifier, terminated_notifier_, true, 
-						notifier->on_disconnected_callback(this));
-				}
-				else if (__set_status(TRANSPORT_STOPPING, TRANSPORT_STOPPED))
-				{
-					PUMP_LOCK_WPOINTER_EXPR(notifier, terminated_notifier_, true,
-						notifier->on_stopped_callback(this));
-				}
-			}
-		}
-
-		void tcp_transport::on_channel_event(uint32 event)
-		{
-			if (event == TRANSPORT_SENT_EVENT)
-			{
-				PUMP_LOCK_SPOINTER_EXPR(notifier, __get_notifier<transport_io_notifier>(), true,
-					notifier->on_sent_callback(this));
-			}
-		}
-
 		bool tcp_transport::__open_flow(int32 fd)
 		{
 			// Setup flow
@@ -296,78 +261,21 @@ namespace pump {
 			return true;
 		}
 
-		bool tcp_transport::__start_all_trackers()
-		{
-			PUMP_ASSERT(!r_tracker_ && !s_tracker_);
-			poll::channel_sptr ch = shared_from_this();
-			r_tracker_.reset(new poll::channel_tracker(ch, TRACK_READ, TRACK_MODE_LOOP));
-			s_tracker_.reset(new poll::channel_tracker(ch, TRACK_WRITE, TRACK_MODE_ONCE));
-			if (!get_service()->add_channel_tracker(s_tracker_) ||
-				!get_service()->add_channel_tracker(r_tracker_))
-				return false;
-
-			tracker_cnt_.fetch_add(2);
-
-			return true;
-		}
-
-		bool tcp_transport::__awake_tracker(poll::channel_tracker_sptr tracker)
-		{
-			if (!tracker)
-				return false;
-
-			if (!get_service()->awake_channel_tracker(tracker.get()))
-				PUMP_ASSERT(false);
-
-			return true;
-		}
-
-		bool tcp_transport::__pause_tracker(poll::channel_tracker_sptr tracker)
-		{
-			if (!tracker)
-				return false;
-
-			if (!get_service()->pause_channel_tracker(tracker.get()))
-				PUMP_ASSERT(false);
-
-			return true;
-		}
-
-		void tcp_transport::__stop_read_tracker()
-		{
-			if (!r_tracker_)
-				return;
-
-			if (!get_service()->remove_channel_tracker(r_tracker_))
-				PUMP_ASSERT(false);
-
-			r_tracker_.reset();
-		}
-
-		void tcp_transport::__stop_send_tracker()
-		{
-			if (!s_tracker_)
-				return;
-
-			if (!get_service()->remove_channel_tracker(s_tracker_))
-				PUMP_ASSERT(false);
-
-			s_tracker_.reset();
-		}
-
 		bool tcp_transport::__async_send(flow::buffer_ptr b)
 		{
-			sendlist_.push(b);
+			if (!sendlist_.enqueue(b))
+				return false;
 
-			flow::buffer_ptr buffer = nullptr;
-			sendlist_.peek(buffer);
-			if (buffer != b || is_sending_.test_and_set())
+			if (sendlist_size_.fetch_add(1) != 1 || is_sending_.test_and_set())
 				return true;
+
+			if (!sendlist_.try_dequeue(cur_send_buffer_))
+				PUMP_ASSERT(false);
 
 			PUMP_LOCK_SPOINTER_EXPR(flow, flow_, false, 
 				return false);
 
-			if (__send_once(flow) == FLOW_ERR_ABORT)
+			if (flow->want_to_send(cur_send_buffer_) == FLOW_ERR_ABORT)
 				return false;
 
 			if (!__awake_tracker(s_tracker_))
@@ -378,27 +286,24 @@ namespace pump {
 
 		int32 tcp_transport::__send_once(flow::flow_tcp_ptr flow)
 		{
-			flow::buffer_ptr buffer = nullptr;
-			while (true)
+			if (cur_send_buffer_)
 			{
-				if (!sendlist_.peek(buffer))
-					break;
-				
-				if (buffer->data_size() > 0)
-					return flow->want_to_send(buffer);
-
-				sendlist_.pop(buffer);
-
-				delete buffer;
+				delete cur_send_buffer_;
+				cur_send_buffer_ = nullptr;
+				sendlist_size_.fetch_sub(1);
 			}
+
+			if (sendlist_size_.load() > 0 && sendlist_.try_dequeue(cur_send_buffer_))
+				return flow->want_to_send(cur_send_buffer_);
 
 			is_sending_.clear();
 
-			if (sendlist_.peek(buffer))
+			if (sendlist_size_.load() > 0 && !is_sending_.test_and_set())
 			{
-				if (!is_sending_.test_and_set())
-					return flow->want_to_send(buffer);
-				return FLOW_ERR_NO_DATA;
+				if (!sendlist_.try_dequeue(cur_send_buffer_))
+					PUMP_ASSERT(false);
+
+				return flow->want_to_send(cur_send_buffer_);
 			}
 
 			// If the transport is in stopping status and no data to send, the flow should be closed
@@ -426,8 +331,11 @@ namespace pump {
 
 		void tcp_transport::__clear_sendlist()
 		{
-			flow::buffer_ptr buffer = nullptr;
-			while (sendlist_.pop(buffer))
+			if (cur_send_buffer_)
+				delete cur_send_buffer_;
+
+			flow::buffer_ptr buffer;
+			while (sendlist_.try_dequeue(buffer))
 			{
 				delete buffer;
 			}

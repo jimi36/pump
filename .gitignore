@@ -6,6 +6,7 @@
 # Include path
 include/*
 !include/pump
+!include/concurrentqueue
 
 # Library path
 lib/*

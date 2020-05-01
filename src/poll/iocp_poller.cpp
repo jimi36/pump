@@ -42,7 +42,7 @@ namespace pump {
 
 			SYSTEM_INFO sys_info;
 			GetSystemInfo(&sys_info);
-			for (DWORD i = 0; i < (sys_info.dwNumberOfProcessors * 2); ++i)
+			for (DWORD i = 0; i < (sys_info.dwNumberOfProcessors); ++i)
 			{
 				std::thread *worker = new std::thread(
 					function::bind(&iocp_poller::__work_thread, this)

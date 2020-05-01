@@ -66,10 +66,4 @@
 	if ((!!p) == b) {expr;} \
 	void(0)
 
-#ifdef WIN32
-#	define snprintf sprintf_s
-#	define strncpy strcpy_s
-#	define strncasecmp _strnicmp
-#endif
-
 #endif

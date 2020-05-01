@@ -19,6 +19,7 @@
 
 #include "pump/deps.h"
 #include "pump/net/iocp.h"
+#include "pump/utils/features.h"
 
 namespace pump {
 	namespace poll {
@@ -42,35 +43,40 @@ namespace pump {
 			CH_OPT_DELETE = 0x03
 		};
 
-		class LIB_EXPORT channel
+		class LIB_EXPORT channel:
+			public utils::noncopyable
 		{
 		public:
 			/*********************************************************************************
 			 * Constructor
 			 ********************************************************************************/
-			channel(int32 fd = -1): 
+			explicit channel(int32 fd = -1):
 				ctx_(nullptr),
-				fd_(fd) {}
+				fd_(fd) 
+			{}
 
 			/*********************************************************************************
 			 * Deconstructor
 			 ********************************************************************************/
-			virtual ~channel() {}
+			virtual ~channel() = default;
 
 			/*********************************************************************************
 			 * Get channel fd
 			 ********************************************************************************/
-			LIB_FORCEINLINE int32 get_fd() const { return fd_; }
+			LIB_FORCEINLINE int32 get_fd() const 
+			{ return fd_; }
 
 			/*********************************************************************************
 			 * Get channel context
 			 ********************************************************************************/
-			LIB_FORCEINLINE void_ptr get_context() const { return ctx_; }
+			LIB_FORCEINLINE void_ptr get_context() const 
+			{ return ctx_; }
 
 			/*********************************************************************************
 			 * Set context
 			 ********************************************************************************/
-			LIB_FORCEINLINE void set_context(void_ptr ctx) { ctx_ = ctx; }
+			LIB_FORCEINLINE void set_context(void_ptr ctx) 
+			{ ctx_ = ctx; }
 
 			/*********************************************************************************
 			 * Handle io event
@@ -86,18 +92,21 @@ namespace pump {
 			/*********************************************************************************
 			 * Handle channel event
 			 ********************************************************************************/
-			LIB_FORCEINLINE void handle_channel_event(int32 ev) { on_channel_event(ev); }
+			LIB_FORCEINLINE void handle_channel_event(int32 ev) 
+			{ on_channel_event(ev); }
 
 			/*********************************************************************************
 			 * Handle tracker event
 			 ********************************************************************************/
-			LIB_FORCEINLINE void handle_tracker_event(int32 ev) { on_tracker_event(ev); }
+			LIB_FORCEINLINE void handle_tracker_event(int32 ev) 
+			{ on_tracker_event(ev); }
 
 		protected:
 			/*********************************************************************************
 			 * Set channel fd
 			 ********************************************************************************/
-			LIB_FORCEINLINE void __set_fd(int32 fd) { fd_ = fd; }
+			LIB_FORCEINLINE void __set_fd(int32 fd) 
+			{ fd_ = fd; }
 
 		protected:
 			/*********************************************************************************

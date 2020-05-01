@@ -17,6 +17,7 @@
 #ifndef pump_transport_tls_acceptor_h
 #define pump_transport_tls_acceptor_h
 
+#include "pump/transport/base_acceptor.h"
 #include "pump/transport/tls_handshaker.h"
 #include "pump/transport/flow/flow_tls_acceptor.h"
 
@@ -27,93 +28,74 @@ namespace pump {
 		DEFINE_ALL_POINTER_TYPE(tls_acceptor);
 
 		class LIB_EXPORT tls_acceptor :
-			public transport_base,
-			public tls_handshaked_notifier,
+			public base_acceptor,
 			public std::enable_shared_from_this<tls_acceptor>
 		{
 		public:
 			/*********************************************************************************
 			 * Create instance
 			 ********************************************************************************/
-			static tls_acceptor_sptr create_instance()
-			{
-				return tls_acceptor_sptr(new tls_acceptor);
+			static tls_acceptor_sptr create_instance(
+				void_ptr cert, 
+				const address &listen_address, 
+				int64 handshake_timeout = 0
+			) {
+				return tls_acceptor_sptr(new tls_acceptor(cert, listen_address, handshake_timeout));
 			}
 
 			/*********************************************************************************
 			 * Deconstructor
 			 ********************************************************************************/
-			virtual ~tls_acceptor() {}
+			virtual ~tls_acceptor() = default;
 
 			/*********************************************************************************
 			 * Start
 			 ********************************************************************************/
-			bool start(
-				void_ptr tls_cert,
-				service_ptr sv,
-				int64 handshake_timeout,
-				const address &listen_address,
-				accepted_notifier_sptr &notifier
-			);
+			virtual bool start(service_ptr sv, const acceptor_callbacks &cbs) override;
 
 			/*********************************************************************************
 			 * Stop
 			 ********************************************************************************/
-			virtual void stop();
-
-			/*********************************************************************************
-			 * Get local address
-			 ********************************************************************************/
-			virtual const address& get_local_address() const { return listen_address_; }
+			virtual void stop() override;
 
 		protected:
 			/*********************************************************************************
 			 * Read event callback
 			 ********************************************************************************/
-			virtual void on_read_event(net::iocp_task_ptr itask);
+			virtual void on_read_event(net::iocp_task_ptr itask) override;
 
+		protected:
 			/*********************************************************************************
-			 * Tracker event callback
+			 * TLS handshaked callback
 			 ********************************************************************************/
-			virtual void on_tracker_event(int32 ev);
-
-			/*********************************************************************************
-			 * Tls handshake success callback
-			 ********************************************************************************/
-			virtual void on_handshaked_callback(transport_base_ptr handshaker, bool succ);
-
-			/*********************************************************************************
-			 * Tls handshake timeout callback
-			 ********************************************************************************/
-			virtual void on_handshaked_timeout_callback(transport_base_ptr handshaker);
+			static void on_handshaked_callback(
+				tls_acceptor_wptr wptr,
+				tls_handshaker_ptr handshaker,
+				bool succ
+			);
 
 			/*********************************************************************************
 			 * Tls handskake stopped callback
 			 ********************************************************************************/
-			virtual void on_stopped_handshaking_callback(transport_base_ptr handshaker);
+			static void on_stopped_handshaking_callback(
+				tls_acceptor_wptr wptr,
+				tls_handshaker_ptr handshaker
+			);
 
 		private:
 			/*********************************************************************************
 			 * Constructor
 			 ********************************************************************************/
-			tls_acceptor();
-
-			/*********************************************************************************
-			 * Set tls credentials
-			 ********************************************************************************/
-			LIB_FORCEINLINE void __set_tls_cert(void_ptr tls_cert) 
-			{ tls_cert_ = tls_cert; }
-
-			/*********************************************************************************
-			 * Set tls handshake timeout
-			 ********************************************************************************/
-			LIB_FORCEINLINE void __set_tls_handshake_timeout(int64 timeout) 
-			{ handshake_timeout_ = timeout; }
+			tls_acceptor(
+				void_ptr cert, 
+				const address &listen_address, 
+				int64 handshake_timeout
+			);
 
 			/*********************************************************************************
 			 * Open flow
 			 ********************************************************************************/
-			bool __open_flow(const address &listen_address);
+			bool __open_flow();
 
 			/*********************************************************************************
 			 * Close flow
@@ -122,43 +104,33 @@ namespace pump {
 			{ flow_.reset(); }
 
 			/*********************************************************************************
-			 * Start tracker
+			 * Create handshaker
 			 ********************************************************************************/
-			bool __start_tracker();
+			tls_handshaker_ptr __create_handshaker();
 
 			/*********************************************************************************
-			 * Stop tracker
+			 * Remove handshaker
 			 ********************************************************************************/
-			void __stop_tracker();
+			void __remove_handshaker(tls_handshaker_ptr handshaker);
 
 			/*********************************************************************************
-			 * Create tls handshaker
+			 * Stop all handshakers
 			 ********************************************************************************/
-			tls_handshaker_ptr __create_tls_handshaker();
-
-			/*********************************************************************************
-			 * Remove tls handshaker
-			 ********************************************************************************/
-			void __remove_tls_handshaker(tls_handshaker_ptr handshaker);
-
-			/*********************************************************************************
-			 * Stop all tls handshakers
-			 ********************************************************************************/
-			void __stop_all_tls_handshakers();
+			void __stop_all_handshakers();
 
 		private:
-			// GNUTls credentials
-			void_ptr tls_cert_;
-			// Listen address
-			address listen_address_;
-			// Channel tracker
-			poll::channel_tracker_sptr tracker_;
+			// GNUTLS credentials
+			void_ptr cert_;
+			// GNUTLS handshake timeout time
+			int64 handshake_timeout_;
+			// Handshakers
+			std::mutex handshaker_mx_;
+			std::unordered_map<tls_handshaker_ptr, tls_handshaker_sptr> handshakers_;
+			// Handshaker callbacks
+			tls_handshaker::tls_handshaker_callbacks handshaker_cbs_;
+
 			// Acceptor flow
 			flow::flow_tls_acceptor_sptr flow_;
-			// GNUTls handshake info
-			int64 handshake_timeout_;
-			std::mutex tls_handshaker_mx_;
-			std::unordered_map<tls_handshaker_ptr, tls_handshaker_sptr> tls_handshakers_;
 		};
 	}
 }

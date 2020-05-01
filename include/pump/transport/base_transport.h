@@ -20,6 +20,7 @@
 #include "pump/service.h"
 #include "pump/poll/channel.h"
 #include "pump/transport/address.h"
+#include "pump/transport/callbacks.h"
 #include "pump/transport/flow/buffer.h"
 
 namespace pump {
@@ -61,40 +62,7 @@ namespace pump {
 			TLS_TRANSPORT
 		};
 
-		enum transport_event 
-		{
-			TRANSPORT_SENT_EVENT = 0
-		};
-
-		class LIB_EXPORT transport_buffer:
-			public flow::buffer 
-		{
-		public:
-			/*********************************************************************************
-			 * Constructor
-			 ********************************************************************************/
-			transport_buffer():
-				completed_notify_(false)
-			{}
-
-			/*********************************************************************************
-			 * Set completed notify status
-			 ********************************************************************************/
-			LIB_FORCEINLINE void set_completed_notify(bool notify) 
-			{ completed_notify_ = notify; }
-
-			/*********************************************************************************
-			 * Check completed notify status
-			 ********************************************************************************/
-			LIB_FORCEINLINE bool need_completed_notify() const 
-			{ return completed_notify_; }
-
-		private:
-			bool completed_notify_;
-		};
-		DEFINE_ALL_POINTER_TYPE(transport_buffer);
-
-		class LIB_EXPORT transport_base:
+		class LIB_EXPORT base_channel:
 			public service_getter,
 			public poll::channel
 		{
@@ -102,75 +70,18 @@ namespace pump {
 			/*********************************************************************************
 			 * Constructor
 			 ********************************************************************************/
-			transport_base(transport_type type, service_ptr sv = nullptr, int32 fd = -1):
+			base_channel(transport_type type, service_ptr sv, int32 fd) :
 				service_getter(sv),
 				poll::channel(fd),
 				tracker_cnt_(0),
 				status_(TRANSPORT_INIT),
-				type_(type) {}
+				type_(type) 
+			{}
 
 			/*********************************************************************************
 			 * Deconstructor
 			 ********************************************************************************/
-			virtual ~transport_base() {}
-
-			/*********************************************************************************
-			 * Stop channel
-			 ********************************************************************************/
-			virtual void stop() {}
-
-			/*********************************************************************************
-			 * Force stop
-			 ********************************************************************************/
-			virtual void force_stop() { stop(); }
-
-			/*********************************************************************************
-			 * Restart
-			 * After paused success, this will restart transport.
-			 ********************************************************************************/
-			virtual bool restart() { return false; }
-
-			/*********************************************************************************
-			 * Pause
-			 ********************************************************************************/
-			virtual bool pause() { return false; }
-
-			/*********************************************************************************
-			 * Send
-			 * If notify is setted, transport will notify when the data is sent completely.
-			 ********************************************************************************/
-			virtual bool send(c_block_ptr b, uint32 size, bool notify = false) { return false; }
-
-			/*********************************************************************************
-			 * Send
-			 * After sent, the buffer has moved ownership to transport.
-			 ********************************************************************************/
-			virtual bool send(flow::buffer_ptr b, bool notify = false) { return false; }
-
-			/*********************************************************************************
-			 * Send to remote address
-			 * This is a synchronous operation, just for udp transport.
-			 ********************************************************************************/
-			virtual bool send(c_block_ptr b, uint32 size, const address &remote_address) 
-			{ return false; }
-
-			/*********************************************************************************
-			 * Get local address
-			 ********************************************************************************/
-			virtual const address& get_local_address() const 
-			{
-				static address no_addr;
-				return no_addr; 
-			}
-
-			/*********************************************************************************
-			 * Get remote address
-			 ********************************************************************************/
-			virtual const address& get_remote_address() const
-			{
-				static address no_addr;
-				return no_addr;
-			}
+			virtual ~base_channel() = default;
 
 			/*********************************************************************************
 			 * Get transport type
@@ -198,37 +109,142 @@ namespace pump {
 			{ return status_.load() == status; }
 
 			/*********************************************************************************
-			 * Set notifier
-			********************************************************************************/
-			LIB_FORCEINLINE void __set_notifier(void_wptr notifier) 
-			{ notifier_ = notifier; }
-
-			/*********************************************************************************
 			 * Post channel event
 			 ********************************************************************************/
 			LIB_FORCEINLINE void __post_channel_event(poll::channel_sptr &ch, uint32 event)
 			{ get_service()->post_channel_event(ch, event); }
 
+		protected:
+			// Tracked tracker count
+			std::atomic_int16_t tracker_cnt_;
+			// Channel status
+			std::atomic_uint status_;
+			// Channel type
+			transport_type type_;
+		};
+
+		class LIB_EXPORT base_transport :
+			public base_channel
+		{
+		public:
 			/*********************************************************************************
-			 * Get notifier
+			 * Constructor
 			 ********************************************************************************/
-			template <typename NotifyType>
-			LIB_FORCEINLINE std::shared_ptr<NotifyType> __get_notifier()
-			{ return std::move(std::static_pointer_cast<NotifyType>(notifier_.lock())); }
+			base_transport(transport_type type, service_ptr sv, int32 fd) :
+				base_channel(type, sv, fd)
+			{}
+
+			/*********************************************************************************
+			 * Deconstructor
+			 ********************************************************************************/
+			virtual ~base_transport() = default;
+
+			/*********************************************************************************
+			 * Start
+			 ********************************************************************************/
+			virtual bool start(
+				service_ptr sv,
+				const transport_callbacks &cbs
+			) = 0;
+
+			/*********************************************************************************
+			 * Stop
+			 ********************************************************************************/
+			virtual void stop() = 0;
+
+			/*********************************************************************************
+			 * Force stop
+			 ********************************************************************************/
+			virtual void force_stop() = 0;
+
+			/*********************************************************************************
+			 * Restart
+			 * After paused success, this will restart transport.
+			 ********************************************************************************/
+			virtual bool restart() 
+			{ return false; }
+
+			/*********************************************************************************
+			 * Pause
+			 ********************************************************************************/
+			virtual bool pause() 
+			{ return false; }
+
+			/*********************************************************************************
+			 * Send
+			 ********************************************************************************/
+			virtual bool send(c_block_ptr b, uint32 size)
+			{ return false; }
+
+			/*********************************************************************************
+			 * Send
+			 * After sent, the buffer has moved ownership to transport.
+			 ********************************************************************************/
+			virtual bool send(flow::buffer_ptr b)
+			{ return false; }
+
+			/*********************************************************************************
+			 * Send
+			 ********************************************************************************/
+			virtual bool send(
+				c_block_ptr b,
+				uint32 size,
+				const address &remote_address
+			) { return false; }
+
+			/*********************************************************************************
+			 * Get local address
+			 ********************************************************************************/
+			const address& get_local_address() const
+			{ return local_address_; }
+
+			/*********************************************************************************
+			 * Get remote address
+			 ********************************************************************************/
+			const address& get_remote_address() const
+			{ return remote_address_; }
 
 		protected:
-			// Tracking tracker count
-			std::atomic_int16_t tracker_cnt_;
+			/*********************************************************************************
+			 * Tracker event callback
+			 ********************************************************************************/
+			virtual void on_tracker_event(int32 ev) override;
 
-		private:
-			// Transport status
-			std::atomic_uint status_;
-			// Transport type
-			transport_type type_;
-			// Notifier
-			void_wptr notifier_;
+		protected:
+			/*********************************************************************************
+			 * Start all trackers
+			 ********************************************************************************/
+			bool __start_all_trackers(poll::channel_sptr &ch);
+
+			/*********************************************************************************
+			 * Awake tracker
+			 ********************************************************************************/
+			bool __awake_tracker(poll::channel_tracker_sptr tracker);
+
+			/*********************************************************************************
+			 * Pause tracker
+			 ********************************************************************************/
+			bool __pause_tracker(poll::channel_tracker_sptr tracker);
+
+			/*********************************************************************************
+			 * Stop tracker
+			 ********************************************************************************/
+			void __stop_read_tracker();
+			void __stop_send_tracker();
+
+		protected:
+			// Local address
+			address local_address_;
+			// Remote address
+			address remote_address_;
+
+			// Channel trackers
+			poll::channel_tracker_sptr r_tracker_;
+			poll::channel_tracker_sptr s_tracker_;
+
+			// Transport callbacks
+			transport_callbacks cbs_;
 		};
-		DEFINE_ALL_POINTER_TYPE(transport_base);
 
 	}
 }

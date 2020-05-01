@@ -23,7 +23,8 @@ namespace pump {
 	namespace transport {
 		namespace flow {
 
-			class flow_tcp: public flow_base
+			class flow_tcp: 
+				public flow_base
 			{
 			public:
 				/*********************************************************************************

@@ -27,7 +27,7 @@ namespace pump {
 		loop_poller_(nullptr),
 		once_poller_(nullptr),
 		iocp_poller_(nullptr),
-		waiting_for_task_(true)
+		event_waiting_(true)
 	{
 		if (has_poller)
 		{
@@ -65,7 +65,7 @@ namespace pump {
 		running_ = true;
 
 		if (tqueue_ != nullptr)
-			tqueue_->start(function::bind(&service::__post_pending_timer, this, _1));
+			tqueue_->start(function::bind(&service::__post_timeout_timer, this, _1));
 		if (iocp_poller_ != nullptr)
 			iocp_poller_->start();
 		if (loop_poller_ != nullptr)
@@ -73,12 +73,7 @@ namespace pump {
 		if (once_poller_ != nullptr)
 			once_poller_->start();
 
-		task_worker_.reset(
-			new std::thread([&]() {
-				while (running_)
-					__do_posted_tasks();
-			}
-		));
+		__start_task_thread();
 
 		return true;
 	}
@@ -188,23 +183,17 @@ namespace pump {
 
 	void service::post(const post_task_type& task)
 	{
-		std::unique_lock<std::mutex> locker(task_mx_);
+		std::unique_lock<std::mutex> locker(event_mx_);
 		tasks_.push_back(task);
 
-		if (waiting_for_task_)
+		if (event_waiting_)
 			task_cv_.notify_all();
 	}
 
 	bool service::start_timer(time::timer_sptr &tr)
 	{
-		time::timer_queue_ptr tq = tqueue_.get();
-		if (tq == nullptr)
-			return false;
-
-		if (!tr->start() || !tq->add_timer(tr))
-			return false;
-
-		return true;
+		PUMP_ASSERT_EXPR(tqueue_, 
+			return tqueue_->add_timer(tr));
 	}
 
 	void service::stop_timer(time::timer_sptr &tr)
@@ -213,50 +202,59 @@ namespace pump {
 			tr->stop();
 	}
 
-	void service::__post_pending_timer(time::timer_wptr &tr)
+	void service::__post_timeout_timer(time::timer_wptr &tr)
 	{
-		std::unique_lock<std::mutex> locker(task_mx_);
+		std::unique_lock<std::mutex> locker(event_mx_);
 		timers_.push_back(tr);
 
-		if (waiting_for_task_)
+		if (event_waiting_)
 			task_cv_.notify_all();
 	}
 
-	void service::__do_posted_tasks()
+	void service::__start_task_thread()
 	{
-		std::vector<time::timer_wptr> process_timers;
-		std::vector<post_task_type> process_tasks;
+		task_worker_.reset(new std::thread([&]() {
+			std::vector<post_task_type> process_tasks;
+			std::vector<time::timer_wptr> process_timers;
+			while (running_)
+			{
+				__do_posted_tasks(process_tasks, process_timers);
+
+				process_tasks.clear();
+				process_timers.clear();
+			}
+		}));
+	}
+
+	void service::__do_posted_tasks(
+		std::vector<post_task_type> &posted_tasks,
+		std::vector<time::timer_wptr> &timeout_timers
+	) {
 		{
-			std::unique_lock<std::mutex> locker(task_mx_);
+			std::unique_lock<std::mutex> locker(event_mx_);
 			if (tasks_.empty() && timers_.empty())
 			{
-				waiting_for_task_ = true;
+				event_waiting_ = true;
 				task_cv_.wait_for(locker, std::chrono::seconds(1));
-				waiting_for_task_ = false;
+				event_waiting_ = false;
 			}
 
 			if (!tasks_.empty())
-				process_tasks.swap(tasks_);
+				posted_tasks.swap(tasks_);
 			if (!timers_.empty())
-				process_timers.swap(timers_);
+				timeout_timers.swap(timers_);
 		}
 
-		for (int32 i = 0; i < (int32)process_tasks.size(); ++i)
+		for (auto &task: posted_tasks)
 		{
-			if (process_tasks[i])
-				process_tasks[i]();
+			task();
 		}
 
-		for (int32 i = 0; i < (int32)process_timers.size(); ++i)
+		for (auto &wtr: timeout_timers)
 		{
-			time::timer_sptr tr_locker = process_timers[i].lock();
-			time::timer_ptr tr = tr_locker.get();
-			if (tr)
-			{
-				tr->handle_timeout();
-				if (tr->is_repeated() && tr->start())
-					tqueue_->add_timer(tr_locker);
-			}
+			PUMP_LOCK_WPOINTER_EXPR(tr, wtr, true,
+				tr->handle_timeout(tqueue_.get());
+			);
 		}
 	}
 

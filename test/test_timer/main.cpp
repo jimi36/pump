@@ -2,20 +2,7 @@
 #include <pump/service.h>
 #include <pump/time/timer.h>
 
-void operator delete(void *ptr) noexcept {
-	free(ptr);
-}
-
-void operator delete[](void *ptr) noexcept {
-	free(ptr);
-}
-
-void operator delete(void *ptr, const std::nothrow_t &) noexcept {
-	free(ptr);
-}
-
 class Timeout: 
-	public pump::time::timeout_notifier,
 	public std::enable_shared_from_this<Timeout>
 {
 public:
@@ -26,9 +13,9 @@ public:
 
 	void start()
 	{
-		auto notify = std::static_pointer_cast<timeout_notifier>(shared_from_this());
 		printf("new timeout\n");
-		t_.reset(new pump::time::timer(nullptr, notify, 1000, true));
+		pump::time::timer_callback cb = function::bind(&Timeout::on_timer_timeout, this);
+		t_.reset(new pump::time::timer(cb, 1000, true));
 		if (!sv_->start_timer(t_))
 		{
 			printf("start timeout error\n");
@@ -38,11 +25,11 @@ public:
 	/*********************************************************************************
 	 * Timer timeout callback
 	 ********************************************************************************/
-	virtual void on_timer_timeout(void *arg)
+	void on_timer_timeout()
 	{
 		printf("timeout event pending %d\n", time(0));
 		//sv_->stop();
-		t_.reset();
+		//t_.reset();
 	}
 
 private:

@@ -23,7 +23,8 @@
 namespace pump {
 	namespace time {
 
-		class timer_queue
+		class timer_queue: 
+			public utils::noncopyable
 		{
 		protected:
 			typedef function::function<void(timer_wptr&)> timer_pending_callback;
@@ -37,7 +38,7 @@ namespace pump {
 			/*********************************************************************************
 			 * Deconstructor
 			 ********************************************************************************/
-			virtual ~timer_queue() {}
+			~timer_queue() = default;
 
 			/*********************************************************************************
 			 * Start

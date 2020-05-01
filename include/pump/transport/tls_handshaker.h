@@ -20,36 +20,30 @@
 #include "pump/time/timer.h"
 #include "pump/utils/features.h"
 #include "pump/transport/flow/flow_tls.h"
-#include "pump/transport/transport_notifier.h"
+#include "pump/transport/base_transport.h"
 
 namespace pump {
 	namespace transport {
 
-		class tls_handshaked_notifier
-		{
-		public:
-			/*********************************************************************************
-			 * Tls handskake success callback
-			 ********************************************************************************/
-			virtual void on_handshaked_callback(transport_base_ptr handshaker, bool succ) = 0;
+		class tls_handshaker;
+		DEFINE_ALL_POINTER_TYPE(tls_handshaker);
 
-			/*********************************************************************************
-			 * Tls handskake timeout callback
-			 ********************************************************************************/
-			virtual void on_handshaked_timeout_callback(transport_base_ptr handshaker) = 0;
-
-			/*********************************************************************************
-			 * Tls handskake stopped callback
-			 ********************************************************************************/
-			virtual void on_stopped_handshaking_callback(transport_base_ptr handshaker) = 0;
-		};
-		DEFINE_ALL_POINTER_TYPE(tls_handshaked_notifier);
-
-		class tls_handshaker :
-			public transport_base,
-			public time::timeout_notifier,
+		class tls_handshaker:
+			public base_channel,
 			public std::enable_shared_from_this<tls_handshaker>
 		{
+		public:
+			struct tls_handshaker_callbacks
+			{
+				function::function<
+					void(tls_handshaker_ptr, bool)
+				> handshaked_cb;
+
+				function::function<
+					void(tls_handshaker_ptr)
+				> stopped_cb;
+			};
+
 		public:
 			/*********************************************************************************
 			 * Constructor
@@ -59,7 +53,7 @@ namespace pump {
 			/*********************************************************************************
 			 * Deconstructor
 			 ********************************************************************************/
-			virtual ~tls_handshaker() {}
+			virtual ~tls_handshaker() = default;
 
 			/*********************************************************************************
 			 * Init
@@ -78,19 +72,19 @@ namespace pump {
 			bool start(
 				service_ptr sv, 
 				int64 timeout, 
-				tls_handshaked_notifier_sptr &notifier
+				const tls_handshaker_callbacks &cbs
 			);
 			bool start(
 				service_ptr sv, 
 				poll::channel_tracker_sptr &tracker, 
 				int64 timeout, 
-				tls_handshaked_notifier_sptr &notifier
+				const tls_handshaker_callbacks &cbs
 			);
 
 			/*********************************************************************************
 			 * Stop transport
 			 ********************************************************************************/
-			virtual void stop();
+			void stop();
 
 			/*********************************************************************************
 			 * Unlock flow
@@ -101,33 +95,36 @@ namespace pump {
 			/*********************************************************************************
 			 * Get local address
 			 ********************************************************************************/
-			virtual const address& get_local_address() const { return local_address_; }
+			LIB_FORCEINLINE const address& get_local_address() const
+			{ return local_address_; }
 
 			/*********************************************************************************
-			 * Start remote address
+			 * Get remote address
 			 ********************************************************************************/
-			virtual const address& get_remote_address() const { return remote_address_; }
+			LIB_FORCEINLINE const address& get_remote_address() const
+			{ return remote_address_; }
 
 		protected:
 			/*********************************************************************************
 			 * Read event callback
 			 ********************************************************************************/
-			virtual void on_read_event(net::iocp_task_ptr itask);
+			virtual void on_read_event(net::iocp_task_ptr itask) override;
 
 			/*********************************************************************************
 			 * Send event callback
 			 ********************************************************************************/
-			virtual void on_send_event(net::iocp_task_ptr itask);
+			virtual void on_send_event(net::iocp_task_ptr itask) override;
 
 			/*********************************************************************************
 			 * Tracker event callback
 			 ********************************************************************************/
-			virtual void on_tracker_event(int32 ev);
+			virtual void on_tracker_event(int32 ev) override;
 
+		protected:
 			/*********************************************************************************
 			 * Timer timeout callback
 			 ********************************************************************************/
-			virtual void on_timer_timeout(void_ptr arg);
+			static void on_timeout(tls_handshaker_wptr wptr);
 
 		private:
 			/*********************************************************************************
@@ -192,10 +189,11 @@ namespace pump {
 			time::timer_sptr timer_;
 			// Channel tracker
 			poll::channel_tracker_sptr tracker_;
-			// Tls flow
+			// TLS flow
 			flow::flow_tls_sptr flow_;
+			// TLS handshaker callbacks
+			tls_handshaker_callbacks cbs_;
 		};
-		DEFINE_ALL_POINTER_TYPE(tls_handshaker);
 
 	}
 }

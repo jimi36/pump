@@ -290,9 +290,6 @@ namespace pump {
 			int32 flow_tls::want_to_send()
 			{
 #ifdef USE_GNUTLS
-				//if (net_send_buffer_.data_size() == 0)
-				//	PUMP_ASSERT(false);
-				
 #	if defined(WIN32) && defined(USE_IOCP)
 				//PUMP_ASSERT(send_task_);
 				net::set_iocp_task_buffer(send_task_, (int8_ptr)net_send_buffer_.data(), net_send_buffer_.data_size());

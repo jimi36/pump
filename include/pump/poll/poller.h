@@ -24,7 +24,8 @@
 namespace pump {
 	namespace poll {
 
-		class poller
+		class poller:
+			public utils::noncopyable
 		{
 		protected:
 			struct channel_event
@@ -60,7 +61,7 @@ namespace pump {
 			/*********************************************************************************
 			 * Deconstructor
 			 ********************************************************************************/
-			virtual ~poller() {}
+			virtual ~poller() = default;
 
 			/*********************************************************************************
 			 * Start
@@ -106,7 +107,8 @@ namespace pump {
 			/*********************************************************************************
 			 * Add channel tracker for derived class
 			 ********************************************************************************/
-			virtual bool __add_channel_tracker(channel_tracker_ptr tracker) { return true; }
+			virtual bool __add_channel_tracker(channel_tracker_ptr tracker) 
+			{ return true; }
 
 			/*********************************************************************************
 			 * Remove append channel for derived class

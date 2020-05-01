@@ -61,6 +61,9 @@ namespace pump {
 			if (!started_.load())
 				return false;
 
+			if (!ptr->__start())
+				return false;
+
 			std::unique_lock<std::mutex> locker(observer_mx_);
 			timers_.insert(std::make_pair(ptr->time(), ptr));
 			if (next_observe_time_ > ptr->time())

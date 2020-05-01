@@ -98,14 +98,22 @@ namespace pump {
 
 	private:
 		/*********************************************************************************
-		 * Post pending timer
+		 * Post timeout timer
 		 ********************************************************************************/
-		void __post_pending_timer(time::timer_wptr &tr);
+		void __post_timeout_timer(time::timer_wptr &tr);
+
+		/*********************************************************************************
+		 * Start task thread
+		 ********************************************************************************/
+		void __start_task_thread();
 
 		/*********************************************************************************
 		 * Do posted task
 		 ********************************************************************************/
-		void __do_posted_tasks();
+		void __do_posted_tasks(
+			std::vector<post_task_type> &posted_tasks, 
+			std::vector<time::timer_wptr> &timeout_timers
+		);
 
 	private:
 		// Running status
@@ -121,47 +129,41 @@ namespace pump {
 		// Callback task worker
 		std::shared_ptr<std::thread> task_worker_;
 		//  Callback tasks
-		bool waiting_for_task_;
-		std::mutex task_mx_;
+		bool event_waiting_;
+		std::mutex event_mx_;
 		std::condition_variable task_cv_;
 		std::vector<post_task_type> tasks_;
 		std::vector<time::timer_wptr> timers_;
 	};
 	DEFINE_ALL_POINTER_TYPE(service);
 
-	class LIB_EXPORT service_getter : public utils::noncopyable
+	class LIB_EXPORT service_getter
 	{
 	public:
 		/*********************************************************************************
 		 * Constructor
 		 ********************************************************************************/
-		service_getter(service_ptr sv) : service_(sv)
-		{
-		}
+		service_getter(service_ptr sv): 
+			service_(sv)
+		{}
 
 		/*********************************************************************************
 		 * Deconstructor
 		 ********************************************************************************/
-		virtual ~service_getter()
-		{
-		}
+		~service_getter() = default;
 
 		/*********************************************************************************
 		 * Get service
 		 ********************************************************************************/
-		service_ptr get_service()
-		{
-			return service_;
-		}
+		LIB_FORCEINLINE service_ptr get_service()
+		{ return service_; }
 
 	protected:
 		/*********************************************************************************
 		 * Set service
 		 ********************************************************************************/
-		void __set_service(service_ptr sv)
-		{
-			service_ = sv;
-		}
+		LIB_FORCEINLINE void __set_service(service_ptr sv)
+		{ service_ = sv; }
 
 	private:
 		service_ptr service_;

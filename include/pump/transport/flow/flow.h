@@ -33,7 +33,8 @@ namespace pump {
 			#define FLOW_ERR_AGAIN   3
 			#define FLOW_ERR_NO_DATA 4
 
-			class flow_base
+			class flow_base: 
+				public utils::noncopyable
 			{
 			public:
 				/*********************************************************************************
@@ -55,12 +56,14 @@ namespace pump {
 				/*********************************************************************************
 				 * Get fd
 				 ********************************************************************************/
-				LIB_FORCEINLINE int32 get_fd() const { return fd_; }
+				LIB_FORCEINLINE int32 get_fd() const 
+				{ return fd_; }
 
 				/*********************************************************************************
 				 * Check flow valid status
 				 ********************************************************************************/
-				LIB_FORCEINLINE bool is_valid() const { return fd_ > 0; }
+				LIB_FORCEINLINE bool is_valid() const 
+				{ return fd_ > 0; }
 
 			protected:
 				// FD
@@ -71,8 +74,6 @@ namespace pump {
 				net::net_extension_ptr ext_;
 			};
 			DEFINE_ALL_POINTER_TYPE(flow_base);
-
-			void free_task(net::iocp_task_ptr itask);
 
 		}
 	}

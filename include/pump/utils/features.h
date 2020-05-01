@@ -26,34 +26,28 @@ namespace pump {
 		class LIB_EXPORT noncopyable
 		{
 		protected:
-			noncopyable() {}
-			virtual ~noncopyable() {}
+			noncopyable() = default;
+			~noncopyable() = default;
 
-		private:
-			noncopyable(noncopyable&);
-			noncopyable& operator=(noncopyable&);
+			noncopyable(noncopyable&) = delete;
+			noncopyable& operator=(noncopyable&) = delete;
 		};
 
-		class LIB_EXPORT scoped_defer: public noncopyable
+		class LIB_EXPORT scoped_defer: 
+			public noncopyable
 		{
 		protected:
 			typedef function::function<void()> defer_callback;
 
 		public:
 			scoped_defer(const defer_callback &&cb)
-			{
-				cb_ = cb;
-			}
+			{ cb_ = cb; }
 
-			virtual ~scoped_defer()
-			{
-				if (cb_) cb_();
-			}
+			~scoped_defer()
+			{ if (cb_) cb_(); }
 
-			void clear()
-			{
-				cb_.reset();
-			}
+			LIB_FORCEINLINE void clear()
+			{ cb_.reset(); }
 
 		private:
 			defer_callback cb_;

@@ -29,7 +29,8 @@
 namespace pump {
 	namespace poll {
 
-		class epoll_poller: public poller
+		class epoll_poller: 
+			public poller
 		{
 		public:
 			/*********************************************************************************
@@ -46,27 +47,27 @@ namespace pump {
 			/*********************************************************************************
 			 * Add channel tracker for derived class
 			 ********************************************************************************/
-			virtual bool __add_channel_tracker(channel_tracker_ptr tracker);
+			virtual bool __add_channel_tracker(channel_tracker_ptr tracker) override;
 
 			/*********************************************************************************
 			 * Remove append channel for derived class
 			 ********************************************************************************/
-			virtual void __remove_channel_tracker(channel_tracker_ptr tracker);
+			virtual void __remove_channel_tracker(channel_tracker_ptr tracker) override;
 
 			/*********************************************************************************
 			 * Pause channel tracker for derived class
 			 ********************************************************************************/
-			virtual void __pause_channel_tracker(channel_tracker_ptr tracker);
+			virtual void __pause_channel_tracker(channel_tracker_ptr tracker) override;
 
 			/*********************************************************************************
 			 * Awake channel tracker for derived class
 			 ********************************************************************************/
-			virtual void __awake_channel_tracker(channel_tracker_ptr tracker);
+			virtual void __awake_channel_tracker(channel_tracker_ptr tracker) override;
 
 			/*********************************************************************************
 			 * Poll
 			 ********************************************************************************/
-			virtual void __poll(int32 timeout);
+			virtual void __poll(int32 timeout) override;
 
 		private:
 			/*********************************************************************************

@@ -28,9 +28,6 @@ struct transport_context
 };
 
 class my_tcp_acceptor :
-	public accepted_notifier,
-	public transport_io_notifier,
-	public transport_terminated_notifier,
 	public std::enable_shared_from_this<my_tcp_acceptor>
 {
 public:
@@ -42,46 +39,47 @@ public:
 	/*********************************************************************************
 	 * Tcp accepted event callback
 	 ********************************************************************************/
-	virtual void on_accepted_callback(void_ptr ctx, transport_base_sptr transp)
+	void on_accepted_callback(base_transport_sptr transp)
 	{
 		tcp_transport_sptr transport = std::static_pointer_cast<tcp_transport>(transp);
 		auto tctx = new transport_context(transport);
 		transport->set_context(tctx);
 
-		transport_io_notifier_sptr io_notifier = shared_from_this();
-		transport_terminated_notifier_sptr terminated_notifier = shared_from_this();
-		if (transport->start(sv, io_notifier, terminated_notifier))
+		pump::transport_callbacks cbs;
+		cbs.read_cb = function::bind(&my_tcp_acceptor::on_read_callback, this, transp.get(), _1, _2);
+		cbs.stopped_cb = function::bind(&my_tcp_acceptor::on_stopped_callback, this, transp.get());
+		cbs.disconnected_cb = function::bind(&my_tcp_acceptor::on_disconnected_callback, this, transp.get());
+
+		if (transport->start(sv, cbs))
 		{
 			std::lock_guard<std::mutex> lock(mx_);
 			printf("tcp transport server accepted %d\n", transp->get_fd());
 			transports_[transp.get()] = tctx;
 		}
 
-		for (int i = 0; i < send_loop; i++)
-		{
-			send_data(transport.get());
-		}
+		//for (int i = 0; i < send_loop; i++)
+		//{
+		//	send_data(transport.get());
+		//}
 	}
 
 	/*********************************************************************************
 	 * Stopped accepting event callback
 	 ********************************************************************************/
-	virtual void on_stopped_accepting_callback(void_ptr ctx)
+	void on_stopped_accepting_callback()
 	{
 	}
 
 	/*********************************************************************************
 	 * Tcp read event callback
 	 ********************************************************************************/
-	virtual void on_read_callback(transport_base_ptr transp, c_block_ptr b, int32 size)
+	void on_read_callback(base_transport_ptr transp, c_block_ptr b, int32 size)
 	{
 		transport_context* ctx = (transport_context*)transp->get_context();
 
 		ctx->all_read_size += size;
 		ctx->read_pocket_size += size;
 		ctx->read_size += size;
-
-		//assert(size == 4096);
 
 		while (ctx->read_pocket_size >= send_pocket_size)
 		{
@@ -93,7 +91,7 @@ public:
 	/*********************************************************************************
 	 * Tcp disconnected event callback
 	 ********************************************************************************/
-	virtual void on_disconnected_callback(transport_base_ptr transp)
+	void on_disconnected_callback(base_transport_ptr transp)
 	{
 		std::lock_guard<std::mutex> lock(mx_);
 		auto it = transports_.find(transp);
@@ -109,7 +107,7 @@ public:
 	/*********************************************************************************
 	 * Tcp stopped event callback
 	 ********************************************************************************/
-	virtual void on_stopped_callback(transport_base_ptr transp)
+	void on_stopped_callback(base_transport_ptr transp)
 	{
 		std::lock_guard<std::mutex> lock(mx_);
 		auto it = transports_.find(transp);
@@ -120,7 +118,7 @@ public:
 		}
 	}
 
-	void send_data(transport_base_ptr transport)
+	void send_data(base_transport_ptr transport)
 	{
 		transport->send(send_data_.data(), send_data_.size());
 	}
@@ -144,8 +142,6 @@ private:
 	std::map<void_ptr, transport_context*> transports_;
 };
 
-static std::shared_ptr<accepted_notifier> my_accpeted_notifier;
-
 void start_tcp_server(const std::string &ip, uint16 port)
 {
 	sv = new service;
@@ -155,11 +151,14 @@ void start_tcp_server(const std::string &ip, uint16 port)
 	sv1->start();
 
 	my_tcp_acceptor *my_acceptor = new my_tcp_acceptor;
-	my_accpeted_notifier.reset(my_acceptor);
+
+	pump::acceptor_callbacks cbs;
+	cbs.accepted_cb = function::bind(&my_tcp_acceptor::on_accepted_callback, my_acceptor, _1);
+	cbs.stopped_cb = function::bind(&my_tcp_acceptor::on_stopped_accepting_callback, my_acceptor);
 
 	address listen_address(ip, port);
-	tcp_acceptor_sptr acceptor = tcp_acceptor::create_instance();
-	if (!acceptor->start(sv, listen_address, my_accpeted_notifier))
+	tcp_acceptor_sptr acceptor = tcp_acceptor::create_instance(listen_address);
+	if (!acceptor->start(sv, cbs))
 	{
 		printf("tcp acceptor start error\n");
 	}

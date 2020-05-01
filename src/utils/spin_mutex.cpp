@@ -20,34 +20,25 @@ namespace pump {
 	namespace utils {
 
 		spin_mutex::spin_mutex(int32 per_loop) :
-			per_loop_(per_loop)
-		{
-			unlock();
-		}
-
-		spin_mutex::~spin_mutex()
+			per_loop_(per_loop),
+			locked_(false)
 		{
 		}
 
 		void spin_mutex::lock()
 		{
 			int32 loop = 0;
+			bool exp = false;
 
 			while (1)
 			{
-				if (!locked_.test_and_set())
+				if (!locked_.compare_exchange_strong(exp, true))
 					break;
 
-				loop++;
-
-				if (loop >= per_loop_)
+				if (loop++ > per_loop_)
 				{
 					loop = 0;
-#ifdef WIN32
-					SwitchToThread();
-#else
 					sched_yield();
-#endif
 				}
 			}
 		}

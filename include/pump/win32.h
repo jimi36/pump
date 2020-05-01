@@ -14,33 +14,19 @@
  * limitations under the License.
  */
 
-#include "pump/transport/flow/flow.h"
+#ifndef pump_win32_h
+#define pump_win32_h
 
-namespace pump {
-	namespace transport {
-		namespace flow {
+#ifdef WIN32
 
-			flow_base::flow_base() :
-				fd_(-1),
-				ext_(nullptr)
-			{
-			}
+#	define strncpy strcpy_s
 
-			flow_base::~flow_base()
-			{
-				if (ext_)
-					net::delete_net_extension(ext_);
+#	define snprintf sprintf_s
 
-				if (fd_ > 0)
-					net::close(fd_);
-			}
+#	define strncasecmp _strnicmp
 
-			int32 flow_base::unbind_fd()
-			{
-				int32 fd = fd_; fd_ = -1;
-				return fd;
-			}
+#   define sched_yield SwitchToThread
 
-		}
-	}
-}
+#endif
+
+#endif

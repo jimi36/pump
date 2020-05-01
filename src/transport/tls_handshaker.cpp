@@ -24,7 +24,7 @@ namespace pump {
 		const int32 TLS_HANDSHAKE_ERROR = 2;
 
 		tls_handshaker::tls_handshaker() :
-			transport_base(TLS_HANDSHAKER, nullptr, -1)
+			base_channel(TLS_HANDSHAKER, nullptr, -1)
 		{
 		}
 
@@ -47,7 +47,7 @@ namespace pump {
 		bool tls_handshaker::start(
 			service_ptr sv, 
 			int64 timeout, 
-			tls_handshaked_notifier_sptr &notifier
+			const tls_handshaker_callbacks &cbs
 		) {
 			if (!flow_)
 				return false;
@@ -56,7 +56,7 @@ namespace pump {
 				return false;
 
 			PUMP_ASSERT_EXPR(sv, __set_service(sv));
-			PUMP_ASSERT_EXPR(notifier, __set_notifier(notifier));
+			PUMP_ASSERT_EXPR(cbs.handshaked_cb && cbs.stopped_cb, cbs_ = cbs);
 
 			utils::scoped_defer defer([&]() {
 				__close_flow();
@@ -82,7 +82,7 @@ namespace pump {
 			service_ptr sv,
 			poll::channel_tracker_sptr &tracker,
 			int64 timeout,
-			tls_handshaked_notifier_sptr &notifier
+			const tls_handshaker_callbacks &cbs
 		) {
 			if (!flow_)
 				return false;
@@ -91,7 +91,7 @@ namespace pump {
 				return false;
 
 			PUMP_ASSERT_EXPR(sv, __set_service(sv));
-			PUMP_ASSERT_EXPR(notifier, __set_notifier(notifier));
+			PUMP_ASSERT_EXPR(cbs.handshaked_cb && cbs.stopped_cb, cbs_ = cbs);
 
 			utils::scoped_defer defer([&]() {
 				__close_flow();
@@ -234,39 +234,27 @@ namespace pump {
 			if (tracker_cnt_ == 0)
 			{
 				if (__is_status(TRANSPORT_FINISH))
-				{
-					PUMP_LOCK_SPOINTER_EXPR(notifier, __get_notifier<tls_handshaked_notifier>(), true,
-						notifier->on_handshaked_callback(this, true));
-				}
+					cbs_.handshaked_cb(this, true);
 				else if (__is_status(TRANSPORT_ERROR))
-				{
-					PUMP_LOCK_SPOINTER_EXPR(notifier, __get_notifier<tls_handshaked_notifier>(), true,
-						notifier->on_handshaked_callback(this, false));
-				}
+					cbs_.handshaked_cb(this, false);
 				else if (__set_status(TRANSPORT_TIMEOUT_DOING, TRANSPORT_TIMEOUT_DONE))
-				{
-					PUMP_LOCK_SPOINTER_EXPR(notifier, __get_notifier<tls_handshaked_notifier>(), true,
-						notifier->on_handshaked_timeout_callback(this));
-				}
+					cbs_.handshaked_cb(this, false);
 				else if (__set_status(TRANSPORT_DISCONNECTING, TRANSPORT_DISCONNECTED))
-				{
-					PUMP_LOCK_SPOINTER_EXPR(notifier, __get_notifier<tls_handshaked_notifier>(), true,
-						notifier->on_handshaked_callback(this, false));
-				}
+					cbs_.handshaked_cb(this, false);
 				else if (__set_status(TRANSPORT_STOPPING, TRANSPORT_STOPPED))
-				{
-					PUMP_LOCK_SPOINTER_EXPR(notifier, __get_notifier<tls_handshaked_notifier>(), true,
-						notifier->on_stopped_handshaking_callback(this));
-				}
+					cbs_.stopped_cb(this);
 			}
 		}
 
-		void tls_handshaker::on_timer_timeout(void_ptr arg)
+		void tls_handshaker::on_timeout(tls_handshaker_wptr wptr)
 		{
-			if (__set_status(TRANSPORT_STARTED, TRANSPORT_TIMEOUT_DOING))
+			PUMP_LOCK_WPOINTER_EXPR(handshaker, wptr, false,
+				return);
+
+			if (handshaker->__set_status(TRANSPORT_STARTED, TRANSPORT_TIMEOUT_DOING))
 			{
-				__close_flow();
-				__stop_tracker();
+				handshaker->__close_flow();
+				handshaker->__stop_tracker();
 			}
 		}
 
@@ -327,8 +315,8 @@ namespace pump {
 				return true;
 
 			PUMP_ASSERT(!timer_);
-			time::timeout_notifier_sptr notifier = shared_from_this();
-			timer_.reset(new time::timer(nullptr, notifier, timeout));
+			time::timer_callback cb = function::bind(&tls_handshaker::on_timeout, shared_from_this());
+			timer_.reset(new time::timer(cb, timeout));
 
 			return get_service()->start_timer(timer_);
 		}
@@ -379,10 +367,8 @@ namespace pump {
 			if (!tracker_)
 				return;
 
-			if (!get_service()->remove_channel_tracker(tracker_))
+			if (!get_service()->remove_channel_tracker(std::move(tracker_)))
 				PUMP_ASSERT(false);
-
-			tracker_.reset();
 		}
 
 		void tls_handshaker::__awake_tracker(poll::channel_tracker_ptr tracker)

@@ -17,8 +17,8 @@
 #ifndef pump_transport_tls_dialer_h
 #define pump_transport_tls_dialer_h
 
+#include "pump/transport/base_dialer.h"
 #include "pump/transport/tls_handshaker.h"
-#include "pump/transport/transport_notifier.h"
 #include "pump/transport/flow/flow_tls_dialer.h"
 
 namespace pump {
@@ -28,106 +28,89 @@ namespace pump {
 		DEFINE_ALL_POINTER_TYPE(tls_dialer);
 
 		class LIB_EXPORT tls_dialer :
-			public transport_base,
-			public time::timeout_notifier,
-			public tls_handshaked_notifier,
+			public base_dialer,
 			public std::enable_shared_from_this<tls_dialer>
 		{
 		public:
 			/*********************************************************************************
 			 * Create instance
 			 ********************************************************************************/
-			static tls_dialer_sptr create_instance()
-			{
-				return tls_dialer_sptr(new tls_dialer);
+			static tls_dialer_sptr create_instance(
+				void_ptr cert,
+				const address &local_address,
+				const address &remote_address,
+				int64 dial_timeout = 0,
+				int64 handshake_timeout = 0
+			) {
+				return tls_dialer_sptr(new tls_dialer(
+					cert,
+					local_address, 
+					remote_address, 
+					dial_timeout, 
+					handshake_timeout
+				));
 			}
 
 			/*********************************************************************************
 			 * Deconstructor
 			 ********************************************************************************/
-			virtual ~tls_dialer() {}
+			virtual ~tls_dialer() = default;
 
 			/*********************************************************************************
 			 * Start
 			 ********************************************************************************/
-			bool start(
-				void_ptr tls_cert,
-				service_ptr sv,
-				int64 connect_timeout,
-				int64 handshake_timeout,
-				const address &bind_address,
-				const address &connect_address,
-				dialed_notifier_sptr &notifier
-			);
+			virtual bool start(service_ptr sv, const dialer_callbacks &cbs) override;
 
 			/*********************************************************************************
 			 * Stop
 			 ********************************************************************************/
-			virtual void stop();
-
-			/*********************************************************************************
-			 * Get local address
-			 ********************************************************************************/
-			virtual const address& get_local_address() const { return bind_address_; }
-
-			/*********************************************************************************
-			 * Get remote address
-			 ********************************************************************************/
-			virtual const address& get_remote_address() const { return peer_address_; }
+			virtual void stop() override;
 
 		protected:
 			/*********************************************************************************
 			 * Send event callback
 			 ********************************************************************************/
-			virtual void on_send_event(net::iocp_task_ptr itask);
+			virtual void on_send_event(net::iocp_task_ptr itask) override;
 
-			/*********************************************************************************
-			 * Tracker event callback
-			 ********************************************************************************/
-			virtual void on_tracker_event(int32 ev);
-
+		protected:
 			/*********************************************************************************
 			 * Timeout event callback
 			 ********************************************************************************/
-			virtual void on_timer_timeout(void_ptr arg);
+			static void on_timeout(tls_dialer_wptr wptr);
 
 			/*********************************************************************************
-			 * Tls handshake success callback
+			 * TLS handshake success callback
 			 ********************************************************************************/
-			virtual void on_handshaked_callback(transport_base_ptr handshaker, bool succ);
-
-			/*********************************************************************************
-			 * Tls handshake timeout callback
-			 ********************************************************************************/
-			virtual void on_handshaked_timeout_callback(transport_base_ptr handshaker);
+			static void on_handshaked_callback(
+				tls_dialer_wptr wptr,
+				tls_handshaker_ptr handshaker,
+				bool succ
+			);
 
 			/*********************************************************************************
 			 * Tls handskake stopped callback
 			 ********************************************************************************/
-			virtual void on_stopped_handshaking_callback(transport_base_ptr handshaker);
+			static void on_stopped_handshaking_callback(
+				tls_dialer_wptr wptr,
+				tls_handshaker_ptr handshaker
+			);
 
 		private:
 			/*********************************************************************************
 			 * Constructor
 			 ********************************************************************************/
-			tls_dialer();
-
-			/*********************************************************************************
-			 * Set tls credentials
-			 ********************************************************************************/
-			LIB_FORCEINLINE void __set_tls_cert(void_ptr tls_cert) 
-			{ tls_cert_ = tls_cert; }
-
-			/*********************************************************************************
-			 * Set tls handshake timeout
-			 ********************************************************************************/
-			LIB_FORCEINLINE void __set_tls_handshake_timeout(int64 timeout) 
-			{ handshake_timeout_ = timeout; }
+			tls_dialer(
+				void_ptr cert,
+				const address &local_address,
+				const address &remote_address,
+				int64 dial_timeout,
+				int64 handshake_timeout
+			);
 
 			/*********************************************************************************
 			 * Open flow
 			 ********************************************************************************/
-			bool __open_flow(const address &bind_address);
+			bool __open_flow();
 
 			/*********************************************************************************
 			 * Close flow
@@ -135,42 +118,85 @@ namespace pump {
 			LIB_FORCEINLINE void __close_flow() 
 			{ flow_.reset(); }
 
-			/*********************************************************************************
-			 * Start tracker
-			 ********************************************************************************/
-			bool __start_tracker();
-
-			/*********************************************************************************
-			 * Stop tracker
-			 ********************************************************************************/
-			void __stop_tracker();
-
-			/*********************************************************************************
-			 * Start timeout timer
-			 ********************************************************************************/
-			bool __start_timer(int64 timeout);
-
-			/*********************************************************************************
-			 * Stop timeout timer
-			 ********************************************************************************/
-			void __stop_timer();
-
 		private:
-			// Bind address
-			address bind_address_;
-			// Remote address
-			address peer_address_;
-			// GnuTls credentials
-			void_ptr tls_cert_;
-			// Connect timeout timer
-			time::timer_sptr timer_;
-			// Channel tracker
-			poll::channel_tracker_sptr tracker_;
+			// GNUTLS credentials
+			void_ptr cert_;
 			// Dialer flow
 			flow::flow_tls_dialer_sptr flow_;
-			// GnuTls handshaker
+			// Handshake timeout
 			int64 handshake_timeout_;
+			// Handshaker
 			tls_handshaker_sptr handshaker_;
+		};
+
+		class tls_sync_dialer;
+		DEFINE_ALL_POINTER_TYPE(tls_sync_dialer);
+
+		class LIB_EXPORT tls_sync_dialer :
+			public std::enable_shared_from_this<tls_sync_dialer>
+		{
+		public:
+			/*********************************************************************************
+			 * Create instance
+			 ********************************************************************************/
+			static tls_sync_dialer_sptr create_instance()
+			{
+				return tls_sync_dialer_sptr(new tls_sync_dialer);
+			}
+
+			/*********************************************************************************
+			 * Deconstructor
+			 ********************************************************************************/
+			virtual ~tls_sync_dialer() = default;
+
+			/*********************************************************************************
+			 * Dial by sync
+			 ********************************************************************************/
+			base_transport_sptr dial(
+				void_ptr cert,
+				service_ptr sv,
+				const address &local_address,
+				const address &remote_address,
+				int64 connect_timeout,
+				int64 handshake_timeout
+			);
+
+		protected:
+			/*********************************************************************************
+			 * Dialed event callback
+			 ********************************************************************************/
+			static void on_dialed_callback(
+				tls_sync_dialer_wptr wptr,
+				base_transport_sptr transp,
+				bool succ
+			);
+
+			/*********************************************************************************
+			 * Dialed timeout event callback
+			 ********************************************************************************/
+			static void on_timeout_callback(tls_sync_dialer_wptr wptr);
+
+			/*********************************************************************************
+			 * Stopped dial event callback
+			 ********************************************************************************/
+			static void on_stopped_callback();
+
+		private:
+			/*********************************************************************************
+			 * Constructor
+			 ********************************************************************************/
+			tls_sync_dialer();
+
+			/*********************************************************************************
+			 * Reset sync dialer
+			 ********************************************************************************/
+			void __reset();
+
+		private:
+			// Tcp dialer
+			tls_dialer_sptr dialer_;
+			// Dial promise
+			std::promise<base_transport_sptr> dial_promise_;
 		};
 
 	}

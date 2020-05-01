@@ -23,7 +23,8 @@ namespace pump {
 	namespace transport {
 		namespace flow {
 
-			class flow_udp: public flow_base
+			class flow_udp: 
+				public flow_base
 			{
 			public:
 				/*********************************************************************************
@@ -76,7 +77,7 @@ namespace pump {
 				/*********************************************************************************
 				 * Send to
 				 ********************************************************************************/
-				int32 send_to(c_block_ptr b, uint32 size, const address &remote_addr);
+				int32 send(c_block_ptr b, uint32 size, const address &remote_addr);
 
 			private:
 				// Read task for IOCP

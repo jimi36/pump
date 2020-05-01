@@ -17,7 +17,7 @@
 #ifndef pump_transport_tcp_acceptor_h
 #define pump_transport_tcp_acceptor_h
 
-#include "pump/transport/tcp_transport.h"
+#include "pump/transport/base_acceptor.h"
 #include "pump/transport/flow/flow_tcp_acceptor.h"
 
 namespace pump {
@@ -27,85 +27,58 @@ namespace pump {
 		DEFINE_ALL_POINTER_TYPE(tcp_acceptor);
 
 		class LIB_EXPORT tcp_acceptor :
-			public transport_base,
+			public base_acceptor,
 			public std::enable_shared_from_this<tcp_acceptor>
 		{
 		public:
 			/*********************************************************************************
 			 * Create instance
 			 ********************************************************************************/
-			static tcp_acceptor_sptr create_instance()
+			static tcp_acceptor_sptr create_instance(const address &listen_address)
 			{
-				return tcp_acceptor_sptr(new tcp_acceptor);
+				return tcp_acceptor_sptr(new tcp_acceptor(listen_address));
 			}
 
 			/*********************************************************************************
 			 * Deconstructor
 			 ********************************************************************************/
-			virtual ~tcp_acceptor() {}
+			virtual ~tcp_acceptor() = default;
 
 			/*********************************************************************************
-			 * Start accepter
+			 * Start
 			 ********************************************************************************/
-			bool start(
-				service_ptr sv,
-				const address &listen_address,
-				accepted_notifier_sptr &notifier
-			);
+			virtual bool start(service_ptr sv, const acceptor_callbacks &cbs) override;
 
 			/*********************************************************************************
-			 * Stop accepter
+			 * Stop
 			 ********************************************************************************/
-			virtual void stop();
-
-			/*********************************************************************************
-			 * Get local address
-			 ********************************************************************************/
-			virtual const address& get_local_address() const { return listen_address_; }
+			virtual void stop() override;
 
 		protected:
 			/*********************************************************************************
 			 * Read event callback
 			 ********************************************************************************/
-			virtual void on_read_event(net::iocp_task_ptr itask);
-
-			/*********************************************************************************
-			 * Tracker event callback
-			 ********************************************************************************/
-			virtual void on_tracker_event(int32 ev);
+			virtual void on_read_event(net::iocp_task_ptr itask) override;
 
 		private:
 			/*********************************************************************************
 			 * Open flow
 			 ********************************************************************************/
-			bool __open_flow(const address &listen_address);
+			bool __open_flow();
 
 			/*********************************************************************************
 			 * Close flow
 			 ********************************************************************************/
-			void __close_flow() { flow_.reset(); }
-
-			/*********************************************************************************
-			 * Start tracker
-			 ********************************************************************************/
-			bool __start_tracker();
-
-			/*********************************************************************************
-			 * Stop tracker
-			 ********************************************************************************/
-			void __stop_tracker();
+			LIB_FORCEINLINE void __close_flow()
+			{ flow_.reset(); }
 
 		private:
 			/*********************************************************************************
 			 * Constructor
 			 ********************************************************************************/
-			tcp_acceptor();
+			tcp_acceptor(const address &listen_address);
 
 		private:
-			// Listen address
-			address listen_address_;
-			// Channel tracker
-			poll::channel_tracker_sptr tracker_;
 			// Acceptor flow
 			flow::flow_tcp_acceptor_sptr flow_;
 		};

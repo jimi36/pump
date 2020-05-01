@@ -10,9 +10,6 @@ static int send_loop = 1024;
 static int send_pocket_size = 1024*4;
 
 class my_tls_dialer :
-	public dialed_notifier,
-	public transport_io_notifier,
-	public transport_terminated_notifier,
 	public std::enable_shared_from_this<my_tls_dialer>
 {
 public:
@@ -26,7 +23,7 @@ public:
 	/*********************************************************************************
 	 * Tls dialed event callback
 	 ********************************************************************************/
-	virtual void on_dialed_callback(void_ptr ctx, transport_base_sptr transp, bool succ)
+	void on_dialed_callback(base_transport_sptr transp, bool succ)
 	{
 		if (!succ)
 		{
@@ -36,23 +33,21 @@ public:
 
 		transport_ = std::static_pointer_cast<tls_transport>(transp);
 
-		transport_io_notifier_sptr io_notifier = shared_from_this();
-		transport_terminated_notifier_sptr terminated_notifier = shared_from_this();
-		if (!transport_->start(sv, io_notifier, terminated_notifier))
+		pump::transport_callbacks cbs;
+		cbs.read_cb = function::bind(&my_tls_dialer::on_read_callback, this, transp.get(), _1, _2);
+		cbs.stopped_cb = function::bind(&my_tls_dialer::on_stopped_callback, this, transp.get());
+		cbs.disconnected_cb = function::bind(&my_tls_dialer::on_disconnected_callback, this, transp.get());
+
+		if (!transport_->start(sv, cbs))
 			return;
 
-		printf("tls client dialed\n");
-
-		for (int i = 0; i < send_loop; i++)
-		{
-			send_data();
-		}
+		printf("tls client dialed %d\n", transp->get_fd());
 	}
 
 	/*********************************************************************************
 	 * Tls dialed error event callback
 	 ********************************************************************************/
-	virtual void on_dialed_error_callback(void_ptr ctx)
+	void on_dialed_error_callback()
 	{
 		printf("tls client transport dialed error\n");
 	}
@@ -60,7 +55,7 @@ public:
 	/*********************************************************************************
 	 * Tls dialed timeout event callback
 	 ********************************************************************************/
-	virtual void on_dialed_timeout_callback(void_ptr ctx)
+	void on_dialed_timeout_callback()
 	{
 		printf("tls client transport dialed timeout\n");
 	}
@@ -68,7 +63,7 @@ public:
 	/*********************************************************************************
 	 * Stopped dial event callback
 	 ********************************************************************************/
-	virtual void on_stopped_dialing_callback(void_ptr ctx)
+	void on_stopped_dialing_callback()
 	{
 		printf("tls client dial stopped\n");
 	}
@@ -76,8 +71,15 @@ public:
 	/*********************************************************************************
 	 * Tls read event callback
 	 ********************************************************************************/
-	virtual void on_read_callback(transport_base_ptr transp, c_block_ptr b, int32 size)
+	void on_read_callback(base_transport_ptr transp, c_block_ptr b, int32 size)
 	{
+		static int last_fd = 0;
+		if (last_fd != transp->get_fd())
+		{
+			//printf("transport %d read\n", transp->get_fd());
+			last_fd = transp->get_fd();
+		}
+
 		read_size_ += size;
 		read_pocket_size_ += size;
 
@@ -91,7 +93,7 @@ public:
 	/*********************************************************************************
 	 * Tls disconnected event callback
 	 ********************************************************************************/
-	virtual void on_disconnected_callback(transport_base_ptr transp)
+	void on_disconnected_callback(base_transport_ptr transp)
 	{
 		printf("client tls transport disconnected\n");
 		transport_.reset();
@@ -100,7 +102,7 @@ public:
 	/*********************************************************************************
 	 * Tls stopped event callback
 	 ********************************************************************************/
-	virtual void on_stopped_callback(transport_base_ptr transp)
+	void on_stopped_callback(base_transport_ptr transp)
 	{
 		printf("client tls transport stopped\n");
 	}
@@ -128,15 +130,14 @@ public:
 	tls_dialer_sptr dialer_;
 };
 
-static int count = 10;
+static int count = 2;
 
 static std::vector< std::shared_ptr<my_tls_dialer>> my_dialers;
 
-class tls_time_report :
-	public timeout_notifier
+class tls_time_report
 {
-protected:
-	virtual void on_timer_timeout(void_ptr arg)
+public:
+	static void on_timer_timeout()
 	{
 		int read_size = 0;
 		for (int i = 0; i < count; i++)
@@ -165,26 +166,39 @@ void start_tls_client(const std::string &ip, uint16 port)
 
 	for (int i = 0; i < count; i++)
 	{
-		tls_dialer_sptr dialer = tls_dialer::create_instance();
+		address bind_address("0.0.0.0", 0);
+		address remote_address(ip, port);
+		tls_dialer_sptr dialer = tls_dialer::create_instance(xcred, bind_address, remote_address);
 
 		std::shared_ptr<my_tls_dialer> my_dialer(new my_tls_dialer);
 		my_dialer->set_dialer(dialer);
 
 		my_dialers.push_back(my_dialer);
 
-		address bind_address("0.0.0.0", 0);
-		address remote_address(ip, port);
-		pump::dialed_notifier_sptr notifier = my_dialer;
-		if (!dialer->start(xcred, sv, 0, 0, bind_address, remote_address, notifier))
+		pump::dialer_callbacks cbs;
+		cbs.dialed_cb = function::bind(&my_tls_dialer::on_dialed_callback, my_dialer.get(), _1, _2);
+		cbs.stopped_cb = function::bind(&my_tls_dialer::on_stopped_dialing_callback, my_dialer.get());
+		cbs.timeout_cb = function::bind(&my_tls_dialer::on_dialed_timeout_callback, my_dialer.get());
+
+		if (!dialer->start(sv, cbs))
 		{
 			printf("tls dialer start error\n");
 		}
 	}
 
-	timeout_notifier_sptr notifier(new tls_time_report);
-	timer_sptr t(new timer(0, notifier, 1000, true));
-
+	pump::time::timer_callback cb = function::bind(&tls_time_report::on_timer_timeout);
+	timer_sptr t(new timer(cb, 1000, true));
 	sv->start_timer(t);
+
+	Sleep(2000);
+
+	for (int i = 0; i < send_loop; i++)
+	{
+		for (auto t : my_dialers)
+		{
+			t->send_data();
+		}
+	}
 
 	sv->wait_stopped();
 #endif

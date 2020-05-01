@@ -14,98 +14,75 @@
  * limitations under the License.
  */
 
-#ifndef pump_transport_notify_h
-#define pump_transport_notify_h
+#ifndef pump_transport_acceptor_h
+#define pump_transport_acceptor_h
 
-#include "pump/deps.h"
-#include "pump/transport/address.h"
-#include "pump/transport/transport_base.h"
+#include "pump/transport/base_transport.h"
 
 namespace pump {
 	namespace transport {
 
-		class LIB_EXPORT accepted_notifier
+		class LIB_EXPORT base_acceptor :
+			public base_channel
 		{
 		public:
 			/*********************************************************************************
-			 * Accepted event callback
+			 * Constructor
 			 ********************************************************************************/
-			virtual void on_accepted_callback(void_ptr ctx, transport_base_sptr transp) = 0;
+			base_acceptor(transport_type type, const address &listen_address) :
+				base_channel(type, nullptr, -1),
+				listen_address_(listen_address)
+			{}
 
 			/*********************************************************************************
-			 * Stopped accepting event callback
+			 * Deconstructor
 			 ********************************************************************************/
-			virtual void on_stopped_accepting_callback(void_ptr ctx) {}
+			virtual ~base_acceptor() = default;
+
+			/*********************************************************************************
+			 * Start
+			 ********************************************************************************/
+			virtual bool start(service_ptr sv, const acceptor_callbacks &cbs) = 0;
+
+			/*********************************************************************************
+			 * Stop
+			 ********************************************************************************/
+			virtual void stop() = 0;
+
+			/*********************************************************************************
+			 * Get local address
+			 ********************************************************************************/
+			const address& get_listen_address() const
+			{
+				return listen_address_;
+			}
+
+		protected:
+			/*********************************************************************************
+			 * Tracker event callback
+			 ********************************************************************************/
+			virtual void on_tracker_event(int32 ev) override;
+
+		protected:
+			/*********************************************************************************
+			 * Start tracker
+			 ********************************************************************************/
+			bool __start_tracker(poll::channel_sptr &ch);
+
+			/*********************************************************************************
+			 * Stop tracker
+			 ********************************************************************************/
+			void __stop_tracker();
+
+		protected:
+			// Listen address
+			address listen_address_;
+			// Channel tracker
+			poll::channel_tracker_sptr tracker_;
+			// Acceptor callbacks
+			acceptor_callbacks cbs_;
 		};
-		DEFINE_ALL_POINTER_TYPE(accepted_notifier);
-
-		class LIB_EXPORT dialed_notifier
-		{
-		public:
-			/*********************************************************************************
-			 * Dialed event callback
-			 ********************************************************************************/
-			virtual void on_dialed_callback(
-				void_ptr ctx, 
-				transport_base_sptr transp, 
-				bool succ
-			) = 0;
-
-			/*********************************************************************************
-			 * Dialed timeout event callback
-			 ********************************************************************************/
-			virtual void on_dialed_timeout_callback(void_ptr ctx) {}
-
-			/*********************************************************************************
-			 * Stopped dial event callback
-			 ********************************************************************************/
-			virtual void on_stopped_dialing_callback(void_ptr ctx) {}
-		};
-		DEFINE_ALL_POINTER_TYPE(dialed_notifier);
-
-		class LIB_EXPORT transport_io_notifier
-		{
-		public:
-			/*********************************************************************************
-			 * Read event callback
-			 ********************************************************************************/
-			virtual void on_read_callback(
-				transport_base_ptr transp, 
-				c_block_ptr b, 
-				int32 size
-			) {}
-
-			/*********************************************************************************
-			 * Read event callback for udp
-			 ********************************************************************************/
-			virtual void on_read_callback(
-				transport_base_ptr transp, 
-				c_block_ptr b, 
-				int32 size, 
-				const address &remote
-			) {}
-
-			/*********************************************************************************
-			 * Sent event callback
-			 ********************************************************************************/
-			virtual void on_sent_callback(transport_base_ptr transp) {}
-		};
-		DEFINE_ALL_POINTER_TYPE(transport_io_notifier);
-
-		class LIB_EXPORT transport_terminated_notifier
-		{
-		public:
-			/*********************************************************************************
-			 * Disconnected event callback
-			 ********************************************************************************/
-			virtual void on_disconnected_callback(transport_base_ptr transp) {}
-
-			/*********************************************************************************
-			 * Stopped event callback
-			 ********************************************************************************/
-			virtual void on_stopped_callback(transport_base_ptr transp) {}
-		};
-		DEFINE_ALL_POINTER_TYPE(transport_terminated_notifier);
+		DEFINE_ALL_POINTER_TYPE(base_acceptor);
 
 	}
 }

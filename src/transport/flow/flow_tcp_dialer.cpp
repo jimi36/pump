@@ -68,13 +68,13 @@ namespace pump {
 				return FLOW_ERR_NO;
 			}
 
-			int32 flow_tcp_dialer::want_to_connect(const address &connect_address)
+			int32 flow_tcp_dialer::want_to_connect(const address &remote_address)
 			{
 #if defined(WIN32) && defined(USE_IOCP)
-				if (!net::post_iocp_connect(ext_, dial_task_, connect_address.get(), connect_address.len()))
+				if (!net::post_iocp_connect(ext_, dial_task_, remote_address.get(), remote_address.len()))
 					return FLOW_ERR_ABORT;
 #else
-				if (!net::connect(fd_, (sockaddr*)connect_address.get(), connect_address.len()))
+				if (!net::connect(fd_, (sockaddr*)remote_address.get(), remote_address.len()))
 					return FLOW_ERR_ABORT;
 #endif
 				return FLOW_ERR_NO;

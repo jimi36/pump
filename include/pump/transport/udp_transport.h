@@ -18,7 +18,7 @@
 #define pump_transport_udp_transport_h
 
 #include "pump/transport/flow/flow_udp.h"
-#include "pump/transport/transport_notifier.h"
+#include "pump/transport/base_transport.h"
 
 namespace pump {
 	namespace transport {
@@ -27,48 +27,52 @@ namespace pump {
 		DEFINE_ALL_POINTER_TYPE(udp_transport);
 
 		class LIB_EXPORT udp_transport :
-			public transport_base,
+			public base_transport,
 			public std::enable_shared_from_this<udp_transport>
 		{
 		public:
 			/*********************************************************************************
 			 * Create instance
 			 ********************************************************************************/
-			static udp_transport_sptr create_instance()
+			static udp_transport_sptr create_instance(const address &local_address)
 			{
-				return udp_transport_sptr(new udp_transport);
+				return udp_transport_sptr(new udp_transport(local_address));
 			}
 
 			/*********************************************************************************
 			 * Deconstructor
 			 ********************************************************************************/
-			virtual ~udp_transport() {}
+			virtual ~udp_transport() = default;
 
 			/*********************************************************************************
 			 * Start
 			 ********************************************************************************/
-			bool start(
+			virtual bool start(
 				service_ptr sv,
-				const address &bind_address,
-				transport_io_notifier_sptr &io_notifier,
-				transport_terminated_notifier_sptr &terminated_notifier
-			);
+				const transport_callbacks &cbs
+			) override;
 
 			/*********************************************************************************
 			 * Stop 
 			 ********************************************************************************/
-			virtual void stop();
+			virtual void stop() override;
+
+			/*********************************************************************************
+			 * Force stop
+			 ********************************************************************************/
+			virtual void force_stop() override
+			{ stop(); }
 
 			/*********************************************************************************
 			 * Restart
 			 * After paused success, this will restart transport.
 			 ********************************************************************************/
-			virtual bool restart();
+			virtual bool restart() override;
 
 			/*********************************************************************************
 			 * Pause
 			 ********************************************************************************/
-			virtual bool pause();
+			virtual bool pause() override;
 
 			/*********************************************************************************
 			 * Send
@@ -77,41 +81,29 @@ namespace pump {
 				c_block_ptr b, 
 				uint32 size, 
 				const address &remote_address
-			);
-
-			/*********************************************************************************
-			 * Get local address
-			 ********************************************************************************/
-			virtual const address& get_local_address() const { return bind_address_; }
+			) override;
 
 		protected:
 			/*********************************************************************************
 			 * Read event callback
 			 ********************************************************************************/
-			virtual void on_read_event(net::iocp_task_ptr itask);
+			virtual void on_read_event(net::iocp_task_ptr itask) override;
 
 			/*********************************************************************************
 			 * Tracker event callback
 			 ********************************************************************************/
-			virtual void on_tracker_event(int32 ev);
+			virtual void on_tracker_event(int32 ev) override;
 
 		private:
 			/*********************************************************************************
 			 * Constructor
 			 ********************************************************************************/
-			udp_transport();
-
-			/*********************************************************************************
-			 * Set terminated notifier
-			 ********************************************************************************/
-			LIB_FORCEINLINE void __set_terminated_notifier(
-				transport_terminated_notifier_sptr &notifier
-			) { terminated_notifier_ = notifier; }
+			udp_transport(const address &local_address);
 
 			/*********************************************************************************
 			 * Open flow
 			 ********************************************************************************/
-			bool __open_flow(const address &local_address);
+			bool __open_flow();
 
 			/*********************************************************************************
 			 * Close flow
@@ -120,34 +112,13 @@ namespace pump {
 			{ flow_.reset(); }
 
 			/*********************************************************************************
-			 * Start tracker
+			 * Start read tracker
 			 ********************************************************************************/
-			bool __start_tracker();
-
-			/*********************************************************************************
-			 * Stop tracker
-			 ********************************************************************************/
-			void __stop_tracker();
-
-			/*********************************************************************************
-			 * Awake tracker
-			 ********************************************************************************/
-			bool __awake_tracker();
-
-			/*********************************************************************************
-			 * Pause tracker
-			 ********************************************************************************/
-			bool __pause_tracker();
+			bool __start_read_tracker();
 
 		private:
-			// Bind address
-			address bind_address_;
 			// Udp flow
 			flow::flow_udp_sptr flow_;
-			// Channel tracker
-			poll::channel_tracker_sptr tracker_;
-			// Transport terminated notifier
-			transport_terminated_notifier_wptr terminated_notifier_;
 		};
 
 	}

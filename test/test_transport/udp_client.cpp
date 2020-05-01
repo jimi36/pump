@@ -2,15 +2,13 @@
 
 static service *sv;
 
-class my_udp_client: 
-	public transport_io_notifier,
-	public transport_terminated_notifier
+class my_udp_client
 {
 public:
 	/*********************************************************************************
 	 * Read event callback for udp
 	 ********************************************************************************/
-	virtual void on_read_callback(transport_base_ptr transp, c_block_ptr b, int32 size, const address &remote_address)
+	virtual void on_read_callback(base_transport_ptr transp, c_block_ptr b, int32 size, const address &remote_address)
 	{
 
 	}
@@ -18,14 +16,14 @@ public:
 	/*********************************************************************************
 	 * Stopped event callback
 	 ********************************************************************************/
-	virtual void on_stopped_callback(transport_base_ptr transp)
+	virtual void on_stopped_callback(base_transport_ptr transp)
 	{
 	}
 
 	/*********************************************************************************
 	 * Disconnected event callback
 	 ********************************************************************************/
-	virtual void on_disconnected_callback(transport_base_ptr transp)
+	virtual void on_disconnected_callback(base_transport_ptr transp)
 	{
 	}
 };
@@ -54,12 +52,16 @@ void start_udp_client(const std::string &ip, uint16 port)
 	sv = new service;
 	sv->start();
 
-	address localaddr("0.0.0.0", 0);
 	udp_client.reset(new my_udp_client);
-	transport_io_notifier_sptr io_notifier = udp_client;
-	transport_terminated_notifier_sptr terminated_notifier = udp_client;
-	udp_transport_sptr transport = udp_transport::create_instance();
-	if (!transport->start(sv, localaddr, io_notifier, terminated_notifier))
+
+	address localaddr("0.0.0.0", 0);
+	udp_transport_sptr transport = udp_transport::create_instance(localaddr);
+
+	pump::transport_callbacks cbs;
+	cbs.read_from_cb = function::bind(&my_udp_client::on_read_callback, udp_client.get(), transport.get(), _1, _2, _3);
+	cbs.stopped_cb = function::bind(&my_udp_client::on_stopped_callback, udp_client.get(), transport.get());
+
+	if (!transport->start(sv, cbs))
 	{
 		printf("udp client start error\n");
 		return;

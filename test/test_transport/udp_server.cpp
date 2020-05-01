@@ -2,9 +2,7 @@
 
 static service *sv;
 
-class my_udp_server: 
-	public transport_io_notifier,
-	public transport_terminated_notifier
+class my_udp_server
 {
 public:
 	my_udp_server()
@@ -14,17 +12,9 @@ public:
 	}
 
 	/*********************************************************************************
-	 * Tcp read event callback
-	 ********************************************************************************/
-	virtual void on_recv_callback(transport_base_ptr transp, c_block_ptr b, int32 size)
-	{
-
-	}
-
-	/*********************************************************************************
 	 * Udp read event callback
 	 ********************************************************************************/
-	virtual void on_recv_callback(transport_base_ptr transp, c_block_ptr b, int32 size, const address &remote_address)
+	virtual void on_read_callback(base_transport_ptr transp, c_block_ptr b, int32 size, const address &remote_address)
 	{
 		if (size > 0)
 			read_size_ += size;
@@ -43,7 +33,7 @@ public:
 	/*********************************************************************************
 	 * Sent event callback
 	 ********************************************************************************/
-	virtual void on_sent_callback(transport_base_ptr transp)
+	virtual void on_sent_callback(base_transport_ptr transp)
 	{
 
 	}
@@ -51,7 +41,7 @@ public:
 	/*********************************************************************************
 	 * Stopped event callback
 	 ********************************************************************************/
-	virtual void on_stopped_callback(transport_base_ptr transp)
+	virtual void on_stopped_callback(base_transport_ptr transp)
 	{
 
 	}
@@ -59,7 +49,7 @@ public:
 	/*********************************************************************************
 	 * Disconnected event callback
 	 ********************************************************************************/
-	virtual void on_disconnected_callback(transport_base_ptr transp)
+	virtual void on_disconnected_callback(base_transport_ptr transp)
 	{
 
 	}
@@ -76,12 +66,17 @@ void start_udp_server(const std::string &ip, uint16 port)
 	sv = new service;
 	sv->start();
 
-	address localaddr(ip, port);
 	udp_server.reset(new my_udp_server);
-	transport_io_notifier_sptr io_notifier = udp_server;
-	transport_terminated_notifier_sptr terminated_notifier = udp_server;
-	udp_transport_sptr transport = udp_transport::create_instance();
-	if (!transport->start(sv, localaddr, io_notifier, terminated_notifier))
+
+	address localaddr(ip, port);
+	udp_transport_sptr transport = udp_transport::create_instance(localaddr);
+
+	pump::transport_callbacks cbs;
+	cbs.read_from_cb = function::bind(&my_udp_server::on_read_callback, udp_server.get(), transport.get(), _1, _2, _3);
+	cbs.stopped_cb = function::bind(&my_udp_server::on_stopped_callback, udp_server.get(), transport.get());
+
+	
+	if (!transport->start(sv, cbs))
 	{
 		printf("udp server start error\n");
 	}

@@ -23,7 +23,8 @@
 namespace pump {
 	namespace poll {
 
-		class select_poller: public poller
+		class select_poller: 
+			public poller
 		{
 		public:
 			/*********************************************************************************
@@ -40,7 +41,7 @@ namespace pump {
 			/*********************************************************************************
 			 * Poll
 			 ********************************************************************************/
-			virtual void __poll(int32 timeout);
+			virtual void __poll(int32 timeout) override;
 
 		private:
 			/*********************************************************************************

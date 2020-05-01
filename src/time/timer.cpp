@@ -15,6 +15,7 @@
  */
 
 #include "pump/time/timer.h"
+#include "pump/time/timer_queue.h"
 
 namespace pump {
 	namespace time {
@@ -24,21 +25,19 @@ namespace pump {
 		const int32 TIMER_PENDING  = 2;
 
 		timer::timer(
-			void_ptr arg, 
-			timeout_notifier_sptr &notifier, 
+			const timer_callback &cb,
 			uint64 interval, 
-			bool repeat
+			bool repeated
 		): 
-			arg_(arg),
 			status_(TIMER_STOPPED),
-			repeated_(repeat),
+			cb_(cb),
+			repeated_(repeated),
 			interval_(interval),
-			overtime_(0),
-			notifier_(notifier)
+			overtime_(0)
 		{
 		}
 
-		bool timer::start() 
+		bool timer::__start() 
 		{
 			if (!__set_status(TIMER_STOPPED, TIMER_STARTING))
 				return false;
@@ -61,18 +60,18 @@ namespace pump {
 				else if (__set_status(TIMER_PENDING, TIMER_STOPPED))
 					break;
 			}
-
-			notifier_.reset();
 		}
 
-		void timer::handle_timeout()
+		void timer::handle_timeout(void_ptr tq)
 		{
 			if (!__set_status(TIMER_STARTING, TIMER_STOPPED))
 				return;
 
-			auto notify = notifier_.lock();
-			if (notify)
-				notify->on_timer_timeout(arg_);
+			if (cb_)
+				cb_();
+
+			if (repeated_)
+				((timer_queue_ptr)tq)->add_timer(shared_from_this());
 		}
 
 	}

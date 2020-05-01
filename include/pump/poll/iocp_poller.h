@@ -23,7 +23,8 @@
 namespace pump {
 	namespace poll {
 
-		class iocp_poller: public poller
+		class iocp_poller: 
+			public poller
 		{
 		public:
 			/*********************************************************************************
@@ -39,42 +40,42 @@ namespace pump {
 			/*********************************************************************************
 			 * Start
 			 ********************************************************************************/
-			virtual bool start();
+			virtual bool start() override;
 
 			/*********************************************************************************
 			 * Stop
 			 ********************************************************************************/
-			virtual void stop();
+			virtual void stop() override;
 
 			/*********************************************************************************
 			 * Wait stopping
 			 ********************************************************************************/
-			virtual void wait_stopped();
+			virtual void wait_stopped() override;
 
 			/*********************************************************************************
 			 * Add channel tracker
 			 ********************************************************************************/
-			virtual bool add_channel_tracker(channel_tracker_sptr &tracker);
+			virtual bool add_channel_tracker(channel_tracker_sptr &tracker) override;
 
 			/*********************************************************************************
 			 * Remove channel tracker
 			 ********************************************************************************/
-			virtual void remove_channel_tracker(channel_tracker_sptr &tracker);
+			virtual void remove_channel_tracker(channel_tracker_sptr &tracker) override;
 
 			/*********************************************************************************
 			 * Pause channel tracker
 			 ********************************************************************************/
-			virtual void pause_channel_tracker(channel_tracker_ptr tracker) {}
+			virtual void pause_channel_tracker(channel_tracker_ptr tracker) override {}
 
 			/*********************************************************************************
 			 * Awake channel tracker
 			 ********************************************************************************/
-			virtual void awake_channel_tracker(channel_tracker_ptr tracker) {}
+			virtual void awake_channel_tracker(channel_tracker_ptr tracker) override {}
 
 			/*********************************************************************************
 			 * Push channel event
 			 ********************************************************************************/
-			virtual void push_channel_event(channel_sptr &c, uint32 ev);
+			virtual void push_channel_event(channel_sptr &c, uint32 ev) override;
 
 		protected:
 			/*********************************************************************************

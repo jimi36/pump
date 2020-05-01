@@ -17,44 +17,35 @@
 #ifndef pump_time_timer_h
 #define pump_time_timer_h
 
+#include "pump/utils/features.h"
 #include "pump/time/timestamp.h"
 
 namespace pump {
 	namespace time {
 
-		class LIB_EXPORT timeout_notifier
-		{
-		public:
-			/*********************************************************************************
-			 * Timer timeout callback
-			 ********************************************************************************/
-			virtual void on_timer_timeout(void_ptr arg) = 0;
-		};
-		DEFINE_ALL_POINTER_TYPE(timeout_notifier);
+		typedef function::function<void()> timer_callback;
 
 		class LIB_EXPORT timer: 
+			public utils::noncopyable,
 			public std::enable_shared_from_this<timer>
 		{
+		protected:
+			friend class timer_queue;
+
 		public:
 			/*********************************************************************************
 			 * Constructor
 			 ********************************************************************************/
 			timer(
-				void_ptr arg, 
-				timeout_notifier_sptr &notify, 
-				uint64 interval, 
-				bool repeat = false
+				const timer_callback &cb,
+				uint64 interval,
+				bool repeated = false
 			);
 
 			/*********************************************************************************
 			 * Deconstructor
 			 ********************************************************************************/
-			virtual ~timer() {}
-
-			/*********************************************************************************
-			 * Start
-			 ********************************************************************************/
-			bool start();
+			~timer() = default;
 
 			/*********************************************************************************
 			 * Stop
@@ -64,24 +55,32 @@ namespace pump {
 			/*********************************************************************************
 			 * Handle timeout
 			 ********************************************************************************/
-			void handle_timeout();
+			void handle_timeout(void_ptr tq);
 
 			/*********************************************************************************
 			 * Get overtime
 			 ********************************************************************************/
-			uint64 time() const { return overtime_; }
+			LIB_FORCEINLINE uint64 time() const 
+			{ return overtime_; }
 
 			/*********************************************************************************
 			 * Get starting state
 			 ********************************************************************************/
-			LIB_FORCEINLINE bool is_started() const { return status_.load() == 1; }
+			LIB_FORCEINLINE bool is_started() const 
+			{ return status_.load() == 1; }
 
 			/*********************************************************************************
 			 * Get repeated status
 			 ********************************************************************************/
-			LIB_FORCEINLINE bool is_repeated() const { return repeated_; }
+			LIB_FORCEINLINE bool is_repeated() const 
+			{ return repeated_; }
 
 		private:
+			/*********************************************************************************
+			 * Start
+			 ********************************************************************************/
+			bool __start();
+
 			/*********************************************************************************
 			 * Set status
 			 ********************************************************************************/
@@ -89,18 +88,16 @@ namespace pump {
 			{ return status_.compare_exchange_strong(o, n); }
 
 		private:
-			// Timer Arg
-			void_ptr arg_;
 			// Timer status
 			std::atomic_int status_;
+			// Timer callback
+			timer_callback cb_;
 			// Repeated status
 			volatile bool repeated_;
-			// Timeout interval ms
+			// Timeout interval with ms
 			uint64 interval_;
-			// Timeout time ms
+			// Timeout time with ms
 			uint64 overtime_;
-			// Timeout notifier
-			timeout_notifier_wptr notifier_;
 		};
 		DEFINE_ALL_POINTER_TYPE(timer);
 

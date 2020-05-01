@@ -18,10 +18,10 @@
 #define pump_transport_tls_transport_h
 
 #include "pump/utils/features.h"
-#include "pump/utils/freelock.h"
-
 #include "pump/transport/flow/flow_tls.h"
-#include "pump/transport/transport_notifier.h"
+#include "pump/transport/base_transport.h"
+
+#include "concurrentqueue/concurrentqueue.h"
 
 namespace pump {
 	namespace transport {
@@ -30,7 +30,7 @@ namespace pump {
 		DEFINE_ALL_POINTER_TYPE(tls_transport);
 
 		class LIB_EXPORT tls_transport :
-			public transport_base,
+			public base_transport,
 			public std::enable_shared_from_this<tls_transport>
 		{
 		public:
@@ -59,79 +59,54 @@ namespace pump {
 			/*********************************************************************************
 			 * Start tls transport
 			 ********************************************************************************/
-			bool start(
-				service_ptr sv,
-				transport_io_notifier_sptr &io_notifier,
-				transport_terminated_notifier_sptr &terminated_notifier
-			);
+			virtual bool start(service_ptr sv, const transport_callbacks &cbs) override;
 
 			/*********************************************************************************
 			 * Stop
 			 * Tls transport will delay stopping until all sendlist data is sent.
 			 ********************************************************************************/
-			virtual void stop();
+			virtual void stop() override;
 
 			/*********************************************************************************
 			 * Force stop
 			 ********************************************************************************/
-			virtual void force_stop();
+			virtual void force_stop() override;
 
 			/*********************************************************************************
 			 * Restart
 			 * After paused success, this will restart transport.
 			 ********************************************************************************/
-			virtual bool restart();
+			virtual bool restart() override;
 
 			/*********************************************************************************
 			 * Pause
 			 ********************************************************************************/
-			virtual bool pause();
+			virtual bool pause() override;
 
 			/*********************************************************************************
 			 * Send
 			 ********************************************************************************/
 			virtual bool send(
 				c_block_ptr b, 
-				uint32 size, 
-				bool notify = false
-			);
+				uint32 size
+			) override;
 
 			/*********************************************************************************
 			 * Send
 			 * After called, the transport got the buffer onwership.
 			 ********************************************************************************/
-			virtual bool send(flow::buffer_ptr b);
-
-			/*********************************************************************************
-			 * Get local address
-			 ********************************************************************************/
-			virtual const address& get_local_address() const { return local_address_; }
-
-			/*********************************************************************************
-			 * Get peer address
-			 ********************************************************************************/
-			virtual const address& get_remote_address() const { return remote_address_; }
+			virtual bool send(flow::buffer_ptr b) override;
 
 		protected:
 			/*********************************************************************************
 			 * Read event callback
 			 ********************************************************************************/
-			virtual void on_read_event(net::iocp_task_ptr itask);
+			virtual void on_read_event(net::iocp_task_ptr itask) override;
 
 			/*********************************************************************************
 			 * Send event callback
 			 ********************************************************************************/
-			virtual void on_send_event(net::iocp_task_ptr itask);
-
-			/*********************************************************************************
-			 * Tracker event callback
-			 ********************************************************************************/
-			virtual void on_tracker_event(int32 ev);
-
-			/*********************************************************************************
-			 * Channel event callback
-			 ********************************************************************************/
-			virtual void on_channel_event(uint32 ev);
+			virtual void on_send_event(net::iocp_task_ptr itask) override;
 
 		private:
 			/*********************************************************************************
@@ -140,38 +115,10 @@ namespace pump {
 			tls_transport();
 
 			/*********************************************************************************
-			 * Set terminated notifier
-			 ********************************************************************************/
-			LIB_FORCEINLINE void __set_terminated_notifier(
-				transport_terminated_notifier_sptr &notifier
-			) { terminated_notifier_ = notifier; }
-
-			/*********************************************************************************
 			 * Close flow
 			 ********************************************************************************/
 			LIB_FORCEINLINE void __close_flow() 
 			{ flow_.reset(); }
-
-			/*********************************************************************************
-			 * Start all trackers
-			 ********************************************************************************/
-			bool __start_all_trackers();
-
-			/*********************************************************************************
-			 * Awake tracker
-			 ********************************************************************************/
-			bool __awake_tracker(poll::channel_tracker_sptr tracker);
-
-			/*********************************************************************************
-			 * Pause tracker
-			 ********************************************************************************/
-			bool __pause_tracker(poll::channel_tracker_sptr tracker);
-
-			/*********************************************************************************
-			 * Stop tracker
-			 ********************************************************************************/
-			void __stop_read_tracker();
-			void __stop_send_tracker();
 
 			/*********************************************************************************
 			 * Async send
@@ -196,28 +143,20 @@ namespace pump {
 			void __clear_send_pockets();
 
 		private:
-			// Local address
-			address local_address_;
-			// Remote address
-			address remote_address_;
-
-			// Channel trackers
-			poll::channel_tracker_sptr r_tracker_;
-			poll::channel_tracker_sptr s_tracker_;
-
-			// Tls flow
+			// TLS flow
 			flow::flow_tls_sptr flow_;
 
 			// When sending data, transport will append buffer to sendlist at first. On triggering send
 			// event, transport will send buffer in the sendlist.
-			utils::freelock_list<flow::buffer_ptr> sendlist_;
+			moodycamel::ConcurrentQueue<flow::buffer_ptr> sendlist_;
+			std::atomic_int32_t sendlist_size_;
+
+			// Current send buffer
+			volatile flow::buffer_ptr cur_send_buffer_;
 
 			// Transport will start listening send event when starting. But there are maybe no data to
 			// send and asynchronous sending data at the same time, so this status is for this scenario.
 			std::atomic_flag is_sending_;
-
-			// Transport terminated notifier
-			transport_terminated_notifier_wptr terminated_notifier_;
 		};
 
 	}

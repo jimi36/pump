@@ -23,7 +23,8 @@ namespace pump {
 	namespace transport {
 		namespace flow {
 
-			class flow_tcp_dialer: public flow_base
+			class flow_tcp_dialer: 
+				public flow_base
 			{
 			public:
 				/*********************************************************************************
@@ -51,7 +52,7 @@ namespace pump {
 				 *     FLOW_ERR_NO    => success
 				 *     FLOW_ERR_ABORT => error
 				 ********************************************************************************/
-				int32 want_to_connect(const address &connect_address);
+				int32 want_to_connect(const address &remote_address);
 
 				/*********************************************************************************
 				 * Connect
