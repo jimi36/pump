@@ -183,7 +183,7 @@ namespace pump {
 			PUMP_ASSERT(!r_tracker_);
 			poll::channel_sptr ch = shared_from_this();
 			r_tracker_.reset(new poll::channel_tracker(ch, TRACK_READ, TRACK_MODE_LOOP));
-			if (!get_service()->add_channel_tracker(r_tracker_))
+			if (!get_service()->add_channel_tracker(r_tracker_, true))
 				return false;
 
 			tracker_cnt_.fetch_add(1);

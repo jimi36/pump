@@ -332,13 +332,14 @@ namespace pump {
 			PUMP_ASSERT(!tracker_);
 			poll::channel_sptr ch = shared_from_this();
 			tracker_.reset(new poll::channel_tracker(ch, TRACK_NONE, TRACK_MODE_ONCE));
-			if (!get_service()->add_channel_tracker(tracker_))
-				return false;
-
-			tracker_cnt_.fetch_add(1);
 
 			if (__process_handshake(flow_.get(), tracker_.get()) == TLS_HANDSHAKE_ERROR)
 				return false;
+
+			if (!get_service()->add_channel_tracker(tracker_, true))
+				return false;
+
+			tracker_cnt_.fetch_add(1);
 
 			return true;
 		}
@@ -348,16 +349,16 @@ namespace pump {
 			PUMP_ASSERT(tracker->get_mode() == TRACK_MODE_ONCE);
 			PUMP_ASSERT_EXPR(tracker, tracker_ = tracker);
 
+			if (__process_handshake(flow_.get(), tracker_.get()) == TLS_HANDSHAKE_ERROR)
+				return false;
+
 			poll::channel_sptr ch = shared_from_this();
 			tracker_->set_channel(ch);
-			
+
 			if (!get_service()->awake_channel_tracker(tracker_.get()))
 				PUMP_ASSERT(false);
 
 			tracker_cnt_.fetch_add(1);
-
-			if (__process_handshake(flow_.get(), tracker_.get()) == TLS_HANDSHAKE_ERROR)
-				return false;
 
 			return true;
 		}

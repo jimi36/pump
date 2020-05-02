@@ -71,10 +71,6 @@ namespace pump {
 				__set_status(TRANSPORT_STARTING, TRANSPORT_ERROR);
 			});
 
-			// If using iocp, the transport is ready for sending.
-			if (!net::get_iocp_handler())
-				is_sending_.test_and_set();
-
 			if (!__start_all_trackers((poll::channel_sptr)shared_from_this()))
 				return false;
 
@@ -268,7 +264,7 @@ namespace pump {
 			if (!sendlist_.enqueue(b))
 				return false;
 
-			if (sendlist_size_.fetch_add(1) != 1 || is_sending_.test_and_set())
+			if (sendlist_size_.fetch_add(1) != 0 || is_sending_.test_and_set())
 				return true;
 
 			if (!sendlist_.try_dequeue(cur_send_buffer_))

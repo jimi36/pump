@@ -26,8 +26,7 @@ namespace pump {
 		running_(false),
 		loop_poller_(nullptr),
 		once_poller_(nullptr),
-		iocp_poller_(nullptr),
-		event_waiting_(true)
+		iocp_poller_(nullptr)
 	{
 		if (has_poller)
 		{
@@ -73,7 +72,9 @@ namespace pump {
 		if (once_poller_ != nullptr)
 			once_poller_->start();
 
-		__start_task_thread();
+		__start_posted_task_worker();
+
+		__start_timeout_timer_worker();
 
 		return true;
 	}
@@ -102,11 +103,13 @@ namespace pump {
 			once_poller_->wait_stopped();
 		if (tqueue_)
 			tqueue_->wait_stopped();
-		if (task_worker_)
-			task_worker_->join();
+		if (posted_task_worker_)
+			posted_task_worker_->join();
+		if (timeout_timer_worker_)
+			timeout_timer_worker_->join();
 	}
 
-	bool service::add_channel_tracker(poll::channel_tracker_sptr &tracker)
+	bool service::add_channel_tracker(poll::channel_tracker_sptr &tracker, bool tracking)
 	{
 #if defined(WIN32) && defined(USE_IOCP)
 		poll::poller_ptr poller = iocp_poller_;
@@ -118,7 +121,7 @@ namespace pump {
 			poller = once_poller_;
 #endif
 		PUMP_ASSERT(poller);
-		return poller->add_channel_tracker(tracker);
+		return poller->add_channel_tracker(tracker, tracking);
 	}
 
 	bool service::remove_channel_tracker(poll::channel_tracker_sptr &tracker)
@@ -181,15 +184,6 @@ namespace pump {
 		return true;
 	}
 
-	void service::post(const post_task_type& task)
-	{
-		std::unique_lock<std::mutex> locker(event_mx_);
-		tasks_.push_back(task);
-
-		if (event_waiting_)
-			task_cv_.notify_all();
-	}
-
 	bool service::start_timer(time::timer_sptr &tr)
 	{
 		PUMP_ASSERT_EXPR(tqueue_, 
@@ -202,60 +196,31 @@ namespace pump {
 			tr->stop();
 	}
 
-	void service::__post_timeout_timer(time::timer_wptr &tr)
+	void service::__start_posted_task_worker()
 	{
-		std::unique_lock<std::mutex> locker(event_mx_);
-		timers_.push_back(tr);
-
-		if (event_waiting_)
-			task_cv_.notify_all();
-	}
-
-	void service::__start_task_thread()
-	{
-		task_worker_.reset(new std::thread([&]() {
-			std::vector<post_task_type> process_tasks;
-			std::vector<time::timer_wptr> process_timers;
+		posted_task_worker_.reset(new std::thread([&]() {
 			while (running_)
 			{
-				__do_posted_tasks(process_tasks, process_timers);
-
-				process_tasks.clear();
-				process_timers.clear();
+				post_task_type task;
+				if (posted_tasks_.wait_dequeue_timed(task, std::chrono::seconds(1)))
+					task();
 			}
 		}));
 	}
 
-	void service::__do_posted_tasks(
-		std::vector<post_task_type> &posted_tasks,
-		std::vector<time::timer_wptr> &timeout_timers
-	) {
-		{
-			std::unique_lock<std::mutex> locker(event_mx_);
-			if (tasks_.empty() && timers_.empty())
+	void service::__start_timeout_timer_worker()
+	{
+		timeout_timer_worker_.reset(new std::thread([&]() {
+			while (running_)
 			{
-				event_waiting_ = true;
-				task_cv_.wait_for(locker, std::chrono::seconds(1));
-				event_waiting_ = false;
+				time::timer_wptr wptr;
+				if (timeout_timers_.wait_dequeue_timed(wptr, std::chrono::seconds(1)))
+				{
+					PUMP_LOCK_WPOINTER_EXPR(timer, wptr, true,
+						timer->handle_timeout(tqueue_.get()));
+				}
 			}
-
-			if (!tasks_.empty())
-				posted_tasks.swap(tasks_);
-			if (!timers_.empty())
-				timeout_timers.swap(timers_);
-		}
-
-		for (auto &task: posted_tasks)
-		{
-			task();
-		}
-
-		for (auto &wtr: timeout_timers)
-		{
-			PUMP_LOCK_WPOINTER_EXPR(tr, wtr, true,
-				tr->handle_timeout(tqueue_.get());
-			);
-		}
+		}));
 	}
 
 }

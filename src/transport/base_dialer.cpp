@@ -42,7 +42,7 @@ namespace pump {
 		{
 			PUMP_ASSERT(!tracker_);
 			tracker_.reset(new poll::channel_tracker(ch, TRACK_WRITE, TRACK_MODE_ONCE));
-			if (!get_service()->add_channel_tracker(tracker_))
+			if (!get_service()->add_channel_tracker(tracker_, true))
 				return false;
 
 			tracker_cnt_.fetch_add(1);

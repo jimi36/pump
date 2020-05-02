@@ -22,6 +22,8 @@
 #include "pump/time/timer_queue.h"
 #include "pump/utils/features.h"
 
+#include <concurrentqueue/blockingconcurrentqueue.h>
+
 namespace pump {
 
 	class LIB_EXPORT service: 
@@ -59,7 +61,7 @@ namespace pump {
 		/*********************************************************************************
 		 * Add channel checker
 		 ********************************************************************************/
-		bool add_channel_tracker(poll::channel_tracker_sptr &tracker);
+		bool add_channel_tracker(poll::channel_tracker_sptr &tracker, bool tracking);
 
 		/*********************************************************************************
 		 * Delete channel
@@ -84,7 +86,8 @@ namespace pump {
 		/*********************************************************************************
 		 * Post callback task
 		 ********************************************************************************/
-		void post(const post_task_type &task);
+		LIB_FORCEINLINE void post(const post_task_type &task)
+		{ posted_tasks_.enqueue(task); }
 
 		/*********************************************************************************
 		 * Start timer
@@ -100,40 +103,40 @@ namespace pump {
 		/*********************************************************************************
 		 * Post timeout timer
 		 ********************************************************************************/
-		void __post_timeout_timer(time::timer_wptr &tr);
+		LIB_FORCEINLINE void __post_timeout_timer(time::timer_wptr &timer)
+		{ timeout_timers_.enqueue(timer); }
 
 		/*********************************************************************************
-		 * Start task thread
+		 * Start posted task worker
 		 ********************************************************************************/
-		void __start_task_thread();
+		void __start_posted_task_worker();
 
 		/*********************************************************************************
-		 * Do posted task
+		 * Start timeout timer worker
 		 ********************************************************************************/
-		void __do_posted_tasks(
-			std::vector<post_task_type> &posted_tasks, 
-			std::vector<time::timer_wptr> &timeout_timers
-		);
+		void __start_timeout_timer_worker();
 
 	private:
 		// Running status
 		bool running_;
+
 		// Loop poller
 		poll::poller_ptr loop_poller_;
 		// Once poller
 		poll::poller_ptr once_poller_;
 		// IOCP poller
 		poll::poller_ptr iocp_poller_;
+
 		// Timer queue
 		time::timer_queue_sptr tqueue_;
-		// Callback task worker
-		std::shared_ptr<std::thread> task_worker_;
-		//  Callback tasks
-		bool event_waiting_;
-		std::mutex event_mx_;
-		std::condition_variable task_cv_;
-		std::vector<post_task_type> tasks_;
-		std::vector<time::timer_wptr> timers_;
+
+		// Posted task worker
+		std::shared_ptr<std::thread> posted_task_worker_;
+		moodycamel::BlockingConcurrentQueue<post_task_type> posted_tasks_;
+
+		// Timout timer worker
+		std::shared_ptr<std::thread> timeout_timer_worker_;
+		moodycamel::BlockingConcurrentQueue<time::timer_wptr> timeout_timers_;
 	};
 	DEFINE_ALL_POINTER_TYPE(service);
 

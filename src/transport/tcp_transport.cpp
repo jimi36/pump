@@ -56,10 +56,6 @@ namespace pump {
 			PUMP_ASSERT_EXPR(sv, __set_service(sv));
 			PUMP_ASSERT_EXPR(cbs.read_cb && cbs.disconnected_cb && cbs.stopped_cb, cbs_ = cbs);
 
-			// If use iocp, the transport is ready for sending.
-			if (!net::get_iocp_handler())
-				is_sending_.test_and_set();
-
 			utils::scoped_defer defer([&]() {
 				__close_flow();
 				__stop_read_tracker();
@@ -266,7 +262,7 @@ namespace pump {
 			if (!sendlist_.enqueue(b))
 				return false;
 
-			if (sendlist_size_.fetch_add(1) != 1 || is_sending_.test_and_set())
+			if (sendlist_size_.fetch_add(1) != 0 || is_sending_.test_and_set())
 				return true;
 
 			if (!sendlist_.try_dequeue(cur_send_buffer_))

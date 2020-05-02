@@ -21,6 +21,8 @@
 #include "pump/utils/spin_mutex.h"
 #include "pump/poll/channel_tracker.h"
 
+#include <concurrentqueue/concurrentqueue.h>
+
 namespace pump {
 	namespace poll {
 
@@ -81,7 +83,7 @@ namespace pump {
 			/*********************************************************************************
 			 * Add channel tracker
 			 ********************************************************************************/
-			virtual bool add_channel_tracker(channel_tracker_sptr &tracker);
+			virtual bool add_channel_tracker(channel_tracker_sptr &tracker, bool tracking);
 
 			/*********************************************************************************
 			 * Remove channel tracker
@@ -138,9 +140,9 @@ namespace pump {
 			void __handle_channel_events();
 
 			/*********************************************************************************
-			 * Update channel trackers
+			 * Handle channel tracker events
 			 ********************************************************************************/
-			void __update_channel_trackers();
+			void __handle_channel_tracker_events();
 
 		protected:
 			// Started status
@@ -152,21 +154,16 @@ namespace pump {
 			// Worker thread
 			std::shared_ptr<std::thread> worker_;
 
-			// Channel events
-			std::mutex ch_event_mx_;
-			//utils::spin_mutex ch_event_mx_;
-			std::atomic_bool has_ch_event_;
-			std::vector<channel_event> ch_events_;
+			// Channel event
+			std::atomic_int32_t cev_cnt_;
+			moodycamel::ConcurrentQueue<channel_event*> cevents_;
 
-			// Modifying channel trackers
-			std::mutex tracker_mx_;
-			//utils::spin_mutex tracker_mx_;
-			std::atomic_bool has_tr_event_;
-			std::vector<channel_tracker_event> tr_events_;
+			// Channel tracker event
+			std::atomic_int32_t tev_cnt_;
+			moodycamel::ConcurrentQueue<channel_tracker_event*> tevents_;
 
 			// Channel trackers
 			std::map<channel_tracker_ptr, channel_tracker_sptr> trackers_;
-			//std::unordered_map<channel_tracker_ptr, channel_tracker_sptr> trackers_;
 		};
 
 		DEFINE_ALL_POINTER_TYPE(poller);

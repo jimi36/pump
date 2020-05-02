@@ -75,12 +75,9 @@ namespace pump {
 			 ********************************************************************************/
 			void __dispatch_pending_event(int32 count);
 
-#ifndef WIN32
 		private:
-			int32 epollfd_;
-			std::vector<struct epoll_event> events_;
-			std::unordered_map<channel_tracker_ptr, channel_tracker_sptr> waiting_trackers_;
-#endif
+			int32 epoll_fd_;
+			void_ptr epoll_mem_;
 		};
 
 		DEFINE_ALL_POINTER_TYPE(epoll_poller);

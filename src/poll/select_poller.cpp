@@ -98,7 +98,7 @@ namespace pump {
 				if (pending_event != IO_EVENT_NONE && tracker->is_tracking())
 				{
 					if (pop_pending_channel_)
-						tracker->set_tracking(false);
+						tracker->__set_tracking(false);
 
 					ch->handle_io_event(pending_event, nullptr);
 				}

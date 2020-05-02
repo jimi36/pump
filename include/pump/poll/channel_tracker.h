@@ -36,6 +36,12 @@ namespace pump {
 		class channel_tracker:
 			public utils::noncopyable
 		{
+		protected:
+			friend class poller;
+			friend class iocp_poller;
+			friend class epoll_poller;
+			friend class select_poller;
+
 		public:
 			/*********************************************************************************
 			 * Constructor
@@ -47,12 +53,6 @@ namespace pump {
 				fd_(ch->get_fd()),
 				ch_(ch)
 			{}
-			
-			/*********************************************************************************
-			 * Set tracking status
-			 ********************************************************************************/
-			LIB_FORCEINLINE void set_tracking(bool on) 
-			{ is_tracking_ = on; }
 			
 			/*********************************************************************************
 			 * Get tracking status
@@ -95,6 +95,15 @@ namespace pump {
 			 ********************************************************************************/
 			LIB_FORCEINLINE int32 get_mode() const 
 			{ return mode_; }
+
+		private:
+			/*********************************************************************************
+			 * Set tracking status
+			 ********************************************************************************/
+			LIB_FORCEINLINE void __set_tracking(bool on)
+			{
+				is_tracking_ = on;
+			}
 			
 		private:
 			// Status

@@ -42,7 +42,7 @@ namespace pump {
 
 			SYSTEM_INFO sys_info;
 			GetSystemInfo(&sys_info);
-			for (DWORD i = 0; i < (sys_info.dwNumberOfProcessors); ++i)
+			for (DWORD i = 0; i < (sys_info.dwNumberOfProcessors * 2); ++i)
 			{
 				std::thread *worker = new std::thread(
 					function::bind(&iocp_poller::__work_thread, this)
@@ -77,11 +77,15 @@ namespace pump {
 #endif
 		}
 
-		bool iocp_poller::add_channel_tracker(channel_tracker_sptr &tracker)
-		{
+		bool iocp_poller::add_channel_tracker(
+			channel_tracker_sptr &tracker, 
+			bool tracking
+		) {
 #if defined(WIN32) && defined(USE_IOCP)
 			if (!started_.load())
 				return false;
+
+			tracker->__set_tracking(tracking);
 
 			auto itask = net::new_iocp_task();
 			net::set_iocp_task_type(itask, IOCP_TASK_TRACKER);
@@ -96,6 +100,8 @@ namespace pump {
 		void iocp_poller::remove_channel_tracker(channel_tracker_sptr &tracker)
 		{
 #if defined(WIN32) && defined(USE_IOCP)
+			tracker->__set_tracking(false);
+
 			auto itask = net::new_iocp_task();
 			net::set_iocp_task_type(itask, IOCP_TASK_TRACKER);
 			net::set_iocp_task_notifier(itask, tracker->get_channel());

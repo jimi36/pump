@@ -55,7 +55,10 @@ namespace pump {
 			/*********************************************************************************
 			 * Add channel tracker
 			 ********************************************************************************/
-			virtual bool add_channel_tracker(channel_tracker_sptr &tracker) override;
+			virtual bool add_channel_tracker(
+				channel_tracker_sptr &tracker, 
+				bool tracking
+			) override;
 
 			/*********************************************************************************
 			 * Remove channel tracker
@@ -65,12 +68,14 @@ namespace pump {
 			/*********************************************************************************
 			 * Pause channel tracker
 			 ********************************************************************************/
-			virtual void pause_channel_tracker(channel_tracker_ptr tracker) override {}
+			virtual void pause_channel_tracker(channel_tracker_ptr tracker) override 
+			{ tracker->__set_tracking(false); }
 
 			/*********************************************************************************
 			 * Awake channel tracker
 			 ********************************************************************************/
-			virtual void awake_channel_tracker(channel_tracker_ptr tracker) override {}
+			virtual void awake_channel_tracker(channel_tracker_ptr tracker) override 
+			{ tracker->__set_tracking(true); }
 
 			/*********************************************************************************
 			 * Push channel event
