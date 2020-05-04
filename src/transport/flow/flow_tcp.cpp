@@ -44,7 +44,7 @@ namespace pump {
 				PUMP_ASSERT_EXPR(fd > 0, fd_ = fd);
 				
 				read_cache_.resize(MAX_FLOW_BUFFER_SIZE);
-				net_read_cache_raw_size_ = read_cache_.size();
+				net_read_cache_raw_size_ = (int32)read_cache_.size();
 				net_read_cache_raw_ = (block_ptr)read_cache_.data();
 
 				read_task_ = net::new_iocp_task();

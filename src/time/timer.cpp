@@ -20,58 +20,76 @@
 namespace pump {
 	namespace time {
 
-		const int32 TIMER_STOPPED  = 0;
-		const int32 TIMER_STARTING = 1;
-		const int32 TIMER_PENDING  = 2;
+		const int32 TIMER_INIT     = 0;
+		const int32 TIMER_STOPPED  = 1;
+		const int32 TIMER_STARTED  = 2;
+		const int32 TIMER_PENDING  = 3;
 
-		timer::timer(
-			const timer_callback &cb,
-			uint64 interval, 
-			bool repeated
-		): 
-			status_(TIMER_STOPPED),
+		timer::timer(uint64 timeout, const timer_callback &cb, bool repeated) : 
+			queue_(nullptr),
+			status_(TIMER_INIT),
+			timeout_(timeout),
 			cb_(cb),
 			repeated_(repeated),
-			interval_(interval),
 			overtime_(0)
 		{
 		}
 
-		bool timer::__start() 
+		bool timer::__start(timer_queue_ptr queue)
 		{
-			if (!__set_status(TIMER_STOPPED, TIMER_STARTING))
+			if (!__set_status(TIMER_INIT, TIMER_STARTED))
 				return false;
 
-			overtime_ = get_clock_milliseconds() + interval_;
+			overtime_ = get_clock_milliseconds() + timeout_;
+
+			queue_ = queue;
+
+			return true;
+		}
+
+		bool timer::__restart()
+		{
+			if (!is_started())
+				return false;
+
+			overtime_ = get_clock_milliseconds() + timeout_;
 
 			return true;
 		}
 
 		void timer::stop()
-		{
-			repeated_ = false;
-
+		{	
 			while (true)
 			{
-				if (__set_status(TIMER_STOPPED, TIMER_STOPPED))
+				if (__set_status(TIMER_INIT, TIMER_INIT))
+					return;
+
+				if (__set_status(TIMER_INIT, TIMER_INIT) ||
+					__set_status(TIMER_STOPPED, TIMER_STOPPED) || 
+					__set_status(TIMER_PENDING, TIMER_STOPPED))
 					break;
-				else if (__set_status(TIMER_STARTING, TIMER_STOPPED))
+
+				if (__set_status(TIMER_STARTED, TIMER_STOPPED))
+				{
+					if (queue_)
+						queue_->delete_timer(this);
 					break;
-				else if (__set_status(TIMER_PENDING, TIMER_STOPPED))
-					break;
+				}
 			}
+
+			repeated_ = false;
 		}
 
-		void timer::handle_timeout(void_ptr tq)
+		void timer::handle_timeout()
 		{
-			if (!__set_status(TIMER_STARTING, TIMER_STOPPED))
+			if (!__set_status(TIMER_STARTED, TIMER_PENDING))
 				return;
 
 			if (cb_)
 				cb_();
 
-			if (repeated_)
-				((timer_queue_ptr)tq)->add_timer(shared_from_this());
+			if (repeated_ && queue_ &&__set_status(TIMER_PENDING, TIMER_STARTED))
+				queue_->add_timer(shared_from_this(), true);
 		}
 
 	}

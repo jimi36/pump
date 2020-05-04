@@ -65,7 +65,7 @@ namespace pump {
 				return true;
 
 			PUMP_ASSERT(!connect_timer_);
-			connect_timer_.reset(new time::timer(cb, connect_timeout_));
+			connect_timer_ = time::timer::create_instance(connect_timeout_, cb);
 
 			return get_service()->start_timer(connect_timer_);
 		}

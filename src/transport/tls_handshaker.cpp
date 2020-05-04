@@ -316,7 +316,7 @@ namespace pump {
 
 			PUMP_ASSERT(!timer_);
 			time::timer_callback cb = function::bind(&tls_handshaker::on_timeout, shared_from_this());
-			timer_.reset(new time::timer(cb, timeout));
+			timer_ = time::timer::create_instance(timeout, cb);
 
 			return get_service()->start_timer(timer_);
 		}

@@ -56,26 +56,37 @@ namespace pump {
 				observer_->join();
 		}
 
-		bool timer_queue::add_timer(timer_sptr &ptr)
+		bool timer_queue::add_timer(timer_sptr &ptr, bool repeated)
 		{
 			if (!started_.load())
 				return false;
 
-			if (!ptr->__start())
-				return false;
+			switch (repeated)
+			{
+			case false:
+				if (!ptr->__start(this))
+					return false;
+				break;
+			case true:
+				if (!ptr->__restart())
+					return false;
+				break;
+			}
+
+			auto overtime = ptr->time();
 
 			std::unique_lock<std::mutex> locker(observer_mx_);
-			timers_.insert(std::make_pair(ptr->time(), ptr));
-			if (next_observe_time_ > ptr->time())
+			timers_.insert(std::make_pair(overtime, ptr));
+			if (next_observe_time_ > overtime)
 			{
-				next_observe_time_ = timers_.begin()->first;
+				next_observe_time_ = overtime;
 				observer_cv_.notify_all();
 			}
 
 			return true;
 		}
 
-		void timer_queue::delete_timer(timer_sptr &ptr)
+		void timer_queue::delete_timer(timer_ptr ptr)
 		{
 			std::unique_lock<std::mutex> locker(observer_mx_);
 			uint64 key = ptr->time();
@@ -84,7 +95,7 @@ namespace pump {
 			while (beg != end)
 			{
 				auto tmp = beg->second.lock();
-				if (tmp && tmp.get() == ptr.get())
+				if (tmp.get() == ptr)
 				{
 					timers_.erase(beg);
 					break;

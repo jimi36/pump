@@ -217,7 +217,7 @@ namespace pump {
 				if (timeout_timers_.wait_dequeue_timed(wptr, std::chrono::seconds(1)))
 				{
 					PUMP_LOCK_WPOINTER_EXPR(timer, wptr, true,
-						timer->handle_timeout(tqueue_.get()));
+						timer->handle_timeout());
 				}
 			}
 		}));

@@ -23,24 +23,29 @@
 namespace pump {
 	namespace time {
 
+		class timer;
+		DEFINE_ALL_POINTER_TYPE(timer);
+
 		typedef function::function<void()> timer_callback;
 
 		class LIB_EXPORT timer: 
-			public utils::noncopyable,
 			public std::enable_shared_from_this<timer>
 		{
 		protected:
 			friend class timer_queue;
+			DEFINE_RAW_POINTER_TYPE(timer_queue);
 
 		public:
 			/*********************************************************************************
-			 * Constructor
+			 * Create instance
 			 ********************************************************************************/
-			timer(
-				const timer_callback &cb,
-				uint64 interval,
+			static timer_sptr create_instance(
+				uint64 timeout, 
+				const timer_callback &cb, 
 				bool repeated = false
-			);
+			) {
+				return timer_sptr(new timer(timeout, cb, repeated));
+			}
 
 			/*********************************************************************************
 			 * Deconstructor
@@ -55,7 +60,7 @@ namespace pump {
 			/*********************************************************************************
 			 * Handle timeout
 			 ********************************************************************************/
-			void handle_timeout(void_ptr tq);
+			void handle_timeout();
 
 			/*********************************************************************************
 			 * Get overtime
@@ -67,7 +72,7 @@ namespace pump {
 			 * Get starting state
 			 ********************************************************************************/
 			LIB_FORCEINLINE bool is_started() const 
-			{ return status_.load() == 1; }
+			{ return status_.load() >= 2; }
 
 			/*********************************************************************************
 			 * Get repeated status
@@ -77,9 +82,19 @@ namespace pump {
 
 		private:
 			/*********************************************************************************
+			 * Constructor
+			 ********************************************************************************/
+			timer(uint64 timeout, const timer_callback &cb, bool repeated);
+
+			/*********************************************************************************
 			 * Start
 			 ********************************************************************************/
-			bool __start();
+			bool __start(timer_queue_ptr queue);
+
+			/*********************************************************************************
+			 * Restart
+			 ********************************************************************************/
+			bool __restart();
 
 			/*********************************************************************************
 			 * Set status
@@ -88,18 +103,19 @@ namespace pump {
 			{ return status_.compare_exchange_strong(o, n); }
 
 		private:
+			// Timer queue
+			timer_queue_ptr queue_;
 			// Timer status
 			std::atomic_int status_;
 			// Timer callback
 			timer_callback cb_;
 			// Repeated status
-			volatile bool repeated_;
-			// Timeout interval with ms
-			uint64 interval_;
+			bool repeated_;
+			// Timeout with ms
+			uint64 timeout_;
 			// Timeout time with ms
 			uint64 overtime_;
 		};
-		DEFINE_ALL_POINTER_TYPE(timer);
 
 	}
 }
