@@ -20,16 +20,14 @@
 namespace pump {
 	namespace transport {
 
-		udp_transport::udp_transport(const address &local_address):
+		udp_transport::udp_transport(PUMP_CONST address &local_address) PUMP_NOEXCEPT :
 			base_transport(UDP_TRANSPORT, nullptr, -1)
 		{
 			local_address_ = local_address;
 		}
 
-		bool udp_transport::start(
-			service_ptr sv,
-			const transport_callbacks &cbs
-		) {
+		bool udp_transport::start(service_ptr sv, PUMP_CONST transport_callbacks &cbs)
+		{
 			if (!__set_status(TRANSPORT_INIT, TRANSPORT_STARTING))
 				return false;
 
@@ -51,8 +49,7 @@ namespace pump {
 			if (flow_->beg_read_task() != FLOW_ERR_NO)
 				return false;
 
-			if (!__set_status(TRANSPORT_STARTING, TRANSPORT_STARTED))
-				PUMP_ASSERT(false);
+			PUMP_DEBUG_CHECK(__set_status(TRANSPORT_STARTING, TRANSPORT_STARTED));
 
 			defer.clear();
 
@@ -75,8 +72,9 @@ namespace pump {
 
 		bool udp_transport::restart()
 		{
-			PUMP_LOCK_SPOINTER_EXPR(flow, flow_, false,
-				return false);
+			PUMP_LOCK_SPOINTER(flow, flow_);
+			if (flow == nullptr)
+				return false;
 
 			if (__set_status(TRANSPORT_PAUSED, TRANSPORT_STARTED))
 			{
@@ -98,8 +96,9 @@ namespace pump {
 
 		bool udp_transport::pause()
 		{
-			PUMP_LOCK_SPOINTER_EXPR(flow, flow_, false,
-				return false);
+			PUMP_LOCK_SPOINTER(flow, flow_);
+			if (flow == nullptr)
+				return false;
 
 			if (__set_status(TRANSPORT_STARTED, TRANSPORT_PAUSED))
 			{
@@ -113,31 +112,28 @@ namespace pump {
 		bool udp_transport::send(
 			c_block_ptr b, 
 			uint32 size, 
-			const address &remote_address
+			PUMP_CONST address &remote_address
 		) {
-			PUMP_ASSERT(b);
+			PUMP_ASSERT(b && size > 0);
 
-			PUMP_LOCK_SPOINTER_EXPR(flow, flow_, false,
-				return false);
-
-			if (flow->send(b, size, remote_address) <= 0)
+			PUMP_LOCK_SPOINTER(flow, flow_);
+			if (PUMP_UNLIKELY(flow == nullptr))
 				return false;
-
-			return true;
+			else
+				return flow->send(b, size, remote_address) > 0;
 		}
 
 		void udp_transport::on_read_event(net::iocp_task_ptr itask)
 		{
-			PUMP_LOCK_SPOINTER_EXPR(flow, flow_, false,
-				return);
+			PUMP_LOCK_SPOINTER(flow, flow_);
+			if (flow == nullptr)
+				return;
 
 			address addr;
 			int32 size = 0;
 			c_block_ptr b = flow->read_from(itask, &size, &addr);
-			if (size <= 0)
-				return;
-
-			cbs_.read_from_cb(b, size, addr);
+			if (size > 0)
+				cbs_.read_from_cb(b, size, addr);
 
 			flow->end_read_task();
 

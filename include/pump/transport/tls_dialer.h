@@ -27,7 +27,7 @@ namespace pump {
 		class tls_dialer;
 		DEFINE_ALL_POINTER_TYPE(tls_dialer);
 
-		class LIB_EXPORT tls_dialer :
+		class LIB_PUMP tls_dialer : 
 			public base_dialer,
 			public std::enable_shared_from_this<tls_dialer>
 		{
@@ -35,10 +35,10 @@ namespace pump {
 			/*********************************************************************************
 			 * Create instance
 			 ********************************************************************************/
-			static tls_dialer_sptr create_instance(
+			PUMP_INLINE PUMP_STATIC tls_dialer_sptr create_instance(
 				void_ptr cert,
-				const address &local_address,
-				const address &remote_address,
+				PUMP_CONST address &local_address,
+				PUMP_CONST address &remote_address,
 				int64 dial_timeout = 0,
 				int64 handshake_timeout = 0
 			) {
@@ -59,7 +59,7 @@ namespace pump {
 			/*********************************************************************************
 			 * Start
 			 ********************************************************************************/
-			virtual bool start(service_ptr sv, const dialer_callbacks &cbs) override;
+			virtual bool start(service_ptr sv, PUMP_CONST dialer_callbacks &cbs) override;
 
 			/*********************************************************************************
 			 * Stop
@@ -76,12 +76,12 @@ namespace pump {
 			/*********************************************************************************
 			 * Timeout event callback
 			 ********************************************************************************/
-			static void on_timeout(tls_dialer_wptr wptr);
+			PUMP_STATIC void on_timeout(tls_dialer_wptr wptr);
 
 			/*********************************************************************************
 			 * TLS handshake success callback
 			 ********************************************************************************/
-			static void on_handshaked_callback(
+			PUMP_STATIC void on_handshaked_callback(
 				tls_dialer_wptr wptr,
 				tls_handshaker_ptr handshaker,
 				bool succ
@@ -90,7 +90,7 @@ namespace pump {
 			/*********************************************************************************
 			 * Tls handskake stopped callback
 			 ********************************************************************************/
-			static void on_stopped_handshaking_callback(
+			PUMP_STATIC void on_handshake_stopped_callback(
 				tls_dialer_wptr wptr,
 				tls_handshaker_ptr handshaker
 			);
@@ -101,11 +101,11 @@ namespace pump {
 			 ********************************************************************************/
 			tls_dialer(
 				void_ptr cert,
-				const address &local_address,
-				const address &remote_address,
+				PUMP_CONST address &local_address,
+				PUMP_CONST address &remote_address,
 				int64 dial_timeout,
 				int64 handshake_timeout
-			);
+			) PUMP_NOEXCEPT;
 
 			/*********************************************************************************
 			 * Open flow
@@ -115,8 +115,8 @@ namespace pump {
 			/*********************************************************************************
 			 * Close flow
 			 ********************************************************************************/
-			LIB_FORCEINLINE void __close_flow() 
-			{ flow_.reset(); }
+			PUMP_INLINE void __close_flow()
+			{ if (flow_) flow_->close(); }
 
 		private:
 			// GNUTLS credentials
@@ -132,14 +132,14 @@ namespace pump {
 		class tls_sync_dialer;
 		DEFINE_ALL_POINTER_TYPE(tls_sync_dialer);
 
-		class LIB_EXPORT tls_sync_dialer :
+		class LIB_PUMP tls_sync_dialer :
 			public std::enable_shared_from_this<tls_sync_dialer>
 		{
 		public:
 			/*********************************************************************************
 			 * Create instance
 			 ********************************************************************************/
-			static tls_sync_dialer_sptr create_instance()
+			PUMP_STATIC tls_sync_dialer_sptr create_instance()
 			{
 				return tls_sync_dialer_sptr(new tls_sync_dialer);
 			}
@@ -155,8 +155,8 @@ namespace pump {
 			base_transport_sptr dial(
 				void_ptr cert,
 				service_ptr sv,
-				const address &local_address,
-				const address &remote_address,
+				PUMP_CONST address &local_address,
+				PUMP_CONST address &remote_address,
 				int64 connect_timeout,
 				int64 handshake_timeout
 			);
@@ -165,7 +165,7 @@ namespace pump {
 			/*********************************************************************************
 			 * Dialed event callback
 			 ********************************************************************************/
-			static void on_dialed_callback(
+			PUMP_STATIC void on_dialed_callback(
 				tls_sync_dialer_wptr wptr,
 				base_transport_sptr transp,
 				bool succ
@@ -174,23 +174,25 @@ namespace pump {
 			/*********************************************************************************
 			 * Dialed timeout event callback
 			 ********************************************************************************/
-			static void on_timeout_callback(tls_sync_dialer_wptr wptr);
+			PUMP_STATIC void on_timeout_callback(tls_sync_dialer_wptr wptr);
 
 			/*********************************************************************************
 			 * Stopped dial event callback
 			 ********************************************************************************/
-			static void on_stopped_callback();
+			PUMP_STATIC void on_stopped_callback();
 
 		private:
 			/*********************************************************************************
 			 * Constructor
 			 ********************************************************************************/
-			tls_sync_dialer();
+			tls_sync_dialer() PUMP_NOEXCEPT
+			{}
 
 			/*********************************************************************************
 			 * Reset sync dialer
 			 ********************************************************************************/
-			void __reset();
+			PUMP_INLINE void __reset()
+			{ dialer_.reset(); }
 
 		private:
 			// Tcp dialer

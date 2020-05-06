@@ -19,7 +19,7 @@
 namespace pump {
 	namespace net {
 
-#ifdef WIN32
+#if defined(WIN32)
 		void_ptr get_extension_function(int32 fd, const GUID *which_fn)
 		{
 			DWORD bytes = 0;
@@ -33,8 +33,8 @@ namespace pump {
 
 		struct net_extension
 		{
-#ifdef WIN32
-			net_extension()
+#if defined(WIN32)
+			net_extension() PUMP_NOEXCEPT
 			{
 				accept_ex = nullptr;
 				connect_ex = nullptr;
@@ -49,7 +49,7 @@ namespace pump {
 
 		net_extension_ptr new_net_extension(int32 fd)
 		{
-#ifdef WIN32
+#if defined(WIN32)
 			GUID guid_accept_ex = WSAID_ACCEPTEX;
 			LPFN_ACCEPTEX accept_ex = (LPFN_ACCEPTEX)get_extension_function(fd, &guid_accept_ex);
 			GUID guid_get_acceptex_sockaddrs = WSAID_GETACCEPTEXSOCKADDRS;
@@ -72,7 +72,7 @@ namespace pump {
 
 		void delete_net_extension(net_extension_ptr ext)
 		{
-#ifdef WIN32
+#if defined(WIN32)
 			if (ext)
 				delete ext;
 #endif
@@ -80,7 +80,7 @@ namespace pump {
 
 		void_ptr get_accpet_ex_func(net_extension_ptr ext)
 		{
-#ifdef WIN32
+#if defined(WIN32)
 			if (ext)
 				return ext->accept_ex;
 #endif
@@ -89,7 +89,7 @@ namespace pump {
 
 		void_ptr get_accepted_addrs_func(net_extension_ptr ext)
 		{
-#ifdef WIN32
+#if defined(WIN32)
 			if (ext)
 				return ext->get_accepted_addrs;
 #endif
@@ -98,7 +98,7 @@ namespace pump {
 
 		void_ptr get_connect_ex_func(net_extension_ptr ext)
 		{
-#ifdef WIN32
+#if defined(WIN32)
 			if (ext)
 				return ext->connect_ex;
 #endif

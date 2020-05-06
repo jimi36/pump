@@ -20,7 +20,7 @@ namespace pump {
 	namespace transport {
 		namespace flow {
 
-			flow_tcp::flow_tcp():
+			flow_tcp::flow_tcp() PUMP_NOEXCEPT : 
 				read_task_(nullptr),
 				send_task_(nullptr),
 				net_read_cache_raw_size_(0),
@@ -80,13 +80,6 @@ namespace pump {
 #endif
 			}
 
-			void flow_tcp::cancel_read_task()
-			{
-#if defined(WIN32) && defined(USE_IOCP)
-				//net::cancel_iocp_task(net::get_iocp_handler(), read_task_);
-#endif
-			}
-
 			c_block_ptr flow_tcp::read(net::iocp_task_ptr itask, int32_ptr size)
 			{
 #if defined(WIN32) && defined(USE_IOCP)
@@ -107,10 +100,9 @@ namespace pump {
 					return FLOW_ERR_NO;
 #else
 				int32 size = net::send(fd_, send_buffer_->data(), send_buffer_->data_size());
-				if (size > 0)
+				if (PUMP_LIKELY(size > 0))
 				{
-					if (!send_buffer_->shift(size))
-						PUMP_ASSERT(false);
+					PUMP_DEBUG_CHECK(send_buffer_->shift(size));
 					return FLOW_ERR_NO;
 				}
 				else if (size < 0)
@@ -127,29 +119,26 @@ namespace pump {
 				int32 size = net::get_iocp_task_processed_size(itask);
 				if (size > 0)
 				{
-					if (!send_buffer_->shift(size))
-						PUMP_ASSERT(false);
+					PUMP_DEBUG_CHECK(send_buffer_->shift(size));
+					auto data_size = send_buffer_->data_size();
+					if (data_size == 0)
+						return FLOW_ERR_NO_DATA;
 
-					if (send_buffer_->data_size() == 0)
-						return FLOW_ERR_NO;
-
-					net::set_iocp_task_buffer(send_task_, (block_ptr)send_buffer_->data(), send_buffer_->data_size());
+					net::set_iocp_task_buffer(send_task_, (block_ptr)send_buffer_->data(), data_size);
 					if (net::post_iocp_send(send_task_))
 						return FLOW_ERR_AGAIN;
 				}
 #else
-				if (!has_data_to_send())
+				auto data_size = send_buffer_->data_size();
+				if (data_size == 0)
 					return FLOW_ERR_NO_DATA;
 
-				int32 size = net::send(fd_, send_buffer_->data(), send_buffer_->data_size());
-				if (size > 0)
+				int32 size = net::send(fd_, send_buffer_->data(), data_size);
+				if (PUMP_LIKELY(size > 0))
 				{
-					if (!send_buffer_->shift(size))
-						PUMP_ASSERT(false);
-
-					if (send_buffer_->data_size() > 0)
+					PUMP_DEBUG_CHECK(send_buffer_->shift(size));
+					if (data_size > size)
 						return FLOW_ERR_AGAIN;
-
 					return FLOW_ERR_NO;
 				}
 				else if (size < 0)
@@ -158,14 +147,6 @@ namespace pump {
 				}
 #endif
 				return FLOW_ERR_ABORT;
-			}
-
-			bool flow_tcp::has_data_to_send()
-			{
-				if (send_buffer_ == nullptr ||
-					send_buffer_->data_size() == 0)
-					return false;
-				return true;
 			}
 
 		}

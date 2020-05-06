@@ -27,7 +27,7 @@ namespace pump {
 		class tls_acceptor;
 		DEFINE_ALL_POINTER_TYPE(tls_acceptor);
 
-		class LIB_EXPORT tls_acceptor :
+		class LIB_PUMP tls_acceptor : 
 			public base_acceptor,
 			public std::enable_shared_from_this<tls_acceptor>
 		{
@@ -35,12 +35,14 @@ namespace pump {
 			/*********************************************************************************
 			 * Create instance
 			 ********************************************************************************/
-			static tls_acceptor_sptr create_instance(
+			PUMP_INLINE PUMP_STATIC tls_acceptor_sptr create_instance(
 				void_ptr cert, 
-				const address &listen_address, 
+				PUMP_CONST address &listen_address,
 				int64 handshake_timeout = 0
 			) {
-				return tls_acceptor_sptr(new tls_acceptor(cert, listen_address, handshake_timeout));
+				return tls_acceptor_sptr(
+					new tls_acceptor(cert, listen_address, handshake_timeout)
+				);
 			}
 
 			/*********************************************************************************
@@ -51,7 +53,7 @@ namespace pump {
 			/*********************************************************************************
 			 * Start
 			 ********************************************************************************/
-			virtual bool start(service_ptr sv, const acceptor_callbacks &cbs) override;
+			virtual bool start(service_ptr sv, PUMP_CONST acceptor_callbacks &cbs) override;
 
 			/*********************************************************************************
 			 * Stop
@@ -68,7 +70,7 @@ namespace pump {
 			/*********************************************************************************
 			 * TLS handshaked callback
 			 ********************************************************************************/
-			static void on_handshaked_callback(
+			PUMP_STATIC void on_handshaked_callback(
 				tls_acceptor_wptr wptr,
 				tls_handshaker_ptr handshaker,
 				bool succ
@@ -77,7 +79,7 @@ namespace pump {
 			/*********************************************************************************
 			 * Tls handskake stopped callback
 			 ********************************************************************************/
-			static void on_stopped_handshaking_callback(
+			PUMP_STATIC void on_handshake_stopped_callback(
 				tls_acceptor_wptr wptr,
 				tls_handshaker_ptr handshaker
 			);
@@ -88,9 +90,9 @@ namespace pump {
 			 ********************************************************************************/
 			tls_acceptor(
 				void_ptr cert, 
-				const address &listen_address, 
+				PUMP_CONST address &listen_address,
 				int64 handshake_timeout
-			);
+			) PUMP_NOEXCEPT;
 
 			/*********************************************************************************
 			 * Open flow
@@ -100,8 +102,8 @@ namespace pump {
 			/*********************************************************************************
 			 * Close flow
 			 ********************************************************************************/
-			LIB_FORCEINLINE void __close_flow() 
-			{ flow_.reset(); }
+			PUMP_INLINE void __close_flow()
+			{ if (flow_) flow_->close(); }
 
 			/*********************************************************************************
 			 * Create handshaker

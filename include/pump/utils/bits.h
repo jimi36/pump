@@ -22,13 +22,13 @@
 namespace pump {
 	namespace utils {
 
-		class LIB_EXPORT bits_reader
+		class LIB_PUMP bits_reader
 		{
 		public:
 			/*********************************************************************************
 			 * Constructor
 			 ********************************************************************************/
-			bits_reader(c_uint8_ptr b, uint32 size);
+			bits_reader(c_uint8_ptr b, uint32 size) PUMP_NOEXCEPT;
 
 			/*********************************************************************************
 			 * Deconstructor
@@ -46,7 +46,7 @@ namespace pump {
 			/*********************************************************************************
 			 * Get used bit count
 			 ********************************************************************************/
-			LIB_FORCEINLINE uint32 used_bc() const 
+			PUMP_INLINE uint32 used_bc() PUMP_CONST
 			{ return used_bc_;}
 
 		private:
@@ -67,13 +67,13 @@ namespace pump {
 			c_uint8_ptr byte_pos_;
 		};
 
-		class LIB_EXPORT bits_writer
+		class LIB_PUMP bits_writer
 		{
 		public:
 			/*********************************************************************************
 			 * Constructor
 			 ********************************************************************************/
-			bits_writer(uint8_ptr b, uint32 size);
+			bits_writer(uint8_ptr b, uint32 size) PUMP_NOEXCEPT;
 
 			/*********************************************************************************
 			 * Deconstructor
@@ -91,7 +91,7 @@ namespace pump {
 			/*********************************************************************************
 			 * Get used bit count
 			 ********************************************************************************/
-			LIB_FORCEINLINE uint32 used_bc() const 
+			PUMP_INLINE uint32 used_bc() PUMP_CONST
 			{ return used_bc_; }
 
 		private:

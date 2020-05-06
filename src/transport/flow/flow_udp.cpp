@@ -20,9 +20,9 @@ namespace pump {
 	namespace transport {
 		namespace flow {
 
-#define UDP_BUFFER_SIZE 1024*64
+			#define UDP_BUFFER_SIZE 1024*64
 
-			flow_udp::flow_udp():
+			flow_udp::flow_udp() PUMP_NOEXCEPT : 
 				read_task_(nullptr)
 			{
 				read_flag_.clear();
@@ -36,12 +36,12 @@ namespace pump {
 #endif
 			}
 
-			int32 flow_udp::init(poll::channel_sptr &ch, const address &bind_address)
+			int32 flow_udp::init(poll::channel_sptr &ch, PUMP_CONST address &local_address)
 			{
 				PUMP_ASSERT_EXPR(ch, ch_ = ch);
 		
 				int32 domain = AF_INET;
-				if (bind_address.is_ipv6())
+				if (local_address.is_ipv6())
 					domain = AF_INET6;
 
 #if defined(WIN32) && defined(USE_IOCP)
@@ -61,7 +61,7 @@ namespace pump {
 #endif
 				if (!net::set_reuse(fd_, 1) ||
 					!net::set_noblock(fd_, 1) ||
-					!net::bind(fd_, (sockaddr*)bind_address.get(), bind_address.len()) ||
+					!net::bind(fd_, (sockaddr*)local_address.get(), local_address.len()) ||
 					!net::set_udp_conn_reset(fd_, false))
 					return FLOW_ERR_ABORT;
 
@@ -103,9 +103,8 @@ namespace pump {
 				address_ptr remote_address
 			) {
 #if defined(WIN32) && defined(USE_IOCP)
-				//PUMP_ASSERT(read_task_ == itask);
 				c_block_ptr buf = net::get_iocp_task_processed_data(itask, size);
-				if (*size > 0)
+				if (PUMP_LIKELY(*size > 0))
 				{
 					int32 addrlen = 0;
 					sockaddr *addr = net::get_iocp_task_remote_address(itask, &addrlen);
@@ -122,9 +121,9 @@ namespace pump {
 				return buf;
 			}
 
-			int32 flow_udp::send(c_block_ptr b, uint32 size, const address &remote_addr)
+			int32 flow_udp::send(c_block_ptr b, uint32 size, PUMP_CONST address &remote_address)
 			{
-				return net::send_to(fd_, b, size, (struct sockaddr*)remote_addr.get(), remote_addr.len());
+				return net::send_to(fd_, b, size, (struct sockaddr*)remote_address.get(), remote_address.len());
 			}
 
 		}

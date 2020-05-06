@@ -19,9 +19,9 @@
 namespace pump {
 	namespace time {
 
-#define US_PER_MS			1000
-#define MS_PER_SECOND		US_PER_MS
-#define US_PER_SECOND		US_PER_MS * US_PER_MS
+#		define US_PER_MS			1000
+#		define MS_PER_SECOND		US_PER_MS
+#		define US_PER_SECOND		US_PER_MS * US_PER_MS
 
 		uint64 get_clock_microsecond()
 		{
@@ -37,7 +37,7 @@ namespace pump {
 				).time_since_epoch().count();
 		}
 
-		std::string timestamp::to_string() const
+		std::string timestamp::to_string() PUMP_CONST
 		{
 			struct tm tm_time;
 			char date[64] = { 0 };
@@ -59,7 +59,7 @@ namespace pump {
 			return date;
 		}
 
-		std::string timestamp::format(const std::string &format) const
+		std::string timestamp::format(PUMP_CONST std::string &format) PUMP_CONST
 		{
 			struct tm tm_time;
 			char date[64] = { 0 };

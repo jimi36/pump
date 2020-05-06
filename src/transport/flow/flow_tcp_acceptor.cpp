@@ -20,7 +20,7 @@ namespace pump {
 	namespace transport {
 		namespace flow {
 
-			flow_tcp_acceptor::flow_tcp_acceptor():
+			flow_tcp_acceptor::flow_tcp_acceptor() PUMP_NOEXCEPT : 
 				is_ipv6_(false),
 				accept_task_(nullptr)
 			{
@@ -34,7 +34,7 @@ namespace pump {
 #endif
 			}
 
-			int32 flow_tcp_acceptor::init(poll::channel_sptr &ch, const address &listen_address)
+			int32 flow_tcp_acceptor::init(poll::channel_sptr &ch, PUMP_CONST address &listen_address)
 			{
 				PUMP_ASSERT_EXPR(ch, ch_ = ch);
 
@@ -96,7 +96,6 @@ namespace pump {
 				address_ptr remote_address
 			) {
 #if defined(WIN32) && defined(USE_IOCP)
-				//PUMP_ASSERT(accept_task_ == itask);
 				int32 ec = net::get_iocp_task_ec(itask);
 				int32 client_fd = net::get_iocp_task_client_fd(itask);
 				if (ec != 0 || client_fd == -1)

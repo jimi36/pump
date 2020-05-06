@@ -52,42 +52,34 @@ namespace pump {
 
 		bool base_transport::__awake_tracker(poll::channel_tracker_sptr tracker)
 		{
-			if (!tracker)
+			if (PUMP_UNLIKELY(!tracker))
 				return false;
-
-			if (!get_service()->awake_channel_tracker(tracker.get()))
-				PUMP_ASSERT(false);
+			else
+				PUMP_DEBUG_CHECK(get_service()->awake_channel_tracker(tracker.get()));
 
 			return true;
 		}
 
 		bool base_transport::__pause_tracker(poll::channel_tracker_sptr tracker)
 		{
-			if (!tracker)
+			if (PUMP_UNLIKELY(!tracker))
 				return false;
-
-			if (!get_service()->pause_channel_tracker(tracker.get()))
-				PUMP_ASSERT(false);
+			else
+				PUMP_DEBUG_CHECK(get_service()->pause_channel_tracker(tracker.get()));
 
 			return true;
 		}
 
 		void base_transport::__stop_read_tracker()
 		{
-			if (!r_tracker_)
-				return;
-
-			if (!get_service()->remove_channel_tracker(std::move(r_tracker_)))
-				PUMP_ASSERT(false);
+			if (r_tracker_)
+				PUMP_DEBUG_CHECK(get_service()->remove_channel_tracker(std::move(r_tracker_)));
 		}
 
 		void base_transport::__stop_send_tracker()
 		{
-			if (!s_tracker_)
-				return;
-
-			if (!get_service()->remove_channel_tracker(std::move(s_tracker_)))
-				PUMP_ASSERT(false);
+			if (s_tracker_)
+				PUMP_DEBUG_CHECK(get_service()->remove_channel_tracker(std::move(s_tracker_)));
 		}
 
 	}

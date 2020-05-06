@@ -23,14 +23,14 @@ namespace pump {
 	namespace transport {
 		namespace flow {
 
-			class flow_tcp_dialer: 
+			class flow_tcp_dialer : 
 				public flow_base
 			{
 			public:
 				/*********************************************************************************
 				 * Constructor
 				 ********************************************************************************/
-				flow_tcp_dialer();
+				flow_tcp_dialer() PUMP_NOEXCEPT;
 
 				/*********************************************************************************
 				 * Deconstructor
@@ -43,7 +43,7 @@ namespace pump {
 				 *     FLOW_ERR_NO    => success
 				 *     FLOW_ERR_ABORT => error
 				 ********************************************************************************/
-				int32 init(poll::channel_sptr &ch, const address &bind_address);
+				int32 init(poll::channel_sptr &ch, PUMP_CONST address &bind_address);
 
 				/*********************************************************************************
 				 * Want to connect
@@ -52,7 +52,7 @@ namespace pump {
 				 *     FLOW_ERR_NO    => success
 				 *     FLOW_ERR_ABORT => error
 				 ********************************************************************************/
-				int32 want_to_connect(const address &remote_address);
+				int32 want_to_connect(PUMP_CONST address &remote_address);
 
 				/*********************************************************************************
 				 * Connect
@@ -60,8 +60,8 @@ namespace pump {
 				 ********************************************************************************/
 				int32 connect(
 					net::iocp_task_ptr itask, 
-					address &local_address, 
-					address &remote_address
+					address_ptr local_address, 
+					address_ptr remote_address
 				);
 
 			private:

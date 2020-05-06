@@ -20,25 +20,32 @@ namespace pump {
 	namespace transport {
 		namespace flow {
 
-			flow_base::flow_base() :
+			flow_base::flow_base() PUMP_NOEXCEPT :
 				fd_(-1),
 				ext_(nullptr)
 			{
 			}
 
-			flow_base::~flow_base()
-			{
-				if (ext_)
-					net::delete_net_extension(ext_);
-
-				if (fd_ > 0)
-					net::close(fd_);
-			}
-
 			int32 flow_base::unbind_fd()
 			{
-				int32 fd = fd_; fd_ = -1;
+				int32 fd = fd_; 
+				fd_ = -1;
 				return fd;
+			}
+
+			void flow_base::close()
+			{
+				if (ext_)
+				{
+					net::delete_net_extension(ext_);
+					ext_ = nullptr;
+				}
+				
+				if (fd_ > 0)
+				{
+					net::close(fd_);
+					fd_ = -1;
+				}
 			}
 
 		}

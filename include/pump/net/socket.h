@@ -27,7 +27,7 @@ namespace pump {
 		/*********************************************************************************
 		 * Create socket file descriptor
 		 ********************************************************************************/
-		LIB_FORCEINLINE int32 create_socket(int32 domain, int32 type)
+		PUMP_INLINE int32 create_socket(int32 domain, int32 type)
 		{ return (int32)::socket(domain, type, 0); }
 
 		/*********************************************************************************
@@ -41,19 +41,31 @@ namespace pump {
 		bool set_linger(int32 fd, uint16 on, uint16 linger);
 
 		/*********************************************************************************
-		 * Set receive buffer size
+		 * Set read buffer size
 		 ********************************************************************************/
-		LIB_FORCEINLINE bool set_recv_buf(int32 fd, int32 size)
+		PUMP_INLINE bool set_read_bs(int32 fd, int32 size)
 		{
-			return ::setsockopt(fd, SOL_SOCKET, SO_RCVBUF, (c_block_ptr)&size, sizeof(int32)) == 0;
+			return ::setsockopt(
+				fd, 
+				SOL_SOCKET, 
+				SO_RCVBUF, 
+				(c_block_ptr)&size, 
+				sizeof(int32)
+			) == 0;
 		}
 
 		/*********************************************************************************
 		 * Set send buffer size
 		 ********************************************************************************/
-		LIB_FORCEINLINE bool set_send_buf(int32 fd, int32 size)
+		PUMP_INLINE bool set_send_bs(int32 fd, int32 size)
 		{
-			return ::setsockopt(fd, SOL_SOCKET, SO_SNDBUF, (c_block_ptr)&size, sizeof(int32)) == 0;
+			return ::setsockopt(
+				fd, 
+				SOL_SOCKET, 
+				SO_SNDBUF, 
+				(c_block_ptr)&size, 
+				sizeof(int32)
+			) == 0;
 		}
 
 		/*********************************************************************************
@@ -64,17 +76,29 @@ namespace pump {
 		/*********************************************************************************
 		 * Set reuse address
 		 ********************************************************************************/
-		LIB_FORCEINLINE bool set_reuse(int32 fd, int32 reuse)
+		PUMP_INLINE bool set_reuse(int32 fd, int32 reuse)
 		{
-			return ::setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (c_block_ptr)&reuse, sizeof(reuse)) == 0;
+			return ::setsockopt(
+				fd, 
+				SOL_SOCKET, 
+				SO_REUSEADDR, 
+				(c_block_ptr)&reuse, 
+				sizeof(reuse)
+			) == 0;
 		}
 
 		/*********************************************************************************
 		 * Set tcp no delay
 		 ********************************************************************************/
-		LIB_FORCEINLINE bool set_nodelay(int32 fd, int32 nodelay)
+		PUMP_INLINE bool set_nodelay(int32 fd, int32 nodelay)
 		{
-			return ::setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, (c_block_ptr)&nodelay, sizeof(nodelay)) == 0;
+			return ::setsockopt(
+				fd, 
+				IPPROTO_TCP, 
+				TCP_NODELAY, 
+				(c_block_ptr)&nodelay, 
+				sizeof(nodelay)
+			) == 0;
 		}
 
 		/*********************************************************************************
@@ -91,19 +115,19 @@ namespace pump {
 		/*********************************************************************************
 		 * Bind address
 		 ********************************************************************************/
-		LIB_FORCEINLINE bool bind(int32 fd, struct sockaddr *addr, int32 addrlen)
+		PUMP_INLINE bool bind(int32 fd, struct sockaddr *addr, int32 addrlen) 
 		{ return ::bind(fd, addr, addrlen) == 0;}
 
 		/*********************************************************************************
 		 * Listen socket
 		 ********************************************************************************/
-		LIB_FORCEINLINE bool listen(int32 fd, int32 backlog = 65535)
+		PUMP_INLINE bool listen(int32 fd, int32 backlog = 65535)
 		{ return (::listen(fd, backlog) == 0); }
 
 		/*********************************************************************************
 		 * Accept socket
 		 ********************************************************************************/
-		LIB_FORCEINLINE int32 accept(int32 fd, struct sockaddr *addr, int32_ptr addrlen)
+		PUMP_INLINE int32 accept(int32 fd, struct sockaddr *addr, int32_ptr addrlen)
 		{ return (int32)::accept(fd, addr, (socklen_t*)addrlen); }
 
 		/*********************************************************************************
@@ -151,7 +175,7 @@ namespace pump {
 		/*********************************************************************************
 		 * Close the ability of writing
 		 ********************************************************************************/
-		LIB_FORCEINLINE void shutdown(int32 fd)
+		PUMP_INLINE void shutdown(int32 fd)
 		{ ::shutdown(fd, 0); }
 
 		/*********************************************************************************
@@ -172,20 +196,14 @@ namespace pump {
 		/*********************************************************************************
 		 * Get local address of the socket
 		 ********************************************************************************/
-		LIB_FORCEINLINE bool local_address(
-			int32 fd, 
-			struct sockaddr *addr, 
-			int32_ptr addrlen
-		) { return ::getsockname(fd, addr, (socklen_t*)addrlen) == 0; }
+		PUMP_INLINE bool local_address(int32 fd, struct sockaddr *addr, int32_ptr addrlen) 
+		{ return ::getsockname(fd, addr, (socklen_t*)addrlen) == 0; }
 
 		/*********************************************************************************
 		 * Get remote address of the socket
 		 ********************************************************************************/
-		LIB_FORCEINLINE bool remote_address(
-			int32 fd, 
-			struct sockaddr *addr, 
-			int32_ptr addrlen
-		) { return ::getpeername(fd, addr, (socklen_t*)addrlen) == 0; }
+		PUMP_INLINE bool remote_address(int32 fd, struct sockaddr *addr, int32_ptr addrlen) 
+		{ return ::getpeername(fd, addr, (socklen_t*)addrlen) == 0; }
 
 		/*********************************************************************************
 		 * Transfrom address to string
@@ -197,7 +215,7 @@ namespace pump {
 		 * Transfrom string to address
 		 ********************************************************************************/
 		bool string_to_address(
-			const std::string &ip, 
+			PUMP_CONST std::string &ip,
 			uint16 port, 
 			struct sockaddr *addr, 
 			int32_ptr addrlen

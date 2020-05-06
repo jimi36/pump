@@ -21,7 +21,7 @@ namespace pump {
 
 #define EPOLL_EVENT_SIZE 1024
 
-		epoll_poller::epoll_poller(bool pop_pending): 
+		epoll_poller::epoll_poller(bool pop_pending) PUMP_NOEXCEPT :
 			poller(pop_pending)
 		{
 #ifndef WIN32
@@ -50,7 +50,7 @@ namespace pump {
 
 			ev.events = EL_TRI_TYPE;
 
-			int32 listen_event = tracker->get_track_event();
+			auto listen_event = tracker->get_track_event();
 			ev.events |= (listen_event & IO_EVNET_READ) ? EL_READ_EVENT : 0;
 			ev.events |= (listen_event & IO_EVENT_SEND) ? EL_WRITE_EVENT : 0;
 			ev.events |= pop_pending_channel_ ? EPOLLONESHOT : 0;
@@ -71,7 +71,7 @@ namespace pump {
 
 			ev.events = EL_TRI_TYPE;
 
-			int32 listen_event = tracker->get_track_event();
+			auto listen_event = tracker->get_track_event();
 			ev.events |= (listen_event & IO_EVNET_READ) ? EL_READ_EVENT : 0;
 			ev.events |= (listen_event & IO_EVENT_SEND) ? EL_WRITE_EVENT : 0;
 			ev.events |= pop_pending_channel_ ? EPOLLONESHOT : 0;
@@ -100,7 +100,7 @@ namespace pump {
 		void epoll_poller::__poll(int32 timeout)
 		{
 #ifndef WIN32
-			int32 count = ::epoll_wait(epoll_fd_, (struct epoll_event*)epoll_mem_, EPOLL_EVENT_SIZE, timeout);
+			auto count = ::epoll_wait(epoll_fd_, (struct epoll_event*)epoll_mem_, EPOLL_EVENT_SIZE, timeout);
 			if (count > 0)
 				__dispatch_pending_event(count);
 #endif
@@ -113,23 +113,30 @@ namespace pump {
 
 			for (int32 i = 0; i < count; ++i)
 			{
-				auto tracker = (channel_tracker_ptr)events[i].data.ptr;
+				auto ev = events + i;
+
+				auto tracker = (channel_tracker_ptr)ev->data.ptr;
 				
-				// Epoll will automatically deltete closed fd.
 				// If channel already not existed, channel tracker should be removed.
-				PUMP_LOCK_SPOINTER_EXPR(ch, tracker->get_channel(), false,
-					trackers_.erase(tracker); continue);
+				PUMP_LOCK_SPOINTER(ch, tracker->get_channel());
+				if (PUMP_UNLIKELY(ch == nullptr))
+				{
+					trackers_.erase(tracker);
+					continue;
+				}
 
-				int32 pending_event = IO_EVENT_NONE;
-				if (events[i].events & EL_READ_EVENT)
-					pending_event |= IO_EVNET_READ;
-				if (events[i].events & EL_WRITE_EVENT)
-					pending_event |= IO_EVENT_SEND;
-
-				if (pop_pending_channel_)
-					tracker->__set_tracking(false);
-
-				ch->handle_io_event(pending_event, nullptr);
+				if (ev->events & EL_READ_EVENT)
+				{
+					if (pop_pending_channel_)
+						tracker->__set_tracked(false);
+					ch->handle_io_event(IO_EVNET_READ, nullptr);
+				}
+				else if (ev->events & EL_WRITE_EVENT)
+				{
+					if (pop_pending_channel_)
+						tracker->__set_tracked(false);
+					ch->handle_io_event(IO_EVENT_SEND, nullptr);
+				}
 			}
 #endif
 		}

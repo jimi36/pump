@@ -28,7 +28,7 @@ namespace pump {
 		class tcp_dialer;
 		DEFINE_ALL_POINTER_TYPE(tcp_dialer);
 
-		class LIB_EXPORT tcp_dialer :
+		class LIB_PUMP tcp_dialer : 
 			public base_dialer,
 			public std::enable_shared_from_this<tcp_dialer>
 		{
@@ -36,9 +36,9 @@ namespace pump {
 			/*********************************************************************************
 			 * Create instance
 			 ********************************************************************************/
-			static tcp_dialer_sptr create_instance(
-				const address &local_address,
-				const address &remote_address,
+			PUMP_INLINE PUMP_STATIC tcp_dialer_sptr create_instance(
+				PUMP_CONST address &local_address,
+				PUMP_CONST address &remote_address,
 				int64 connect_timeout = 0
 			) {
 				return tcp_dialer_sptr(new tcp_dialer(
@@ -56,7 +56,7 @@ namespace pump {
 			/*********************************************************************************
 			 * Start
 			 ********************************************************************************/
-			virtual bool start(service_ptr sv, const dialer_callbacks &cbs) override;
+			virtual bool start(service_ptr sv, PUMP_CONST dialer_callbacks &cbs) override;
 
 			/*********************************************************************************
 			 * Stop
@@ -73,7 +73,7 @@ namespace pump {
 			/*********************************************************************************
 			 * Timeout event callback
 			 ********************************************************************************/
-			static void on_timeout(tcp_dialer_wptr wptr);
+			PUMP_STATIC void on_timeout(tcp_dialer_wptr wptr);
 
 		private:
 			/*********************************************************************************
@@ -84,18 +84,18 @@ namespace pump {
 			/*********************************************************************************
 			 * Close flow
 			 ********************************************************************************/
-			LIB_FORCEINLINE void __close_flow() 
-			{ flow_.reset(); }
+			PUMP_INLINE void __close_flow()
+			{ if (flow_) flow_->close(); }
 
 		private:
 			/*********************************************************************************
 			 * Constructor
 			 ********************************************************************************/
 			tcp_dialer(
-				const address &local_address,
-				const address &remote_address,
+				PUMP_CONST address &local_address,
+				PUMP_CONST address &remote_address,
 				int64 connect_timeout
-			);
+			) PUMP_NOEXCEPT;
 
 		private:
 			// Dialer flow
@@ -105,14 +105,14 @@ namespace pump {
 		class tcp_sync_dialer;
 		DEFINE_ALL_POINTER_TYPE(tcp_sync_dialer);
 
-		class LIB_EXPORT tcp_sync_dialer:
+		class LIB_PUMP tcp_sync_dialer : 
 			public std::enable_shared_from_this<tcp_sync_dialer>
 		{
 		public:
 			/*********************************************************************************
 			 * Create instance
 			 ********************************************************************************/
-			static tcp_sync_dialer_sptr create_instance()
+			PUMP_STATIC tcp_sync_dialer_sptr create_instance()
 			{
 				return tcp_sync_dialer_sptr(new tcp_sync_dialer);
 			}
@@ -127,8 +127,8 @@ namespace pump {
 			 ********************************************************************************/
 			base_transport_sptr dial(
 				service_ptr sv,
-				const address &local_address,
-				const address &remote_address,
+				PUMP_CONST address &local_address,
+				PUMP_CONST address &remote_address,
 				int64 connect_timeout = 0
 			);
 
@@ -145,23 +145,25 @@ namespace pump {
 			/*********************************************************************************
 			 * Dialed timeout event callback
 			 ********************************************************************************/
-			static void on_timeout_callback(tcp_sync_dialer_wptr wptr);
+			PUMP_STATIC void on_timeout_callback(tcp_sync_dialer_wptr wptr);
 
 			/*********************************************************************************
 			 * Stopped dial event callback
 			 ********************************************************************************/
-			static void on_stopped_callback();
+			PUMP_STATIC void on_stopped_callback();
 
 		private:
 			/*********************************************************************************
 			 * Constructor
 			 ********************************************************************************/
-			tcp_sync_dialer();
+			tcp_sync_dialer() PUMP_NOEXCEPT
+			{}
 
 			/*********************************************************************************
 			 * Reset sync dialer
 			 ********************************************************************************/
-			void __reset();
+			PUMP_INLINE void __reset()
+			{ dialer_.reset(); }
 
 		private:
 			// Tcp dialer

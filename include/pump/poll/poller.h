@@ -26,39 +26,37 @@
 namespace pump {
 	namespace poll {
 
-		class poller:
+		class poller : 
 			public utils::noncopyable
 		{
 		protected:
 			struct channel_event
 			{
-				channel_event(std::shared_ptr<channel> &c, uint32 e)
-				{
-					ch    = c;
-					event = e;
-				}
-
+				channel_event(std::shared_ptr<channel> &c, uint32 ev) PUMP_NOEXCEPT : 
+					ch(c),
+					event(ev)
+				{}
 				channel_wptr ch;
 				uint32 event;
 			};
-			DEFINE_ALL_POINTER_TYPE(channel_event);
+			DEFINE_RAW_POINTER_TYPE(channel_event);
 
 			struct channel_tracker_event
 			{
-				channel_tracker_event(channel_tracker_sptr &t, int32 o)
-				{
-					tracker = t;
-					event = o;
-				}
+				channel_tracker_event(channel_tracker_sptr &t, int32 ev) PUMP_NOEXCEPT : 
+					tracker(t),
+					event(ev)
+				{}
 				channel_tracker_sptr tracker;
 				int32 event;
 			};
+			DEFINE_RAW_POINTER_TYPE(channel_tracker_event);
 
 		public:
 			/*********************************************************************************
 			 * Constructor
 			 ********************************************************************************/
-			poller(bool pop_pending = false);
+			poller(bool pop_pending = false) PUMP_NOEXCEPT;
 
 			/*********************************************************************************
 			 * Deconstructor
@@ -73,7 +71,8 @@ namespace pump {
 			/*********************************************************************************
 			 * Stop
 			 ********************************************************************************/
-			virtual void stop();
+			virtual void stop()
+			{ started_.store(false); }
 
 			/*********************************************************************************
 			 * Wait stopped
@@ -156,11 +155,11 @@ namespace pump {
 
 			// Channel event
 			std::atomic_int32_t cev_cnt_;
-			moodycamel::ConcurrentQueue<channel_event*> cevents_;
+			moodycamel::ConcurrentQueue<channel_event_ptr> cevents_;
 
 			// Channel tracker event
 			std::atomic_int32_t tev_cnt_;
-			moodycamel::ConcurrentQueue<channel_tracker_event*> tevents_;
+			moodycamel::ConcurrentQueue<channel_tracker_event_ptr> tevents_;
 
 			// Channel trackers
 			std::map<channel_tracker_ptr, channel_tracker_sptr> trackers_;

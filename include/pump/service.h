@@ -26,7 +26,7 @@
 
 namespace pump {
 
-	class LIB_EXPORT service: 
+	class LIB_PUMP service: 
 		public utils::noncopyable
 	{
 	protected:
@@ -86,7 +86,7 @@ namespace pump {
 		/*********************************************************************************
 		 * Post callback task
 		 ********************************************************************************/
-		LIB_FORCEINLINE void post(const post_task_type &task)
+		PUMP_INLINE void post(const post_task_type &task)
 		{ posted_tasks_.enqueue(task); }
 
 		/*********************************************************************************
@@ -94,16 +94,11 @@ namespace pump {
 		 ********************************************************************************/
 		bool start_timer(time::timer_sptr &tr);
 
-		/*********************************************************************************
-		 * Stop timer
-		 ********************************************************************************/
-		void stop_timer(time::timer_sptr &tr);
-
 	private:
 		/*********************************************************************************
 		 * Post timeout timer
 		 ********************************************************************************/
-		LIB_FORCEINLINE void __post_timeout_timer(time::timer_wptr &timer)
+		PUMP_INLINE void __post_timeout_timer(time::timer_wptr &timer)
 		{ timeout_timers_.enqueue(timer); }
 
 		/*********************************************************************************
@@ -140,7 +135,7 @@ namespace pump {
 	};
 	DEFINE_ALL_POINTER_TYPE(service);
 
-	class LIB_EXPORT service_getter
+	class LIB_PUMP service_getter
 	{
 	public:
 		/*********************************************************************************
@@ -158,14 +153,14 @@ namespace pump {
 		/*********************************************************************************
 		 * Get service
 		 ********************************************************************************/
-		LIB_FORCEINLINE service_ptr get_service()
+		PUMP_INLINE service_ptr get_service()
 		{ return service_; }
 
 	protected:
 		/*********************************************************************************
 		 * Set service
 		 ********************************************************************************/
-		LIB_FORCEINLINE void __set_service(service_ptr sv)
+		PUMP_INLINE void __set_service(service_ptr sv)
 		{ service_ = sv; }
 
 	private:

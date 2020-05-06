@@ -20,7 +20,7 @@
 namespace pump {
 	namespace transport {
 
-		address::address():
+		address::address() PUMP_NOEXCEPT : 
 			is_v6_(false),
 			addrlen_(0),
 			port_(0)
@@ -28,7 +28,7 @@ namespace pump {
 			memset(&addr_, 0, sizeof(addr_));
 		}
 
-		address::address(const std::string &ip, uint16 port)
+		address::address(PUMP_CONST std::string &ip, uint16 port)
 		{
 			if (net::string_to_address(ip, port, (struct sockaddr*)addr_, &addrlen_))
 			{
@@ -41,7 +41,7 @@ namespace pump {
 			}
 		}
 
-		address::address(const struct sockaddr *addr, int32 addr_len)
+		address::address(PUMP_CONST struct sockaddr *addr, int32 addr_len)
 		{
 			addrlen_ = addr_len;
 			memcpy(&addr_, addr, addr_len);
@@ -53,7 +53,7 @@ namespace pump {
 			__update();
 		}
 
-		bool address::set(const std::string &ip, uint16 port)
+		bool address::set(PUMP_CONST std::string &ip, uint16 port)
 		{
 			if (net::string_to_address(ip, port, (struct sockaddr*)addr_, &addrlen_))
 			{
@@ -72,7 +72,7 @@ namespace pump {
 			return true;
 		}
 
-		bool address::set(const struct sockaddr *addr, int32 addrlen)
+		bool address::set(PUMP_CONST struct sockaddr *addr, int32 addrlen)
 		{
 			if (addrlen == sizeof(struct sockaddr_in6))
 				is_v6_ = true;
@@ -89,24 +89,24 @@ namespace pump {
 			return true;
 		}
 
-		std::string address::to_string() const
+		std::string address::to_string() PUMP_CONST
 		{
 			int8 tmp[126] = { 0 };
 			snprintf(tmp, sizeof(tmp) - 1, "%s:%d", ip_.c_str(), port_);
 			return std::move(std::string(tmp));
 		}
 
-		bool address::operator ==(const address& other)
+		bool address::operator ==(PUMP_CONST address& other) PUMP_CONST PUMP_NOEXCEPT
 		{
 			if (is_v6_ == other.is_v6_ &&
 				addrlen_ == other.addrlen_ &&
-				memcpy(addr_, other.addr_, addrlen_) == 0)
+				memcmp(addr_, other.addr_, addrlen_) == 0)
 				return true;
 
 			return false;
 		}
 
-		bool address::operator <(const address& other)
+		bool address::operator <(const address& other) PUMP_CONST PUMP_NOEXCEPT
 		{
 			if (addrlen_ < other.addrlen_)
 				return true;
@@ -120,14 +120,14 @@ namespace pump {
 			int8 host[128] = { 0 };
 			if (is_v6_)
 			{
-				struct sockaddr_in6 *v6 = (struct sockaddr_in6*)addr_;
+				auto v6 = (struct sockaddr_in6*)addr_;
 				if (::inet_ntop(AF_INET6, &(v6->sin6_addr), host, sizeof(host)) != NULL)
 					ip_ = host;
 				port_ = ntohs(v6->sin6_port);
 			}
 			else
 			{
-				struct sockaddr_in *v4 = (struct sockaddr_in*)addr_;
+				auto v4 = (struct sockaddr_in*)addr_;
 				if (::inet_ntop(AF_INET, &(v4->sin_addr), host, sizeof(host)) != NULL)
 					ip_ = host;
 				port_ = ntohs(v4->sin_port);

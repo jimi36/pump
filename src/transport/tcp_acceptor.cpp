@@ -20,11 +20,11 @@
 namespace pump {
 	namespace transport {
 
-		tcp_acceptor::tcp_acceptor(const address &listen_address) :
+		tcp_acceptor::tcp_acceptor(PUMP_CONST address &listen_address) PUMP_NOEXCEPT : 
 			base_acceptor(TCP_ACCEPTOR, listen_address)
 		{}
 
-		bool tcp_acceptor::start(service_ptr sv,const acceptor_callbacks &cbs)
+		bool tcp_acceptor::start(service_ptr sv, PUMP_CONST acceptor_callbacks &cbs)
 		{
 			if (!__set_status(TRANSPORT_INIT, TRANSPORT_STARTING))
 				return false;
@@ -47,8 +47,7 @@ namespace pump {
 			if (flow_->want_to_accept() != FLOW_ERR_NO)
 				return false;
 
-			if (!__set_status(TRANSPORT_STARTING, TRANSPORT_STARTED))
-				PUMP_ASSERT(false);
+			PUMP_DEBUG_CHECK(__set_status(TRANSPORT_STARTING, TRANSPORT_STARTED));
 
 			defer.clear();
 
@@ -68,16 +67,14 @@ namespace pump {
 
 		void tcp_acceptor::on_read_event(net::iocp_task_ptr itask)
 		{
-			PUMP_LOCK_SPOINTER_EXPR(flow, flow_, false, 
-				return);
+			auto flow = flow_.get();
 
 			address local_address, remote_address;
 			int32 fd = flow->accept(itask, &local_address, &remote_address);
 			if (fd > 0)
 			{
 				auto conn = tcp_transport::create_instance();
-				if (!conn->init(fd, local_address, remote_address))
-					PUMP_ASSERT(false);
+				PUMP_DEBUG_CHECK(conn->init(fd, local_address, remote_address));
 
 				// The acceptor maybe be stopped before this, so we need check it in started 
 				// status or not. And if notifier is already not existed, we only can close the
@@ -86,10 +83,9 @@ namespace pump {
 					cbs_.accepted_cb(conn);
 			}
 
-			// The acceptor maybe be stopped before this, so we also need check it in started 
-			// status or not.
-			if (flow->want_to_accept() != FLOW_ERR_NO && __is_status(TRANSPORT_STARTED))
-				PUMP_ASSERT(false);
+			// Acceptor maybe be stopped, so we need check it in started status.
+			if (flow->want_to_accept() != FLOW_ERR_NO)
+				PUMP_ASSERT(!__is_status(TRANSPORT_STARTED));
 		}
 
 		bool tcp_acceptor::__open_flow()
@@ -101,7 +97,7 @@ namespace pump {
 			if (flow_->init(ch, listen_address_) != FLOW_ERR_NO)
 				return false;
 
-			// Set channel FD
+			// Set channel fd
 			poll::channel::__set_fd(flow_->get_fd());
 
 			return true;

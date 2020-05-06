@@ -22,14 +22,17 @@
 namespace pump {
 	namespace transport {
 
-		class LIB_EXPORT base_acceptor :
+		class LIB_PUMP base_acceptor : 
 			public base_channel
 		{
 		public:
 			/*********************************************************************************
 			 * Constructor
 			 ********************************************************************************/
-			base_acceptor(transport_type type, const address &listen_address) :
+			base_acceptor(
+				transport_type type, 
+				PUMP_CONST address &listen_address
+			) PUMP_NOEXCEPT : 
 				base_channel(type, nullptr, -1),
 				listen_address_(listen_address)
 			{}
@@ -37,12 +40,13 @@ namespace pump {
 			/*********************************************************************************
 			 * Deconstructor
 			 ********************************************************************************/
-			virtual ~base_acceptor() = default;
+			virtual ~base_acceptor()
+			{ __stop_tracker(); }
 
 			/*********************************************************************************
 			 * Start
 			 ********************************************************************************/
-			virtual bool start(service_ptr sv, const acceptor_callbacks &cbs) = 0;
+			virtual bool start(service_ptr sv, PUMP_CONST acceptor_callbacks &cbs) = 0;
 
 			/*********************************************************************************
 			 * Stop
@@ -52,10 +56,8 @@ namespace pump {
 			/*********************************************************************************
 			 * Get local address
 			 ********************************************************************************/
-			const address& get_listen_address() const
-			{
-				return listen_address_;
-			}
+			PUMP_INLINE PUMP_CONST address& get_listen_address() PUMP_CONST
+			{ return listen_address_; }
 
 		protected:
 			/*********************************************************************************

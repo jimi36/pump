@@ -21,7 +21,7 @@ namespace pump {
 
 		bool set_noblock(int32 fd, int32 noblock)
 		{
-#ifdef WIN32
+#if defined(WIN32)
 			u_long mode = (noblock == 0) ? 0 : 1;  //non-blocking mode
 			return ::ioctlsocket(fd, FIONBIO, &mode) != SOCKET_ERROR;
 #else
@@ -44,7 +44,7 @@ namespace pump {
 			int32 on = 1;
 			if (::setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, (const char*)&on, sizeof(on)) == -1)
 				return false;
-#ifdef WIN32
+#if defined(WIN32)
 			DWORD bytes = 0;
 			struct tcp_keepalive keepalive;
 			keepalive.onoff = 1;
@@ -64,7 +64,7 @@ namespace pump {
 
 		bool update_connect_context(int32 fd)
 		{
-#ifdef WIN32
+#if defined(WIN32)
 			return (::setsockopt(fd, SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT, nullptr, 0) == 0);
 #else
 			return true;
@@ -73,13 +73,12 @@ namespace pump {
 
 		bool set_udp_conn_reset(int32 fd, bool enable)
 		{
-#ifdef WIN32
+#if defined(WIN32)
 			DWORD bytes_returned = 0;
 			BOOL behavior = enable ? TRUE : FALSE;
 			if (WSAIoctl(fd, SIO_UDP_CONNRESET, &behavior, sizeof(behavior), nullptr, 0, &bytes_returned, nullptr, nullptr) == SOCKET_ERROR)
 			{
-				int32 ec = last_errno();
-				if (ec != WSAEWOULDBLOCK)
+				if (last_errno() != WSAEWOULDBLOCK)
 					return false;
 			}
 #endif
@@ -168,7 +167,7 @@ namespace pump {
 
 		int32 poll(struct pollfd *pfds, int32 count, int32 timeout)
 		{
-#ifdef WIN32
+#if defined(WIN32)
 			return ::WSAPoll(pfds, count, timeout);
 #else
 			return ::poll(pfds, count, timeout);
@@ -178,7 +177,7 @@ namespace pump {
 
 		bool close(int32 fd)
 		{
-#ifdef WIN32
+#if defined(WIN32)
 			return (::closesocket(fd) == 0);
 #else
 			return (::close(fd) == 0);
@@ -188,7 +187,7 @@ namespace pump {
 		int32 get_socket_error(int32 fd)
 		{
 			int32 res = 0;
-#ifdef WIN32
+#if defined(WIN32)
 			int32 len = sizeof(res);
 			::getsockopt(fd, SOL_SOCKET, SO_ERROR, (char*)&res, &len);
 #else
@@ -200,7 +199,7 @@ namespace pump {
 
 		int32 last_errno()
 		{
-#ifdef WIN32
+#if defined(WIN32)
 			return ::WSAGetLastError();
 #else
 			return errno;

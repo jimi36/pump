@@ -41,6 +41,7 @@ namespace pump {
 		bool base_dialer::__start_tracker(poll::channel_sptr &ch)
 		{
 			PUMP_ASSERT(!tracker_);
+
 			tracker_.reset(new poll::channel_tracker(ch, TRACK_WRITE, TRACK_MODE_ONCE));
 			if (!get_service()->add_channel_tracker(tracker_, true))
 				return false;
@@ -55,11 +56,10 @@ namespace pump {
 			if (!tracker_)
 				return;
 
-			if (!get_service()->remove_channel_tracker(std::move(tracker_)))
-				PUMP_ASSERT(false);
+			PUMP_DEBUG_CHECK(get_service()->remove_channel_tracker(std::move(tracker_)));
 		}
 
-		bool base_dialer::__start_connect_timer(const time::timer_callback &cb)
+		bool base_dialer::__start_connect_timer(PUMP_CONST time::timer_callback &cb)
 		{
 			if (connect_timeout_ <= 0)
 				return true;

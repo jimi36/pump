@@ -38,6 +38,7 @@ namespace pump {
 		bool base_acceptor::__start_tracker(poll::channel_sptr &ch)
 		{
 			PUMP_ASSERT(!tracker_);
+
 			tracker_.reset(new poll::channel_tracker(ch, TRACK_READ, TRACK_MODE_LOOP));
 			if (!get_service()->add_channel_tracker(tracker_, true))
 				return false;
@@ -49,11 +50,8 @@ namespace pump {
 
 		void base_acceptor::__stop_tracker()
 		{
-			if (!tracker_)
-				return;
-
-			if (!get_service()->remove_channel_tracker(std::move(tracker_)))
-				PUMP_ASSERT(false);
+			if (tracker_)
+				PUMP_DEBUG_CHECK(get_service()->remove_channel_tracker(std::move(tracker_)));
 		}
 
 	}

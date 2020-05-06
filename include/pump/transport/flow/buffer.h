@@ -25,13 +25,14 @@ namespace pump {
 
 			#define MAX_FLOW_BUFFER_SIZE 4096
 
-			class LIB_EXPORT buffer
+			class LIB_PUMP buffer
 			{
 			public:
 				/*********************************************************************************
 				 * Constructor
 				 ********************************************************************************/
-				buffer(): rpos_(0)
+				buffer() PUMP_NOEXCEPT : 
+					rpos_(0)
 				{}
 
 				/*********************************************************************************
@@ -42,7 +43,7 @@ namespace pump {
 				/*********************************************************************************
 				 * Reset
 				 ********************************************************************************/
-				LIB_FORCEINLINE void reset()
+				PUMP_INLINE void reset()
 				{ rpos_ = 0; raw_.clear(); }
 
 				/*********************************************************************************
@@ -53,25 +54,25 @@ namespace pump {
 				/*********************************************************************************
 				 * Get buffer raw ptr
 				 ********************************************************************************/
-				LIB_FORCEINLINE c_block_ptr raw() const
+				PUMP_INLINE c_block_ptr raw() PUMP_CONST
 				{ return raw_.empty() ? nullptr : (c_block_ptr)raw_.data(); }
 
 				/*********************************************************************************
 				 * Get buffer raw size
 				 ********************************************************************************/
-				LIB_FORCEINLINE int32 raw_size() const
+				PUMP_INLINE int32 raw_size() PUMP_CONST
 				{  return (int32)raw_.size(); }
 
 				/*********************************************************************************
 				 * Get data ptr
 				 ********************************************************************************/
-				LIB_FORCEINLINE c_block_ptr data() const
+				PUMP_INLINE c_block_ptr data() PUMP_CONST
 				{ return raw_.empty() ? nullptr : raw_.data() + rpos_; }
 
 				/*********************************************************************************
 				 * Get data size
 				 ********************************************************************************/
-				LIB_FORCEINLINE int32 data_size() const
+				PUMP_INLINE int32 data_size() PUMP_CONST
 				{ return (int32)raw_.size() - rpos_; }
 
 			private:

@@ -25,17 +25,17 @@ namespace pump {
 		/*********************************************************************************
 		 * Transform gbk to utf8
 		 ********************************************************************************/
-		LIB_EXPORT bool gbk_to_utf8(const std::string &src, std::string &des);
+		LIB_PUMP bool gbk_to_utf8(const std::string &src, std::string &des);
 
 		/*********************************************************************************
 		 * Transform utf8 to gbk
 		 ********************************************************************************/
-		LIB_EXPORT bool utf8_to_gbk(const std::string &src, std::string &des);
+		LIB_PUMP bool utf8_to_gbk(const std::string &src, std::string &des);
 
 		/*********************************************************************************
 		 * Join strings
 		 ********************************************************************************/
-		LIB_EXPORT std::string join_strings(
+		LIB_PUMP std::string join_strings(
 			const std::vector<std::string> &srcs, 
 			const std::string &sep
 		);
@@ -43,7 +43,7 @@ namespace pump {
 		/*********************************************************************************
 		 * Split string
 		 ********************************************************************************/
-		LIB_EXPORT void split_string(
+		LIB_PUMP void split_string(
 			const std::string &src, 
 			const std::string &sep, 
 			std::vector<std::string> &rets

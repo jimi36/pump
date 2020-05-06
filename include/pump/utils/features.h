@@ -23,7 +23,7 @@
 namespace pump {
 	namespace utils {
 
-		class LIB_EXPORT noncopyable
+		class LIB_PUMP noncopyable
 		{
 		protected:
 			noncopyable() = default;
@@ -33,7 +33,7 @@ namespace pump {
 			noncopyable& operator=(noncopyable&) = delete;
 		};
 
-		class LIB_EXPORT scoped_defer: 
+		class LIB_PUMP scoped_defer: 
 			public noncopyable
 		{
 		protected:
@@ -46,7 +46,7 @@ namespace pump {
 			~scoped_defer()
 			{ if (cb_) cb_(); }
 
-			LIB_FORCEINLINE void clear()
+			PUMP_INLINE void clear() PUMP_NOEXCEPT
 			{ cb_.reset(); }
 
 		private:

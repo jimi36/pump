@@ -30,7 +30,7 @@ namespace pump {
 				/*********************************************************************************
 				 * Constructor
 				 ********************************************************************************/
-				flow_udp();
+				flow_udp() PUMP_NOEXCEPT;
 
 				/*********************************************************************************
 				 * Deconstructor
@@ -43,7 +43,7 @@ namespace pump {
 				 *     FLOW_ERR_NO    => success
 				 *     FLOW_ERR_ABORT => error
 				 ********************************************************************************/
-				int32 init(poll::channel_sptr &ch, const address &bind_address);
+				int32 init(poll::channel_sptr &ch, PUMP_CONST address &local_address);
 
 				/*********************************************************************************
 				 * Begin read task
@@ -77,7 +77,7 @@ namespace pump {
 				/*********************************************************************************
 				 * Send to
 				 ********************************************************************************/
-				int32 send(c_block_ptr b, uint32 size, const address &remote_addr);
+				int32 send(c_block_ptr b, uint32 size, PUMP_CONST address &remote_address);
 
 			private:
 				// Read task for IOCP

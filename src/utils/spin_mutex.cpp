@@ -19,7 +19,7 @@
 namespace pump {
 	namespace utils {
 
-		spin_mutex::spin_mutex(int32 per_loop) :
+		spin_mutex::spin_mutex(int32 per_loop) PUMP_NOEXCEPT :
 			per_loop_(per_loop),
 			locked_(false)
 		{

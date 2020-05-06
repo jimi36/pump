@@ -20,7 +20,7 @@ namespace pump {
 	namespace transport {
 		namespace flow {
 
-			flow_tcp_dialer::flow_tcp_dialer(): 
+			flow_tcp_dialer::flow_tcp_dialer() PUMP_NOEXCEPT : 
 				is_ipv6_(false),
 				dial_task_(nullptr)
 			{
@@ -34,7 +34,7 @@ namespace pump {
 #endif
 			}
 
-			int32 flow_tcp_dialer::init(poll::channel_sptr &ch, const address &bind_address)
+			int32 flow_tcp_dialer::init(poll::channel_sptr &ch, PUMP_CONST address &bind_address)
 			{
 				PUMP_ASSERT_EXPR(ch, ch_ = ch);
 	
@@ -68,7 +68,7 @@ namespace pump {
 				return FLOW_ERR_NO;
 			}
 
-			int32 flow_tcp_dialer::want_to_connect(const address &remote_address)
+			int32 flow_tcp_dialer::want_to_connect(PUMP_CONST address &remote_address)
 			{
 #if defined(WIN32) && defined(USE_IOCP)
 				if (!net::post_iocp_connect(ext_, dial_task_, remote_address.get(), remote_address.len()))
@@ -82,8 +82,8 @@ namespace pump {
 
 			int32 flow_tcp_dialer::connect(
 				net::iocp_task_ptr itask, 
-				address &local_address, 
-				address &remote_address
+				address_ptr local_address, 
+				address_ptr remote_address
 			) {
 #if defined(WIN32) && defined(USE_IOCP)
 				PUMP_ASSERT(itask);
@@ -105,11 +105,11 @@ namespace pump {
 
 				addrlen = ADDRESS_MAX_LEN;
 				net::local_address(fd_, (sockaddr*)addr, &addrlen);
-				local_address.set((sockaddr*)addr, addrlen);
+				local_address->set((sockaddr*)addr, addrlen);
 
 				addrlen = ADDRESS_MAX_LEN;
 				net::remote_address(fd_, (sockaddr*)addr, &addrlen);
-				remote_address.set((sockaddr*)addr, addrlen);
+				remote_address->set((sockaddr*)addr, addrlen);
 
 				return ec;
 			}

@@ -95,7 +95,7 @@ namespace pump {
 		/*********************************************************************************
 		 * Set iocp task notifier
 		 ********************************************************************************/
-		void set_iocp_task_notifier(iocp_task_ptr itask, void_wptr ch_notifier);
+		void set_iocp_task_notifier(iocp_task_ptr itask, void_wptr ch);
 
 		/*********************************************************************************
 		 * Get iocp task notify
@@ -165,7 +165,7 @@ namespace pump {
 		bool post_iocp_connect(
 			net_extension_ptr ext,
 			iocp_task_ptr itask,
-			const sockaddr *addr,
+			PUMP_CONST sockaddr *addr,
 			int32 addrlen
 		);
 

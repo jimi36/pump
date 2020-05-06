@@ -23,14 +23,14 @@ namespace pump {
 	namespace transport {
 		namespace flow {
 
-			class flow_tcp_acceptor: 
+			class flow_tcp_acceptor : 
 				public flow_base
 			{
 			public:
 				/*********************************************************************************
 				 * Constructor
 				 ********************************************************************************/
-				flow_tcp_acceptor();
+				flow_tcp_acceptor() PUMP_NOEXCEPT;
 
 				/*********************************************************************************
 				 * Deconstructor
@@ -43,7 +43,7 @@ namespace pump {
 				 *     FLOW_ERR_NO    => success
 				 *     FLOW_ERR_ABORT => error
 				 ********************************************************************************/
-				int32 init(poll::channel_sptr &ch, const address &listen_address);
+				int32 init(poll::channel_sptr &ch, PUMP_CONST address &listen_address);
 
 				/*********************************************************************************
 				 * Want to accept

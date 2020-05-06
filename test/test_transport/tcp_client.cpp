@@ -2,8 +2,9 @@
 
 static service *sv;
 
-static int max_send_cont = 1024 * 256;
-static int send_loop = 128;
+static int count = 1;
+static int max_send_cont = 1024 * 256 * 10;
+static int send_loop = 1;
 static int send_pocket_size = 1024*4;
 
 class my_tcp_dialer :
@@ -70,11 +71,10 @@ public:
 	void on_read_callback(base_transport_ptr transp, c_block_ptr b, int32 size)
 	{
 		read_size_ += size;
-		read_pocket_size_ += size;
 		all_read_size_ += size;
+		read_pocket_size_ += size;
 
-
-		while (read_pocket_size_ >= send_pocket_size)
+		if (read_pocket_size_ >= send_pocket_size)
 		{
 			read_pocket_size_ -= send_pocket_size;
 			send_data();
@@ -104,16 +104,13 @@ public:
 		dialer_ = d;
 	}
 
-	void send_data()
+	inline void send_data()
 	{
-		
 		if (max_send_count_ == 0)
 		{
-			//transport_->stop();
 			return;
 		}
 		
-
 		transport_->send(send_data_.data(), send_data_.size());
 
 		max_send_count_--;
@@ -133,8 +130,6 @@ public:
 	tcp_transport_sptr transport_;
 };
 
-static int count = 2;
-
 static std::vector< std::shared_ptr<my_tcp_dialer>> my_dialers;
 
 class time_report
@@ -148,7 +143,7 @@ public:
 			read_size += my_dialers[i]->read_size_;
 			my_dialers[i]->read_size_ = 0;
 		}
-		printf("client read speed is %fMB/s at %llu\n", (float)read_size / 1024 / 1024, ::time(0));
+		printf("client read speed is %fMB/s at %llu\n", (double)read_size / 1024 / 1024 / 1, ::time(0));
 	}
 };
 
@@ -178,8 +173,8 @@ void start_tcp_client(const std::string &ip, uint16 port)
 		}
 	}
 
-	pump::time::timer_callback cb = function::bind(&time_report::on_timer_timeout);
-	timer_sptr t(new timer(cb, 1000, true));
+	pump::timer_callback cb = function::bind(&time_report::on_timer_timeout);
+	timer_sptr t = pump::timer::create_instance(1000*1, cb, true);
 	sv->start_timer(t);
 
 	sv->wait_stopped();

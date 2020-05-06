@@ -19,7 +19,7 @@
 namespace pump {
 	namespace poll {
 
-		iocp_poller::iocp_poller(bool pop_pending) :
+		iocp_poller::iocp_poller(bool pop_pending) PUMP_NOEXCEPT :
 			poller(pop_pending),
 			iocp_(nullptr)
 		{
@@ -85,7 +85,7 @@ namespace pump {
 			if (!started_.load())
 				return false;
 
-			tracker->__set_tracking(tracking);
+			tracker->__set_tracked(tracking);
 
 			auto itask = net::new_iocp_task();
 			net::set_iocp_task_type(itask, IOCP_TASK_TRACKER);
@@ -100,7 +100,7 @@ namespace pump {
 		void iocp_poller::remove_channel_tracker(channel_tracker_sptr &tracker)
 		{
 #if defined(WIN32) && defined(USE_IOCP)
-			tracker->__set_tracking(false);
+			tracker->__set_tracked(false);
 
 			auto itask = net::new_iocp_task();
 			net::set_iocp_task_type(itask, IOCP_TASK_TRACKER);
@@ -126,9 +126,13 @@ namespace pump {
 					if (!itask)
 						continue;
 
-					PUMP_LOCK_SPOINTER_EXPR(void_ch, net::get_iocp_task_notifier(itask), false,
-						net::unlink_iocp_task(itask); continue);
-					auto ch = (channel_ptr)void_ch;
+					PUMP_LOCK_SPOINTER(vptr, net::get_iocp_task_notifier(itask));
+					if (vptr == nullptr)
+					{
+						net::unlink_iocp_task(itask); 
+						continue;
+					}
+					auto ch = (channel_ptr)vptr;
 
 					int32 event = IO_EVENT_NONE;
 					task_type = net::get_iocp_task_type(itask);
@@ -176,9 +180,13 @@ namespace pump {
 					if (!itask)
 						continue;
 
-					PUMP_LOCK_SPOINTER_EXPR(void_ch, net::get_iocp_task_notifier(itask), false,
-						net::unlink_iocp_task(itask); continue);
-					auto ch = (channel_ptr)void_ch;
+					PUMP_LOCK_SPOINTER(vptr, net::get_iocp_task_notifier(itask));
+					if (vptr == nullptr)
+					{
+						net::unlink_iocp_task(itask);
+						continue;
+					}
+					auto ch = (channel_ptr)vptr;
 
 					int32 event = IO_EVENT_NONE;
 					task_type = net::get_iocp_task_type(itask);
@@ -195,6 +203,7 @@ namespace pump {
 
 				net::unlink_iocp_task(itask);
 			}
+			printf("worker exit\n");
 #endif
 		}
 

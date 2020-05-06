@@ -35,7 +35,7 @@ namespace pump {
 		 ********************************************************************************/
 		enum transport_status
 		{
-			TRANSPORT_INIT      = 0,
+			TRANSPORT_INIT = 0,
 			TRANSPORT_STARTING,
 			TRANSPORT_STARTED,
 			TRANSPORT_PAUSED,
@@ -62,7 +62,7 @@ namespace pump {
 			TLS_TRANSPORT
 		};
 
-		class LIB_EXPORT base_channel:
+		class LIB_PUMP base_channel : 
 			public service_getter,
 			public poll::channel
 		{
@@ -70,7 +70,7 @@ namespace pump {
 			/*********************************************************************************
 			 * Constructor
 			 ********************************************************************************/
-			base_channel(transport_type type, service_ptr sv, int32 fd) :
+			base_channel(transport_type type, service_ptr sv, int32 fd) PUMP_NOEXCEPT :
 				service_getter(sv),
 				poll::channel(fd),
 				tracker_cnt_(0),
@@ -86,32 +86,32 @@ namespace pump {
 			/*********************************************************************************
 			 * Get transport type
 			 ********************************************************************************/
-			LIB_FORCEINLINE transport_type get_type() const 
+			PUMP_INLINE transport_type get_type() PUMP_CONST
 			{ return type_; }
 
 			/*********************************************************************************
 			 * Get started status
 			 ********************************************************************************/
-			LIB_FORCEINLINE bool is_started() 
+			PUMP_INLINE bool is_started() PUMP_CONST
 			{ return __is_status(TRANSPORT_STARTED); }
 
 		protected:
 			/*********************************************************************************
 			 * Set channel status
 			 ********************************************************************************/
-			LIB_FORCEINLINE bool __set_status(uint32 o, uint32 n)
+			PUMP_INLINE bool __set_status(uint32 o, uint32 n)
 			{ return status_.compare_exchange_strong(o, n); }
 
 			/*********************************************************************************
 			 * Check transport is in status
 			 ********************************************************************************/
-			LIB_FORCEINLINE bool __is_status(uint32 status) 
+			PUMP_INLINE bool __is_status(uint32 status) PUMP_CONST
 			{ return status_.load() == status; }
 
 			/*********************************************************************************
 			 * Post channel event
 			 ********************************************************************************/
-			LIB_FORCEINLINE void __post_channel_event(poll::channel_sptr &ch, uint32 event)
+			PUMP_INLINE void __post_channel_event(poll::channel_sptr &ch, uint32 event)
 			{ get_service()->post_channel_event(ch, event); }
 
 		protected:
@@ -123,7 +123,7 @@ namespace pump {
 			transport_type type_;
 		};
 
-		class LIB_EXPORT base_transport :
+		class LIB_PUMP base_transport :
 			public base_channel
 		{
 		public:
@@ -137,7 +137,11 @@ namespace pump {
 			/*********************************************************************************
 			 * Deconstructor
 			 ********************************************************************************/
-			virtual ~base_transport() = default;
+			virtual ~base_transport()
+			{
+				__stop_read_tracker();
+				__stop_send_tracker();
+			}
 
 			/*********************************************************************************
 			 * Start
@@ -178,7 +182,7 @@ namespace pump {
 
 			/*********************************************************************************
 			 * Send
-			 * After sent, the buffer has moved ownership to transport.
+			 * After sent success, the buffer has moved ownership to transport.
 			 ********************************************************************************/
 			virtual bool send(flow::buffer_ptr b)
 			{ return false; }

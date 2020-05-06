@@ -3,7 +3,6 @@
 static service *sv;
 static service *sv1;
 
-static int send_loop = 1024;
 static int send_pocket_size = 1024*4;
 
 struct transport_context
@@ -56,11 +55,6 @@ public:
 			printf("tcp transport server accepted %d\n", transp->get_fd());
 			transports_[transp.get()] = tctx;
 		}
-
-		//for (int i = 0; i < send_loop; i++)
-		//{
-		//	send_data(transport.get());
-		//}
 	}
 
 	/*********************************************************************************
@@ -77,9 +71,9 @@ public:
 	{
 		transport_context* ctx = (transport_context*)transp->get_context();
 
+		ctx->read_size += size;
 		ctx->all_read_size += size;
 		ctx->read_pocket_size += size;
-		ctx->read_size += size;
 
 		while (ctx->read_pocket_size >= send_pocket_size)
 		{
@@ -118,7 +112,7 @@ public:
 		}
 	}
 
-	void send_data(base_transport_ptr transport)
+	inline void send_data(base_transport_ptr transport)
 	{
 		transport->send(send_data_.data(), send_data_.size());
 	}

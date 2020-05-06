@@ -19,13 +19,13 @@
 namespace pump {
 	namespace transport {
 
-		tls_transport::tls_transport() :
+		tls_transport::tls_transport() PUMP_NOEXCEPT :
 			base_transport(TLS_TRANSPORT, nullptr, -1),
 			sendlist_(1024),
 			sendlist_size_(0),
-			cur_send_buffer_(nullptr)
+			last_send_buffer_(nullptr)
 		{
-			is_sending_.clear();
+			next_send_chance_.clear();
 		}
 
 		tls_transport::~tls_transport()
@@ -35,8 +35,8 @@ namespace pump {
 
 		bool tls_transport::init(
 			flow::flow_tls_sptr &flow,
-			const address &local_address,
-			const address &remote_address
+			PUMP_CONST address &local_address,
+			PUMP_CONST address &remote_address
 		) {
 			PUMP_ASSERT_EXPR(flow, flow_ = flow);
 
@@ -55,12 +55,10 @@ namespace pump {
 
 		bool tls_transport::start(service_ptr sv, const transport_callbacks &cbs)
 		{
-			if (!flow_)
-				return false;
-
 			if (!__set_status(TRANSPORT_INIT, TRANSPORT_STARTING))
 				return false;
 
+			PUMP_ASSERT(flow_);
 			PUMP_ASSERT_EXPR(sv, __set_service(sv));
 			PUMP_ASSERT_EXPR(cbs.read_cb && cbs.disconnected_cb && cbs.stopped_cb, cbs_ = cbs);
 
@@ -77,8 +75,7 @@ namespace pump {
 			if (flow_->beg_read_task() != FLOW_ERR_NO)
 				return false;
 
-			if (!__set_status(TRANSPORT_STARTING, TRANSPORT_STARTED))
-				PUMP_ASSERT(false);
+			PUMP_DEBUG_CHECK(__set_status(TRANSPORT_STARTING, TRANSPORT_STARTED));
 
 			defer.clear();
 
@@ -139,12 +136,9 @@ namespace pump {
 
 		bool tls_transport::restart()
 		{
-			PUMP_LOCK_SPOINTER_EXPR(flow, flow_, false,
-				return false);
-
 			if (__set_status(TRANSPORT_PAUSED, TRANSPORT_STARTED))
 			{
-				if (flow->beg_read_task() == FLOW_ERR_ABORT)
+				if (flow_->beg_read_task() == FLOW_ERR_ABORT)
 				{
 					__try_doing_disconnected_process();
 					return false;
@@ -158,71 +152,65 @@ namespace pump {
 
 		bool tls_transport::pause()
 		{
-			PUMP_LOCK_SPOINTER_EXPR(flow, flow_, false,
-				return false);
+			if (!__set_status(TRANSPORT_STARTED, TRANSPORT_PAUSED))
+				return false;
 
-			if (__set_status(TRANSPORT_STARTED, TRANSPORT_PAUSED))
+			if (!__pause_tracker(r_tracker_))
+				return false;
+
+			return true;
+		}
+
+		bool tls_transport::send(flow::buffer_ptr b)
+		{
+			PUMP_ASSERT(b && b->data_size() > 0);
+			if (PUMP_LIKELY(__is_status(TRANSPORT_STARTED)))
+				return __async_send(b);
+			else
+				return false;
+		}
+
+		bool tls_transport::send(c_block_ptr b, uint32 size)
+		{
+			PUMP_ASSERT(b && size > 0);
+			if (__is_status(TRANSPORT_STARTED))
 			{
-				flow->cancel_read_task();
-				return __pause_tracker(r_tracker_);
+				auto buffer = new flow::buffer;
+				if (!buffer->append(b, size) || !__async_send(buffer))
+				{
+					delete buffer;
+					return false;
+				}
+				return true;
 			}
 
 			return false;
 		}
 
-		bool tls_transport::send(flow::buffer_ptr b)
-		{
-			PUMP_ASSERT(b);
-
-			if (!__is_status(TRANSPORT_STARTED))
-				return false;
-
-			return __async_send(b);
-		}
-
-		bool tls_transport::send(c_block_ptr b, uint32 size)
-		{
-			PUMP_ASSERT(b);
-
-			if (!__is_status(TRANSPORT_STARTED))
-				return false;
-
-			auto buffer = new flow::buffer;
-			if (!buffer->append(b, size))
-			{
-				delete buffer;
-				return false;
-			}
-
-			return __async_send(buffer);
-		}
-
 		void tls_transport::on_read_event(net::iocp_task_ptr itask)
 		{
-			PUMP_LOCK_SPOINTER_EXPR(flow, flow_, false,
-				return);
+			auto flow = flow_.get();
 
-			switch (flow->read_from_net(itask))
-			{
-			case FLOW_ERR_NO:
+			auto ret = flow->read_from_net(itask);
+			if (PUMP_LIKELY(ret == FLOW_ERR_NO))
 			{
 				while (true)
 				{
 					int32 size = 0;
 					c_block_ptr b = flow->read_from_ssl(&size);
-					if (size <= 0)
+					if (size > 0)
+						cbs_.read_cb(b, size);
+					else
 						break;
-
-					cbs_.read_cb(b, size);
 				}
-				flow->end_read_task();
-
-				break;
 			}
-			case FLOW_ERR_ABORT:
+			else if (ret == FLOW_ERR_ABORT)
+			{
 				__try_doing_disconnected_process();
 				return;
 			}
+
+			flow->end_read_task();
 
 			if (__is_status(TRANSPORT_STARTED) && flow->beg_read_task() == FLOW_ERR_ABORT)
 				__try_doing_disconnected_process();
@@ -230,112 +218,68 @@ namespace pump {
 
 		void tls_transport::on_send_event(net::iocp_task_ptr itask)
 		{
-			PUMP_LOCK_SPOINTER_EXPR(flow, flow_, false,
-				return);
+			auto flow = flow_.get();
 
-			switch (flow->send_to_net(itask))
+			auto ret = flow->send_to_net(itask);
+			if (ret == FLOW_ERR_AGAIN)
 			{
-			case FLOW_ERR_NO_DATA:
-			case FLOW_ERR_NO:
-				break;
-			case FLOW_ERR_AGAIN:
 				__awake_tracker(s_tracker_);
 				return;
-			case FLOW_ERR_ABORT:
+			}
+			else if (ret == FLOW_ERR_ABORT)
+			{
 				__try_doing_disconnected_process();
 				return;
 			}
 
-			switch (__send_once(flow))
+			// Last send buffer has sent completely, we should delete it.
+			delete last_send_buffer_;
+			last_send_buffer_ = nullptr;
+
+			// If there are more buffers to send, we should send next one immediately.
+			if (sendlist_size_.fetch_sub(1) - 1 > 0)
 			{
-			case FLOW_ERR_NO:
-				__awake_tracker(s_tracker_);
+				__send_once(flow);
 				return;
-			case FLOW_ERR_NO_DATA:
-				break;
-			case FLOW_ERR_ABORT:
-				__try_doing_disconnected_process();
-				return;
+			}
+
+			// We must free next send chance because no more buffers to send.
+			next_send_chance_.clear();
+
+			// Sendlist maybe has be inserted buffers at the moment, so we need check and try to get 
+			// next send chance. If success, we should send next buffer immediately.
+			if (sendlist_size_ > 0 && !next_send_chance_.test_and_set())
+			{
+				__send_once(flow);
+			}
+			else if (__is_status(TRANSPORT_STOPPING))
+			{
+				__close_flow();
+				__stop_send_tracker();
 			}
 		}
 
 		bool tls_transport::__async_send(flow::buffer_ptr b)
 		{
-			if (!sendlist_.enqueue(b))
-				return false;
+			// Insert buffer to sendlist.
+			PUMP_DEBUG_CHECK(sendlist_.enqueue(b));
 
-			if (sendlist_size_.fetch_add(1) != 0 || is_sending_.test_and_set())
+			// If there are no more buffers, we should try to get next send chance.
+			if (sendlist_size_.fetch_add(1) != 0 || next_send_chance_.test_and_set())
 				return true;
 
-			if (!sendlist_.try_dequeue(cur_send_buffer_))
-				PUMP_ASSERT(false);
-			PUMP_ASSERT(cur_send_buffer_);
-
-			PUMP_LOCK_SPOINTER_EXPR(flow, flow_, false,
-				return false);
-
-			if (flow->send_to_ssl(cur_send_buffer_) <= 0)
-				PUMP_ASSERT(false);
-			PUMP_ASSERT(cur_send_buffer_->data_size() == 0);
-
-			if (flow->want_to_send() == FLOW_ERR_ABORT)
-				return false;
-
-			if (!__awake_tracker(s_tracker_))
-				return false;
-
-			return true;
+			return __send_once(flow_.get());
 		}
 
-		int32 tls_transport::__send_once(flow::flow_tls_ptr flow)
+		bool tls_transport::__send_once(flow::flow_tls_ptr flow)
 		{
-			if (cur_send_buffer_)
-			{
-				delete cur_send_buffer_;
-				cur_send_buffer_ = nullptr;
-				sendlist_size_.fetch_sub(1);
-			}
+			PUMP_DEBUG_CHECK(sendlist_.try_dequeue(last_send_buffer_));
+			if (flow->send_to_ssl(last_send_buffer_) && flow->want_to_send() == FLOW_ERR_NO)
+				return __awake_tracker(s_tracker_);
 
-			if (sendlist_size_.load() > 0 && sendlist_.try_dequeue(cur_send_buffer_))
-			{
-				if (flow->send_to_ssl(cur_send_buffer_) <= 0)
-					PUMP_ASSERT(false);
-				PUMP_ASSERT(cur_send_buffer_->data_size() == 0);
+			__try_doing_disconnected_process();
 
-				int32 ret = flow->want_to_send();
-				if (ret == FLOW_ERR_NO_DATA)
-					ret = FLOW_ERR_NO;
-				return ret;
-			}
-
-			is_sending_.clear();
-
-			if (sendlist_size_.load() > 0 && !is_sending_.test_and_set())
-			{
-				if (!sendlist_.try_dequeue(cur_send_buffer_))
-					PUMP_ASSERT(false);
-				PUMP_ASSERT(cur_send_buffer_);
-
-				if (flow->send_to_ssl(cur_send_buffer_) <= 0)
-					PUMP_ASSERT(false);
-				PUMP_ASSERT(cur_send_buffer_->data_size() == 0);
-
-				int32 ret = flow->want_to_send();
-				if (ret == FLOW_ERR_NO_DATA)
-					ret = FLOW_ERR_NO;
-				return ret;
-			}
-
-			// If the transport is in stopping status and no data to send, the flow should be closed
-			// and the send tracker should be stopped. By the way the recv tracker no need to be 
-			// stopped, beacuse it is already stopped. Then the transport will be stopped,
-			if (__is_status(TRANSPORT_STOPPING))
-			{
-				__close_flow();
-				__stop_send_tracker();
-			}
-
-			return FLOW_ERR_NO_DATA;
+			return false;
 		}
 
 		void tls_transport::__try_doing_disconnected_process()
@@ -351,8 +295,8 @@ namespace pump {
 
 		void tls_transport::__clear_send_pockets()
 		{
-			if (cur_send_buffer_)
-				delete cur_send_buffer_;
+			if (last_send_buffer_)
+				delete last_send_buffer_;
 
 			flow::buffer_ptr buffer;
 			while (sendlist_.try_dequeue(buffer))

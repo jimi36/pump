@@ -29,14 +29,14 @@
 namespace pump {
 	namespace poll {
 
-		class epoll_poller: 
+		class epoll_poller : 
 			public poller
 		{
 		public:
 			/*********************************************************************************
 			 * Constructor
 			 ********************************************************************************/
-			epoll_poller(bool pop_pending);
+			epoll_poller(bool pop_pending) PUMP_NOEXCEPT;
 
 			/*********************************************************************************
 			 * Deconstructor

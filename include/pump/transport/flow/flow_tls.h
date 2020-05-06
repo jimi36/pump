@@ -28,7 +28,7 @@ namespace pump {
 
 			class ssl_net_layer;
 
-			class flow_tls: 
+			class flow_tls : 
 				public flow_base
 			{
 			public:
@@ -38,7 +38,7 @@ namespace pump {
 				/*********************************************************************************
 				 * Constructor
 				 ********************************************************************************/
-				flow_tls();
+				flow_tls() PUMP_NOEXCEPT;
 
 				/*********************************************************************************
 				 * Deconstructor
@@ -51,12 +51,7 @@ namespace pump {
 				 *     FLOW_ERR_NO    => success
 				 *     FLOW_ERR_ABORT => error
 				 ********************************************************************************/
-				int32 init(
-					poll::channel_sptr &ch, 
-					int32 fd, 
-					void_ptr tls_cert, 
-					bool is_client
-				);
+				int32 init(poll::channel_sptr &ch, int32 fd, void_ptr cert, bool client);
 
 				/*********************************************************************************
 				 * Rebind channel
@@ -82,12 +77,6 @@ namespace pump {
 				int32 beg_read_task();
 
 				/*********************************************************************************
-				 * Cancel read
-				 * If using IOCP this cancel posted IOCP task for reading, else do nothing.
-				 ********************************************************************************/
-				void cancel_read_task();
-
-				/*********************************************************************************
 				 * End read task
 				 ********************************************************************************/
 				void end_read_task();
@@ -108,9 +97,9 @@ namespace pump {
 
 				/*********************************************************************************
 				 * Send to ssl
-				 * If happened error return -1, Otherwise return size of buffer sent.
+				 * If sent completedly return true else return false.
 				 ********************************************************************************/
-				int32 send_to_ssl(buffer_ptr wb);
+				bool send_to_ssl(buffer_ptr wb);
 
 				/*********************************************************************************
 				 * Want to send
@@ -135,13 +124,13 @@ namespace pump {
 				/*********************************************************************************
 				 * Check there are data to send or not
 				 ********************************************************************************/
-				LIB_FORCEINLINE bool has_data_to_send() const 
+				PUMP_INLINE bool has_data_to_send() PUMP_CONST
 				{ return net_send_buffer_.data_size() > 0; }
 
 				/*********************************************************************************
 				 * Check handshaked status
 				 ********************************************************************************/
-				LIB_FORCEINLINE bool is_handshaked() const 
+				PUMP_INLINE bool is_handshaked() PUMP_CONST
 				{ return is_handshaked_; }
 
 			private:
@@ -153,13 +142,13 @@ namespace pump {
 				/*********************************************************************************
 				 * Send to net send cache
 				 ********************************************************************************/
-				LIB_FORCEINLINE void __send_to_net_send_cache(c_block_ptr tls_buffer, int32 size)
+				PUMP_INLINE void __send_to_net_send_cache(c_block_ptr tls_buffer, int32 size)
 				{ net_send_buffer_.append(tls_buffer, size); }
 
 				/*********************************************************************************
 				 * Get ssl session
 				 ********************************************************************************/
-				LIB_FORCEINLINE tls_session_ptr __get_tls_cert() 
+				PUMP_INLINE tls_session_ptr __get_tls_session() 
 				{ return session_; }
 
 			private:

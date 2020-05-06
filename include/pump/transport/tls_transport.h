@@ -29,7 +29,7 @@ namespace pump {
 		class tls_transport;
 		DEFINE_ALL_POINTER_TYPE(tls_transport);
 
-		class LIB_EXPORT tls_transport :
+		class LIB_PUMP tls_transport : 
 			public base_transport,
 			public std::enable_shared_from_this<tls_transport>
 		{
@@ -37,7 +37,7 @@ namespace pump {
 			/*********************************************************************************
 			 * Create instance
 			 ********************************************************************************/
-			static tls_transport_sptr create_instance()
+			PUMP_INLINE PUMP_STATIC tls_transport_sptr create_instance()
 			{
 				return tls_transport_sptr(new tls_transport);
 			}
@@ -52,14 +52,14 @@ namespace pump {
 			 ********************************************************************************/
 			bool init(
 				flow::flow_tls_sptr &flow,
-				const address &local_address,
-				const address &remote_address
+				PUMP_CONST address &local_address,
+				PUMP_CONST address &remote_address
 			);
 
 			/*********************************************************************************
 			 * Start tls transport
 			 ********************************************************************************/
-			virtual bool start(service_ptr sv, const transport_callbacks &cbs) override;
+			virtual bool start(service_ptr sv, PUMP_CONST transport_callbacks &cbs) override;
 
 			/*********************************************************************************
 			 * Stop
@@ -86,14 +86,11 @@ namespace pump {
 			/*********************************************************************************
 			 * Send
 			 ********************************************************************************/
-			virtual bool send(
-				c_block_ptr b, 
-				uint32 size
-			) override;
+			virtual bool send(c_block_ptr b, uint32 size) override;
 
 			/*********************************************************************************
 			 * Send
-			 * After called, the transport got the buffer onwership.
+			 * After called success, the transport got the buffer onwership.
 			 ********************************************************************************/
 			virtual bool send(flow::buffer_ptr b) override;
 
@@ -112,13 +109,13 @@ namespace pump {
 			/*********************************************************************************
 			 * Constructor
 			 ********************************************************************************/
-			tls_transport();
+			tls_transport() PUMP_NOEXCEPT;
 
 			/*********************************************************************************
 			 * Close flow
 			 ********************************************************************************/
-			LIB_FORCEINLINE void __close_flow() 
-			{ flow_.reset(); }
+			PUMP_INLINE void __close_flow()
+			{ if (flow_) flow_->close(); }
 
 			/*********************************************************************************
 			 * Async send
@@ -127,10 +124,8 @@ namespace pump {
 
 			/*********************************************************************************
 			 * Send once
-			 * If there are no buffers to send or happening error, return 0. If sending a buffer
-			 * completely, return 1. If sending a buffer not completely, return -1.
 			 ********************************************************************************/
-			int32 __send_once(flow::flow_tls_ptr flow);
+			bool __send_once(flow::flow_tls_ptr flow);
 
 			/*********************************************************************************
 			 * Try doing transport dissconnected process
@@ -151,12 +146,11 @@ namespace pump {
 			moodycamel::ConcurrentQueue<flow::buffer_ptr> sendlist_;
 			std::atomic_int32_t sendlist_size_;
 
-			// Current send buffer
-			volatile flow::buffer_ptr cur_send_buffer_;
+			// Last send buffer
+			volatile flow::buffer_ptr last_send_buffer_;
 
-			// Transport will start listening send event when starting. But there are maybe no data to
-			// send and asynchronous sending data at the same time, so this status is for this scenario.
-			std::atomic_flag is_sending_;
+			// Who got next send chance, who can send next buffer.
+			std::atomic_flag next_send_chance_;
 		};
 
 	}

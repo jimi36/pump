@@ -23,17 +23,18 @@ namespace pump {
 
 		tls_dialer::tls_dialer(
 			void_ptr cert,
-			const address &local_address,
-			const address &remote_address,
+			PUMP_CONST address &local_address,
+			PUMP_CONST address &remote_address,
 			int64 dial_timeout,
 			int64 handshake_timeout
-		) : base_dialer(TLS_DIALER, local_address, remote_address, dial_timeout),
+		) PUMP_NOEXCEPT : 
+			base_dialer(TLS_DIALER, local_address, remote_address, dial_timeout),
 			cert_(cert),
 			handshake_timeout_(handshake_timeout)
 		{
 		}
 
-		bool tls_dialer::start(service_ptr sv,const dialer_callbacks &cbs) 
+		bool tls_dialer::start(service_ptr sv, PUMP_CONST dialer_callbacks &cbs)
 		{
 			if (!__set_status(TRANSPORT_INIT, TRANSPORT_STARTING))
 				return false;
@@ -59,8 +60,7 @@ namespace pump {
 			if (!__start_connect_timer(function::bind(&tls_dialer::on_timeout, shared_from_this())))
 				return false;
 
-			if (!__set_status(TRANSPORT_STARTING, TRANSPORT_STARTED))
-				PUMP_ASSERT(false);
+			PUMP_DEBUG_CHECK(__set_status(TRANSPORT_STARTING, TRANSPORT_STARTED));
 
 			defer.clear();
 
@@ -89,13 +89,12 @@ namespace pump {
 
 		void tls_dialer::on_send_event(net::iocp_task_ptr itask)
 		{
-			PUMP_LOCK_SPOINTER_EXPR(flow, flow_, false, 
-				return);
+			auto flow = flow_.get();
 
 			__stop_connect_timer();
 
 			address local_address, remote_address;
-			if (flow->connect(itask, local_address, remote_address) != 0)
+			if (flow->connect(itask, &local_address, &remote_address) != 0)
 			{
 				if (__set_status(TRANSPORT_STARTED, TRANSPORT_ERROR))
 				{
@@ -108,19 +107,19 @@ namespace pump {
 			if (!__set_status(TRANSPORT_STARTED, TRANSPORT_HANDSHAKING))
 				return;
 
-			__close_flow();
+			//__close_flow();
 
 			tls_handshaker::tls_handshaker_callbacks tls_cbs;
 			tls_cbs.handshaked_cb = function::bind(&tls_dialer::on_handshaked_callback,
 				shared_from_this(), _1, _2);
-			tls_cbs.stopped_cb = function::bind(&tls_dialer::on_stopped_handshaking_callback,
+			tls_cbs.stopped_cb = function::bind(&tls_dialer::on_handshake_stopped_callback,
 				shared_from_this(), _1);
 
 			// If handshaker is started error, handshaked callback will be triggered. So we do nothing
 			// at here when started error. But if dialer stopped befere here, we shuold stop handshaking.
+			auto fd = flow->unbind_fd();
 			handshaker_.reset(new tls_handshaker);
-			if (!handshaker_->init(flow->unbind_fd(), true, cert_, local_address, remote_address))
-				PUMP_ASSERT(false);
+			PUMP_DEBUG_CHECK(handshaker_->init(fd, true, cert_, local_address, remote_address));
 
 			poll::channel_tracker_sptr tracker(std::move(tracker_));
 			if (handshaker_->start(get_service(), tracker, handshake_timeout_, tls_cbs))
@@ -132,8 +131,9 @@ namespace pump {
 
 		void tls_dialer::on_timeout(tls_dialer_wptr wptr)
 		{
-			PUMP_LOCK_WPOINTER_EXPR(dialer, wptr, false,
-				return);
+			PUMP_LOCK_WPOINTER(dialer, wptr);
+			if (dialer == nullptr)
+				return;
 
 			if (dialer->__set_status(TRANSPORT_STARTED, TRANSPORT_TIMEOUT_DOING))
 			{
@@ -147,8 +147,9 @@ namespace pump {
 			tls_handshaker_ptr handshaker,
 			bool succ
 		) {
-			PUMP_LOCK_WPOINTER_EXPR(dialer, wptr, false,
-				handshaker->stop(); return);
+			PUMP_LOCK_WPOINTER(dialer, wptr);
+			if (dialer == nullptr)
+				return;
 
 			if (dialer->__set_status(TRANSPORT_STOPPING, TRANSPORT_STOPPED))
 			{
@@ -160,9 +161,11 @@ namespace pump {
 				if (succ)
 				{
 					auto flow = handshaker->unlock_flow();
+					auto local_address = handshaker->get_local_address();
+					auto remote_address = handshaker->get_remote_address();
+
 					transp = tls_transport::create_instance();
-					if (!transp->init(flow, handshaker->get_local_address(), handshaker->get_remote_address()))
-						PUMP_ASSERT(false);
+					PUMP_DEBUG_CHECK(transp->init(flow, local_address, remote_address));
 				}
 
 				dialer->cbs_.dialed_cb(transp, succ);
@@ -171,12 +174,13 @@ namespace pump {
 			dialer->handshaker_.reset();
 		}
 
-		void tls_dialer::on_stopped_handshaking_callback(
+		void tls_dialer::on_handshake_stopped_callback(
 			tls_dialer_wptr wptr, 
 			tls_handshaker_ptr handshaker
 		) {
-			PUMP_LOCK_WPOINTER_EXPR(dialer, wptr, false,
-				return);
+			PUMP_LOCK_WPOINTER(dialer, wptr);
+			if (dialer == nullptr)
+				return;
 
 			if (dialer->__set_status(TRANSPORT_STOPPING, TRANSPORT_STOPPED))
 				dialer->cbs_.stopped_cb();
@@ -197,15 +201,11 @@ namespace pump {
 			return true;
 		}
 
-		tls_sync_dialer::tls_sync_dialer()
-		{
-		}
-
 		base_transport_sptr tls_sync_dialer::dial(
 			void_ptr cert,
 			service_ptr sv,
-			const address &local_address,
-			const address &remote_address,
+			PUMP_CONST address &local_address,
+			PUMP_CONST address &remote_address,
 			int64 connect_timeout,
 			int64 handshake_timeout
 		) {
@@ -239,24 +239,25 @@ namespace pump {
 			base_transport_sptr transp,
 			bool succ
 		) {
-			PUMP_LOCK_WPOINTER_EXPR(dialer, wptr, true,
-				dialer->dial_promise_.set_value(transp));
+			PUMP_LOCK_WPOINTER(dialer, wptr);
+			if (dialer == nullptr)
+				return;
+
+			dialer->dial_promise_.set_value(transp);
 		}
 
 		void tls_sync_dialer::on_timeout_callback(tls_sync_dialer_wptr wptr) 
 		{
-			PUMP_LOCK_WPOINTER_EXPR(dialer, wptr, true,
-				dialer->dial_promise_.set_value(base_transport_sptr()));
+			PUMP_LOCK_WPOINTER(dialer, wptr);
+			if (dialer == nullptr)
+				return;
+
+			dialer->dial_promise_.set_value(base_transport_sptr());
 		}
 
 		void tls_sync_dialer::on_stopped_callback()
 		{
 			PUMP_ASSERT(false);
-		}
-
-		void tls_sync_dialer::__reset()
-		{
-			dialer_.reset();
 		}
 
 	}

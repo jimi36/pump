@@ -34,22 +34,22 @@ namespace pump {
 		/*********************************************************************************
 		 * Init sha1 context
 		 ********************************************************************************/
-		LIB_EXPORT void sha1_init(SHA1_CTX *ctx);
+		LIB_PUMP void sha1_init(SHA1_CTX *ctx);
 
 		/*********************************************************************************
 		 * Update sha1 context
 		 ********************************************************************************/
-		LIB_EXPORT void sha1_update(SHA1_CTX *ctx, c_uint8_ptr data, uint32 len);
+		LIB_PUMP void sha1_update(SHA1_CTX *ctx, c_uint8_ptr data, uint32 len);
 
 		/*********************************************************************************
 		 * Final sha1 context
 		 ********************************************************************************/
-		LIB_EXPORT void sha1_final(SHA1_CTX *ctx, uint8 digest[20]);
+		LIB_PUMP void sha1_final(SHA1_CTX *ctx, uint8 digest[20]);
 
 		/*********************************************************************************
 		 * Sha1
 		 ********************************************************************************/
-		LIB_EXPORT void sha1(c_uint8_ptr str, uint32 len, uint8 digest[20]);
+		LIB_PUMP void sha1(c_uint8_ptr str, uint32 len, uint8 digest[20]);
 
 	}
 }

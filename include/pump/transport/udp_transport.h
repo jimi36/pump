@@ -26,7 +26,7 @@ namespace pump {
 		class udp_transport;
 		DEFINE_ALL_POINTER_TYPE(udp_transport);
 
-		class LIB_EXPORT udp_transport :
+		class LIB_PUMP udp_transport :
 			public base_transport,
 			public std::enable_shared_from_this<udp_transport>
 		{
@@ -34,8 +34,9 @@ namespace pump {
 			/*********************************************************************************
 			 * Create instance
 			 ********************************************************************************/
-			static udp_transport_sptr create_instance(const address &local_address)
-			{
+			PUMP_INLINE PUMP_STATIC udp_transport_sptr create_instance(
+				PUMP_CONST address &local_address
+			) {
 				return udp_transport_sptr(new udp_transport(local_address));
 			}
 
@@ -47,10 +48,7 @@ namespace pump {
 			/*********************************************************************************
 			 * Start
 			 ********************************************************************************/
-			virtual bool start(
-				service_ptr sv,
-				const transport_callbacks &cbs
-			) override;
+			virtual bool start(service_ptr sv, PUMP_CONST transport_callbacks &cbs) override;
 
 			/*********************************************************************************
 			 * Stop 
@@ -80,7 +78,7 @@ namespace pump {
 			virtual bool send(
 				c_block_ptr b, 
 				uint32 size, 
-				const address &remote_address
+				PUMP_CONST address &remote_address
 			) override;
 
 		protected:
@@ -98,7 +96,7 @@ namespace pump {
 			/*********************************************************************************
 			 * Constructor
 			 ********************************************************************************/
-			udp_transport(const address &local_address);
+			udp_transport(PUMP_CONST address &local_address) PUMP_NOEXCEPT;
 
 			/*********************************************************************************
 			 * Open flow
@@ -108,7 +106,7 @@ namespace pump {
 			/*********************************************************************************
 			 * Close flow
 			 ********************************************************************************/
-			LIB_FORCEINLINE void __close_flow() 
+			PUMP_INLINE void __close_flow()
 			{ flow_.reset(); }
 
 			/*********************************************************************************

@@ -23,14 +23,14 @@ namespace pump {
 	namespace transport {
 		namespace flow {
 
-			class flow_tcp: 
+			class flow_tcp : 
 				public flow_base
 			{
 			public:
 				/*********************************************************************************
 				 * Constructor
 				 ********************************************************************************/
-				flow_tcp();
+				flow_tcp() PUMP_NOEXCEPT;
 
 				/*********************************************************************************
 				 * Deconstructor
@@ -60,12 +60,6 @@ namespace pump {
 				void end_read_task();
 
 				/*********************************************************************************
-				 * Cancel read task
-				 * If using IOCP this cancel posted IOCP task for reading, else do nothing.
-				 ********************************************************************************/
-				void cancel_read_task();
-
-				/*********************************************************************************
 				 * Read
 				 ********************************************************************************/
 				c_block_ptr read(net::iocp_task_ptr itask, int32_ptr size);
@@ -92,7 +86,8 @@ namespace pump {
 				/*********************************************************************************
 				 * Check there are data to send or not
 				 ********************************************************************************/
-				bool has_data_to_send();
+				PUMP_INLINE bool has_data_to_send() PUMP_CONST
+				{ return (send_buffer_ != nullptr && send_buffer_->data_size() > 0); }
 
 			private:
 				// IOCP read task

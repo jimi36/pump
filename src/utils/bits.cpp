@@ -3,7 +3,7 @@
 namespace pump {
 	namespace utils {
 
-		bits_reader::bits_reader(c_uint8_ptr b, uint32 size):
+		bits_reader::bits_reader(c_uint8_ptr b, uint32 size) PUMP_NOEXCEPT :
 			left_bc_(8),
 			used_bc_(0),
 			all_bc_(size*8),
@@ -141,7 +141,7 @@ namespace pump {
 			return val;
 		}
 
-		bits_writer::bits_writer(uint8_ptr b, uint32 size):
+		bits_writer::bits_writer(uint8_ptr b, uint32 size) PUMP_NOEXCEPT :
 			left_bc_(8),
 			used_bc_(0),
 			all_bc_(size * 8),

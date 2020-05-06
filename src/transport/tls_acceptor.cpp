@@ -22,15 +22,16 @@ namespace pump {
 
 		tls_acceptor::tls_acceptor(
 			void_ptr cert, 
-			const address &listen_address, 
+			PUMP_CONST address &listen_address,
 			int64 handshake_timeout
-		) : base_acceptor(TLS_ACCEPTOR, listen_address),
+		) PUMP_NOEXCEPT : 
+			base_acceptor(TLS_ACCEPTOR, listen_address),
 			cert_(cert),
 			handshake_timeout_(0)
 		{
 		}
 
-		bool tls_acceptor::start(service_ptr sv,const acceptor_callbacks &cbs)
+		bool tls_acceptor::start(service_ptr sv, PUMP_CONST acceptor_callbacks &cbs)
 		{
 			if (!__set_status(TRANSPORT_INIT, TRANSPORT_STARTING))
 				return false;
@@ -40,7 +41,7 @@ namespace pump {
 
 			handshaker_cbs_.handshaked_cb = function::bind(&tls_acceptor::on_handshaked_callback,
 				shared_from_this(), _1, _2);
-			handshaker_cbs_.stopped_cb = function::bind(&tls_acceptor::on_stopped_handshaking_callback,
+			handshaker_cbs_.stopped_cb = function::bind(&tls_acceptor::on_handshake_stopped_callback,
 				shared_from_this(), _1);
 
 			utils::scoped_defer defer([&]() {
@@ -58,8 +59,7 @@ namespace pump {
 			if (flow_->want_to_accept() != FLOW_ERR_NO)
 				return false;
 
-			if (!__set_status(TRANSPORT_STARTING, TRANSPORT_STARTED))
-				PUMP_ASSERT(false);
+			PUMP_DEBUG_CHECK(__set_status(TRANSPORT_STARTING, TRANSPORT_STARTED));
 
 			defer.clear();
 
@@ -80,20 +80,18 @@ namespace pump {
 
 		void tls_acceptor::on_read_event(net::iocp_task_ptr itask)
 		{
-			PUMP_LOCK_SPOINTER_EXPR(flow, flow_, false, 
-				return);
+			auto flow = flow_.get();
 
 			address local_address, remote_address;
 			int32 fd = flow->accept(itask, &local_address, &remote_address);
-			if (fd > 0)
+			if (PUMP_LIKELY(fd > 0))
 			{
 				tls_handshaker_ptr handshaker = __create_handshaker();
-				if (handshaker)
+				if (PUMP_LIKELY(handshaker))
 				{
 					// If handshaker is started error, handshaked callback will be triggered. So we do nothing
 					// at here when started error. But if acceptor stopped befere here, we shuold stop handshaking.
-					if (!handshaker->init(fd, false, cert_, local_address, remote_address))
-						PUMP_ASSERT(false);
+					PUMP_DEBUG_CHECK(handshaker->init(fd, false, cert_, local_address, remote_address));
 					if (handshaker->start(get_service(), handshake_timeout_, handshaker_cbs_))
 					{
 						if (__is_status(TRANSPORT_STOPPING) || __is_status(TRANSPORT_STOPPED))
@@ -106,9 +104,9 @@ namespace pump {
 				}
 			}
 
-			// The acceptor maybe be stopped before this, so we need check it status. 
-			if (flow->want_to_accept() != FLOW_ERR_NO && __is_status(TRANSPORT_STARTED))
-				PUMP_ASSERT(false);
+			// Acceptor maybe be stopped, so we need check it in started status.
+			if (flow->want_to_accept() != FLOW_ERR_NO)
+				PUMP_ASSERT(!__is_status(TRANSPORT_STARTED));
 		}
 
 		void tls_acceptor::on_handshaked_callback(
@@ -116,8 +114,12 @@ namespace pump {
 			tls_handshaker_ptr handshaker,
 			bool succ
 		) {
-			PUMP_LOCK_WPOINTER_EXPR(acceptor, wptr, false,
-				handshaker->stop(); return);
+			PUMP_LOCK_WPOINTER(acceptor, wptr);
+			if (acceptor == nullptr)
+			{
+				handshaker->stop(); 
+				return;
+			}
 
 			acceptor->__remove_handshaker(handshaker);
 
@@ -127,19 +129,22 @@ namespace pump {
 				address local_address = handshaker->get_local_address();
 				address remote_address = handshaker->get_remote_address();
 				auto transport = tls_transport::create_instance();
-				if (!transport->init(flow, local_address, remote_address))
-					PUMP_ASSERT(false);
-
+#if defined(MODE_DEBUG)
+				PUMP_ASSERT(transport->init(flow, local_address, remote_address));
+#else
+				transport->init(flow, local_address, remote_address);
+#endif
 				acceptor->cbs_.accepted_cb(transport);
 			}			
 		}
 
-		void tls_acceptor::on_stopped_handshaking_callback(
+		void tls_acceptor::on_handshake_stopped_callback(
 			tls_acceptor_wptr wptr, 
 			tls_handshaker_ptr handshaker
 		) {
-			PUMP_LOCK_WPOINTER_EXPR(acceptor, wptr, true,
-				acceptor->__remove_handshaker(handshaker));
+			PUMP_LOCK_WPOINTER(acceptor, wptr);
+			if (acceptor)
+				acceptor->__remove_handshaker(handshaker);
 		}
 
 		bool tls_acceptor::__open_flow()
@@ -151,7 +156,7 @@ namespace pump {
 			if (flow_->init(ch, listen_address_) != FLOW_ERR_NO)
 				return false;
 
-			// Set channel FD
+			// Set channel fd
 			channel::__set_fd(flow_->get_fd());
 
 			return true;
@@ -176,8 +181,8 @@ namespace pump {
 		void tls_acceptor::__stop_all_handshakers()
 		{
 			std::lock_guard<std::mutex> lock(handshaker_mx_);
-			for (auto p: handshakers_)
-				p.second->stop();
+			for (auto hs : handshakers_)
+				hs.second->stop();
 		}
 
 	}

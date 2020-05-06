@@ -19,23 +19,21 @@
 namespace pump {
 	namespace time {
 
-		const int32 TIMER_DEFAULT_INTERVAL = 1000;
+		PUMP_CONST int32 TIMER_DEFAULT_INTERVAL = 1000;
 
-		timer_queue::timer_queue() :
+		timer_queue::timer_queue() PUMP_NOEXCEPT : 
 			started_(false),
 			next_observe_time_(0)
 		{
 		}
 
-		bool timer_queue::start(const timer_pending_callback &cb)
+		bool timer_queue::start(PUMP_CONST timer_pending_callback &cb)
 		{
 			if (!started_.load())
 			{
 				started_.store(true);
 
-				pending_cb_ = cb;
-
-				next_observe_time_ = get_clock_milliseconds() + TIMER_DEFAULT_INTERVAL;
+				PUMP_ASSERT_EXPR(cb, pending_cb_ = cb);
 
 				observer_.reset(new std::thread(
 					function::bind(&timer_queue::__observe_thread, this)
@@ -43,11 +41,6 @@ namespace pump {
 			}
 
 			return started_.load();
-		}
-
-		void timer_queue::stop()
-		{
-			started_.store(false);
 		}
 
 		void timer_queue::wait_stopped()
@@ -64,13 +57,15 @@ namespace pump {
 			switch (repeated)
 			{
 			case false:
-				if (!ptr->__start(this))
+				if (PUMP_UNLIKELY(!ptr->__start(this)))
 					return false;
-				break;
+				else
+					break;
 			case true:
-				if (!ptr->__restart())
+				if (PUMP_UNLIKELY(!ptr->__restart()))
 					return false;
-				break;
+				else
+					break;
 			}
 
 			auto overtime = ptr->time();
@@ -89,13 +84,13 @@ namespace pump {
 		void timer_queue::delete_timer(timer_ptr ptr)
 		{
 			std::unique_lock<std::mutex> locker(observer_mx_);
-			uint64 key = ptr->time();
+			auto key = ptr->time();
 			auto beg = timers_.lower_bound(key);
 			auto end = timers_.upper_bound(key);
 			while (beg != end)
 			{
-				auto tmp = beg->second.lock();
-				if (tmp.get() == ptr)
+				PUMP_LOCK_WPOINTER(timer, beg->second);
+				if (timer == ptr)
 				{
 					timers_.erase(beg);
 					break;
@@ -106,11 +101,14 @@ namespace pump {
 
 		void timer_queue::__observe_thread()
 		{
+			// Init next observe time.
+			next_observe_time_ = get_clock_milliseconds() + TIMER_DEFAULT_INTERVAL;
+
 			while (1)
 			{
 				{
 					std::unique_lock<std::mutex> locker(observer_mx_);
-					uint64 now = get_clock_milliseconds();
+					auto now = get_clock_milliseconds();
 					if (next_observe_time_ > now)
 					{
 						observer_cv_.wait_for(
@@ -129,7 +127,7 @@ namespace pump {
 		{
 			std::unique_lock<std::mutex> locker(observer_mx_);
 
-			uint64 now = get_clock_milliseconds();
+			auto now = get_clock_milliseconds();
 			next_observe_time_ = now + TIMER_DEFAULT_INTERVAL;
 
 			auto it = timers_.begin();

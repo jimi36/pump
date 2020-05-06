@@ -6,7 +6,8 @@
 
 static service *sv;
 
-static int send_loop = 1024;
+static int count = 2;
+static int send_loop = 1024 / count;
 static int send_pocket_size = 1024*4;
 
 class my_tls_dialer :
@@ -42,6 +43,13 @@ public:
 			return;
 
 		printf("tls client dialed %d\n", transp->get_fd());
+
+		//for (int i = 0; i < send_loop; i++)
+		{
+			//send_data();
+		}
+
+		printf("tls client dialed %d sent\n", transp->get_fd());
 	}
 
 	/*********************************************************************************
@@ -73,13 +81,6 @@ public:
 	 ********************************************************************************/
 	void on_read_callback(base_transport_ptr transp, c_block_ptr b, int32 size)
 	{
-		static int last_fd = 0;
-		if (last_fd != transp->get_fd())
-		{
-			//printf("transport %d read\n", transp->get_fd());
-			last_fd = transp->get_fd();
-		}
-
 		read_size_ += size;
 		read_pocket_size_ += size;
 
@@ -130,7 +131,6 @@ public:
 	tls_dialer_sptr dialer_;
 };
 
-static int count = 2;
 
 static std::vector< std::shared_ptr<my_tls_dialer>> my_dialers;
 
@@ -186,19 +186,21 @@ void start_tls_client(const std::string &ip, uint16 port)
 		}
 	}
 
-	pump::time::timer_callback cb = function::bind(&tls_time_report::on_timer_timeout);
-	timer_sptr t(new timer(cb, 1000, true));
+	pump::timer_callback cb = function::bind(&tls_time_report::on_timer_timeout);
+	timer_sptr t = pump::timer::create_instance(1000, cb, true);
 	sv->start_timer(t);
 
 	Sleep(2000);
 
-	for (int i = 0; i < send_loop; i++)
-	{
+ 	auto b = pump::get_clock_microsecond();
 		for (auto t : my_dialers)
 		{
-			t->send_data();
+			for (int i = 0; i < send_loop; i++)
+				t->send_data();
 		}
-	}
+		printf("send data used %lluus\n", pump::get_clock_microsecond() - b);
+
+		my_dialers[0]->send_data();
 
 	sv->wait_stopped();
 #endif

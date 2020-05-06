@@ -25,7 +25,7 @@ namespace pump {
 		const int32 TIMER_STARTED  = 2;
 		const int32 TIMER_PENDING  = 3;
 
-		timer::timer(uint64 timeout, const timer_callback &cb, bool repeated) : 
+		timer::timer(uint64 timeout, const timer_callback &cb, bool repeated) PUMP_NOEXCEPT : 
 			queue_(nullptr),
 			status_(TIMER_INIT),
 			timeout_(timeout),
@@ -71,9 +71,10 @@ namespace pump {
 
 				if (__set_status(TIMER_STARTED, TIMER_STOPPED))
 				{
-					if (queue_)
+					if (PUMP_LIKELY(queue_))
 						queue_->delete_timer(this);
-					break;
+					else
+						break;
 				}
 			}
 

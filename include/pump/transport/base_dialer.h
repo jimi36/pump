@@ -22,7 +22,7 @@
 namespace pump {
 	namespace transport {
 
-		class LIB_EXPORT base_dialer :
+		class LIB_PUMP base_dialer :
 			public base_channel
 		{
 		public:
@@ -31,10 +31,11 @@ namespace pump {
 			 ********************************************************************************/
 			base_dialer(
 				transport_type type,
-				const address &local_address,
-				const address &remote_address,
+				PUMP_CONST address &local_address,
+				PUMP_CONST address &remote_address,
 				int64 connect_timeout
-			) : base_channel(type, nullptr, -1),
+			) PUMP_NOEXCEPT : 
+				base_channel(type, nullptr, -1),
 				local_address_(local_address),
 				remote_address_(remote_address),
 				connect_timeout_(connect_timeout)
@@ -43,12 +44,13 @@ namespace pump {
 			/*********************************************************************************
 			 * Deconstructor
 			 ********************************************************************************/
-			virtual ~base_dialer() = default;
+			virtual ~base_dialer()
+			{ __stop_tracker(); }
 
 			/*********************************************************************************
 			 * Start
 			 ********************************************************************************/
-			virtual bool start(service_ptr sv, const dialer_callbacks &cbs) = 0;
+			virtual bool start(service_ptr sv, PUMP_CONST dialer_callbacks &cbs) = 0;
 
 			/*********************************************************************************
 			 * Stop
@@ -58,18 +60,14 @@ namespace pump {
 			/*********************************************************************************
 			 * Get local address
 			 ********************************************************************************/
-			const address& get_local_address() const
-			{
-				return local_address_;
-			}
+			PUMP_INLINE PUMP_CONST address& get_local_address() PUMP_CONST
+			{ return local_address_; }
 
 			/*********************************************************************************
 			 * Get remote address
 			 ********************************************************************************/
-			const address& get_remote_address() const
-			{
-				return remote_address_;
-			}
+			PUMP_INLINE PUMP_CONST address& get_remote_address() PUMP_CONST
+			{ return remote_address_; }
 
 		protected:
 			/*********************************************************************************
@@ -91,7 +89,7 @@ namespace pump {
 			/*********************************************************************************
 			 * Start connect timer
 			 ********************************************************************************/
-			bool __start_connect_timer(const time::timer_callback &cb);
+			bool __start_connect_timer(PUMP_CONST time::timer_callback &cb);
 
 			/*********************************************************************************
 			 * Stop connect timer

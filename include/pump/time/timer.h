@@ -28,7 +28,7 @@ namespace pump {
 
 		typedef function::function<void()> timer_callback;
 
-		class LIB_EXPORT timer: 
+		class LIB_PUMP timer : 
 			public std::enable_shared_from_this<timer>
 		{
 		protected:
@@ -39,9 +39,9 @@ namespace pump {
 			/*********************************************************************************
 			 * Create instance
 			 ********************************************************************************/
-			static timer_sptr create_instance(
+			PUMP_INLINE PUMP_STATIC timer_sptr create_instance(
 				uint64 timeout, 
-				const timer_callback &cb, 
+				PUMP_CONST timer_callback &cb,
 				bool repeated = false
 			) {
 				return timer_sptr(new timer(timeout, cb, repeated));
@@ -65,26 +65,26 @@ namespace pump {
 			/*********************************************************************************
 			 * Get overtime
 			 ********************************************************************************/
-			LIB_FORCEINLINE uint64 time() const 
+			PUMP_INLINE uint64 time() PUMP_CONST
 			{ return overtime_; }
 
 			/*********************************************************************************
 			 * Get starting state
 			 ********************************************************************************/
-			LIB_FORCEINLINE bool is_started() const 
+			PUMP_INLINE bool is_started() PUMP_CONST
 			{ return status_.load() >= 2; }
 
 			/*********************************************************************************
 			 * Get repeated status
 			 ********************************************************************************/
-			LIB_FORCEINLINE bool is_repeated() const 
+			PUMP_INLINE bool is_repeated() PUMP_CONST
 			{ return repeated_; }
 
 		private:
 			/*********************************************************************************
 			 * Constructor
 			 ********************************************************************************/
-			timer(uint64 timeout, const timer_callback &cb, bool repeated);
+			timer(uint64 timeout, PUMP_CONST timer_callback &cb, bool repeated) PUMP_NOEXCEPT;
 
 			/*********************************************************************************
 			 * Start
@@ -99,7 +99,7 @@ namespace pump {
 			/*********************************************************************************
 			 * Set status
 			 ********************************************************************************/
-			LIB_FORCEINLINE bool __set_status(int32 o, int32 n) 
+			PUMP_INLINE bool __set_status(int32 o, int32 n)
 			{ return status_.compare_exchange_strong(o, n); }
 
 		private:

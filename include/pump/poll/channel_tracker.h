@@ -33,7 +33,7 @@ namespace pump {
 		#define TRACKER_EVENT_DEL 0
 		#define TRACKER_EVENT_ADD 1
 
-		class channel_tracker:
+		class channel_tracker : 
 			public utils::noncopyable
 		{
 		protected:
@@ -46,8 +46,8 @@ namespace pump {
 			/*********************************************************************************
 			 * Constructor
 			 ********************************************************************************/
-			channel_tracker(channel_sptr &ch, int32 ev, int32 mode):
-				is_tracking_(false),
+			channel_tracker(channel_sptr &ch, int32 ev, int32 mode) PUMP_NOEXCEPT :
+				is_tracked_(false),
 				mode_(mode),
 				event_(ev),
 				fd_(ch->get_fd()),
@@ -55,59 +55,57 @@ namespace pump {
 			{}
 			
 			/*********************************************************************************
-			 * Get tracking status
+			 * Get tracked status
 			 ********************************************************************************/
-			LIB_FORCEINLINE bool is_tracking() const 
-			{ return is_tracking_; }
+			PUMP_INLINE bool is_tracked() PUMP_CONST
+			{ return is_tracked_; }
 			
 			/*********************************************************************************
 			 * Set channel
 			 ********************************************************************************/
-			LIB_FORCEINLINE void set_channel(channel_sptr &ch) 
+			PUMP_INLINE void set_channel(channel_sptr &ch)
 			{ ch_ = ch; fd_ = ch->get_fd(); }
 
 			/*********************************************************************************
 			 * Get channel
 			 ********************************************************************************/
-			LIB_FORCEINLINE channel_sptr get_channel() 
-			{ return ch_.lock(); }
+			PUMP_INLINE channel_sptr get_channel()
+			{ return std::move(ch_.lock()); }
 			
 			/*********************************************************************************
 			 * Get fd
 			 ********************************************************************************/
-			LIB_FORCEINLINE int32 get_fd() const 
+			PUMP_INLINE int32 get_fd() PUMP_CONST
 			{ return fd_; }
 			
 			/*********************************************************************************
 			 * Set track event
 			 ********************************************************************************/
-			LIB_FORCEINLINE void set_event(int32 ev) 
+			PUMP_INLINE void set_event(int32 ev)
 			{ event_ = ev; }
 
 			/*********************************************************************************
 			 * Get track event
 			 ********************************************************************************/
-			LIB_FORCEINLINE int32 get_event() const 
+			PUMP_INLINE int32 get_event() PUMP_CONST
 			{ return event_; }
 
 			/*********************************************************************************
 			 * Get track mode
 			 ********************************************************************************/
-			LIB_FORCEINLINE int32 get_mode() const 
+			PUMP_INLINE int32 get_mode() PUMP_CONST
 			{ return mode_; }
 
 		private:
 			/*********************************************************************************
-			 * Set tracking status
+			 * Set tracked status
 			 ********************************************************************************/
-			LIB_FORCEINLINE void __set_tracking(bool on)
-			{
-				is_tracking_ = on;
-			}
+			PUMP_INLINE void __set_tracked(bool tracked)
+			{ is_tracked_ = tracked; }
 			
 		private:
 			// Status
-			bool is_tracking_;
+			bool is_tracked_;
 			// Track mode
 			int32 mode_;
 			// Track event

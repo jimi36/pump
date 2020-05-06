@@ -28,7 +28,7 @@ namespace pump {
 		class tls_handshaker;
 		DEFINE_ALL_POINTER_TYPE(tls_handshaker);
 
-		class tls_handshaker:
+		class tls_handshaker : 
 			public base_channel,
 			public std::enable_shared_from_this<tls_handshaker>
 		{
@@ -48,7 +48,7 @@ namespace pump {
 			/*********************************************************************************
 			 * Constructor
 			 ********************************************************************************/
-			tls_handshaker();
+			tls_handshaker() PUMP_NOEXCEPT;
 
 			/*********************************************************************************
 			 * Deconstructor
@@ -62,8 +62,8 @@ namespace pump {
 				int32 fd,
 				bool is_client,
 				void_ptr tls_cert,
-				const address &local_address,
-				const address &remote_address
+				PUMP_CONST address &local_address,
+				PUMP_CONST address &remote_address
 			);
 
 			/*********************************************************************************
@@ -72,13 +72,13 @@ namespace pump {
 			bool start(
 				service_ptr sv, 
 				int64 timeout, 
-				const tls_handshaker_callbacks &cbs
+				PUMP_CONST tls_handshaker_callbacks &cbs
 			);
 			bool start(
 				service_ptr sv, 
 				poll::channel_tracker_sptr &tracker, 
 				int64 timeout, 
-				const tls_handshaker_callbacks &cbs
+				PUMP_CONST tls_handshaker_callbacks &cbs
 			);
 
 			/*********************************************************************************
@@ -89,19 +89,19 @@ namespace pump {
 			/*********************************************************************************
 			 * Unlock flow
 			 ********************************************************************************/
-			LIB_FORCEINLINE flow::flow_tls_sptr unlock_flow() 
+			PUMP_INLINE flow::flow_tls_sptr unlock_flow()
 			{ return std::move(flow_); }
 
 			/*********************************************************************************
 			 * Get local address
 			 ********************************************************************************/
-			LIB_FORCEINLINE const address& get_local_address() const
+			PUMP_INLINE PUMP_CONST address& get_local_address() PUMP_CONST
 			{ return local_address_; }
 
 			/*********************************************************************************
 			 * Get remote address
 			 ********************************************************************************/
-			LIB_FORCEINLINE const address& get_remote_address() const
+			PUMP_INLINE PUMP_CONST address& get_remote_address() PUMP_CONST
 			{ return remote_address_; }
 
 		protected:
@@ -124,7 +124,7 @@ namespace pump {
 			/*********************************************************************************
 			 * Timer timeout callback
 			 ********************************************************************************/
-			static void on_timeout(tls_handshaker_wptr wptr);
+			PUMP_STATIC void on_timeout(tls_handshaker_wptr wptr);
 
 		private:
 			/*********************************************************************************
@@ -135,8 +135,8 @@ namespace pump {
 			/*********************************************************************************
 			 * Close flow
 			 ********************************************************************************/
-			LIB_FORCEINLINE void __close_flow() 
-			{ flow_.reset(); }
+			PUMP_INLINE void __close_flow()
+			{ if (flow_) flow_->close(); }
 
 			/*********************************************************************************
 			 * Process handshake

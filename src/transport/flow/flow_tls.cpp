@@ -28,19 +28,26 @@ namespace pump {
 
 			struct tls_session
 			{
-#ifdef USE_GNUTLS
-				tls_session():
+#if defined(USE_GNUTLS)
+				tls_session() PUMP_NOEXCEPT : 
 					session(nullptr)
 				{}
+
+				~tls_session()
+				{
+					if (session)
+						gnutls_deinit(session);
+				}
+
 				gnutls_session_t session;
 #endif
 			};
 
 			class ssl_net_layer
 			{
-#ifdef USE_GNUTLS
+#if defined(USE_GNUTLS)
 			public:
-				LIB_FORCEINLINE static ssize_t data_pull(gnutls_transport_ptr_t ptr, void_ptr data, size_t maxlen)
+				PUMP_INLINE static ssize_t data_pull(gnutls_transport_ptr_t ptr, void_ptr data, size_t maxlen)
 				{
 					int32 size = flow_tls_ptr(ptr)->__read_from_net_read_cache((block_ptr)data, (int32)maxlen);
 					if (size == 0)
@@ -49,20 +56,20 @@ namespace pump {
 					return size;
 				}
 
-				LIB_FORCEINLINE static ssize_t data_push(gnutls_transport_ptr_t ptr, c_void_ptr data, size_t len)
+				PUMP_INLINE static ssize_t data_push(gnutls_transport_ptr_t ptr, c_void_ptr data, size_t len)
 				{
 					flow_tls_ptr(ptr)->__send_to_net_send_cache((c_block_ptr)data, (int32)len);
 					return len;
 				}
 
-				LIB_FORCEINLINE static int get_error(gnutls_transport_ptr_t ptr)
+				PUMP_INLINE static int get_error(gnutls_transport_ptr_t ptr)
 				{
 					return EAGAIN;
 				}
 #endif
 			};
 
-			flow_tls::flow_tls():
+			flow_tls::flow_tls() PUMP_NOEXCEPT : 
 				is_handshaked_(false),
 				session_(nullptr),
 				read_task_(nullptr),
@@ -79,13 +86,9 @@ namespace pump {
 
 			flow_tls::~flow_tls()
 			{
-#ifdef USE_GNUTLS
+#if defined(USE_GNUTLS)
 				if (session_)
-				{
-					if (session_->session)
-						gnutls_deinit(session_->session);
 					delete session_;
-				}
 
 				if (read_task_)
 					net::unlink_iocp_task(read_task_);
@@ -94,19 +97,15 @@ namespace pump {
 #endif
 			}
 
-			int32 flow_tls::init(
-				poll::channel_sptr &ch, 
-				int32 fd, 
-				void_ptr tls_cert, 
-				bool is_client
-			) {
-#ifdef USE_GNUTLS
+			int32 flow_tls::init(poll::channel_sptr &ch, int32 fd, void_ptr cert, bool client)
+			{
+#if defined(USE_GNUTLS)
 				PUMP_ASSERT_EXPR(ch, ch_ = ch);
 				PUMP_ASSERT_EXPR(fd > 0, fd_ = fd);
 
 				PUMP_ASSERT(!session_);
 				session_ = new tls_session();
-				if (is_client)
+				if (client)
 					gnutls_init(&session_->session, GNUTLS_CLIENT | GNUTLS_NONBLOCK);
 				else 
 					gnutls_init(&session_->session, GNUTLS_SERVER | GNUTLS_NONBLOCK);
@@ -114,7 +113,7 @@ namespace pump {
 				// Set transport ptr
 				gnutls_transport_set_ptr(session_->session, this);
 				// Set GnuTLS session with credentials
-				gnutls_credentials_set(session_->session, GNUTLS_CRD_CERTIFICATE, tls_cert);
+				gnutls_credentials_set(session_->session, GNUTLS_CRD_CERTIFICATE, cert);
 				// Set GnuTLS handshake timeout time
 				gnutls_handshake_set_timeout(session_->session, GNUTLS_INDEFINITE_TIMEOUT);
 				//gnutls_handshake_set_timeout(session_->session, GNUTLS_DEFAULT_HANDSHAKE_TIMEOUT);
@@ -152,19 +151,17 @@ namespace pump {
 
 			void flow_tls::rebind_channel(poll::channel_sptr &ch)
 			{
-#ifdef USE_GNUTLS
+#if defined(USE_GNUTLS)
 				PUMP_ASSERT_EXPR(ch, ch_ = ch);
 
-				if (read_task_)
-					net::set_iocp_task_notifier(read_task_, ch_);
-				if (send_task_)
-					net::set_iocp_task_notifier(send_task_, ch_);
+				net::set_iocp_task_notifier(read_task_, ch_);
+				net::set_iocp_task_notifier(send_task_, ch_);
 #endif
 			}
 
 			int32 flow_tls::handshake()
 			{
-#ifdef USE_GNUTLS
+#if defined(USE_GNUTLS)
 				if (is_handshaked_)
 					return FLOW_ERR_NO;
 
@@ -191,12 +188,11 @@ namespace pump {
 
 			int32 flow_tls::beg_read_task()
 			{
-#ifdef USE_GNUTLS
+#if defined(USE_GNUTLS)
 #	if defined(WIN32) && defined (USE_IOCP)
 				if (read_flag_.test_and_set())
 					return FLOW_ERR_BUSY;
 
-				//PUMP_ASSERT(read_task_);
 				if (!net::post_iocp_read(read_task_))
 					return FLOW_ERR_ABORT;
 #	endif
@@ -206,41 +202,26 @@ namespace pump {
 #endif
 			}
 
-			void flow_tls::cancel_read_task()
-			{
-#ifdef USE_GNUTLS
-#	if defined(WIN32) && defined (USE_IOCP)
-				//net::cancel_iocp_task(net::get_iocp_handler(), read_task_);
-#	endif
-#endif
-			}
-
 			void flow_tls::end_read_task()
 			{
-#ifdef USE_GNUTLS
-#	if defined(WIN32) && defined (USE_IOCP)
+#if defined(USE_GNUTLS) && defined(WIN32) && defined (USE_IOCP)
 				read_flag_.clear();
-#	endif
 #endif
 			}
 
 			int32 flow_tls::read_from_net(net::iocp_task_ptr itask)
 			{
-#ifdef USE_GNUTLS
+#if defined(USE_GNUTLS)
 #	if defined(WIN32) && defined(USE_IOCP)
 				int32 size = net::get_iocp_task_processed_size(itask);
 #	else
 				int32 size = net::read(fd_, net_read_cache_raw_, net_read_cache_raw_size_);
 #	endif
-				if (size > 0)
+				if (PUMP_LIKELY(size > 0))
 				{
 					net_read_data_pos_ = 0;
 					net_read_data_size_ = size;
 					return FLOW_ERR_NO;
-				}
-				else if (size < 0)
-				{
-					return FLOW_ERR_AGAIN;
 				}
 #endif
 				return FLOW_ERR_ABORT;
@@ -248,17 +229,20 @@ namespace pump {
 
 			c_block_ptr flow_tls::read_from_ssl(int32_ptr size)
 			{
-#ifdef USE_GNUTLS
+#if defined(USE_GNUTLS)
 				*size = (int32)gnutls_read(session_->session, ssl_read_cache_raw_, ssl_read_cache_raw_size_);
+				if (*size <= 0 && gnutls_error_is_fatal(*size) != 0)
+					return nullptr;
+				return ssl_read_cache_raw_;
 #else
 				*size = -1;
+				return nullptr;
 #endif
-				return ssl_read_cache_raw_;
 			}
 
 			uint32 flow_tls::__read_from_net_read_cache(block_ptr b, int32 maxlen)
 			{
-#ifdef USE_GNUTLS
+#if defined(USE_GNUTLS)
 				// Get suitable size to read
 				int32 size = net_read_data_size_ > maxlen ? maxlen : net_read_data_size_;
 				if (size > 0)
@@ -274,33 +258,34 @@ namespace pump {
 #endif
 			}
 
-			int32 flow_tls::send_to_ssl(buffer_ptr wb)
+			bool flow_tls::send_to_ssl(buffer_ptr wb)
 			{
-#ifdef USE_GNUTLS
-				PUMP_ASSERT(wb);
-				int32 size = (int32)gnutls_write(session_->session, wb->data(), wb->data_size());
-				if (size > 0)
-					wb->shift(size);
-				return size;
-#else
-				return -1;
+#if defined(USE_GNUTLS)
+				PUMP_ASSERT(wb && wb->data_size() > 0);
+				do
+				{
+					int32 size = (int32)gnutls_write(session_->session, wb->data(), wb->data_size());
+					if (size <= 0 || !wb->shift(size))
+						break;
+					if (wb->data_size() == 0)
+						return true;
+				} while (true);
 #endif
+				return false;
 			}
 
 			int32 flow_tls::want_to_send()
 			{
-#ifdef USE_GNUTLS
+#if defined(USE_GNUTLS)
 #	if defined(WIN32) && defined(USE_IOCP)
-				//PUMP_ASSERT(send_task_);
 				net::set_iocp_task_buffer(send_task_, (int8_ptr)net_send_buffer_.data(), net_send_buffer_.data_size());
 				if (net::post_iocp_send(send_task_))
 					return FLOW_ERR_NO;
 #	else
 				int32 size = net::send(fd_, net_send_buffer_.data(), net_send_buffer_.data_size());
-				if (size > 0)
+				if (PUMP_LIKELY(size > 0))
 				{
-					if (!net_send_buffer_.shift(size))
-						PUMP_ASSERT(false);
+					PUMP_DEBUG_CHECK(net_send_buffer_.shift(size));
 					return FLOW_ERR_NO;
 				}
 				else if (size < 0)
@@ -314,35 +299,34 @@ namespace pump {
 
 			int32 flow_tls::send_to_net(net::iocp_task_ptr itask)
 			{
-#ifdef USE_GNUTLS
-				if (net_send_buffer_.data_size() == 0)
-					return FLOW_ERR_NO_DATA;
+#if defined(USE_GNUTLS)
+				auto data_size = net_send_buffer_.data_size();
+				if (data_size == 0)
+					return FLOW_ERR_NO;
 
 #	if defined(WIN32) && defined(USE_IOCP)
 				int32 size = net::get_iocp_task_processed_size(itask);
-				if (size > 0)
+				if (PUMP_LIKELY(size > 0))
 				{
-					if (!net_send_buffer_.shift(size))
-						PUMP_ASSERT(false);
+					PUMP_DEBUG_CHECK(net_send_buffer_.shift(size));
 
-					if (net_send_buffer_.data_size() == 0)
+					data_size -= size;
+					if (data_size > 0)
 					{
-						net_send_buffer_.reset();
-						return FLOW_ERR_NO;
+						net::set_iocp_task_buffer(send_task_, (block_ptr)net_send_buffer_.data(), data_size);
+						if (net::post_iocp_send(send_task_))
+							return FLOW_ERR_AGAIN;
 					}
 					
-					net::set_iocp_task_buffer(send_task_, (block_ptr)net_send_buffer_.data(), net_send_buffer_.data_size());
-					if (net::post_iocp_send(send_task_))
-						return FLOW_ERR_AGAIN;
+					net_send_buffer_.reset();
+					return FLOW_ERR_NO;
 				}
 #	else
-				int32 size = net::send(fd_, net_send_buffer_.data(), net_send_buffer_.data_size());
-				if (size > 0)
+				int32 size = net::send(fd_, net_send_buffer_.data(), data_size);
+				if (PUMP_LIKELY(size > 0))
 				{
-					if (!net_send_buffer_.shift(size))
-						PUMP_ASSERT(false);
-
-					if (net_send_buffer_.data_size() > 0)
+					PUMP_DEBUG_CHECK(net_send_buffer_.shift(size));
+					if (data_size - size > 0)
 						return FLOW_ERR_AGAIN;
 
 					net_send_buffer_.reset();

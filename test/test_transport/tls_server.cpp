@@ -57,11 +57,6 @@ public:
 			printf("server tls transport accepted %d\n", transp->get_fd());
 			transports_[transp.get()] = tctx;
 		}
-
-		//for (int i = 0; i < send_loop; i++)
-		//{
-		//	send_data(transport.get());
-		//}
 	}
 
 	/*********************************************************************************
@@ -88,7 +83,7 @@ public:
 		ctx->read_pocket_size += size;
 		ctx->read_size += size;
 
-		while (ctx->read_pocket_size >= send_pocket_size)
+		if (ctx->read_pocket_size >= send_pocket_size)
 		{
 			ctx->read_pocket_size -= send_pocket_size;
 			send_data(transp);

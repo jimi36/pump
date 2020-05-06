@@ -23,19 +23,19 @@
 namespace pump {
 	namespace poll {
 
-		class select_poller: 
+		class select_poller : 
 			public poller
 		{
 		public:
 			/*********************************************************************************
 			 * Constructor
 			 ********************************************************************************/
-			select_poller(bool pop_pending);
+			select_poller(bool pop_pending) PUMP_NOEXCEPT;
 
 			/*********************************************************************************
 			 * Deconstructor
 			 ********************************************************************************/
-			virtual ~select_poller();
+			virtual ~select_poller() = default;
 
 		protected:
 			/*********************************************************************************
@@ -47,7 +47,7 @@ namespace pump {
 			/*********************************************************************************
 			 * Dispatch pending event
 			 ********************************************************************************/
-			void __dispatch_pending_event(fd_set &rfds, fd_set &wfds);
+			void __dispatch_pending_event(PUMP_CONST fd_set *rfds, PUMP_CONST fd_set *wfds);
 
 		private:
 			fd_set rfds_;

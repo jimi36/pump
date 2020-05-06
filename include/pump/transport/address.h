@@ -24,69 +24,73 @@ namespace pump {
 
 		#define ADDRESS_MAX_LEN 64
 
-		class LIB_EXPORT address
+		class LIB_PUMP address
 		{
 		public:
 			/*********************************************************************************
 			 * Constructor
 			 ********************************************************************************/
-			address();
-			address(const std::string &ip, uint16 port);
-			address(const struct sockaddr *addr, int32 addrlen);
+			address() PUMP_NOEXCEPT;
+			address(PUMP_CONST std::string &ip, uint16 port);
+			address(PUMP_CONST struct sockaddr *addr, int32 addrlen);
 
 			/*********************************************************************************
 			 * Deconstructor
 			 ********************************************************************************/
-			~address() {}
+			~address() = default;
 
 			/*********************************************************************************
 			 * Set and Get address
 			 ********************************************************************************/
-			bool set(const std::string &ip, uint16 port);
-			bool set(const struct sockaddr *addr, int32 addrlen);
+			bool set(PUMP_CONST std::string &ip, uint16 port);
+			bool set(PUMP_CONST struct sockaddr *addr, int32 addrlen);
 
 			/*********************************************************************************
 			 * Get address struct
 			 ********************************************************************************/
-			LIB_FORCEINLINE struct sockaddr* get() 
+			PUMP_INLINE struct sockaddr* get()
 			{ return (struct sockaddr*)addr_; }
-			LIB_FORCEINLINE const struct sockaddr* get() const 
-			{ return (const struct sockaddr*)addr_; }
+			PUMP_INLINE PUMP_CONST struct sockaddr* get() PUMP_CONST
+			{ return (PUMP_CONST struct sockaddr*)addr_; }
 
 			/*********************************************************************************
 			 * Set and Get address struct size
 			 ********************************************************************************/
-			LIB_FORCEINLINE int32 len() const { return addrlen_; }
+			PUMP_INLINE int32 len() PUMP_CONST
+			{ return addrlen_; }
 
 			/*********************************************************************************
 			 * Get port
 			 ********************************************************************************/
-			LIB_FORCEINLINE uint16 port() const { return port_; }
+			PUMP_INLINE uint16 port() PUMP_CONST
+			{ return port_; }
 
 			/*********************************************************************************
 			 * Get ip
 			 ********************************************************************************/
-			LIB_FORCEINLINE const std::string& ip() const { return ip_; }
+			PUMP_INLINE PUMP_CONST std::string& ip() PUMP_CONST
+			{ return ip_; }
 
 			/*********************************************************************************
 			 * Is ipv6 or not
 			 ********************************************************************************/
-			LIB_FORCEINLINE bool is_ipv6() const { return is_v6_; }
+			PUMP_INLINE bool is_ipv6() PUMP_CONST
+			{ return is_v6_; }
 
 			/*********************************************************************************
 			 * Address to string
 			 ********************************************************************************/
-			std::string to_string() const;
+			std::string to_string() PUMP_CONST;
 
 			/*********************************************************************************
 			 * Operator ==
 			 ********************************************************************************/
-			bool operator ==(const address& other);
+			bool operator ==(const address& other) PUMP_CONST PUMP_NOEXCEPT;
 
 			/*********************************************************************************
 			 * Operator ==
 			 ********************************************************************************/
-			bool operator <(const address& other);
+			bool operator <(const address& other) PUMP_CONST PUMP_NOEXCEPT;
 
 		private:
 			/*********************************************************************************

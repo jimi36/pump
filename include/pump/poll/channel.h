@@ -43,14 +43,14 @@ namespace pump {
 			CH_OPT_DELETE = 0x03
 		};
 
-		class LIB_EXPORT channel:
+		class LIB_PUMP channel:
 			public utils::noncopyable
 		{
 		public:
 			/*********************************************************************************
 			 * Constructor
 			 ********************************************************************************/
-			explicit channel(int32 fd = -1):
+			explicit channel(int32 fd) PUMP_NOEXCEPT :
 				ctx_(nullptr),
 				fd_(fd) 
 			{}
@@ -63,49 +63,49 @@ namespace pump {
 			/*********************************************************************************
 			 * Get channel fd
 			 ********************************************************************************/
-			LIB_FORCEINLINE int32 get_fd() const 
+			PUMP_INLINE int32 get_fd() PUMP_CONST
 			{ return fd_; }
 
 			/*********************************************************************************
 			 * Get channel context
 			 ********************************************************************************/
-			LIB_FORCEINLINE void_ptr get_context() const 
+			PUMP_INLINE void_ptr get_context() PUMP_CONST
 			{ return ctx_; }
 
 			/*********************************************************************************
 			 * Set context
 			 ********************************************************************************/
-			LIB_FORCEINLINE void set_context(void_ptr ctx) 
+			PUMP_INLINE void set_context(void_ptr ctx)
 			{ ctx_ = ctx; }
 
 			/*********************************************************************************
 			 * Handle io event
 			 ********************************************************************************/
-			LIB_FORCEINLINE void handle_io_event(uint32 ev, net::iocp_task_ptr itask)
+			PUMP_INLINE void handle_io_event(uint32 ev, net::iocp_task_ptr itask)
 			{
 				if (ev & IO_EVNET_READ)
 					on_read_event(itask);
-				if (ev & IO_EVENT_SEND)
+				else if (ev & IO_EVENT_SEND)
 					on_send_event(itask);
 			}
 
 			/*********************************************************************************
 			 * Handle channel event
 			 ********************************************************************************/
-			LIB_FORCEINLINE void handle_channel_event(int32 ev) 
+			PUMP_INLINE void handle_channel_event(int32 ev) 
 			{ on_channel_event(ev); }
 
 			/*********************************************************************************
 			 * Handle tracker event
 			 ********************************************************************************/
-			LIB_FORCEINLINE void handle_tracker_event(int32 ev) 
+			PUMP_INLINE void handle_tracker_event(int32 ev) 
 			{ on_tracker_event(ev); }
 
 		protected:
 			/*********************************************************************************
 			 * Set channel fd
 			 ********************************************************************************/
-			LIB_FORCEINLINE void __set_fd(int32 fd) 
+			PUMP_INLINE void __set_fd(int32 fd)
 			{ fd_ = fd; }
 
 		protected:

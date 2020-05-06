@@ -23,14 +23,14 @@
 namespace pump {
 	namespace poll {
 
-		class iocp_poller: 
+		class iocp_poller : 
 			public poller
 		{
 		public:
 			/*********************************************************************************
 			 * Constructor
 			 ********************************************************************************/
-			iocp_poller(bool pop_pending);
+			iocp_poller(bool pop_pending) PUMP_NOEXCEPT;
 
 			/*********************************************************************************
 			 * Deconstructor
@@ -69,13 +69,13 @@ namespace pump {
 			 * Pause channel tracker
 			 ********************************************************************************/
 			virtual void pause_channel_tracker(channel_tracker_ptr tracker) override 
-			{ tracker->__set_tracking(false); }
+			{ tracker->__set_tracked(false); }
 
 			/*********************************************************************************
 			 * Awake channel tracker
 			 ********************************************************************************/
 			virtual void awake_channel_tracker(channel_tracker_ptr tracker) override 
-			{ tracker->__set_tracking(true); }
+			{ tracker->__set_tracked(true); }
 
 			/*********************************************************************************
 			 * Push channel event

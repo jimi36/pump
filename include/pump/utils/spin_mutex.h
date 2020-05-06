@@ -22,13 +22,13 @@
 namespace pump {
 	namespace utils {
 
-		class LIB_EXPORT spin_mutex
+		class LIB_PUMP spin_mutex
 		{
 		public:
 			/*********************************************************************************
 			 * Constructor
 			 ********************************************************************************/
-			spin_mutex(int32 per_loop = 3);
+			spin_mutex(int32 per_loop = 3) PUMP_NOEXCEPT;
 
 			/*********************************************************************************
 			 * Deconstructor
@@ -43,7 +43,7 @@ namespace pump {
 			/*********************************************************************************
 			 * Try lock
 			 ********************************************************************************/
-			LIB_FORCEINLINE bool try_lock()
+			PUMP_INLINE bool try_lock()
 			{
 				bool exp = false;
 				return locked_.compare_exchange_strong(exp, true);
@@ -52,13 +52,13 @@ namespace pump {
 			/*********************************************************************************
 			 * Unlock
 			 ********************************************************************************/
-			LIB_FORCEINLINE void unlock()
+			PUMP_INLINE void unlock()
 			{ locked_.store(false); }
 
 			/*********************************************************************************
 			 * Get locked status
 			 ********************************************************************************/
-			LIB_FORCEINLINE bool is_locked()
+			PUMP_INLINE bool is_locked() PUMP_CONST
 			{ return locked_.load(); }
 
 		private:
