@@ -25,16 +25,16 @@ namespace pump {
 				return;
 
 			if (ev == TRACKER_EVENT_DEL)
-				tracker_cnt_ -= 1;
-
-			if (tracker_cnt_ == 0)
 			{
-				if (__is_status(TRANSPORT_ERROR))
-					cbs_.dialed_cb(base_transport_sptr(), false);
-				else if (__set_status(TRANSPORT_TIMEOUT_DOING, TRANSPORT_TIMEOUT_DONE))
-					cbs_.timeout_cb();
-				else if (__set_status(TRANSPORT_STOPPING, TRANSPORT_STOPPED))
-					cbs_.stopped_cb();
+				if (tracker_cnt_.fetch_sub(1) - 1 == 0)
+				{
+					if (__is_status(TRANSPORT_ERROR))
+						cbs_.dialed_cb(base_transport_sptr(), false);
+					else if (__set_status(TRANSPORT_TIMEOUT_DOING, TRANSPORT_TIMEOUT_DONE))
+						cbs_.timeout_cb();
+					else if (__set_status(TRANSPORT_STOPPING, TRANSPORT_STOPPED))
+						cbs_.stopped_cb();
+				}
 			}
 		}
 
@@ -53,10 +53,11 @@ namespace pump {
 
 		void base_dialer::__stop_tracker()
 		{
-			if (!tracker_)
-				return;
-
-			PUMP_DEBUG_CHECK(get_service()->remove_channel_tracker(std::move(tracker_)));
+			if (tracker_)
+			{
+				auto tracker = std::move(tracker_);
+				PUMP_DEBUG_CHECK(get_service()->remove_channel_tracker(tracker));
+			}
 		}
 
 		bool base_dialer::__start_connect_timer(PUMP_CONST time::timer_callback &cb)

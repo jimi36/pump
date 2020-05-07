@@ -26,6 +26,9 @@ namespace pump {
 		class timer;
 		DEFINE_ALL_POINTER_TYPE(timer);
 
+		class timer_queue;
+		DEFINE_RAW_POINTER_TYPE(timer_queue);
+
 		typedef function::function<void()> timer_callback;
 
 		class LIB_PUMP timer : 
@@ -33,7 +36,6 @@ namespace pump {
 		{
 		protected:
 			friend class timer_queue;
-			DEFINE_RAW_POINTER_TYPE(timer_queue);
 
 		public:
 			/*********************************************************************************

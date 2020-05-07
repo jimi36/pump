@@ -25,14 +25,14 @@ namespace pump {
 				return;
 
 			if (ev == TRACKER_EVENT_DEL)
-				tracker_cnt_ -= 1;
-
-			if (tracker_cnt_ == 0)
 			{
-				if (__set_status(TRANSPORT_DISCONNECTING, TRANSPORT_DISCONNECTED))
-					cbs_.disconnected_cb();
-				else if (__set_status(TRANSPORT_STOPPING, TRANSPORT_STOPPED))
-					cbs_.stopped_cb();
+				if (tracker_cnt_.fetch_sub(1) - 1 == 0)
+				{
+					if (__set_status(TRANSPORT_DISCONNECTING, TRANSPORT_DISCONNECTED))
+						cbs_.disconnected_cb();
+					else if (__set_status(TRANSPORT_STOPPING, TRANSPORT_STOPPED))
+						cbs_.stopped_cb();
+				}
 			}
 		}
 
@@ -73,13 +73,19 @@ namespace pump {
 		void base_transport::__stop_read_tracker()
 		{
 			if (r_tracker_)
-				PUMP_DEBUG_CHECK(get_service()->remove_channel_tracker(std::move(r_tracker_)));
+			{
+				auto tracker = std::move(r_tracker_);
+				PUMP_DEBUG_CHECK(get_service()->remove_channel_tracker(tracker));
+			}
 		}
 
 		void base_transport::__stop_send_tracker()
 		{
 			if (s_tracker_)
-				PUMP_DEBUG_CHECK(get_service()->remove_channel_tracker(std::move(s_tracker_)));
+			{
+				auto tracker = std::move(s_tracker_);
+				PUMP_DEBUG_CHECK(get_service()->remove_channel_tracker(tracker));
+			}
 		}
 
 	}

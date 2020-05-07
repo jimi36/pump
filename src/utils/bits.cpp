@@ -29,12 +29,12 @@ namespace pump {
 				return false;
 
 			uint8 tmp[2] = { 0 };
-			uint8 left = bc % 8;
+			uint32 left = bc % 8;
 
-#if defined LITTLE_ENDIAN
-			int8 idx = bc / 8 + (left > 0 ? 0 : -1); int8 s = -1;
-#elif defined BIG_ENDIAN
-			int8 idx = 0; int8 s = 1;
+#if defined(LITTLE_ENDIAN)
+			int32 idx = bc / 8 + (left > 0 ? 0 : -1); int32 s = -1;
+#elif defined(BIG_ENDIAN)
+			int32 idx = 0; int32 s = 1;
 #endif
 			if (left > 0)
 			{
@@ -61,12 +61,12 @@ namespace pump {
 				return false;
 
 			uint8 tmp[4] = { 0 };
-			uint8 left = bc % 8;
+			uint32 left = bc % 8;
 
-#if defined LITTLE_ENDIAN
-			int8 idx = bc / 8 + (left > 0 ? 0 : -1); int8 s = -1;
-#elif defined BIG_ENDIAN
-			int8 idx = 0; int8 s = 1;
+#if defined(LITTLE_ENDIAN)
+			int32 idx = bc / 8 + (left > 0 ? 0 : -1); int32 s = -1;
+#elif defined(BIG_ENDIAN)
+			int32 idx = 0; int32 s = 1;
 #endif
 			if (left > 0)
 			{
@@ -93,12 +93,12 @@ namespace pump {
 				return false;
 
 			uint8 tmp[8] = { 0 };
-			uint8 left = bc % 8;
+			uint32 left = bc % 8;
 
-#if defined LITTLE_ENDIAN
-			int8 idx = bc / 8 + (left > 0 ? 0 : -1); int8 s = -1;
-#elif defined BIG_ENDIAN
-			int8 idx = 0; int8 s = 1;
+#if defined(LITTLE_ENDIAN)
+			int32 idx = bc / 8 + (left > 0 ? 0 : -1); int32 s = -1;
+#elif defined(BIG_ENDIAN)
+			int32 idx = 0; int32 s = 1;
 #endif
 			if (left > 0)
 			{
@@ -166,13 +166,13 @@ namespace pump {
 			if (bc > 16 || bc > all_bc_)
 				return false;
 
-			uint8 left = bc % 8;
+			uint32 left = bc % 8;
 			uint8_ptr tmp = uint8_ptr(&val);
 
-#if defined LITTLE_ENDIAN
-			int8 idx = bc / 8 + (left > 0 ? 0 : -1); int8 s = -1;
-#elif defined BIG_ENDIAN
-			int8 idx = 0; int8 s = 1;
+#if defined(LITTLE_ENDIAN)
+			int32 idx = bc / 8 + (left > 0 ? 0 : -1); int32 s = -1;
+#elif defined(BIG_ENDIAN)
+			int32 idx = 0; int8 32 = 1;
 #endif
 			if (left > 0)
 			{
@@ -196,13 +196,13 @@ namespace pump {
 			if (bc > 32 || bc > all_bc_)
 				return false;
 
-			uint8 left = bc % 8;
+			uint32 left = bc % 8;
 			uint8_ptr tmp = uint8_ptr(&val);
 
-#if defined LITTLE_ENDIAN
-			int8 idx = bc / 8 + (left > 0 ? 0 : -1); int8 s = -1;
-#elif defined BIG_ENDIAN
-			int8 idx = 0; int8 s = 1;
+#if defined(LITTLE_ENDIAN)
+			int32 idx = bc / 8 + (left > 0 ? 0 : -1); int32 s = -1;
+#elif defined(BIG_ENDIAN)
+			int32 idx = 0; int32 s = 1;
 #endif
 			if (left > 0)
 			{
@@ -226,13 +226,13 @@ namespace pump {
 			if (bc > 64 || bc > all_bc_)
 				return false;
 
-			uint8 left = bc % 8;
+			uint32 left = bc % 8;
 			uint8_ptr tmp = uint8_ptr(&val);
 
-#if defined LITTLE_ENDIAN
-			int8 idx = bc / 8 + (left > 0 ? 0 : -1); int8 s = -1;
-#elif defined BIG_ENDIAN
-			int8 idx = 0; int8 s = 1;
+#if defined(LITTLE_ENDIAN)
+			int32 idx = bc / 8 + (left > 0 ? 0 : -1); int32 s = -1;
+#elif defined(BIG_ENDIAN)
+			int32 idx = 0; int32 s = 1;
 #endif
 			if (left > 0)
 			{

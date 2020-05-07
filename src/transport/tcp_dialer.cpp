@@ -45,7 +45,8 @@ namespace pump {
 			if (!__open_flow())
 				return false;
 
-			if (!__start_tracker((poll::channel_sptr)shared_from_this()))
+			poll::channel_sptr ch = std::move(shared_from_this());
+			if (!__start_tracker(ch))
 				return false;
 
 			if (flow_->want_to_connect(remote_address_) != FLOW_ERR_NO)
@@ -91,7 +92,6 @@ namespace pump {
 			if (!__set_status(TRANSPORT_STARTED, next_status))
 				return;
 
-			__close_flow();
 			__stop_tracker();
 			__stop_connect_timer();
 
@@ -100,6 +100,10 @@ namespace pump {
 			{
 				conn = tcp_transport::create_instance();
 				PUMP_DEBUG_CHECK(conn->init(flow->unbind_fd(), local_address, remote_address));
+			}
+			else
+			{
+				__close_flow();
 			}
 
 			cbs_.dialed_cb(conn, success);

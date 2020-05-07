@@ -24,7 +24,7 @@ namespace pump {
 		epoll_poller::epoll_poller(bool pop_pending) PUMP_NOEXCEPT :
 			poller(pop_pending)
 		{
-#ifndef WIN32
+#if defined(__GNUC__)
 			epoll_fd_ = ::epoll_create1(0);
 			epoll_mem_ = malloc(sizeof(struct epoll_event) * EPOLL_EVENT_SIZE);
 #endif
@@ -32,7 +32,7 @@ namespace pump {
 
 		epoll_poller::~epoll_poller()
 		{
-#ifndef WIN32
+#if defined(__GNUC__)
 			if (epoll_fd_ != -1)
 				close(epoll_fd_);
 			if (epoll_mem_)
@@ -42,16 +42,14 @@ namespace pump {
 
 		bool epoll_poller::__add_channel_tracker(channel_tracker_ptr tracker)
 		{
-#ifndef WIN32
+#if defined(__GNUC__)
 			struct epoll_event ev;
 			bzero(&ev, sizeof(ev));
 
 			ev.data.ptr = tracker;
 
-			ev.events = EL_TRI_TYPE;
-
-			auto listen_event = tracker->get_track_event();
-			ev.events |= (listen_event & IO_EVNET_READ) ? EL_READ_EVENT : 0;
+			auto listen_event = tracker->get_event();
+			ev.events = (listen_event & IO_EVNET_READ) ? EL_READ_EVENT : 0;
 			ev.events |= (listen_event & IO_EVENT_SEND) ? EL_WRITE_EVENT : 0;
 			ev.events |= pop_pending_channel_ ? EPOLLONESHOT : 0;
 	
@@ -63,27 +61,25 @@ namespace pump {
 
 		void epoll_poller::__awake_channel_tracker(channel_tracker_ptr tracker)
 		{
-#ifndef WIN32
+#if defined(__GNUC__)
 			struct epoll_event ev;
 			bzero(&ev, sizeof(ev));
 
 			ev.data.ptr = tracker;
 
-			ev.events = EL_TRI_TYPE;
-
-			auto listen_event = tracker->get_track_event();
-			ev.events |= (listen_event & IO_EVNET_READ) ? EL_READ_EVENT : 0;
+			auto listen_event = tracker->get_event();
+			ev.events = (listen_event & IO_EVNET_READ) ? EL_READ_EVENT : 0;
 			ev.events |= (listen_event & IO_EVENT_SEND) ? EL_WRITE_EVENT : 0;
 			ev.events |= pop_pending_channel_ ? EPOLLONESHOT : 0;
 
-			//epoll_ctl(epoll_fd_, EPOLL_CTL_MOD, tracker->get_fd(), &ev);
-			epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, tracker->get_fd(), &ev);
+			if (epoll_ctl(epoll_fd_, EPOLL_CTL_MOD, tracker->get_fd(), &ev) != 0)
+				epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, tracker->get_fd(), &ev);
 #endif
 		}
 
 		void epoll_poller::__remove_channel_tracker(channel_tracker_ptr tracker)
 		{
-#ifndef WIN32
+#if defined(__GNUC__)
 			struct epoll_event ev;
 			epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, tracker->get_fd(), &ev);
 #endif
@@ -91,7 +87,7 @@ namespace pump {
 
 		void epoll_poller::__pause_channel_tracker(channel_tracker_ptr tracker)
 		{
-#ifndef WIN32
+#if defined(__GNUC__)
 			struct epoll_event ev;
 			epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, tracker->get_fd(), &ev);
 #endif
@@ -99,7 +95,7 @@ namespace pump {
 
 		void epoll_poller::__poll(int32 timeout)
 		{
-#ifndef WIN32
+#if defined(__GNUC__)
 			auto count = ::epoll_wait(epoll_fd_, (struct epoll_event*)epoll_mem_, EPOLL_EVENT_SIZE, timeout);
 			if (count > 0)
 				__dispatch_pending_event(count);
@@ -108,7 +104,7 @@ namespace pump {
 
 		void epoll_poller::__dispatch_pending_event(int32 count)
 		{
-#ifndef WIN32
+#if defined(__GNUC__)
 			auto events = (struct epoll_event*)epoll_mem_;
 
 			for (int32 i = 0; i < count; ++i)

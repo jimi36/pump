@@ -28,9 +28,9 @@ namespace pump {
 		timer::timer(uint64 timeout, const timer_callback &cb, bool repeated) PUMP_NOEXCEPT : 
 			queue_(nullptr),
 			status_(TIMER_INIT),
-			timeout_(timeout),
 			cb_(cb),
 			repeated_(repeated),
+			timeout_(timeout),
 			overtime_(0)
 		{
 		}
@@ -71,7 +71,7 @@ namespace pump {
 
 				if (__set_status(TIMER_STARTED, TIMER_STOPPED))
 				{
-					if (PUMP_LIKELY(queue_))
+					if (PUMP_LIKELY(queue_ != nullptr))
 						queue_->delete_timer(this);
 					else
 						break;
@@ -90,7 +90,10 @@ namespace pump {
 				cb_();
 
 			if (repeated_ && queue_ &&__set_status(TIMER_PENDING, TIMER_STARTED))
-				queue_->add_timer(shared_from_this(), true);
+			{
+				auto sptr = shared_from_this();
+				queue_->add_timer(sptr, true);
+			}
 		}
 
 	}

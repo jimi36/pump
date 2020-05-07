@@ -22,9 +22,9 @@ namespace pump {
 
 			flow_tcp::flow_tcp() PUMP_NOEXCEPT : 
 				read_task_(nullptr),
-				send_task_(nullptr),
 				net_read_cache_raw_size_(0),
 				net_read_cache_raw_(nullptr),
+				send_task_(nullptr),
 				send_buffer_(nullptr)
 			{
 				read_flag_.clear();

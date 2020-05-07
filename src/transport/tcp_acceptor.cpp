@@ -41,7 +41,8 @@ namespace pump {
 			if (!__open_flow())
 				return false;
 
-			if (!__start_tracker((poll::channel_sptr)shared_from_this()))
+			poll::channel_sptr ch = std::move(shared_from_this());
+			if (!__start_tracker(ch))
 				return false;
 
 			if (flow_->want_to_accept() != FLOW_ERR_NO)

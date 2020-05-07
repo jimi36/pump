@@ -223,20 +223,20 @@ namespace pump {
 				return;
 
 			if (ev == TRACKER_EVENT_DEL)
-				tracker_cnt_ -= 1;
-
-			if (tracker_cnt_ == 0)
 			{
-				if (__is_status(TRANSPORT_FINISH))
-					cbs_.handshaked_cb(this, true);
-				else if (__is_status(TRANSPORT_ERROR))
-					cbs_.handshaked_cb(this, false);
-				else if (__set_status(TRANSPORT_TIMEOUT_DOING, TRANSPORT_TIMEOUT_DONE))
-					cbs_.handshaked_cb(this, false);
-				else if (__set_status(TRANSPORT_DISCONNECTING, TRANSPORT_DISCONNECTED))
-					cbs_.handshaked_cb(this, false);
-				else if (__set_status(TRANSPORT_STOPPING, TRANSPORT_STOPPED))
-					cbs_.stopped_cb(this);
+				if (tracker_cnt_.fetch_sub(1) - 1 == 0)
+				{
+					if (__is_status(TRANSPORT_FINISH))
+						cbs_.handshaked_cb(this, true);
+					else if (__is_status(TRANSPORT_ERROR))
+						cbs_.handshaked_cb(this, false);
+					else if (__set_status(TRANSPORT_TIMEOUT_DOING, TRANSPORT_TIMEOUT_DONE))
+						cbs_.handshaked_cb(this, false);
+					else if (__set_status(TRANSPORT_DISCONNECTING, TRANSPORT_DISCONNECTED))
+						cbs_.handshaked_cb(this, false);
+					else if (__set_status(TRANSPORT_STOPPING, TRANSPORT_STOPPED))
+						cbs_.stopped_cb(this);
+				}
 			}
 		}
 
@@ -359,10 +359,11 @@ namespace pump {
 
 		void tls_handshaker::__stop_tracker()
 		{
-			if (!tracker_)
-				return;
-
-			PUMP_DEBUG_CHECK(get_service()->remove_channel_tracker(std::move(tracker_)));
+			if (tracker_)
+			{
+				auto tracker = std::move(tracker_);
+				PUMP_DEBUG_CHECK(get_service()->remove_channel_tracker(tracker));
+			}
 		}
 
 		void tls_handshaker::__awake_tracker(poll::channel_tracker_ptr tracker)

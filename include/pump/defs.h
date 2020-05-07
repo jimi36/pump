@@ -82,11 +82,15 @@
 	auto p = p##_locker.get()
 
 // Macro system endian
-#define PUMP_ENDIAD_KEY '\x01\x02'
-#if PUMP_ENDIAD_KEY == 0x0102
-#	define BIG_ENDIAN
-#elif PUMP_ENDIAD_KEY == 0x0201
-#	define LITTLE_ENDIAN
+#define PUMP_ENDIAD_KEY 0x01
+#if PUMP_ENDIAD_KEY == 0x0102 >> 8
+#	if !defined(BIG_ENDIAN)
+#		define BIG_ENDIAN
+#	endif
+#elif PUMP_ENDIAD_KEY == 0x0201 >> 8
+#	if !defined(LITTLE_ENDIAN)
+#		define LITTLE_ENDIAN
+#	endif
 #else
 #	error "Unknow endian"
 #endif

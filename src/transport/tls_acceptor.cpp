@@ -53,7 +53,8 @@ namespace pump {
 			if (!__open_flow())
 				return false;
 
-			if (!__start_tracker((poll::channel_sptr)shared_from_this()))
+			poll::channel_sptr ch = std::move(shared_from_this());
+			if (!__start_tracker(ch))
 				return false;
 
 			if (flow_->want_to_accept() != FLOW_ERR_NO)
@@ -87,7 +88,7 @@ namespace pump {
 			if (PUMP_LIKELY(fd > 0))
 			{
 				tls_handshaker_ptr handshaker = __create_handshaker();
-				if (PUMP_LIKELY(handshaker))
+				if (PUMP_LIKELY(handshaker != nullptr))
 				{
 					// If handshaker is started error, handshaked callback will be triggered. So we do nothing
 					// at here when started error. But if acceptor stopped befere here, we shuold stop handshaking.

@@ -62,11 +62,15 @@ namespace pump {
 				if (fd_ == -1)
 					return FLOW_ERR_ABORT;
 #endif
-				if (!net::set_reuse(fd_, 1) ||
-					!net::set_noblock(fd_, 1) ||
-					!net::set_nodelay(fd_, 1) ||
-					!net::bind(fd_, (sockaddr*)listen_address.get(), listen_address.len()) ||
-					!net::listen(fd_))
+				if (!net::set_reuse(fd_, 1))
+					return FLOW_ERR_ABORT;
+				if (!net::set_noblock(fd_, 1))
+					return FLOW_ERR_ABORT;
+				if (!net::set_nodelay(fd_, 1))
+					return FLOW_ERR_ABORT;
+				if (!net::bind(fd_, (sockaddr*)listen_address.get(), listen_address.len()))
+					return FLOW_ERR_ABORT;
+				if (!net::listen(fd_))
 					return FLOW_ERR_ABORT;
 
 				return FLOW_ERR_NO;

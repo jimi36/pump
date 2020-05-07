@@ -46,7 +46,7 @@ namespace pump {
 					a3_to_a4(a4, a3);
 
 					for (i = 0; i < 4; i++) {
-						out[enc_len++] = kBase64Alphabet[a4[i]];
+						out[enc_len++] = kBase64Alphabet[(int32)a4[i]];
 					}
 
 					i = 0;
@@ -64,7 +64,7 @@ namespace pump {
 
 				for (j = 0; j < i + 1; j++) 
 				{
-					out[enc_len++] = kBase64Alphabet[a4[j]];
+					out[enc_len++] = kBase64Alphabet[(int32)a4[j]];
 				}
 
 				while ((i++ < 3)) 

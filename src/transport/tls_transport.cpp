@@ -69,7 +69,8 @@ namespace pump {
 				__set_status(TRANSPORT_STARTING, TRANSPORT_ERROR);
 			});
 
-			if (!__start_all_trackers((poll::channel_sptr)shared_from_this()))
+			poll::channel_sptr ch = std::move(shared_from_this());
+			if (!__start_all_trackers(ch))
 				return false;
 
 			if (flow_->beg_read_task() != FLOW_ERR_NO)
