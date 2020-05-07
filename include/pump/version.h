@@ -18,7 +18,7 @@
 #define pump_version_h
 
 #define MAJOR_VERSION 1
-#define MINOR_VERSION 0
+#define MINOR_VERSION 1
 #define BUILD_VERSION 0
 
 #endif
