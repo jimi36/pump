@@ -6,9 +6,9 @@ namespace pump {
 		PUMP_STATIC c_block_ptr kBase64Alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
 		/* 'Private' declarations */
-		PUMP_INLINE void a3_to_a4(block_ptr a4, block_ptr a3);
-		PUMP_INLINE void a4_to_a3(block_ptr a3, block_ptr a4);
-		PUMP_INLINE block b64_lookup(block c);
+		PUMP_INLINE void a3_to_a4(uint8_ptr a4, uint8_ptr a3);
+		PUMP_INLINE void a4_to_a3(uint8_ptr a3, uint8_ptr a4);
+		PUMP_INLINE uint8 b64_lookup(uint8 c);
 
 		PUMP_INLINE PUMP_STATIC uint32 encoded_length(uint32 length)
 		{
@@ -28,9 +28,9 @@ namespace pump {
 		bool base64_encode(PUMP_CONST std::string &in, std::string &out) 
 		{
 			int32 i = 0, j = 0;
-			size_t enc_len = 0;
-			block a3[3];
-			block a4[4];
+			int32 enc_len = 0;
+			uint8 a3[3];
+			uint8 a4[4];
 
 			uint32 input_len = (uint32)in.size();
 			std::string::const_iterator input = in.begin();
@@ -97,9 +97,9 @@ namespace pump {
 		bool base64_decode(PUMP_CONST std::string &in, std::string &out)
 		{
 			int32 i = 0, j = 0;
-			size_t dec_len = 0;
-			block a3[3];
-			block a4[4];
+			int32 dec_len = 0;
+			uint8 a3[3];
+			uint8 a4[4];
 
 			uint32 input_len = (uint32)in.size();
 			std::string::const_iterator input = in.begin();
@@ -156,7 +156,7 @@ namespace pump {
 			return (dec_len == out.size());
 		}
 
-		PUMP_INLINE void a3_to_a4(block_ptr a4, block_ptr a3)
+		PUMP_INLINE void a3_to_a4(uint8_ptr a4, uint8_ptr a3)
 		{
 			a4[0] = (a3[0] & 0xfc) >> 2;
 			a4[1] = ((a3[0] & 0x03) << 4) + ((a3[1] & 0xf0) >> 4);
@@ -164,14 +164,14 @@ namespace pump {
 			a4[3] = (a3[2] & 0x3f);
 		}
 
-		PUMP_INLINE void a4_to_a3(block_ptr a3, block_ptr a4)
+		PUMP_INLINE void a4_to_a3(uint8_ptr a3, uint8_ptr a4)
 		{
 			a3[0] = (a4[0] << 2) + ((a4[1] & 0x30) >> 4);
 			a3[1] = ((a4[1] & 0xf) << 4) + ((a4[2] & 0x3c) >> 2);
 			a3[2] = ((a4[2] & 0x3) << 6) + a4[3];
 		}
 
-		PUMP_INLINE block b64_lookup(block c)
+		PUMP_INLINE uint8 b64_lookup(uint8 c)
 		{
 			if (c >= 'A' && c <= 'Z') return c - 'A';
 			if (c >= 'a' && c <= 'z') return c - 71;

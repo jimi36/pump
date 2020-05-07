@@ -21,8 +21,6 @@
 #include "pump/utils/spin_mutex.h"
 #include "pump/poll/channel_tracker.h"
 
-#include <concurrentqueue/concurrentqueue.h>
-
 namespace pump {
 	namespace poll {
 

@@ -24,16 +24,16 @@ A million repetitions of "a"
 		/* blk0() and blk() perform the initial expand. */
 		/* I got the idea of expanding during the round function from SSLeay */
 #if defined LITTLE_ENDIAN
-#define blk0(i) (block->l[i] = (rol(block->l[i],24)&0xFF00FF00) \
-    |(rol(block->l[i],8)&0x00FF00FF))
+#define blk0(i) (cblock->l[i] = (rol(cblock->l[i],24)&0xFF00FF00) \
+    |(rol(cblock->l[i],8)&0x00FF00FF))
 #elif defined BIG_ENDIAN
-#define blk0(i) block->l[i]
+#define blk0(i) cblock->l[i]
 #else
 #error "Endianness not defined!"
 #endif
 
-#define blk(i) (block->l[i&15] = rol(block->l[(i+13)&15]^block->l[(i+8)&15] \
-    ^block->l[(i+2)&15]^block->l[i&15],1))
+#define blk(i) (cblock->l[i&15] = rol(cblock->l[(i+13)&15]^cblock->l[(i+8)&15] \
+    ^cblock->l[(i+2)&15]^cblock->l[i&15],1))
 
 /* (R0+R1), R2, R3, R4 are the different operations used in SHA1 */
 #define R0(v,w,x,y,z,i) z+=((w&(x^y))^y)+blk0(i)+0x5A827999+rol(v,5);w=rol(w,30);
@@ -58,16 +58,16 @@ namespace pump {
 			} CHAR64LONG16;
 
 #ifdef SHA1HANDSOFF
-			CHAR64LONG16 block[1];      /* use array to appear as a pointer */
+			CHAR64LONG16 cblock[1];      /* use array to appear as a pointer */
 
-			memcpy(block, buffer, 64);
+			memcpy(cblock, buffer, 64);
 #else
 			/* The following had better never be used because it causes the
 			 * pointer-to-const buffer to be cast into a pointer to non-const.
 			 * And the result is written through.  I threw a "const" in, hoping
 			 * this will cause a diagnostic.
 			 */
-			CHAR64LONG16 *block = (const CHAR64LONG16 *)buffer;
+			CHAR64LONG16 *cblock = (const CHAR64LONG16 *)buffer;
 #endif
 			/* Copy context->state[] to working vars */
 			a = state[0];
@@ -165,7 +165,7 @@ namespace pump {
 			/* Wipe variables */
 			a = b = c = d = e = 0;
 #ifdef SHA1HANDSOFF
-			memset(block, '\0', sizeof(block));
+			memset(cblock, '\0', sizeof(cblock));
 #endif
 		}
 
@@ -185,7 +185,7 @@ namespace pump {
 
 		/* Run your data through this. */
 
-		void sha1_update(SHA1_CTX *ctx, c_uint8_ptr data, uint32 len)
+		void sha1_update(SHA1_CTX *ctx, c_block_ptr data, uint32 len)
 		{
 			uint32 i, j;
 
@@ -200,7 +200,7 @@ namespace pump {
 				sha1_transform(ctx->state, ctx->buffer);
 				for (; i + 63 < len; i += 64)
 				{
-					sha1_transform(ctx->state, &data[i]);
+					sha1_transform(ctx->state, (c_uint8_ptr)&data[i]);
 				}
 				j = 0;
 			}
@@ -235,7 +235,7 @@ namespace pump {
 				int j;
 
 				for (j = 0; j < 4; t >>= 8, j++)
-					*--fcp = (uint8)t
+					*--fcp = (uint8)t;
 			}
 #else
 			for (i = 0; i < 8; i++)
@@ -244,13 +244,13 @@ namespace pump {
 			}
 #endif
 			c = 0200;
-			sha1_update(ctx, &c, 1);
+			sha1_update(ctx, (c_block_ptr)&c, 1);
 			while ((ctx->count[0] & 504) != 448)
 			{
 				c = 0000;
-				sha1_update(ctx, &c, 1);
+				sha1_update(ctx, (c_block_ptr)&c, 1);
 			}
-			sha1_update(ctx, finalcount, 8); /* Should cause a sha1_transform() */
+			sha1_update(ctx, (c_block_ptr)finalcount, 8); /* Should cause a sha1_transform() */
 			for (i = 0; i < 20; i++)
 			{
 				digest[i] = (uint8)
@@ -261,15 +261,15 @@ namespace pump {
 			memset(&finalcount, '\0', sizeof(finalcount));
 		}
 
-		void sha1(c_uint8_ptr str, uint32 len, uint8 digest[20])
+		void sha1(c_block_ptr str, uint32 len, block digest[20])
 		{
 			SHA1_CTX ctx;
 			uint32 ii;
 
 			sha1_init(&ctx);
 			for (ii = 0; ii < len; ii += 1)
-				sha1_update(&ctx, (c_uint8_ptr)str + ii, 1);
-			sha1_final(&ctx, digest);
+				sha1_update(&ctx, str + ii, 1);
+			sha1_final(&ctx, (uint8_ptr)digest);
 		}
 
 	}

@@ -29,8 +29,6 @@ namespace pump {
 			uint8 buffer[64];
 		};
 
-		//void sha1_transform(uint32 state[5], const uint8 buffer[64]);
-
 		/*********************************************************************************
 		 * Init sha1 context
 		 ********************************************************************************/
@@ -39,7 +37,7 @@ namespace pump {
 		/*********************************************************************************
 		 * Update sha1 context
 		 ********************************************************************************/
-		LIB_PUMP void sha1_update(SHA1_CTX *ctx, c_uint8_ptr data, uint32 len);
+		LIB_PUMP void sha1_update(SHA1_CTX *ctx, c_block_ptr data, uint32 len);
 
 		/*********************************************************************************
 		 * Final sha1 context
@@ -49,7 +47,7 @@ namespace pump {
 		/*********************************************************************************
 		 * Sha1
 		 ********************************************************************************/
-		LIB_PUMP void sha1(c_uint8_ptr str, uint32 len, uint8 digest[20]);
+		LIB_PUMP void sha1(c_block_ptr str, uint32 len, block digest[20]);
 
 	}
 }

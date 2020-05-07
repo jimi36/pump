@@ -83,11 +83,11 @@
 
 // Macro system endian
 #define PUMP_ENDIAD_KEY 0x01
-#if PUMP_ENDIAD_KEY == 0x0102 >> 8
+#if PUMP_ENDIAD_KEY == 0x0201 >> 8
 #	if !defined(BIG_ENDIAN)
 #		define BIG_ENDIAN
 #	endif
-#elif PUMP_ENDIAD_KEY == 0x0201 >> 8
+#elif PUMP_ENDIAD_KEY == 0x0102 >> 8
 #	if !defined(LITTLE_ENDIAN)
 #		define LITTLE_ENDIAN
 #	endif

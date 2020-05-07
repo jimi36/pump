@@ -14,19 +14,19 @@
  * limitations under the License.
  */
 
-#ifndef pump_win32_h
-#define pump_win32_h
+#ifndef pump_platform_h
+#define pump_platform_h
 
-#ifdef WIN32
-
-#	define strncpy strcpy_s
-
-#	define snprintf sprintf_s
-
-#	define strncasecmp _strnicmp
-
-#   define sched_yield SwitchToThread
-
+#if defined(WIN32)
+#	define pump_strncpy strcpy_s
+#	define pump_snprintf sprintf_s
+#	define pump_strncasecmp _strnicmp
+#   define pump_sched_yield SwitchToThread
+#elif defined(__GNUC__)
+#	define pump_strncpy strncpy
+#	define pump_snprintf snprintf
+#	define pump_strncasecmp strncasecmp
+#   define pump_sched_yield sched_yield
 #endif
 
 #endif

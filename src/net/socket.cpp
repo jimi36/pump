@@ -36,7 +36,7 @@ namespace pump {
 			struct linger lgr;
 			lgr.l_onoff = on;
 			lgr.l_linger = linger;
-			return (::setsockopt(fd, SOL_SOCKET, SO_LINGER, (const int8*)&lgr, sizeof(lgr)) == 0);
+			return (::setsockopt(fd, SOL_SOCKET, SO_LINGER, (c_block_ptr)&lgr, sizeof(lgr)) == 0);
 		}
 
 		bool set_keeplive(int32 fd, int32 keeplive, int32 keepinterval)
@@ -214,7 +214,7 @@ namespace pump {
 				struct sockaddr_in *v4 = (struct sockaddr_in*)addr;
 				if (::inet_ntop(AF_INET, &(v4->sin_addr), host, sizeof(host)) != nullptr)
 				{
-					snprintf(host + strlen(host), 10, ":%d", ntohs(v4->sin_port));
+					pump_snprintf(host + strlen(host), 10, ":%d", ntohs(v4->sin_port));
 					return std::string(host);
 				}
 			}
@@ -223,7 +223,7 @@ namespace pump {
 				struct sockaddr_in6 *v6 = (struct sockaddr_in6*)addr;
 				if (::inet_ntop(AF_INET6, &(v6->sin6_addr), host, sizeof(host)) != nullptr)
 				{
-					snprintf(host + strlen(host), 10, ":%d", ntohs(v6->sin6_port));
+					pump_snprintf(host + strlen(host), 10, ":%d", ntohs(v6->sin6_port));
 					return std::string(host);
 				}
 			}

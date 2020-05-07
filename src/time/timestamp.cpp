@@ -46,12 +46,12 @@ namespace pump {
 			uint32 milliseconds = static_cast<uint32>(ms % MS_PER_SECOND);
 #ifdef WIN32
 			::localtime_s(&tm_time, &seconds);
-			snprintf(date, sizeof(date) - 1, "%4d-%d-%d %d:%d:%d:%d",
+			pump_snprintf(date, sizeof(date) - 1, "%4d-%d-%d %d:%d:%d:%d",
 				tm_time.tm_year + 1900, tm_time.tm_mon + 1, tm_time.tm_mday,
 				tm_time.tm_hour, tm_time.tm_min, tm_time.tm_sec, milliseconds);
 #else
 			::gmtime_r(&seconds, &tm_time);
-			snprintf(date, sizeof(date) - 1, "%4d-%d-%d %d:%d:%d:%d",
+			pump_snprintf(date, sizeof(date) - 1, "%4d-%d-%d %d:%d:%d:%d",
 				tm_time.tm_year + 1970, tm_time.tm_mon + 1, tm_time.tm_mday,
 				tm_time.tm_hour - 8, tm_time.tm_min, tm_time.tm_sec, milliseconds);
 #endif
@@ -74,37 +74,37 @@ namespace pump {
 				if (strncmp(format.c_str() + idx, "YY", 2) == 0)
 				{
 					idx += 2;
-					len += snprintf(date + len, sizeof(date) - len - 1, "%4d", tm_time.tm_year + 1900);
+					len += pump_snprintf(date + len, sizeof(date) - len - 1, "%4d", tm_time.tm_year + 1900);
 				}
 				else if (strncmp(format.c_str() + idx, "MM", 2) == 0)
 				{
 					idx += 2;
-					len += snprintf(date + len, sizeof(date) - len - 1, "%d", tm_time.tm_mon + 1);
+					len += pump_snprintf(date + len, sizeof(date) - len - 1, "%d", tm_time.tm_mon + 1);
 				}
 				else if (strncmp(format.c_str() + idx, "DD", 2) == 0)
 				{
 					idx += 2;
-					len += snprintf(date + len, sizeof(date) - len - 1, "%d", tm_time.tm_mday);
+					len += pump_snprintf(date + len, sizeof(date) - len - 1, "%d", tm_time.tm_mday);
 				}
 				else if (strncmp(format.c_str() + idx, "hh", 2) == 0)
 				{
 					idx += 2;
-					len += snprintf(date + len, sizeof(date) - len - 1, "%d", tm_time.tm_hour);
+					len += pump_snprintf(date + len, sizeof(date) - len - 1, "%d", tm_time.tm_hour);
 				}
 				else if (strncmp(format.c_str() + idx, "mm", 2) == 0)
 				{
 					idx += 2;
-					len += snprintf(date + len, sizeof(date) - len - 1, "%d", tm_time.tm_min);
+					len += pump_snprintf(date + len, sizeof(date) - len - 1, "%d", tm_time.tm_min);
 				}
 				else if (strncmp(format.c_str() + idx, "ss", 2) == 0)
 				{
 					idx += 2;
-					len += snprintf(date + idx, sizeof(date) - len - 1, "%d", tm_time.tm_sec);
+					len += pump_snprintf(date + idx, sizeof(date) - len - 1, "%d", tm_time.tm_sec);
 				}
 				else if (strncmp(format.c_str() + idx, "ms", 2) == 0)
 				{
 					idx += 2;
-					len += snprintf(date + len, sizeof(date) - len - 1, "%d", millisecond);
+					len += pump_snprintf(date + len, sizeof(date) - len - 1, "%d", millisecond);
 				}
 				else
 				{
@@ -118,37 +118,37 @@ namespace pump {
 				if (strncmp(format.c_str() + idx, "YY", 2) == 0)
 				{
 					idx += 2;
-					len += snprintf(date + len, sizeof(date) - len - 1, "%4d", tm_time.tm_year + 1970);
+					len += pump_snprintf(date + len, sizeof(date) - len - 1, "%4d", tm_time.tm_year + 1970);
 				}
 				else if (strncmp(format.c_str() + idx, "MM", 2) == 0)
 				{
 					idx += 2;
-					len += snprintf(date + len, sizeof(date) - len - 1, "%d", tm_time.tm_mon + 1);
+					len += pump_snprintf(date + len, sizeof(date) - len - 1, "%d", tm_time.tm_mon + 1);
 				}
 				else if (strncmp(format.c_str() + idx, "DD", 2) == 0)
 				{
 					idx += 2;
-					len += snprintf(date + len, sizeof(date) - len - 1, "%d", tm_time.tm_mday);
+					len += pump_snprintf(date + len, sizeof(date) - len - 1, "%d", tm_time.tm_mday);
 				}
 				else if (strncmp(format.c_str() + idx, "hh", 2) == 0)
 				{
 					idx += 2;
-					len += snprintf(date + len, sizeof(date) - len - 1, "%d", tm_time.tm_hour - 8);
+					len += pump_snprintf(date + len, sizeof(date) - len - 1, "%d", tm_time.tm_hour - 8);
 				}
 				else if (strncmp(format.c_str() + idx, "mm", 2) == 0)
 				{
 					idx += 2;
-					len += snprintf(date + len, sizeof(date) - len - 1, "%d", tm_time.tm_min);
+					len += pump_snprintf(date + len, sizeof(date) - len - 1, "%d", tm_time.tm_min);
 				}
 				else if (strncmp(format.c_str() + idx, "ss", 2) == 0)
 				{
 					idx += 2;
-					len += snprintf(date + idx, sizeof(date) - len - 1, "%d", tm_time.tm_sec);
+					len += pump_snprintf(date + idx, sizeof(date) - len - 1, "%d", tm_time.tm_sec);
 				}
 				else if (strncmp(format.c_str() + idx, "ms", 2) == 0)
 				{
 					idx += 2;
-					len += snprintf(date + len, sizeof(date) - len - 1, "%d", millisecond);
+					len += pump_snprintf(date + len, sizeof(date) - len - 1, "%d", millisecond);
 				}
 				else
 				{

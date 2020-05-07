@@ -91,8 +91,8 @@ namespace pump {
 
 		std::string address::to_string() PUMP_CONST
 		{
-			int8 tmp[126] = { 0 };
-			snprintf(tmp, sizeof(tmp) - 1, "%s:%d", ip_.c_str(), port_);
+			block tmp[126] = { 0 };
+			pump_snprintf(tmp, sizeof(tmp) - 1, "%s:%d", ip_.c_str(), port_);
 			return std::move(std::string(tmp));
 		}
 
@@ -117,7 +117,7 @@ namespace pump {
 
 		void address::__update()
 		{
-			int8 host[128] = { 0 };
+			block host[128] = { 0 };
 			if (is_v6_)
 			{
 				auto v6 = (struct sockaddr_in6*)addr_;

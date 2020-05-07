@@ -101,7 +101,7 @@ namespace pump {
 				}
 
 				int32 addrlen = 0;
-				int8 addr[ADDRESS_MAX_LEN];
+				block addr[ADDRESS_MAX_LEN];
 
 				addrlen = ADDRESS_MAX_LEN;
 				net::local_address(fd_, (sockaddr*)addr, &addrlen);

@@ -31,45 +31,27 @@
 
 namespace pump {
 
-	typedef char int8;
+	typedef std::int8_t int8;
 	DEFINE_RAW_POINTER_TYPE(int8);
-
-	typedef unsigned char uint8;
+	typedef std::uint8_t uint8;
 	DEFINE_RAW_POINTER_TYPE(uint8);
-
-	typedef short int16;
+	typedef std::int16_t int16;
 	DEFINE_RAW_POINTER_TYPE(int16);
-
-	typedef unsigned short uint16;
+	typedef std::uint16_t uint16;
 	DEFINE_RAW_POINTER_TYPE(uint16);
-
-	typedef int int32;
+	typedef std::int32_t int32;
 	DEFINE_RAW_POINTER_TYPE(int32);
-
-	typedef unsigned int uint32;
+	typedef std::uint32_t uint32;
 	DEFINE_RAW_POINTER_TYPE(uint32);
-
-#ifdef _MSC_VER
-	typedef signed __int64 int64;
+	typedef std::int64_t int64;
 	DEFINE_RAW_POINTER_TYPE(int64);
-
-	typedef unsigned __int64 uint64;
+	typedef std::uint64_t uint64;
 	DEFINE_RAW_POINTER_TYPE(uint64);
-#else
-	typedef long long int64;
-	DEFINE_RAW_POINTER_TYPE(int64);
-
-	typedef unsigned long long uint64;
-	DEFINE_RAW_POINTER_TYPE(uint64);
-#endif
-
-	typedef float float32;
+	typedef std::float_t float32;
 	DEFINE_RAW_POINTER_TYPE(float32);
-
-	typedef double float64;
+	typedef std::double_t float64;
 	DEFINE_RAW_POINTER_TYPE(float64);
-
-	typedef int8 block;
+	typedef char block;
 	DEFINE_RAW_POINTER_TYPE(block);
 
 	DEFINE_ALL_POINTER_TYPE(void);

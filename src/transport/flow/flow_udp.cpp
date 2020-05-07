@@ -111,7 +111,7 @@ namespace pump {
 					remote_address->set(addr, addrlen);
 				}
 #else
-				int8 addr[ADDRESS_MAX_LEN];
+				block addr[ADDRESS_MAX_LEN];
 				int32 addrlen = ADDRESS_MAX_LEN;
 				block_ptr buf = (block_ptr)read_cache_.data();
 				*size = net::read_from(fd_, buf, (uint32)read_cache_.size(), (sockaddr*)addr, &addrlen);

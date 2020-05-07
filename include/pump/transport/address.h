@@ -101,7 +101,7 @@ namespace pump {
 		private:
 			bool is_v6_;
 			int32 addrlen_;
-			int8 addr_[ADDRESS_MAX_LEN];
+			block addr_[ADDRESS_MAX_LEN];
 
 			std::string ip_;
 			uint16 port_;

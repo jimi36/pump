@@ -22,8 +22,6 @@
 #include "pump/time/timer_queue.h"
 #include "pump/utils/features.h"
 
-#include <concurrentqueue/blockingconcurrentqueue.h>
-
 namespace pump {
 
 	class LIB_PUMP service: 

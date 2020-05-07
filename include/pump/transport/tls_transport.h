@@ -21,8 +21,6 @@
 #include "pump/transport/flow/flow_tls.h"
 #include "pump/transport/base_transport.h"
 
-#include "concurrentqueue/concurrentqueue.h"
-
 namespace pump {
 	namespace transport {
 

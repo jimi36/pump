@@ -17,12 +17,12 @@
 #ifndef pump_deps_h
 #define pump_deps_h
 
-#ifdef WIN32
+#if defined(WIN32)
 #	pragma warning(disable:4251)
 #	define WIN32_LEAN_AND_MEAN
 #endif
 
-#ifdef WIN32
+#if defined(WIN32)
 #	ifdef _WIN32_WINNT
 #		undef _WIN32_WINNT
 #		define _WIN32_WINNT 0x0600
@@ -34,7 +34,8 @@
 #include <atomic>
 #include <memory>
 #include <chrono>  
-#include <assert.h>
+#include <regex>
+#include <future>
 #include <condition_variable>
 
 #include <map>
@@ -43,10 +44,9 @@
 #include <string>
 #include <unordered_map>
 
-#include <regex>
-#include <future>
+#include <assert.h>
 
-#ifdef WIN32
+#if defined(WIN32)
 #include <windows.h>
 #else
 #include <iconv.h>
@@ -57,7 +57,7 @@
 #include <sys/sysinfo.h>
 #endif
 
-#ifdef WIN32
+#if defined(WIN32)
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <mstcpip.h>
@@ -77,8 +77,11 @@
 #endif
 
 #include "pump/defs.h"
-#include "pump/win32.h"
 #include "pump/types.h"
+#include "pump/platform.h"
+
 #include "function/function.h"
+#include "concurrentqueue/concurrentqueue.h"
+#include "concurrentqueue/blockingconcurrentqueue.h"
 
 #endif

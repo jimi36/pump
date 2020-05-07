@@ -38,7 +38,7 @@ namespace pump {
 				if (loop++ > per_loop_)
 				{
 					loop = 0;
-					sched_yield();
+					pump_sched_yield();
 				}
 			}
 		}
