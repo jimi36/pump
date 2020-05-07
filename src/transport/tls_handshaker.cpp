@@ -142,27 +142,28 @@ namespace pump {
 			PUMP_LOCK_SPOINTER(tracker, tracker_);
 			if (tracker == nullptr)
 				return;
-			
-			switch (__process_handshake(flow, tracker))
+
+			auto ret = __process_handshake(flow, tracker);
+			if (ret == TLS_HANDSHAKE_DONE)
 			{
-			case TLS_HANDSHAKE_DONE:
 				if (__set_status(TRANSPORT_STARTED, TRANSPORT_FINISH))
 				{
 					__stop_timer();
 					__stop_tracker();
 				}
-				break;
-			case TLS_HANDSHAKE_DOING:
+			}
+			else if (ret == TLS_HANDSHAKE_DOING)
+			{
 				__awake_tracker(tracker);
-				break;
-			default:
+			}
+			else
+			{
 				if (__set_status(TRANSPORT_STARTED, TRANSPORT_ERROR))
 				{
 					__stop_timer();
 					__close_flow();
 					__stop_tracker();
 				}
-				break;
 			}
 		}
 
@@ -174,9 +175,8 @@ namespace pump {
 			
 			auto flow = flow_.get();
 
-			switch (flow->send_to_net(itask))
-			{
-			case FLOW_ERR_ABORT:
+			auto ret = flow->send_to_net(itask);
+			if (ret == FLOW_ERR_ABORT)
 			{
 				if (__set_status(TRANSPORT_STARTED, TRANSPORT_DISCONNECTING))
 				{
@@ -186,34 +186,33 @@ namespace pump {
 				}
 				return;
 			}
-			case FLOW_ERR_AGAIN:
+			else if (ret == FLOW_ERR_AGAIN)
+			{
 				__awake_tracker(tracker);
 				return;
-			case FLOW_ERR_NO_DATA:
-			case FLOW_ERR_NO:
-				break;
 			}
 			
-			switch (__process_handshake(flow, tracker))
+			ret = __process_handshake(flow, tracker);
+			if (ret == TLS_HANDSHAKE_DONE)
 			{
-			case TLS_HANDSHAKE_DONE:
 				if (__set_status(TRANSPORT_STARTED, TRANSPORT_FINISH))
 				{
 					__stop_timer();
 					__stop_tracker();
 				}
-				break;
-			case TLS_HANDSHAKE_DOING:
+			}
+			else if (ret == TLS_HANDSHAKE_DOING)
+			{
 				__awake_tracker(tracker);
-				break;
-			default:
+			}
+			else
+			{
 				if (__set_status(TRANSPORT_STARTED, TRANSPORT_ERROR))
 				{
 					__stop_timer();
 					__close_flow();
 					__stop_tracker();
 				}
-				break;
 			}
 		}
 
@@ -262,7 +261,7 @@ namespace pump {
 			if (flow_->init(ch, fd, tls_cert, is_client) != FLOW_ERR_NO)
 				return false;
 
-			// Set channel FD
+			// Set channel fd
 			poll::channel::__set_fd(fd);
 
 			return true;
@@ -277,28 +276,18 @@ namespace pump {
 
 			if (flow->has_data_to_send())
 			{
-				switch (flow->want_to_send())
-				{
-				case FLOW_ERR_ABORT:
-					return TLS_HANDSHAKE_ERROR;
-				case FLOW_ERR_NO:
-					tracker->set_event(TRACK_WRITE);
+				tracker->set_event(TRACK_WRITE);
+				if (flow->want_to_send() == FLOW_ERR_NO)
 					return TLS_HANDSHAKE_DOING;
-				case FLOW_ERR_NO_DATA:
-					PUMP_ASSERT(false);
-				default:
-					PUMP_ASSERT(false);
-				}
+				return TLS_HANDSHAKE_ERROR;
 			}
 
 			if (!flow->is_handshaked())
 			{
-				if (flow->beg_read_task() != FLOW_ERR_NO)
-					return TLS_HANDSHAKE_ERROR;
-
 				tracker->set_event(TRACK_READ);
-
-				return TLS_HANDSHAKE_DOING;
+				if (flow->beg_read_task() == FLOW_ERR_NO)
+					return TLS_HANDSHAKE_DOING;
+				return TLS_HANDSHAKE_ERROR;
 			}
 
 			return TLS_HANDSHAKE_DONE;
@@ -343,7 +332,6 @@ namespace pump {
 		{
 			PUMP_ASSERT_EXPR(tracker, tracker_ = tracker);
 			PUMP_ASSERT(tracker->get_mode() == TRACK_MODE_ONCE);
-
 			if (__process_handshake(flow_.get(), tracker_.get()) == TLS_HANDSHAKE_ERROR)
 				return false;
 

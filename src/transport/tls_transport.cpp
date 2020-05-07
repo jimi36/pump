@@ -44,7 +44,7 @@ namespace pump {
 			poll::channel_sptr ch = shared_from_this();
 			flow_->rebind_channel(ch);
 
-			// Set channel FD
+			// Set channel fd
 			poll::channel::__set_fd(flow->get_fd());
 
 			local_address_ = local_address;

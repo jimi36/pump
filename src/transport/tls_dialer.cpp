@@ -196,7 +196,7 @@ namespace pump {
 			if (flow_->init(ch, local_address_) != FLOW_ERR_NO)
 				return false;
 
-			// Set channel FD
+			// Set channel fd
 			poll::channel::__set_fd(flow_->get_fd());
 
 			return true;

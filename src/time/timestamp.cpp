@@ -44,7 +44,7 @@ namespace pump {
 			uint64 ms = ms_.count();
 			time_t seconds = static_cast<time_t>(ms / MS_PER_SECOND);
 			uint32 milliseconds = static_cast<uint32>(ms % MS_PER_SECOND);
-#ifdef WIN32
+#if defined(WIN32)
 			::localtime_s(&tm_time, &seconds);
 			pump_snprintf(date, sizeof(date) - 1, "%4d-%d-%d %d:%d:%d:%d",
 				tm_time.tm_year + 1900, tm_time.tm_mon + 1, tm_time.tm_mday,
@@ -67,7 +67,7 @@ namespace pump {
 			uint64 ms = ms_.count();
 			time_t seconds = static_cast<time_t>(ms / MS_PER_SECOND);
 			uint32 millisecond = static_cast<uint32>(ms % MS_PER_SECOND);
-#ifdef WIN32
+#if defined(WIN32)
 			localtime_s(&tm_time, &seconds);
 			while (idx < format.size())
 			{

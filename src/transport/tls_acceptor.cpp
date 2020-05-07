@@ -130,11 +130,8 @@ namespace pump {
 				address local_address = handshaker->get_local_address();
 				address remote_address = handshaker->get_remote_address();
 				auto transport = tls_transport::create_instance();
-#if defined(MODE_DEBUG)
-				PUMP_ASSERT(transport->init(flow, local_address, remote_address));
-#else
-				transport->init(flow, local_address, remote_address);
-#endif
+				PUMP_DEBUG_CHECK(transport->init(flow, local_address, remote_address));
+
 				acceptor->cbs_.accepted_cb(transport);
 			}			
 		}
