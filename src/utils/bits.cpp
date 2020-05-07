@@ -172,7 +172,7 @@ namespace pump {
 #if defined(LITTLE_ENDIAN)
 			int32 idx = bc / 8 + (left > 0 ? 0 : -1); int32 s = -1;
 #elif defined(BIG_ENDIAN)
-			int32 idx = 0; int8 32 = 1;
+			int32 idx = 0; int32 s = 1;
 #endif
 			if (left > 0)
 			{
