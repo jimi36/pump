@@ -73,7 +73,7 @@ namespace pump {
 				}
 			}
 
-			return (enc_len == out.size());
+			return (enc_len == (int32)out.size());
 		}
 
 		PUMP_STATIC uint32 decoded_length(PUMP_CONST std::string &in)
@@ -153,7 +153,7 @@ namespace pump {
 				}
 			}
 
-			return (dec_len == out.size());
+			return (dec_len == (int32)out.size());
 		}
 
 		PUMP_INLINE void a3_to_a4(uint8_ptr a4, uint8_ptr a3)

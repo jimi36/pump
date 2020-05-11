@@ -47,9 +47,9 @@ namespace pump {
 	DEFINE_RAW_POINTER_TYPE(int64);
 	typedef std::uint64_t uint64;
 	DEFINE_RAW_POINTER_TYPE(uint64);
-	typedef std::float_t float32;
+	typedef float float32;
 	DEFINE_RAW_POINTER_TYPE(float32);
-	typedef std::double_t float64;
+	typedef double float64;
 	DEFINE_RAW_POINTER_TYPE(float64);
 	typedef char block;
 	DEFINE_RAW_POINTER_TYPE(block);
