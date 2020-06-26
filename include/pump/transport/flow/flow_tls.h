@@ -51,7 +51,7 @@ namespace pump {
 				 *     FLOW_ERR_NO    => success
 				 *     FLOW_ERR_ABORT => error
 				 ********************************************************************************/
-				int32 init(poll::channel_sptr &ch, int32 fd, void_ptr cert, bool client);
+				int32 init(poll::channel_sptr &ch, int32 fd, void_ptr xcred, bool client);
 
 				/*********************************************************************************
 				 * Rebind channel
@@ -74,12 +74,7 @@ namespace pump {
 				 *     FLOW_ERR_NO    => success
 				 *     FLOW_ERR_ABORT => error
 				 ********************************************************************************/
-				int32 beg_read_task();
-
-				/*********************************************************************************
-				 * End read task
-				 ********************************************************************************/
-				void end_read_task();
+				int32 want_to_read();
 
 				/*********************************************************************************
 				 * Read from net
@@ -159,7 +154,6 @@ namespace pump {
 				tls_session_ptr session_;
 
 				// IOCP read task
-				std::atomic_flag read_flag_;
 				net::iocp_task_ptr read_task_;
 
 				// Net read cache

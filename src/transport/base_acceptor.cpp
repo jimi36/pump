@@ -30,7 +30,7 @@ namespace pump {
 
 				if (tracker_cnt_.fetch_sub(1) - 1 == 0)
 				{
-					if (__set_status(TRANSPORT_STOPPING, TRANSPORT_STOPPED))
+					if (__set_status(STATUS_STOPPING, STATUS_STOPPED))
 						cbs_.stopped_cb();
 				}
 			}

@@ -57,7 +57,11 @@ namespace pump {
 			/*********************************************************************************
 			 * Start tls transport
 			 ********************************************************************************/
-			virtual bool start(service_ptr sv, PUMP_CONST transport_callbacks &cbs) override;
+			virtual transport_error start(
+				service_ptr sv,
+				int32 max_pending_send_size,
+				PUMP_CONST transport_callbacks &cbs
+			) override;
 
 			/*********************************************************************************
 			 * Stop
@@ -71,26 +75,15 @@ namespace pump {
 			virtual void force_stop() override;
 
 			/*********************************************************************************
-			 * Restart
-			 * After paused success, this will restart transport.
-			 ********************************************************************************/
-			virtual bool restart() override;
-
-			/*********************************************************************************
-			 * Pause
-			 ********************************************************************************/
-			virtual bool pause() override;
-
-			/*********************************************************************************
 			 * Send
 			 ********************************************************************************/
-			virtual bool send(c_block_ptr b, uint32 size) override;
+			virtual transport_error send(c_block_ptr b, uint32 size) override;
 
 			/*********************************************************************************
 			 * Send
 			 * After called success, the transport got the buffer onwership.
 			 ********************************************************************************/
-			virtual bool send(flow::buffer_ptr b) override;
+			virtual transport_error send(flow::buffer_ptr b) override;
 
 		protected:
 			/*********************************************************************************
@@ -139,13 +132,13 @@ namespace pump {
 			// TLS flow
 			flow::flow_tls_sptr flow_;
 
+			// Last send buffer
+			volatile uint32 last_send_buffer_size_;
+			volatile flow::buffer_ptr last_send_buffer_;
+
 			// When sending data, transport will append buffer to sendlist at first. On triggering send
 			// event, transport will send buffer in the sendlist.
 			moodycamel::ConcurrentQueue<flow::buffer_ptr> sendlist_;
-			std::atomic_int32_t sendlist_size_;
-
-			// Last send buffer
-			volatile flow::buffer_ptr last_send_buffer_;
 
 			// Who got next send chance, who can send next buffer.
 			std::atomic_flag next_send_chance_;

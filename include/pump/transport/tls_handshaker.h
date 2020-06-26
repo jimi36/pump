@@ -61,7 +61,7 @@ namespace pump {
 			bool init(
 				int32 fd,
 				bool is_client,
-				void_ptr tls_cert,
+				void_ptr xcred,
 				PUMP_CONST address &local_address,
 				PUMP_CONST address &remote_address
 			);
@@ -130,7 +130,7 @@ namespace pump {
 			/*********************************************************************************
 			 * Open flow
 			 ********************************************************************************/
-			bool __open_flow(int32 fd, void_ptr tls_cert, bool is_client);
+			bool __open_flow(int32 fd, void_ptr xcred, bool is_client);
 
 			/*********************************************************************************
 			 * Close flow

@@ -17,7 +17,7 @@
 #include "pump/init.h"
 #include "pump/net/iocp.h"
 
-#ifdef USE_GNUTLS
+#if defined(USE_GNUTLS)
 extern "C" {
 #include <gnutls/gnutls.h>
 }
@@ -25,7 +25,7 @@ extern "C" {
 
 namespace pump {
 
-#ifndef WIN32 
+#if !defined(WIN32) 
 	typedef void(*sighandler_t)(int32);
 	static bool setup_signal(int32 sig, int32 flags, sighandler_t hdl)
 	{
@@ -48,7 +48,7 @@ namespace pump {
 
 	bool init()
 	{
-#ifdef WIN32
+#if defined(WIN32)
 		WSADATA wsaData;
 		WORD wVersionRequested;
 		wVersionRequested = MAKEWORD(2, 2);
@@ -57,7 +57,7 @@ namespace pump {
 		setup_signal(SIGPIPE, 0, SIG_IGN);
 #endif
 
-#ifdef USE_GNUTLS
+#if defined(USE_GNUTLS)
 		if (gnutls_global_init() != 0)
 			return false;
 		gnutls_global_set_log_level(0);
@@ -68,7 +68,7 @@ namespace pump {
 
 	void uninit()
 	{
-#ifdef WIN32
+#if defined(WIN32)
 		::WSACleanup();
 #else
 		setup_signal(SIGPIPE, 0, SIG_DFL);
@@ -78,7 +78,7 @@ namespace pump {
 		CloseHandle(net::get_iocp_handler());
 #endif
 
-#ifdef USE_GNUTLS
+#if defined(USE_GNUTLS)
 		gnutls_global_deinit();
 #endif
 	}

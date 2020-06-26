@@ -29,7 +29,7 @@ namespace pump {
 		 ********************************************************************************/
 		#define	IO_EVENT_NONE  0x00  // none event
 		#define	IO_EVNET_READ  0x01  // read event
-		#define	IO_EVENT_SEND 0x02   // send event
+		#define	IO_EVENT_SEND  0x02  // send event
 		#define	IO_EVENT_ERROR 0x04  // error event
 
 		/*********************************************************************************

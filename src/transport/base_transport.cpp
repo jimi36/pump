@@ -28,9 +28,9 @@ namespace pump {
 			{
 				if (tracker_cnt_.fetch_sub(1) - 1 == 0)
 				{
-					if (__set_status(TRANSPORT_DISCONNECTING, TRANSPORT_DISCONNECTED))
+					if (__set_status(STATUS_DISCONNECTING, STATUS_DISCONNECTED))
 						cbs_.disconnected_cb();
-					else if (__set_status(TRANSPORT_STOPPING, TRANSPORT_STOPPED))
+					else if (__set_status(STATUS_STOPPING, STATUS_STOPPED))
 						cbs_.stopped_cb();
 				}
 			}

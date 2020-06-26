@@ -21,15 +21,18 @@ namespace pump {
 	namespace transport {
 
 		udp_transport::udp_transport(PUMP_CONST address &local_address) PUMP_NOEXCEPT :
-			base_transport(UDP_TRANSPORT, nullptr, -1)
+			base_transport(TYPE_UDP_TRANSPORT, nullptr, -1)
 		{
 			local_address_ = local_address;
 		}
 
-		bool udp_transport::start(service_ptr sv, PUMP_CONST transport_callbacks &cbs)
-		{
-			if (!__set_status(TRANSPORT_INIT, TRANSPORT_STARTING))
-				return false;
+			transport_error udp_transport::start(
+			service_ptr sv, 
+			int32 max_pending_send_size,
+			PUMP_CONST transport_callbacks &cbs
+		) {
+			if (!__set_status(STATUS_INIT, STATUS_STARTING))
+				return ERROR_INVALID;
 
 			PUMP_ASSERT_EXPR(sv, __set_service(sv));
 			PUMP_ASSERT_EXPR(cbs.read_from_cb && cbs.stopped_cb, cbs_ = cbs);
@@ -37,31 +40,30 @@ namespace pump {
 			utils::scoped_defer defer([&]() {
 				__close_flow();
 				__stop_read_tracker();
-				__set_status(TRANSPORT_STARTING, TRANSPORT_ERROR);
+				__set_status(STATUS_STARTING, STATUS_ERROR);
 			});
 
 			if (!__open_flow())
-				return false;
+				return ERROR_FAULT;
 
 			if (!__start_read_tracker())
-				return false;
+				return ERROR_FAULT;
 
 			if (flow_->beg_read_task() != FLOW_ERR_NO)
-				return false;
+				return ERROR_FAULT;
 
-			PUMP_DEBUG_CHECK(__set_status(TRANSPORT_STARTING, TRANSPORT_STARTED));
+			PUMP_DEBUG_CHECK(__set_status(STATUS_STARTING, STATUS_STARTED));
 
 			defer.clear();
 
-			return true;
+			return ERROR_OK;
 		}
 
 		void udp_transport::stop()
 		{
-			while (__is_status(TRANSPORT_STARTED) || __is_status(TRANSPORT_PAUSED))
+			while (__is_status(STATUS_STARTED))
 			{
-				if (__set_status(TRANSPORT_STARTED, TRANSPORT_STOPPING) ||
-					__set_status(TRANSPORT_PAUSED, TRANSPORT_STOPPING))
+				if (__set_status(STATUS_STARTED, STATUS_STOPPING))
 				{
 					__close_flow();
 					__stop_read_tracker();
@@ -70,57 +72,23 @@ namespace pump {
 			}
 		}
 
-		bool udp_transport::restart()
-		{
-			PUMP_LOCK_SPOINTER(flow, flow_);
-			if (flow == nullptr)
-				return false;
-
-			if (__set_status(TRANSPORT_PAUSED, TRANSPORT_STARTED))
-			{
-				if (flow->beg_read_task() == FLOW_ERR_ABORT)
-				{
-					if (__set_status(TRANSPORT_STARTED, TRANSPORT_ERROR))
-					{
-						__close_flow();
-						__stop_read_tracker();
-					}
-					return false;
-				}
-
-				return __awake_tracker(r_tracker_);
-			}
-				
-			return false;
-		}
-
-		bool udp_transport::pause()
-		{
-			PUMP_LOCK_SPOINTER(flow, flow_);
-			if (flow == nullptr)
-				return false;
-
-			if (__set_status(TRANSPORT_STARTED, TRANSPORT_PAUSED))
-			{
-				flow->cancel_read_task();
-				return __pause_tracker(r_tracker_);
-			}
-
-			return false;
-		}
-
-		bool udp_transport::send(
+		transport_error udp_transport::send(
 			c_block_ptr b, 
 			uint32 size, 
 			PUMP_CONST address &remote_address
 		) {
 			PUMP_ASSERT(b && size > 0);
 
+			if (PUMP_UNLIKELY(!is_started()))
+				return ERROR_INVALID;
+
 			PUMP_LOCK_SPOINTER(flow, flow_);
 			if (PUMP_UNLIKELY(flow == nullptr))
-				return false;
-			else
-				return flow->send(b, size, remote_address) > 0;
+				return ERROR_FAULT;
+
+			flow->send(b, size, remote_address);
+
+			return ERROR_OK;
 		}
 
 		void udp_transport::on_read_event(net::iocp_task_ptr itask)
@@ -137,9 +105,9 @@ namespace pump {
 
 			flow->end_read_task();
 
-			if (__is_status(TRANSPORT_STARTED) && flow->beg_read_task() == FLOW_ERR_ABORT)
+			if (__is_status(STATUS_STARTED) && flow->beg_read_task() == FLOW_ERR_ABORT)
 			{
-				if (__set_status(TRANSPORT_STARTED, TRANSPORT_ERROR))
+				if (__set_status(STATUS_STARTED, STATUS_ERROR))
 				{
 					__close_flow();
 					__stop_read_tracker();

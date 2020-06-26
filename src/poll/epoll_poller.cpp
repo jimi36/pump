@@ -19,7 +19,14 @@
 namespace pump {
 	namespace poll {
 
-#define EPOLL_EVENT_SIZE 1024
+		#define EPOLL_EVENT_SIZE 1024
+
+#if defined(__GNUC__)
+		#define EL_TRI_TYPE		(0) // (EPOLLET)
+		#define EL_READ_EVENT	(EPOLLIN | EPOLLPRI | EPOLLRDHUP)
+		#define EL_WRITE_EVENT	(EPOLLOUT)
+		#define EL_ERROR_EVENT	(EPOLLERR | EPOLLHUP)
+#endif
 
 		epoll_poller::epoll_poller(bool pop_pending) PUMP_NOEXCEPT :
 			poller(pop_pending)

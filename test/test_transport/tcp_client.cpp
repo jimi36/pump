@@ -38,7 +38,7 @@ public:
 		cbs.disconnected_cb = function::bind(&my_tcp_dialer::on_disconnected_callback, this, transp.get());
 
 		transport_ = std::static_pointer_cast<tcp_transport>(transp);
-		if (!transport_->start(sv, cbs))
+		if (transport_->start(sv, 4096*1024, cbs) != 0)
 			return;
 		
 		printf("tcp client dialed\n");
@@ -104,16 +104,14 @@ public:
 		dialer_ = d;
 	}
 
-	inline void send_data()
+	inline bool send_data()
 	{
-		if (max_send_count_ == 0)
+		if (transport_->send(send_data_.data(), send_data_.size()) != 0)
 		{
-			return;
+			return false;
 		}
 		
-		transport_->send(send_data_.data(), send_data_.size());
-
-		max_send_count_--;
+		return true;
 	}
 
 public:
@@ -140,7 +138,20 @@ public:
 		int read_size = 0;
 		for (int i = 0; i < count; i++)
 		{
-			read_size += my_dialers[i]->read_size_;
+			int size = my_dialers[i]->read_size_;
+			if (size > 1024 * 1024 * 10)
+			{
+				auto pen_ps = my_dialers[i]->transport_->get_pending_send_size();
+				auto new_ps = my_dialers[i]->transport_->get_max_pending_send_size();
+				if (new_ps <= 4096 * 8)
+					new_ps -= 4096;
+				else
+					new_ps /= 2;
+				printf("ps %u %u\n", pen_ps, new_ps);
+				my_dialers[i]->transport_->set_max_pending_send_size(new_ps);
+			}
+
+			read_size += size;
 			my_dialers[i]->read_size_ = 0;
 		}
 		printf("client read speed is %fMB/s at %llu\n", (double)read_size / 1024 / 1024 / 1, ::time(0));
@@ -167,7 +178,7 @@ void start_tcp_client(const std::string &ip, uint16 port)
 		cbs.stopped_cb = function::bind(&my_tcp_dialer::on_stopped_dialing_callback, my_dialer.get());
 		cbs.timeout_cb = function::bind(&my_tcp_dialer::on_dialed_timeout_callback, my_dialer.get());
 
-		if (!dialer->start(sv, cbs))
+		if (dialer->start(sv, cbs) != 0)
 		{
 			printf("tcp dialer start error\n");
 		}

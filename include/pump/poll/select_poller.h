@@ -54,9 +54,6 @@ namespace pump {
 			fd_set wfds_;
 
 			struct timeval tv_;
-
-			std::mutex mx_;
-			std::condition_variable cv_;
 		};
 
 	}

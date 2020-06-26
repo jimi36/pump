@@ -24,18 +24,18 @@ namespace pump {
 		PUMP_CONST int32 TLS_HANDSHAKE_ERROR = 2;
 
 		tls_handshaker::tls_handshaker() PUMP_NOEXCEPT : 
-			base_channel(TLS_HANDSHAKER, nullptr, -1)
+			base_channel(TYPE_TLS_HANDSHAKER, nullptr, -1)
 		{
 		}
 
 		bool tls_handshaker::init(
 			int32 fd,
 			bool is_client,
-			void_ptr tls_cert,
+			void_ptr xcred,
 			PUMP_CONST address &local_address,
 			PUMP_CONST address &remote_address
 		) {
-			if (!__open_flow(fd, tls_cert, is_client))
+			if (!__open_flow(fd, xcred, is_client))
 				return false;
 
 			local_address_  = local_address;
@@ -49,7 +49,7 @@ namespace pump {
 			int64 timeout, 
 			PUMP_CONST tls_handshaker_callbacks &cbs
 		) {
-			if (!__set_status(TRANSPORT_INIT, TRANSPORT_STARTING))
+			if (!__set_status(STATUS_INIT, STATUS_STARTING))
 				return false;
 
 			PUMP_ASSERT(flow_);
@@ -59,7 +59,7 @@ namespace pump {
 			utils::scoped_defer defer([&]() {
 				__close_flow();
 				__stop_tracker();
-				__set_status(TRANSPORT_STARTING, TRANSPORT_ERROR);
+				__set_status(STATUS_STARTING, STATUS_ERROR);
 			});
 
 			if (!__start_tracker())
@@ -68,7 +68,7 @@ namespace pump {
 			if (!__start_timer(timeout))
 				return false;
 
-			PUMP_DEBUG_CHECK(__set_status(TRANSPORT_STARTING, TRANSPORT_STARTED));
+			PUMP_DEBUG_CHECK(__set_status(STATUS_STARTING, STATUS_STARTED));
 
 			defer.clear();
 
@@ -81,7 +81,7 @@ namespace pump {
 			int64 timeout,
 			PUMP_CONST tls_handshaker_callbacks &cbs
 		) {
-			if (!__set_status(TRANSPORT_INIT, TRANSPORT_STARTING))
+			if (!__set_status(STATUS_INIT, STATUS_STARTING))
 				return false;
 
 			PUMP_ASSERT(flow_);
@@ -91,7 +91,7 @@ namespace pump {
 			utils::scoped_defer defer([&]() {
 				__close_flow();
 				__stop_tracker();
-				__set_status(TRANSPORT_STARTING, TRANSPORT_ERROR);
+				__set_status(STATUS_STARTING, STATUS_ERROR);
 			});
 
 			if (!__restart_tracker(tracker))
@@ -100,7 +100,7 @@ namespace pump {
 			if (!__start_timer(timeout))
 				return false;
 
-			PUMP_DEBUG_CHECK(__set_status(TRANSPORT_STARTING, TRANSPORT_STARTED));
+			PUMP_DEBUG_CHECK(__set_status(STATUS_STARTING, STATUS_STARTED));
 
 			defer.clear();
 
@@ -109,7 +109,7 @@ namespace pump {
 
 		void tls_handshaker::stop()
 		{
-			if (__set_status(TRANSPORT_STARTED, TRANSPORT_STOPPING))
+			if (__set_status(STATUS_STARTED, STATUS_STOPPING))
 			{
 				__stop_timer();
 				__close_flow();
@@ -117,18 +117,17 @@ namespace pump {
 				return;
 			}
 
-			if (__set_status(TRANSPORT_DISCONNECTING, TRANSPORT_STOPPING) ||
-				__set_status(TRANSPORT_TIMEOUT_DOING, TRANSPORT_STOPPING))
+			if (__set_status(STATUS_DISCONNECTING, STATUS_STOPPING) ||
+				__set_status(STATUS_TIMEOUTING, STATUS_STOPPING))
 				return;
 		}
 
 		void tls_handshaker::on_read_event(net::iocp_task_ptr itask)
 		{
 			auto flow = flow_.get();
-
 			if (flow->read_from_net(itask) == FLOW_ERR_ABORT)
 			{
-				if (__set_status(TRANSPORT_STARTED, TRANSPORT_DISCONNECTING))
+				if (__set_status(STATUS_STARTED, STATUS_DISCONNECTING))
 				{
 					__stop_timer();
 					__close_flow();
@@ -137,8 +136,6 @@ namespace pump {
 				return;
 			}
 
-			flow->end_read_task();
-
 			PUMP_LOCK_SPOINTER(tracker, tracker_);
 			if (tracker == nullptr)
 				return;
@@ -146,7 +143,7 @@ namespace pump {
 			auto ret = __process_handshake(flow, tracker);
 			if (ret == TLS_HANDSHAKE_DONE)
 			{
-				if (__set_status(TRANSPORT_STARTED, TRANSPORT_FINISH))
+				if (__set_status(STATUS_STARTED, STATUS_FINISHED))
 				{
 					__stop_timer();
 					__stop_tracker();
@@ -158,7 +155,7 @@ namespace pump {
 			}
 			else
 			{
-				if (__set_status(TRANSPORT_STARTED, TRANSPORT_ERROR))
+				if (__set_status(STATUS_STARTED, STATUS_ERROR))
 				{
 					__stop_timer();
 					__close_flow();
@@ -174,11 +171,10 @@ namespace pump {
 				return;
 			
 			auto flow = flow_.get();
-
 			auto ret = flow->send_to_net(itask);
 			if (ret == FLOW_ERR_ABORT)
 			{
-				if (__set_status(TRANSPORT_STARTED, TRANSPORT_DISCONNECTING))
+				if (__set_status(STATUS_STARTED, STATUS_DISCONNECTING))
 				{
 					__stop_timer();
 					__close_flow();
@@ -195,7 +191,7 @@ namespace pump {
 			ret = __process_handshake(flow, tracker);
 			if (ret == TLS_HANDSHAKE_DONE)
 			{
-				if (__set_status(TRANSPORT_STARTED, TRANSPORT_FINISH))
+				if (__set_status(STATUS_STARTED, STATUS_FINISHED))
 				{
 					__stop_timer();
 					__stop_tracker();
@@ -207,7 +203,7 @@ namespace pump {
 			}
 			else
 			{
-				if (__set_status(TRANSPORT_STARTED, TRANSPORT_ERROR))
+				if (__set_status(STATUS_STARTED, STATUS_ERROR))
 				{
 					__stop_timer();
 					__close_flow();
@@ -225,15 +221,15 @@ namespace pump {
 			{
 				if (tracker_cnt_.fetch_sub(1) - 1 == 0)
 				{
-					if (__is_status(TRANSPORT_FINISH))
+					if (__is_status(STATUS_FINISHED))
 						cbs_.handshaked_cb(this, true);
-					else if (__is_status(TRANSPORT_ERROR))
+					else if (__is_status(STATUS_ERROR))
 						cbs_.handshaked_cb(this, false);
-					else if (__set_status(TRANSPORT_TIMEOUT_DOING, TRANSPORT_TIMEOUT_DONE))
+					else if (__set_status(STATUS_TIMEOUTING, STATUS_TIMEOUTED))
 						cbs_.handshaked_cb(this, false);
-					else if (__set_status(TRANSPORT_DISCONNECTING, TRANSPORT_DISCONNECTED))
+					else if (__set_status(STATUS_DISCONNECTING, STATUS_DISCONNECTED))
 						cbs_.handshaked_cb(this, false);
-					else if (__set_status(TRANSPORT_STOPPING, TRANSPORT_STOPPED))
+					else if (__set_status(STATUS_STOPPING, STATUS_STOPPED))
 						cbs_.stopped_cb(this);
 				}
 			}
@@ -245,20 +241,20 @@ namespace pump {
 			if (handshaker == nullptr)
 				return;
 
-			if (handshaker->__set_status(TRANSPORT_STARTED, TRANSPORT_TIMEOUT_DOING))
+			if (handshaker->__set_status(STATUS_STARTED, STATUS_TIMEOUTING))
 			{
 				handshaker->__close_flow();
 				handshaker->__stop_tracker();
 			}
 		}
 
-		bool tls_handshaker::__open_flow(int32 fd, void_ptr tls_cert, bool is_client)
+		bool tls_handshaker::__open_flow(int32 fd, void_ptr xcred, bool is_client)
 		{
 			// Setup flow
 			PUMP_ASSERT(!flow_);
 			flow_.reset(new flow::flow_tls());
 			poll::channel_sptr ch = shared_from_this();
-			if (flow_->init(ch, fd, tls_cert, is_client) != FLOW_ERR_NO)
+			if (flow_->init(ch, fd, xcred, is_client) != FLOW_ERR_NO)
 				return false;
 
 			// Set channel fd
@@ -285,7 +281,7 @@ namespace pump {
 			if (!flow->is_handshaked())
 			{
 				tracker->set_event(TRACK_READ);
-				if (flow->beg_read_task() == FLOW_ERR_NO)
+				if (flow->want_to_read() == FLOW_ERR_NO)
 					return TLS_HANDSHAKE_DOING;
 				return TLS_HANDSHAKE_ERROR;
 			}

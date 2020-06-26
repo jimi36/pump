@@ -19,13 +19,6 @@
 
 #include "pump/poll/poller.h"
 
-#ifndef WIN32
-#define EL_TRI_TYPE		(0) // (EPOLLET)
-#define EL_READ_EVENT	(EPOLLIN | EPOLLPRI | EPOLLRDHUP)
-#define EL_WRITE_EVENT	(EPOLLOUT)
-#define EL_ERROR_EVENT	(EPOLLERR | EPOLLHUP)
-#endif
-
 namespace pump {
 	namespace poll {
 

@@ -47,8 +47,13 @@ namespace pump {
 
 			/*********************************************************************************
 			 * Start
+			 * max_pending_send_size is ignore on udp transport.
 			 ********************************************************************************/
-			virtual bool start(service_ptr sv, PUMP_CONST transport_callbacks &cbs) override;
+			virtual transport_error start(
+				service_ptr sv, 
+				int32 max_pending_send_size,
+				PUMP_CONST transport_callbacks &cbs
+			) override;
 
 			/*********************************************************************************
 			 * Stop 
@@ -62,20 +67,9 @@ namespace pump {
 			{ stop(); }
 
 			/*********************************************************************************
-			 * Restart
-			 * After paused success, this will restart transport.
-			 ********************************************************************************/
-			virtual bool restart() override;
-
-			/*********************************************************************************
-			 * Pause
-			 ********************************************************************************/
-			virtual bool pause() override;
-
-			/*********************************************************************************
 			 * Send
 			 ********************************************************************************/
-			virtual bool send(
+			virtual transport_error send(
 				c_block_ptr b, 
 				uint32 size, 
 				PUMP_CONST address &remote_address

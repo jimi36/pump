@@ -56,7 +56,10 @@ namespace pump {
 			/*********************************************************************************
 			 * Start
 			 ********************************************************************************/
-			virtual bool start(service_ptr sv, PUMP_CONST dialer_callbacks &cbs) override;
+			virtual transport_error start(
+				service_ptr sv, 
+				PUMP_CONST dialer_callbacks &cbs
+			) override;
 
 			/*********************************************************************************
 			 * Stop

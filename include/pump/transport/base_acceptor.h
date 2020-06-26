@@ -46,7 +46,10 @@ namespace pump {
 			/*********************************************************************************
 			 * Start
 			 ********************************************************************************/
-			virtual bool start(service_ptr sv, PUMP_CONST acceptor_callbacks &cbs) = 0;
+			virtual transport_error start(
+				service_ptr sv, 
+				PUMP_CONST acceptor_callbacks &cbs
+			) = 0;
 
 			/*********************************************************************************
 			 * Stop

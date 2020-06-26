@@ -20,10 +20,10 @@ namespace pump {
 	namespace transport {
 
 		tls_transport::tls_transport() PUMP_NOEXCEPT :
-			base_transport(TLS_TRANSPORT, nullptr, -1),
-			sendlist_(1024),
-			sendlist_size_(0),
-			last_send_buffer_(nullptr)
+			base_transport(TYPE_TLS_TRANSPORT, nullptr, -1),
+			last_send_buffer_size_(0),
+			last_send_buffer_(nullptr),
+			sendlist_(1024)			
 		{
 			next_send_chance_.clear();
 		}
@@ -53,10 +53,13 @@ namespace pump {
 			return true;
 		}
 
-		bool tls_transport::start(service_ptr sv, const transport_callbacks &cbs)
-		{
-			if (!__set_status(TRANSPORT_INIT, TRANSPORT_STARTING))
-				return false;
+		transport_error tls_transport::start(
+			service_ptr sv, 
+			int32 max_pending_send_size,
+			PUMP_CONST transport_callbacks &cbs
+		) {
+			if (!__set_status(STATUS_INIT, STATUS_STARTING))
+				return ERROR_INVALID;
 
 			PUMP_ASSERT(flow_);
 			PUMP_ASSERT_EXPR(sv, __set_service(sv));
@@ -66,36 +69,38 @@ namespace pump {
 				__close_flow();
 				__stop_read_tracker();
 				__stop_send_tracker();
-				__set_status(TRANSPORT_STARTING, TRANSPORT_ERROR);
+				__set_status(STATUS_STARTING, STATUS_ERROR);
 			});
 
-			poll::channel_sptr ch = std::move(shared_from_this());
+			if (max_pending_send_size > 0)
+				max_pending_send_size_ = max_pending_send_size;
+
+			poll::channel_sptr ch = shared_from_this();
 			if (!__start_all_trackers(ch))
-				return false;
+				return ERROR_FAULT;
 
-			if (flow_->beg_read_task() != FLOW_ERR_NO)
-				return false;
+			if (flow_->want_to_read() != FLOW_ERR_NO)
+				return ERROR_FAULT;
 
-			PUMP_DEBUG_CHECK(__set_status(TRANSPORT_STARTING, TRANSPORT_STARTED));
+			PUMP_DEBUG_CHECK(__set_status(STATUS_STARTING, STATUS_STARTED));
 
 			defer.clear();
 
-			return true;
+			return ERROR_OK;
 		}
 
 		void tls_transport::stop()
 		{
-			while (__is_status(TRANSPORT_STARTED) || __is_status(TRANSPORT_PAUSED))
+			while (__is_status(STATUS_STARTED))
 			{
 				// When in started status at the moment, stopping can be done. Then tracker event callback
 				// will be triggered, we can trigger stopped callabck at there.
-				if (__set_status(TRANSPORT_STARTED, TRANSPORT_STOPPING) ||
-					__set_status(TRANSPORT_PAUSED, TRANSPORT_STOPPING))
+				if (__set_status(STATUS_STARTED, STATUS_STOPPING))
 				{
 					// At first, stopping read tracker immediately.
 					__stop_read_tracker();
 
-					if (sendlist_size_.load() == 0)
+					if (pending_send_size_.load() == 0)
 					{
 						__stop_send_tracker();
 						__close_flow();
@@ -108,18 +113,17 @@ namespace pump {
 			// If in disconnecting status at the moment, it means transport is disconnected but hasn't
 			// triggered tracker event callback yet. So we just set stopping status to transport, and 
 			// when tracker event callback triggered, we will trigger stopped callabck at there.
-			if (__set_status(TRANSPORT_DISCONNECTING, TRANSPORT_STOPPING))
+			if (__set_status(STATUS_DISCONNECTING, STATUS_STOPPING))
 				return;
 		}
 
 		void tls_transport::force_stop()
 		{
-			while (__is_status(TRANSPORT_STARTED) || __is_status(TRANSPORT_PAUSED))
+			while (__is_status(STATUS_STARTED))
 			{
 				// When in started status at the moment, stopping can be done. Then tracker event callback
 				// will be triggered, we can trigger stopped callabck at there.
-				if (__set_status(TRANSPORT_STARTED, TRANSPORT_STOPPING) ||
-					__set_status(TRANSPORT_PAUSED, TRANSPORT_STOPPING))
+				if (__set_status(STATUS_STARTED, STATUS_STOPPING))
 				{
 					__close_flow();
 					__stop_read_tracker();
@@ -131,67 +135,50 @@ namespace pump {
 			// If in disconnecting status at the moment, it means transport is disconnected but hasn't
 			// triggered tracker event callback yet. So we just set stopping status to transport, and 
 			// when tracker event callback triggered, we will trigger stopped callabck at there.
-			if (__set_status(TRANSPORT_DISCONNECTING, TRANSPORT_STOPPING))
+			if (__set_status(STATUS_DISCONNECTING, STATUS_STOPPING))
 				return;
 		}
 
-		bool tls_transport::restart()
-		{
-			if (__set_status(TRANSPORT_PAUSED, TRANSPORT_STARTED))
-			{
-				if (flow_->beg_read_task() == FLOW_ERR_ABORT)
-				{
-					__try_doing_disconnected_process();
-					return false;
-				}
-
-				return __awake_tracker(r_tracker_);
-			}
-				
-			return false;
-		}
-
-		bool tls_transport::pause()
-		{
-			if (!__set_status(TRANSPORT_STARTED, TRANSPORT_PAUSED))
-				return false;
-
-			if (!__pause_tracker(r_tracker_))
-				return false;
-
-			return true;
-		}
-
-		bool tls_transport::send(flow::buffer_ptr b)
+		transport_error tls_transport::send(flow::buffer_ptr b)
 		{
 			PUMP_ASSERT(b && b->data_size() > 0);
-			if (PUMP_LIKELY(__is_status(TRANSPORT_STARTED)))
-				return __async_send(b);
-			else
-				return false;
+
+			if (PUMP_UNLIKELY(!is_started()))
+				return ERROR_INVALID;
+
+			if (PUMP_UNLIKELY(pending_send_size_.load() >= max_pending_send_size_))
+				return ERROR_AGAIN;
+
+			__async_send(b);
+
+			return ERROR_OK;
 		}
 
-		bool tls_transport::send(c_block_ptr b, uint32 size)
+		transport_error tls_transport::send(c_block_ptr b, uint32 size)
 		{
 			PUMP_ASSERT(b && size > 0);
-			if (__is_status(TRANSPORT_STARTED))
+
+			if (PUMP_UNLIKELY(!is_started()))
+				return ERROR_INVALID;
+
+			if (PUMP_UNLIKELY(pending_send_size_.load() >= max_pending_send_size_))
+				return ERROR_AGAIN;
+
+			auto buffer = new flow::buffer;
+			if (!buffer->append(b, size))
 			{
-				auto buffer = new flow::buffer;
-				if (!buffer->append(b, size) || !__async_send(buffer))
-				{
-					delete buffer;
-					return false;
-				}
-				return true;
+				delete buffer;
+				return ERROR_FAULT;
 			}
 
-			return false;
+			__async_send(buffer);
+
+			return ERROR_OK;
 		}
 
 		void tls_transport::on_read_event(net::iocp_task_ptr itask)
 		{
 			auto flow = flow_.get();
-
 			auto ret = flow->read_from_net(itask);
 			if (PUMP_LIKELY(ret == FLOW_ERR_NO))
 			{
@@ -211,16 +198,13 @@ namespace pump {
 				return;
 			}
 
-			flow->end_read_task();
-
-			if (__is_status(TRANSPORT_STARTED) && flow->beg_read_task() == FLOW_ERR_ABORT)
+			if (__is_status(STATUS_STARTED) && flow->want_to_read() == FLOW_ERR_ABORT)
 				__try_doing_disconnected_process();
 		}
 
 		void tls_transport::on_send_event(net::iocp_task_ptr itask)
 		{
 			auto flow = flow_.get();
-
 			auto ret = flow->send_to_net(itask);
 			if (ret == FLOW_ERR_AGAIN)
 			{
@@ -233,12 +217,8 @@ namespace pump {
 				return;
 			}
 
-			// Last send buffer has sent completely, we should delete it.
-			delete last_send_buffer_;
-			last_send_buffer_ = nullptr;
-
 			// If there are more buffers to send, we should send next one immediately.
-			if (sendlist_size_.fetch_sub(1) - 1 > 0)
+			if (pending_send_size_.fetch_sub(last_send_buffer_size_) > last_send_buffer_size_)
 			{
 				__send_once(flow);
 				return;
@@ -249,11 +229,11 @@ namespace pump {
 
 			// Sendlist maybe has be inserted buffers at the moment, so we need check and try to get 
 			// next send chance. If success, we should send next buffer immediately.
-			if (sendlist_size_ > 0 && !next_send_chance_.test_and_set())
+			if (pending_send_size_.load() > 0 && !next_send_chance_.test_and_set())
 			{
 				__send_once(flow);
 			}
-			else if (__is_status(TRANSPORT_STOPPING))
+			else if (__is_status(STATUS_STOPPING))
 			{
 				__close_flow();
 				__stop_send_tracker();
@@ -266,7 +246,7 @@ namespace pump {
 			PUMP_DEBUG_CHECK(sendlist_.enqueue(b));
 
 			// If there are no more buffers, we should try to get next send chance.
-			if (sendlist_size_.fetch_add(1) != 0 || next_send_chance_.test_and_set())
+			if (pending_send_size_.fetch_add(b->data_size()) != 0 || next_send_chance_.test_and_set())
 				return true;
 
 			return __send_once(flow_.get());
@@ -274,10 +254,27 @@ namespace pump {
 
 		bool tls_transport::__send_once(flow::flow_tls_ptr flow)
 		{
+			if (last_send_buffer_ != nullptr)
+			{
+				// Free last send buffer.
+				delete last_send_buffer_;
+				last_send_buffer_ = nullptr;
+
+				// Reset last send buffer data size.
+				last_send_buffer_size_ = 0;
+			}
+
+			// Get a buffer from sendlist to send.
 			PUMP_DEBUG_CHECK(sendlist_.try_dequeue(last_send_buffer_));
+
+			// Save last send buffer data size.
+			last_send_buffer_size_ = last_send_buffer_->data_size();
+
+			// Try to send the buffer.
 			if (flow->send_to_ssl(last_send_buffer_) && flow->want_to_send() == FLOW_ERR_NO)
 				return __awake_tracker(s_tracker_);
 
+			// Happend error and try disconnecting.
 			__try_doing_disconnected_process();
 
 			return false;
@@ -285,8 +282,7 @@ namespace pump {
 
 		void tls_transport::__try_doing_disconnected_process()
 		{
-			if (__set_status(TRANSPORT_STARTED, TRANSPORT_DISCONNECTING) ||
-				__set_status(TRANSPORT_PAUSED, TRANSPORT_DISCONNECTING))
+			if (__set_status(STATUS_STARTED, STATUS_DISCONNECTING))
 			{
 				__close_flow();
 				__stop_read_tracker();

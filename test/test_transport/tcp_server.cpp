@@ -49,7 +49,7 @@ public:
 		cbs.stopped_cb = function::bind(&my_tcp_acceptor::on_stopped_callback, this, transp.get());
 		cbs.disconnected_cb = function::bind(&my_tcp_acceptor::on_disconnected_callback, this, transp.get());
 
-		if (transport->start(sv, cbs))
+		if (transport->start(sv, 0, cbs) == 0)
 		{
 			std::lock_guard<std::mutex> lock(mx_);
 			printf("tcp transport server accepted %d\n", transp->get_fd());
@@ -117,18 +117,6 @@ public:
 		transport->send(send_data_.data(), send_data_.size());
 	}
 
-	void set_on(bool on)
-	{
-		std::lock_guard<std::mutex> lock(mx_);
-		for (auto t : transports_)
-		{
-			if (on)
-				t.second->transport->restart();
-			else
-				t.second->transport->pause();
-		}
-	}
-
 private:
 	std::string send_data_;
 
@@ -152,16 +140,9 @@ void start_tcp_server(const std::string &ip, uint16 port)
 
 	address listen_address(ip, port);
 	tcp_acceptor_sptr acceptor = tcp_acceptor::create_instance(listen_address);
-	if (!acceptor->start(sv, cbs))
+	if (acceptor->start(sv, cbs) != 0)
 	{
 		printf("tcp acceptor start error\n");
-	}
-
-	bool on = true;
-	while (getchar())
-	{
-		on = !on;
-		my_acceptor->set_on(on);
 	}
 
 	sv->wait_stopped();

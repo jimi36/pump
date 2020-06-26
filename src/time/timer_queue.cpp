@@ -19,7 +19,7 @@
 namespace pump {
 	namespace time {
 
-		PUMP_CONST int32 TIMER_DEFAULT_INTERVAL = 1000;
+		#define TIMER_DEFAULT_INTERVAL 1000
 
 		timer_queue::timer_queue() PUMP_NOEXCEPT : 
 			started_(false),

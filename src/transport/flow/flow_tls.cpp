@@ -16,9 +16,9 @@
 
 #include "pump/transport/flow/flow_tls.h"
 
-#ifdef USE_GNUTLS
+#if defined(USE_GNUTLS)
 extern "C" {
-#include <gnutls/gnutls.h>
+	#include <gnutls/gnutls.h>
 }
 #endif
 
@@ -81,7 +81,6 @@ namespace pump {
 				ssl_read_cache_raw_(nullptr),
 				send_task_(nullptr)
 			{
-				read_flag_.clear();
 			}
 
 			flow_tls::~flow_tls()
@@ -97,7 +96,7 @@ namespace pump {
 #endif
 			}
 
-			int32 flow_tls::init(poll::channel_sptr &ch, int32 fd, void_ptr cert, bool client)
+			int32 flow_tls::init(poll::channel_sptr &ch, int32 fd, void_ptr xcred, bool client)
 			{
 #if defined(USE_GNUTLS)
 				PUMP_ASSERT_EXPR(ch, ch_ = ch);
@@ -113,7 +112,7 @@ namespace pump {
 				// Set transport ptr
 				gnutls_transport_set_ptr(session_->session, this);
 				// Set GnuTLS session with credentials
-				gnutls_credentials_set(session_->session, GNUTLS_CRD_CERTIFICATE, cert);
+				gnutls_credentials_set(session_->session, GNUTLS_CRD_CERTIFICATE, xcred);
 				// Set GnuTLS handshake timeout time
 				gnutls_handshake_set_timeout(session_->session, GNUTLS_INDEFINITE_TIMEOUT);
 				//gnutls_handshake_set_timeout(session_->session, GNUTLS_DEFAULT_HANDSHAKE_TIMEOUT);
@@ -186,37 +185,27 @@ namespace pump {
 #endif
 			}
 
-			int32 flow_tls::beg_read_task()
+			int32 flow_tls::want_to_read()
 			{
 #if defined(USE_GNUTLS)
-#	if defined(WIN32) && defined (USE_IOCP)
-				if (read_flag_.test_and_set())
-					return FLOW_ERR_BUSY;
-
+	#if defined(WIN32) && defined (USE_IOCP)
 				if (!net::post_iocp_read(read_task_))
 					return FLOW_ERR_ABORT;
-#	endif
+	#endif
 				return FLOW_ERR_NO;
 #else
 				return FLOW_ERR_ABORT;
 #endif
 			}
 
-			void flow_tls::end_read_task()
-			{
-#if defined(USE_GNUTLS) && defined(WIN32) && defined (USE_IOCP)
-				read_flag_.clear();
-#endif
-			}
-
 			int32 flow_tls::read_from_net(net::iocp_task_ptr itask)
 			{
 #if defined(USE_GNUTLS)
-#	if defined(WIN32) && defined(USE_IOCP)
+	#if defined(WIN32) && defined(USE_IOCP)
 				int32 size = net::get_iocp_task_processed_size(itask);
-#	else
+	#else
 				int32 size = net::read(fd_, net_read_cache_raw_, net_read_cache_raw_size_);
-#	endif
+	#endif
 				if (PUMP_LIKELY(size > 0))
 				{
 					net_read_data_pos_ = 0;
@@ -277,11 +266,11 @@ namespace pump {
 			int32 flow_tls::want_to_send()
 			{
 #if defined(USE_GNUTLS)
-#	if defined(WIN32) && defined(USE_IOCP)
+	#if defined(WIN32) && defined(USE_IOCP)
 				net::set_iocp_task_buffer(send_task_, (int8_ptr)net_send_buffer_.data(), net_send_buffer_.data_size());
 				if (net::post_iocp_send(send_task_))
 					return FLOW_ERR_NO;
-#	else
+	#else
 				int32 size = net::send(fd_, net_send_buffer_.data(), net_send_buffer_.data_size());
 				if (PUMP_LIKELY(size > 0))
 				{
@@ -292,7 +281,7 @@ namespace pump {
 				{
 					return FLOW_ERR_NO;
 				}
-#	endif
+	#endif
 #endif
 				return FLOW_ERR_ABORT;
 			}
@@ -304,7 +293,7 @@ namespace pump {
 				if (data_size == 0)
 					return FLOW_ERR_NO;
 
-#	if defined(WIN32) && defined(USE_IOCP)
+	#if defined(WIN32) && defined(USE_IOCP)
 				int32 size = net::get_iocp_task_processed_size(itask);
 				if (PUMP_LIKELY(size > 0))
 				{
@@ -321,7 +310,7 @@ namespace pump {
 					net_send_buffer_.reset();
 					return FLOW_ERR_NO;
 				}
-#	else
+	#else
 				int32 size = net::send(fd_, net_send_buffer_.data(), data_size);
 				if (PUMP_LIKELY(size > 0))
 				{
@@ -336,7 +325,7 @@ namespace pump {
 				{
 					return FLOW_ERR_AGAIN;
 				}
-#	endif		
+	#endif		
 #endif
 				return FLOW_ERR_ABORT;
 			}

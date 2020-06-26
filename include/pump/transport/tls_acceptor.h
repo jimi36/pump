@@ -35,25 +35,43 @@ namespace pump {
 			/*********************************************************************************
 			 * Create instance
 			 ********************************************************************************/
-			PUMP_INLINE PUMP_STATIC tls_acceptor_sptr create_instance(
-				void_ptr cert, 
+			PUMP_INLINE PUMP_STATIC tls_acceptor_sptr create_instance_with_file(
+				PUMP_CONST std::string &cert,
+				PUMP_CONST std::string &key,
 				PUMP_CONST address &listen_address,
 				int64 handshake_timeout = 0
 			) {
 				return tls_acceptor_sptr(
-					new tls_acceptor(cert, listen_address, handshake_timeout)
+					new tls_acceptor(true, cert, key, listen_address, handshake_timeout)
+				);
+			}
+
+			/*********************************************************************************
+			 * Create instance
+			 ********************************************************************************/
+			PUMP_INLINE PUMP_STATIC tls_acceptor_sptr create_instance_with_memory(
+				PUMP_CONST std::string &cert,
+				PUMP_CONST std::string &key,
+				PUMP_CONST address &listen_address,
+				int64 handshake_timeout = 0
+			) {
+				return tls_acceptor_sptr(
+					new tls_acceptor(false, cert, key, listen_address, handshake_timeout)
 				);
 			}
 
 			/*********************************************************************************
 			 * Deconstructor
 			 ********************************************************************************/
-			virtual ~tls_acceptor() = default;
+			virtual ~tls_acceptor();
 
 			/*********************************************************************************
 			 * Start
 			 ********************************************************************************/
-			virtual bool start(service_ptr sv, PUMP_CONST acceptor_callbacks &cbs) override;
+			virtual transport_error start(
+				service_ptr sv, 
+				PUMP_CONST acceptor_callbacks &cbs
+			) override;
 
 			/*********************************************************************************
 			 * Stop
@@ -89,10 +107,12 @@ namespace pump {
 			 * Constructor
 			 ********************************************************************************/
 			tls_acceptor(
-				void_ptr cert, 
+				bool use_file,
+				PUMP_CONST std::string &cert_mem,
+				PUMP_CONST std::string &key_mem,
 				PUMP_CONST address &listen_address,
 				int64 handshake_timeout
-			) PUMP_NOEXCEPT;
+			);
 
 			/*********************************************************************************
 			 * Open flow
@@ -122,7 +142,7 @@ namespace pump {
 
 		private:
 			// GNUTLS credentials
-			void_ptr cert_;
+			void_ptr xcred_;
 			// GNUTLS handshake timeout time
 			int64 handshake_timeout_;
 			// Handshakers

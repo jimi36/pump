@@ -28,11 +28,11 @@ namespace pump {
 			{
 				if (tracker_cnt_.fetch_sub(1) - 1 == 0)
 				{
-					if (__is_status(TRANSPORT_ERROR))
+					if (__is_status(STATUS_ERROR))
 						cbs_.dialed_cb(base_transport_sptr(), false);
-					else if (__set_status(TRANSPORT_TIMEOUT_DOING, TRANSPORT_TIMEOUT_DONE))
+					else if (__set_status(STATUS_TIMEOUTING, STATUS_TIMEOUTED))
 						cbs_.timeout_cb();
-					else if (__set_status(TRANSPORT_STOPPING, TRANSPORT_STOPPED))
+					else if (__set_status(STATUS_STOPPING, STATUS_STOPPED))
 						cbs_.stopped_cb();
 				}
 			}

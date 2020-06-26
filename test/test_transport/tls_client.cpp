@@ -1,12 +1,8 @@
 #include "tls_transport_test.h"
 
-#ifdef USE_GNUTLS
-#include <gnutls/gnutls.h>
-#endif
-
 static service *sv;
 
-static int count = 2;
+static int count = 1;
 static int send_loop = 1024 / count;
 static int send_pocket_size = 1024*4;
 
@@ -39,7 +35,7 @@ public:
 		cbs.stopped_cb = function::bind(&my_tls_dialer::on_stopped_callback, this, transp.get());
 		cbs.disconnected_cb = function::bind(&my_tls_dialer::on_disconnected_callback, this, transp.get());
 
-		if (!transport_->start(sv, cbs))
+		if (transport_->start(sv, 0, cbs) != 0)
 			return;
 
 		printf("tls client dialed %d\n", transp->get_fd());
@@ -110,7 +106,7 @@ public:
 
 	void send_data()
 	{
-		if (!transport_->send(send_data_.data(), send_data_.size()))
+		if (transport_->send(send_data_.data(), send_data_.size()) != 0)
 			printf("send data error\n");
 	}
 
@@ -151,16 +147,6 @@ public:
 
 void start_tls_client(const std::string &ip, uint16 port)
 {
-#ifdef USE_GNUTLS
-	if (gnutls_global_init() != 0)
-		return;
-
-	gnutls_global_set_log_level(0);
-
-	gnutls_certificate_credentials_t xcred;
-	gnutls_certificate_allocate_credentials(&xcred);
-	gnutls_certificate_set_x509_system_trust(xcred);
-
 	sv = new service;
 	sv->start();
 
@@ -168,7 +154,7 @@ void start_tls_client(const std::string &ip, uint16 port)
 	{
 		address bind_address("0.0.0.0", 0);
 		address remote_address(ip, port);
-		tls_dialer_sptr dialer = tls_dialer::create_instance(xcred, bind_address, remote_address);
+		tls_dialer_sptr dialer = tls_dialer::create_instance(bind_address, remote_address);
 
 		std::shared_ptr<my_tls_dialer> my_dialer(new my_tls_dialer);
 		my_dialer->set_dialer(dialer);
@@ -180,7 +166,7 @@ void start_tls_client(const std::string &ip, uint16 port)
 		cbs.stopped_cb = function::bind(&my_tls_dialer::on_stopped_dialing_callback, my_dialer.get());
 		cbs.timeout_cb = function::bind(&my_tls_dialer::on_dialed_timeout_callback, my_dialer.get());
 
-		if (!dialer->start(sv, cbs))
+		if (dialer->start(sv, cbs) != 0)
 		{
 			printf("tls dialer start error\n");
 		}
@@ -192,16 +178,13 @@ void start_tls_client(const std::string &ip, uint16 port)
 
 	Sleep(2000);
 
- 	auto b = pump::get_clock_microsecond();
-		for (auto t : my_dialers)
-		{
-			for (int i = 0; i < send_loop; i++)
-				t->send_data();
-		}
-		printf("send data used %lluus\n", pump::get_clock_microsecond() - b);
-
-		my_dialers[0]->send_data();
+ 	//auto b = pump::get_clock_microsecond();
+	for (auto t : my_dialers)
+	{
+		for (int i = 0; i < send_loop; i++)
+			t->send_data();
+	}
+	//printf("send data used %lluus\n", pump::get_clock_microsecond() - b);
 
 	sv->wait_stopped();
-#endif
 }

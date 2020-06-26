@@ -19,9 +19,9 @@
 namespace pump {
 	namespace time {
 
-#		define US_PER_MS			1000
-#		define MS_PER_SECOND		US_PER_MS
-#		define US_PER_SECOND		US_PER_MS * US_PER_MS
+		#define US_PER_MS	  1000
+		#define MS_PER_SECOND US_PER_MS
+		#define US_PER_SECOND US_PER_MS * US_PER_MS
 
 		uint64 get_clock_microsecond()
 		{

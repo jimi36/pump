@@ -36,14 +36,12 @@ namespace pump {
 			 * Create instance
 			 ********************************************************************************/
 			PUMP_INLINE PUMP_STATIC tls_dialer_sptr create_instance(
-				void_ptr cert,
 				PUMP_CONST address &local_address,
 				PUMP_CONST address &remote_address,
 				int64 dial_timeout = 0,
 				int64 handshake_timeout = 0
 			) {
 				return tls_dialer_sptr(new tls_dialer(
-					cert,
 					local_address, 
 					remote_address, 
 					dial_timeout, 
@@ -59,7 +57,10 @@ namespace pump {
 			/*********************************************************************************
 			 * Start
 			 ********************************************************************************/
-			virtual bool start(service_ptr sv, PUMP_CONST dialer_callbacks &cbs) override;
+			virtual transport_error start(
+				service_ptr sv, 
+				PUMP_CONST dialer_callbacks &cbs
+			) override;
 
 			/*********************************************************************************
 			 * Stop
@@ -100,7 +101,6 @@ namespace pump {
 			 * Constructor
 			 ********************************************************************************/
 			tls_dialer(
-				void_ptr cert,
 				PUMP_CONST address &local_address,
 				PUMP_CONST address &remote_address,
 				int64 dial_timeout,
@@ -120,7 +120,7 @@ namespace pump {
 
 		private:
 			// GNUTLS credentials
-			void_ptr cert_;
+			void_ptr xcred_;
 			// Dialer flow
 			flow::flow_tls_dialer_sptr flow_;
 			// Handshake timeout
@@ -153,7 +153,6 @@ namespace pump {
 			 * Dial by sync
 			 ********************************************************************************/
 			base_transport_sptr dial(
-				void_ptr cert,
 				service_ptr sv,
 				PUMP_CONST address &local_address,
 				PUMP_CONST address &remote_address,

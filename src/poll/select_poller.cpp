@@ -65,11 +65,7 @@ namespace pump {
 			int32 count = ::select(maxfd + 1, &rfds_, &wfds_, NULL, &tv_);
 #if defined(WIN32)
 			if (maxfd == -1)
-			{
 				Sleep(1);
-				//std::unique_lock<std::mutex> lck(mx_);
-				//cv_.wait_for(lck, std::chrono::milliseconds(timeout));
-			}
 #endif
 			if (count > 0)
 				__dispatch_pending_event(&rfds_, &wfds_);

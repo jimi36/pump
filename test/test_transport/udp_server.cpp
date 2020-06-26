@@ -76,7 +76,7 @@ void start_udp_server(const std::string &ip, uint16 port)
 	cbs.stopped_cb = function::bind(&my_udp_server::on_stopped_callback, udp_server.get(), transport.get());
 
 	
-	if (!transport->start(sv, cbs))
+	if (!transport->start(sv, 0, cbs))
 	{
 		printf("udp server start error\n");
 	}

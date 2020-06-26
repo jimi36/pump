@@ -27,7 +27,6 @@ namespace pump {
 				send_task_(nullptr),
 				send_buffer_(nullptr)
 			{
-				read_flag_.clear();
 			}
 
 			flow_tcp::~flow_tcp()
@@ -61,23 +60,13 @@ namespace pump {
 				return FLOW_ERR_NO;
 			}
 
-			int32 flow_tcp::beg_read_task()
+			int32 flow_tcp::want_to_read()
 			{
 #if defined(WIN32) && defined(USE_IOCP)
-				if (read_flag_.test_and_set())
-					return FLOW_ERR_BUSY;
-
 				if (!net::post_iocp_read(read_task_))
 					return FLOW_ERR_ABORT;
 #endif
 				return FLOW_ERR_NO;
-			}
-
-			void flow_tcp::end_read_task()
-			{
-#if defined(WIN32) && defined(USE_IOCP)
-				read_flag_.clear();
-#endif
 			}
 
 			c_block_ptr flow_tcp::read(net::iocp_task_ptr itask, int32_ptr size)
