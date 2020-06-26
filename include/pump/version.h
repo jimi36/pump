@@ -19,6 +19,6 @@
 
 #define MAJOR_VERSION 1
 #define MINOR_VERSION 1
-#define BUILD_VERSION 1
+#define BUILD_VERSION 2
 
 #endif

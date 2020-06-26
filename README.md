@@ -5,9 +5,9 @@ The library is an asynchronous net library, callback based. It implement udp, tc
 # Fetures
 
 - Timer based on callback.
-- Use free lock queue to improve performance.
-- Transport reading and sending separation, and sending operation is thread-safe.
-- Supports Windows and most Linux distributions.
+- Transport are read-write separated and thread-safe. We use free lock queue to improve transport performance.
+- Tls and tcp transport provide a simple speed control function.
+- Supports windows and linux os.
 
 # Build
 
@@ -198,7 +198,7 @@ void on_new_transport(pump::base_transport_sptr transp)
 	cbs.stopped_cb = function::bind(&on_stopped_callback);
 	cbs.disconnected_cb = function::bind(&on_disconnected_callback);
 
-    if (!transp->start(sv, cbs))
+    if (!transp->start(sv, 0, cbs))
     {
         printf("transport start error\n");
     }
@@ -232,7 +232,7 @@ cbs.stopped_cb = function::bind(&on_stopped_callback);
 
 pump::address local_address("0.0.0.0", 8888);
 pump::udp_transport_sptr transp = pump::udp_transport::create_instance(local_address);
-if (!transp->start(sv, cbs))
+if (!transp->start(sv, 0, cbs))
 {
     printf("udp transport start error\n");
 }
