@@ -2,6 +2,8 @@
 # Export functions:
 #	build_pump_library()
 #
+# Run:
+#   build_pump_library()
 
 MACRO(build_pump_library)
 	set_complie_flags(${LIB_COMPILE_FLAGS})
@@ -34,7 +36,7 @@ MACRO(build_pump_library)
 	ENDIF()
 	
 	ADD_LIBRARY(${LIBRARY_NAME} SHARED ${LIB_ALL_FILES})
-		IF(WIN32)
+	IF(WIN32)
 		SET_TARGET_PROPERTIES(${LIBRARY_NAME} PROPERTIES PREFIX "")
 	ENDIF()
 	
@@ -77,3 +79,5 @@ MACRO(build_pump_library)
 				ARCHIVE DESTINATION lib64)
 	ENDIF()
 ENDMACRO()
+
+build_pump_library()

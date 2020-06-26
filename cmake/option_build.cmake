@@ -1,0 +1,42 @@
+#
+# Config build environment
+#
+
+# Specifies comiler on linux
+IF(UNIX)
+	SET(CMAKE_C_COMPILER gcc)
+	SET(CMAKE_CXX_COMPILER g++)
+ENDIF()
+
+# Specifies build type
+IF(BUILD_DEBUG)
+	SET(CMAKE_BUILD_TYPE Debug)
+ELSE()
+	SET(CMAKE_BUILD_TYPE Release)
+	# The macro disable assert
+	ADD_DEFINITIONS("-DNDEBUG")
+ENDIF()
+SET(CMAKE_CONFIGURATION_TYPES ${CMAKE_BUILD_TYPE} CACHE STRING "" FORCE)
+
+# Modify suffix of linked libraries
+IF(WIN32)
+	SET(CMAKE_FIND_LIBRARY_SUFFIXES "${CMAKE_FIND_LIBRARY_SUFFIXES};.a")
+	SET(CMAKE_STATIC_LIBRARY_SUFFIX "${CMAKE_STATIC_LIBRARY_SUFFIX};.a")
+	SET(CMAKE_SHARED_LIBRARY_PREFIX "${CMAKE_SHARED_LIBRARY_PREFIX};.a")
+ENDIF()
+
+# Specifies project prefix path
+SET(CMAKE_PREFIX_PATH ${ROOT_DIR}/lib)
+
+# Specifies libraries path
+LINK_DIRECTORIES(${ROOT_DIR}/lib)
+LINK_DIRECTORIES(${CMAKE_BINARY_DIR})
+
+# Specifies include path
+INCLUDE_DIRECTORIES(${ROOT_DIR}/include)
+
+# Specifies unicode character set on windows
+IF(WIN32)
+	REMOVE_DEFINITIONS("-D_MBCS")
+	ADD_DEFINITIONS("-DUNICODE -D_UNICODE")
+ENDIF()

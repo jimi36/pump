@@ -2,6 +2,11 @@
 # Export functions:
 #	build_test_project(project_name)
 #
+# Run:
+#   build_test_project("test_transport")
+#   build_test_project("test_simple")
+#   build_test_project("test_timer")
+#
 
 MACRO(build_test_project NAME)
 	set_complie_flags(${EXE_COMPILE_FLAGS})
@@ -36,3 +41,10 @@ MACRO(build_test_project NAME)
 		SET_TARGET_PROPERTIES(${NAME} PROPERTIES VS_DEBUGGER_ENVIRONMENT "PATH=${ROOT_DIR}/lib;%PATH%")
 	ENDIF()
 ENDMACRO()
+
+
+build_test_project("test_transport")
+
+build_test_project("test_simple")
+
+build_test_project("test_timer")

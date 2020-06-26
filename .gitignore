@@ -2,10 +2,13 @@
 *.o
 *.a
 *.so
+*.lib
+*.dll
 
 # Include path
 include/*
 !include/pump
+!include/function
 !include/concurrentqueue
 
 # Library path

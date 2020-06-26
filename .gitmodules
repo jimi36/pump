@@ -1,4 +1,2 @@
 [submodule "include/function"]
-	path = include/function
-	url = https://github.com/jimi36/function.git
-	branch = "master"
+
