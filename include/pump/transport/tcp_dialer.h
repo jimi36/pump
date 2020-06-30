@@ -137,23 +137,23 @@ namespace pump {
 
 		protected:
 			/*********************************************************************************
-			 * Dialed event callback
+			 * Dialed callback
 			 ********************************************************************************/
-			static void on_dialed_callback(
+			static void on_dialed(
 				tcp_sync_dialer_wptr wptr,
 				base_transport_sptr transp,
 				bool succ
 			);
 
 			/*********************************************************************************
-			 * Dialed timeout event callback
+			 * Dialed timeout callback
 			 ********************************************************************************/
-			PUMP_STATIC void on_timeout_callback(tcp_sync_dialer_wptr wptr);
+			PUMP_STATIC void on_timeouted(tcp_sync_dialer_wptr wptr);
 
 			/*********************************************************************************
 			 * Stopped dial event callback
 			 ********************************************************************************/
-			PUMP_STATIC void on_stopped_callback();
+			PUMP_STATIC void on_stopped();
 
 		private:
 			/*********************************************************************************

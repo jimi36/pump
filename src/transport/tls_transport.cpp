@@ -33,7 +33,7 @@ namespace pump {
 			__clear_send_pockets();
 		}
 
-		bool tls_transport::init(
+		void tls_transport::init(
 			flow::flow_tls_sptr &flow,
 			PUMP_CONST address &local_address,
 			PUMP_CONST address &remote_address
@@ -49,8 +49,6 @@ namespace pump {
 
 			local_address_ = local_address;
 			remote_address_ = remote_address;
-
-			return true;
 		}
 
 		transport_error tls_transport::start(
@@ -58,31 +56,41 @@ namespace pump {
 			int32 max_pending_send_size,
 			PUMP_CONST transport_callbacks &cbs
 		) {
-			if (!__set_status(STATUS_INIT, STATUS_STARTING))
+			if (!__set_status(STATUS_INIT, STATUS_STARTED))
 				return ERROR_INVALID;
 
 			PUMP_ASSERT(flow_);
-			PUMP_ASSERT_EXPR(sv, __set_service(sv));
+			PUMP_ASSERT_EXPR(sv != nullptr, __set_service(sv));
 			PUMP_ASSERT_EXPR(cbs.read_cb && cbs.disconnected_cb && cbs.stopped_cb, cbs_ = cbs);
 
 			utils::scoped_defer defer([&]() {
 				__close_flow();
 				__stop_read_tracker();
 				__stop_send_tracker();
-				__set_status(STATUS_STARTING, STATUS_ERROR);
+				__set_status(STATUS_STARTED, STATUS_ERROR);
 			});
 
 			if (max_pending_send_size > 0)
 				max_pending_send_size_ = max_pending_send_size;
 
+			// Tls flow maybe read and cached some user data when hankshaking. If there is  
+			// cached data, transport must callback the cached data to user before reading 
+			// more data.
 			poll::channel_sptr ch = shared_from_this();
-			if (!__start_all_trackers(ch))
-				return ERROR_FAULT;
-
-			if (flow_->want_to_read() != FLOW_ERR_NO)
-				return ERROR_FAULT;
-
-			PUMP_DEBUG_CHECK(__set_status(STATUS_STARTING, STATUS_STARTED));
+			if (!flow_->has_data_to_read())
+			{
+				if (!__start_all_trackers(ch, true, false))
+					return ERROR_FAULT;
+				if (flow_->want_to_read() != FLOW_ERR_NO)
+					return ERROR_FAULT;
+			}
+			else
+			{
+				if (!__start_all_trackers(ch, false, false))
+					return ERROR_FAULT;
+				if (!sv->post_channel_event(ch, 0))
+					return ERROR_FAULT;
+			}
 
 			defer.clear();
 
@@ -176,27 +184,29 @@ namespace pump {
 			return ERROR_OK;
 		}
 
+		void tls_transport::on_channel_event(uint32 ev)
+		{
+			auto flow = flow_.get();
+
+			__read_tls_data(flow);
+
+			__awake_tracker(r_tracker_);
+
+			if (__is_status(STATUS_STARTED) && flow->want_to_read() == FLOW_ERR_ABORT)
+				__try_doing_disconnected_process();
+		}
+
 		void tls_transport::on_read_event(net::iocp_task_ptr itask)
 		{
 			auto flow = flow_.get();
 			auto ret = flow->read_from_net(itask);
-			if (PUMP_LIKELY(ret == FLOW_ERR_NO))
-			{
-				while (true)
-				{
-					int32 size = 0;
-					c_block_ptr b = flow->read_from_ssl(&size);
-					if (size > 0)
-						cbs_.read_cb(b, size);
-					else
-						break;
-				}
-			}
-			else if (ret == FLOW_ERR_ABORT)
+			if (PUMP_UNLIKELY(ret == FLOW_ERR_ABORT))
 			{
 				__try_doing_disconnected_process();
 				return;
 			}
+
+			__read_tls_data(flow);
 
 			if (__is_status(STATUS_STARTED) && flow->want_to_read() == FLOW_ERR_ABORT)
 				__try_doing_disconnected_process();
@@ -278,6 +288,19 @@ namespace pump {
 			__try_doing_disconnected_process();
 
 			return false;
+		}
+
+		void tls_transport::__read_tls_data(flow::flow_tls_ptr flow)
+		{
+			while (true)
+			{
+				int32 size = 0;
+				c_block_ptr b = flow->read_from_ssl(&size);
+				if (size > 0)
+					cbs_.read_cb(b, size);
+				else
+					break;
+			}
 		}
 
 		void tls_transport::__try_doing_disconnected_process()

@@ -31,16 +31,16 @@ namespace pump {
 			int32 max_pending_send_size,
 			PUMP_CONST transport_callbacks &cbs
 		) {
-			if (!__set_status(STATUS_INIT, STATUS_STARTING))
+			if (!__set_status(STATUS_INIT, STATUS_STARTED))
 				return ERROR_INVALID;
 
-			PUMP_ASSERT_EXPR(sv, __set_service(sv));
+			PUMP_ASSERT_EXPR(sv != nullptr, __set_service(sv));
 			PUMP_ASSERT_EXPR(cbs.read_from_cb && cbs.stopped_cb, cbs_ = cbs);
 
 			utils::scoped_defer defer([&]() {
 				__close_flow();
 				__stop_read_tracker();
-				__set_status(STATUS_STARTING, STATUS_ERROR);
+				__set_status(STATUS_STARTED, STATUS_ERROR);
 			});
 
 			if (!__open_flow())
@@ -49,10 +49,8 @@ namespace pump {
 			if (!__start_read_tracker())
 				return ERROR_FAULT;
 
-			if (flow_->beg_read_task() != FLOW_ERR_NO)
+			if (flow_->want_to_read() != FLOW_ERR_NO)
 				return ERROR_FAULT;
-
-			PUMP_DEBUG_CHECK(__set_status(STATUS_STARTING, STATUS_STARTED));
 
 			defer.clear();
 
@@ -82,30 +80,21 @@ namespace pump {
 			if (PUMP_UNLIKELY(!is_started()))
 				return ERROR_INVALID;
 
-			PUMP_LOCK_SPOINTER(flow, flow_);
-			if (PUMP_UNLIKELY(flow == nullptr))
-				return ERROR_FAULT;
-
-			flow->send(b, size, remote_address);
+			flow_->send(b, size, remote_address);
 
 			return ERROR_OK;
 		}
 
 		void udp_transport::on_read_event(net::iocp_task_ptr itask)
 		{
-			PUMP_LOCK_SPOINTER(flow, flow_);
-			if (flow == nullptr)
-				return;
-
 			address addr;
 			int32 size = 0;
+			auto flow = flow_.get();
 			c_block_ptr b = flow->read_from(itask, &size, &addr);
 			if (size > 0)
 				cbs_.read_from_cb(b, size, addr);
 
-			flow->end_read_task();
-
-			if (__is_status(STATUS_STARTED) && flow->beg_read_task() == FLOW_ERR_ABORT)
+			if (__is_status(STATUS_STARTED) && flow->want_to_read() == FLOW_ERR_ABORT)
 			{
 				if (__set_status(STATUS_STARTED, STATUS_ERROR))
 				{
@@ -113,18 +102,6 @@ namespace pump {
 					__stop_read_tracker();
 				}
 			}
-		}
-
-		void udp_transport::on_tracker_event(int32 ev)
-		{
-			if (ev == TRACKER_EVENT_ADD)
-				return;
-
-			if (ev == TRACKER_EVENT_DEL)
-				tracker_cnt_ -= 1;
-
-			if (tracker_cnt_ == 0)
-				cbs_.stopped_cb();
 		}
 
 		bool udp_transport::__open_flow()

@@ -21,9 +21,6 @@ namespace pump {
 
 		void base_dialer::on_tracker_event(int32 ev)
 		{
-			if (ev == TRACKER_EVENT_ADD)
-				return;
-
 			if (ev == TRACKER_EVENT_DEL)
 			{
 				if (tracker_cnt_.fetch_sub(1) - 1 == 0)

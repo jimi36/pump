@@ -86,11 +86,12 @@ namespace pump {
 				return false;
 
 			tracker->__set_tracked(tracking);
-
+			/*
 			auto itask = net::new_iocp_task();
 			net::set_iocp_task_type(itask, IOCP_TASK_TRACKER);
 			net::set_iocp_task_notifier(itask, tracker->get_channel());
 			PostQueuedCompletionStatus(iocp_, 1, TRACKER_EVENT_ADD, (LPOVERLAPPED)itask);
+			*/
 			return true;
 #else
 			return false;

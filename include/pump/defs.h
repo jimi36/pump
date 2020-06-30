@@ -52,23 +52,23 @@
 #define PUMP_ASSERT(x) assert(x)
 #define PUMP_ASSERT_EXPR(x, expr) PUMP_ASSERT(x); expr
 
+// Macro debug check expression
+#if !defined(NDEBUG)
+	#define PUMP_DEBUG_CHECK(x) PUMP_ASSERT(x)
+#else
+	#define PUMP_DEBUG_CHECK(x) (x)
+#endif
+
 // Macro pump static assert qualifier
 #define PUMP_STATIC_ASSERT(x, msg) static_assert((x), msg)
 
 // Macro pump likely/unlikely hints
 #if defined(__GNUC__)
-#	define PUMP_LIKELY(x) __builtin_expect((x), true)
-#	define PUMP_UNLIKELY(x) __builtin_expect((x), false)
+	#define PUMP_LIKELY(x) __builtin_expect((x), true)
+	#define PUMP_UNLIKELY(x) __builtin_expect((x), false)
 #else
-#	define PUMP_LIKELY(x) (x)
-#	define PUMP_UNLIKELY(x) (x)
-#endif
-
-// Macro debug check expression
-#if !defined(NDEBUG)
-#	define PUMP_DEBUG_CHECK(expr) PUMP_ASSERT(expr)
-#else
-#	define PUMP_DEBUG_CHECK(expr) (expr)
+	#define PUMP_LIKELY(x) (x)
+	#define PUMP_UNLIKELY(x) (x)
 #endif
 
 // Macro lock smart pointer to raw pointer

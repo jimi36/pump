@@ -36,7 +36,6 @@ namespace pump {
 		enum transport_status
 		{
 			STATUS_INIT = 0,
-			STATUS_STARTING,
 			STATUS_STARTED,
 			STATUS_STOPPING,
 			STATUS_STOPPED,
@@ -235,7 +234,7 @@ namespace pump {
 			/*********************************************************************************
 			 * Start all trackers
 			 ********************************************************************************/
-			bool __start_all_trackers(poll::channel_sptr &ch);
+			bool __start_all_trackers(poll::channel_sptr &ch, bool trackr, bool trackw);
 
 			/*********************************************************************************
 			 * Awake tracker

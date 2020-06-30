@@ -22,12 +22,8 @@ namespace pump {
 
 		void base_acceptor::on_tracker_event(int32 ev)
 		{
-			if (ev == TRACKER_EVENT_ADD)
-				return;
-
 			if (ev == TRACKER_EVENT_DEL)
 			{
-
 				if (tracker_cnt_.fetch_sub(1) - 1 == 0)
 				{
 					if (__set_status(STATUS_STOPPING, STATUS_STOPPED))

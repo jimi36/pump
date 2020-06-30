@@ -25,7 +25,6 @@ namespace pump {
 			flow_udp::flow_udp() PUMP_NOEXCEPT : 
 				read_task_(nullptr)
 			{
-				read_flag_.clear();
 			}
 
 			flow_udp::~flow_udp()
@@ -70,31 +69,14 @@ namespace pump {
 				return FLOW_ERR_NO;
 			}
 
-			int32 flow_udp::beg_read_task()
+			int32 flow_udp::want_to_read()
 			{
 #if defined(WIN32) && defined(USE_IOCP)
-				if (read_flag_.test_and_set())
-					return FLOW_ERR_BUSY;
-
 				PUMP_ASSERT(read_task_);
 				if (!net::post_iocp_read_from(read_task_))
 					return FLOW_ERR_ABORT;
 #endif
 				return FLOW_ERR_NO;
-			}
-
-			void flow_udp::end_read_task()
-			{
-#if defined(WIN32) && defined(USE_IOCP)
-				read_flag_.clear();
-#endif
-			}
-
-			void flow_udp::cancel_read_task()
-			{
-#if defined(WIN32) && defined(USE_IOCP)
-				//net::cancel_iocp_task(net::get_iocp_handler(), read_task_);
-#endif
 			}
 
 			c_block_ptr flow_udp::read_from(

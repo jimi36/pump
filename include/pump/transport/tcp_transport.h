@@ -48,7 +48,7 @@ namespace pump {
 			/*********************************************************************************
 			 * Init
 			 ********************************************************************************/
-			bool init(
+			void init(
 				int32 fd, 
 				PUMP_CONST address &local_address, 
 				PUMP_CONST address &remote_address

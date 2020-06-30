@@ -28,29 +28,27 @@ namespace pump {
 			service_ptr sv, 
 			PUMP_CONST acceptor_callbacks &cbs
 		) {
-			if (!__set_status(STATUS_INIT, STATUS_STARTING))
+			if (!__set_status(STATUS_INIT, STATUS_STARTED))
 				return ERROR_INVALID;
 
-			PUMP_ASSERT_EXPR(sv, __set_service(sv));
-			PUMP_ASSERT_EXPR(cbs.accepted_cb && cbs.stopped_cb, cbs_ = cbs);	
+			PUMP_ASSERT_EXPR(sv != nullptr, __set_service(sv));
+			PUMP_ASSERT_EXPR(cbs.accepted_cb && cbs.stopped_cb, cbs_ = cbs);
 
 			utils::scoped_defer defer([&]() {
 				__close_flow();
 				__stop_tracker();
-				__set_status(STATUS_STARTING, STATUS_ERROR);
+				__set_status(STATUS_STARTED, STATUS_ERROR);
 			});
 
 			if (!__open_flow())
 				return ERROR_FAULT;
 
-			poll::channel_sptr ch = std::move(shared_from_this());
+			poll::channel_sptr ch = shared_from_this();
 			if (!__start_tracker(ch))
 				return ERROR_FAULT;
 
 			if (flow_->want_to_accept() != FLOW_ERR_NO)
 				return ERROR_FAULT;
-
-			PUMP_DEBUG_CHECK(__set_status(STATUS_STARTING, STATUS_STARTED));
 
 			defer.clear();
 
@@ -59,8 +57,7 @@ namespace pump {
 
 		void tcp_acceptor::stop()
 		{
-			// When in started status at the moment, stopping can be done. Then tracker
-			// event callback will be triggered, we can trigger stopped callabck at there.
+			// When stopping done, tracker event will trigger stopped callabck.
 			if (__set_status(STATUS_STARTED, STATUS_STOPPING))
 			{
 				__close_flow();
@@ -77,18 +74,14 @@ namespace pump {
 			if (fd > 0)
 			{
 				auto conn = tcp_transport::create_instance();
-				PUMP_DEBUG_CHECK(conn->init(fd, local_address, remote_address));
+				conn->init(fd, local_address, remote_address);
 
-				// The acceptor maybe be stopped before this, so we need check it in started 
-				// status or not. And if notifier is already not existed, we only can close the
-				// new tcp connection.
-				if (__is_status(STATUS_STARTED))
-					cbs_.accepted_cb(conn);
+				cbs_.accepted_cb(conn);
 			}
 
 			// Acceptor maybe be stopped, so we need check it in started status.
-			if (flow->want_to_accept() != FLOW_ERR_NO)
-				PUMP_ASSERT(!__is_status(STATUS_STARTED));
+			if (__is_status(STATUS_STARTED) && flow->want_to_accept() != FLOW_ERR_NO)
+				PUMP_ASSERT(false);
 		}
 
 		bool tcp_acceptor::__open_flow()

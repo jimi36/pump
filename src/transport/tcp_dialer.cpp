@@ -32,22 +32,22 @@ namespace pump {
 			service_ptr sv, 
 			PUMP_CONST dialer_callbacks &cbs
 		) {
-			if (!__set_status(STATUS_INIT, STATUS_STARTING))
+			if (!__set_status(STATUS_INIT, STATUS_STARTED))
 				return ERROR_INVALID;
 
-			PUMP_ASSERT_EXPR(sv, __set_service(sv));
+			PUMP_ASSERT_EXPR(sv != nullptr, __set_service(sv));
 			PUMP_ASSERT_EXPR(cbs.dialed_cb && cbs.stopped_cb && cbs.timeout_cb, cbs_ = cbs);
 
 			utils::scoped_defer defer([&]() {
 				__close_flow();
 				__stop_tracker();
-				__set_status(STATUS_STARTING, STATUS_ERROR);
+				__set_status(STATUS_STARTED, STATUS_ERROR);
 			});
 
 			if (!__open_flow())
 				return ERROR_FAULT;
 
-			poll::channel_sptr ch = std::move(shared_from_this());
+			poll::channel_sptr ch = shared_from_this();
 			if (!__start_tracker(ch))
 				return ERROR_FAULT;
 
@@ -57,8 +57,6 @@ namespace pump {
 			if (!__start_connect_timer(function::bind(&tcp_dialer::on_timeout, shared_from_this())))
 				return ERROR_FAULT;
 
-			PUMP_DEBUG_CHECK(__set_status(STATUS_STARTING, STATUS_STARTED));
-
 			defer.clear();
 
 			return ERROR_OK;
@@ -66,8 +64,7 @@ namespace pump {
 
 		void tcp_dialer::stop()
 		{
-			// When in started status at the moment, stopping can be done. Then tracker event callback
-			// will be triggered, we can trigger stopped callabck at there.
+			// When stopping done, tracker event will trigger stopped callback.
 			if (__set_status(STATUS_STARTED, STATUS_STOPPING))
 			{
 				__close_flow();
@@ -76,9 +73,9 @@ namespace pump {
 				return;
 			}
 			
-			// If in timeout doing status at the moment, it means that dialer is timeout but hasn't 
-			// triggered tracker event callback yet. So we just set stopping status to dialer, and
-			// when tracker event callback triggered, we will trigger stopped callabck at there.
+			// If in timeouting status at the moment, it means that dialer is timeout but hasn't 
+			// triggered tracker event callback yet. So we just set it to stopping status, then
+			// tracker event will trigger stopped callabck.
 			if (__set_status(STATUS_TIMEOUTING, STATUS_STOPPING))
 				return;
 		}
@@ -101,7 +98,7 @@ namespace pump {
 			if (success)
 			{
 				conn = tcp_transport::create_instance();
-				PUMP_DEBUG_CHECK(conn->init(flow->unbind_fd(), local_address, remote_address));
+				conn->init(flow->unbind_fd(), local_address, remote_address);
 			}
 			else
 			{
@@ -148,29 +145,21 @@ namespace pump {
 			base_transport_sptr transp;
 
 			if (dialer_)
-				return transp;
+				return base_transport_sptr();
 
 			dialer_callbacks cbs;
-			cbs.dialed_cb = function::bind(&tcp_sync_dialer::on_dialed_callback, 
-				shared_from_this(), _1, _2);
-			cbs.timeout_cb = function::bind(&tcp_sync_dialer::on_timeout_callback,
-				shared_from_this());
-			cbs.stopped_cb = function::bind(&tcp_sync_dialer::on_stopped_callback);
+			cbs.dialed_cb = function::bind(&tcp_sync_dialer::on_dialed, shared_from_this(), _1, _2);
+			cbs.timeout_cb = function::bind(&tcp_sync_dialer::on_timeouted, shared_from_this());
+			cbs.stopped_cb = function::bind(&tcp_sync_dialer::on_stopped);
 
 			dialer_ = tcp_dialer::create_instance(local_address, remote_address, connect_timeout);
-			if (!dialer_->start(sv, cbs))
-			{
-				dialer_.reset();
-				return transp;
-			}
+			if (dialer_->start(sv, cbs) != ERROR_OK)
+				return base_transport_sptr();
 
-			auto future = dial_promise_.get_future();
-			transp = future.get();
-
-			return transp;
+			return dial_promise_.get_future().get();
 		}
 
-		void tcp_sync_dialer::on_dialed_callback(
+		void tcp_sync_dialer::on_dialed(
 			tcp_sync_dialer_wptr wptr,
 			base_transport_sptr transp,
 			bool succ
@@ -182,7 +171,7 @@ namespace pump {
 			dialer->dial_promise_.set_value(transp);
 		}
 
-		void tcp_sync_dialer::on_timeout_callback(tcp_sync_dialer_wptr wptr) 
+		void tcp_sync_dialer::on_timeouted(tcp_sync_dialer_wptr wptr) 
 		{
 			PUMP_LOCK_WPOINTER(dialer, wptr);
 			if (dialer == nullptr)
@@ -191,7 +180,7 @@ namespace pump {
 			dialer->dial_promise_.set_value(base_transport_sptr());
 		}
 
-		void tcp_sync_dialer::on_stopped_callback()
+		void tcp_sync_dialer::on_stopped()
 		{
 			PUMP_ASSERT(false);
 		}

@@ -88,7 +88,7 @@ namespace pump {
 			/*********************************************************************************
 			 * TLS handshaked callback
 			 ********************************************************************************/
-			PUMP_STATIC void on_handshaked_callback(
+			PUMP_STATIC void on_handshaked(
 				tls_acceptor_wptr wptr,
 				tls_handshaker_ptr handshaker,
 				bool succ
@@ -97,7 +97,7 @@ namespace pump {
 			/*********************************************************************************
 			 * Tls handskake stopped callback
 			 ********************************************************************************/
-			PUMP_STATIC void on_handshake_stopped_callback(
+			PUMP_STATIC void on_handshake_stopped(
 				tls_acceptor_wptr wptr,
 				tls_handshaker_ptr handshaker
 			);

@@ -82,7 +82,7 @@ namespace pump {
 			/*********************************************************************************
 			 * TLS handshake success callback
 			 ********************************************************************************/
-			PUMP_STATIC void on_handshaked_callback(
+			PUMP_STATIC void on_handshaked(
 				tls_dialer_wptr wptr,
 				tls_handshaker_ptr handshaker,
 				bool succ
@@ -91,7 +91,7 @@ namespace pump {
 			/*********************************************************************************
 			 * Tls handskake stopped callback
 			 ********************************************************************************/
-			PUMP_STATIC void on_handshake_stopped_callback(
+			PUMP_STATIC void on_handshake_stopped(
 				tls_dialer_wptr wptr,
 				tls_handshaker_ptr handshaker
 			);
@@ -162,23 +162,23 @@ namespace pump {
 
 		protected:
 			/*********************************************************************************
-			 * Dialed event callback
+			 * Dialed callback
 			 ********************************************************************************/
-			PUMP_STATIC void on_dialed_callback(
+			PUMP_STATIC void on_dialed(
 				tls_sync_dialer_wptr wptr,
 				base_transport_sptr transp,
 				bool succ
 			);
 
 			/*********************************************************************************
-			 * Dialed timeout event callback
+			 * Dial timeouted callback
 			 ********************************************************************************/
-			PUMP_STATIC void on_timeout_callback(tls_sync_dialer_wptr wptr);
+			PUMP_STATIC void on_timeouted(tls_sync_dialer_wptr wptr);
 
 			/*********************************************************************************
-			 * Stopped dial event callback
+			 * Dial stopped callback
 			 ********************************************************************************/
-			PUMP_STATIC void on_stopped_callback();
+			PUMP_STATIC void on_stopped();
 
 		private:
 			/*********************************************************************************

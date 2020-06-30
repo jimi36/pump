@@ -52,18 +52,7 @@ namespace pump {
 				 *     FLOW_ERR_NO    => success
 				 *     FLOW_ERR_ABORT => error
 				 ********************************************************************************/
-				int32 beg_read_task();
-
-				/*********************************************************************************
-				 * End read task
-				 ********************************************************************************/
-				void end_read_task();
-
-				/*********************************************************************************
-				 * Cancel read
-				 * If using IOCP this cancel posted IOCP task for reading, else do nothing.
-				 ********************************************************************************/
-				void cancel_read_task();
+				int32 want_to_read();
 
 				/*********************************************************************************
 				 * Read from
@@ -81,7 +70,6 @@ namespace pump {
 
 			private:
 				// Read task for IOCP
-				std::atomic_flag read_flag_;
 				net::iocp_task_ptr read_task_;
 				// Read cache
 				std::string read_cache_;

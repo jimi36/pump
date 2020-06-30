@@ -34,18 +34,15 @@ namespace pump {
 			__clear_sendlist();
 		}
 
-		bool tcp_transport::init(
+		void tcp_transport::init(
 			int32 fd, 
 			PUMP_CONST address &local_address, 
 			PUMP_CONST address &remote_address
 		) {
-			if (!__open_flow(fd))
-				return false;
+			PUMP_ASSERT(__open_flow(fd));
 
 			local_address_  = local_address;
 			remote_address_ = remote_address;
-
-			return true;
 		}
 
 		transport_error tcp_transport::start(
@@ -53,31 +50,29 @@ namespace pump {
 			int32 max_pending_send_size,
 			PUMP_CONST transport_callbacks &cbs
 		) {
-			if (!__set_status(STATUS_INIT, STATUS_STARTING))
+			if (!__set_status(STATUS_INIT, STATUS_STARTED))
 				return ERROR_INVALID;
 
 			PUMP_ASSERT(flow_);
-			PUMP_ASSERT_EXPR(sv, __set_service(sv));
+			PUMP_ASSERT_EXPR(sv != nullptr, __set_service(sv));
 			PUMP_ASSERT_EXPR(cbs.read_cb && cbs.disconnected_cb && cbs.stopped_cb, cbs_ = cbs);
 
 			utils::scoped_defer defer([&]() {
 				__close_flow();
 				__stop_read_tracker();
 				__stop_send_tracker();
-				__set_status(STATUS_STARTING, STATUS_ERROR);
+				__set_status(STATUS_STARTED, STATUS_ERROR);
 			});
 
 			if (max_pending_send_size > 0)
 				max_pending_send_size_ = max_pending_send_size;
 
 			poll::channel_sptr ch = shared_from_this();
-			if (!__start_all_trackers(ch))
+			if (!__start_all_trackers(ch, true, false))
 				return ERROR_FAULT;
 
 			if (flow_->want_to_read() == FLOW_ERR_ABORT)
 				return ERROR_FAULT;
-
-			PUMP_DEBUG_CHECK(__set_status(STATUS_STARTING, STATUS_STARTED));
 
 			defer.clear();
 			
@@ -183,7 +178,7 @@ namespace pump {
 				cbs_.read_cb(b, size);
 
 				// Begin new read task
-				if (is_started() && flow->want_to_read() == FLOW_ERR_ABORT)
+				if (__is_status(STATUS_STARTED) && flow->want_to_read() == FLOW_ERR_ABORT)
 					__try_doing_disconnected_process();
 			}
 			else

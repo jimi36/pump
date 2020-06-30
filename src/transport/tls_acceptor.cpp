@@ -70,30 +70,32 @@ namespace pump {
 
 		tls_acceptor::~tls_acceptor()
 		{
+#if defined(USE_GNUTLS)
 			if (xcred_ != nullptr)
 				gnutls_certificate_free_credentials((gnutls_certificate_credentials_t)xcred_);
+#endif
 		}
 
 		transport_error tls_acceptor::start(
 			service_ptr sv, 
 			PUMP_CONST acceptor_callbacks &cbs
 		) {
-			if (!__set_status(STATUS_INIT, STATUS_STARTING))
+			if (!__set_status(STATUS_INIT, STATUS_STARTED))
 				return ERROR_INVALID;
 
-			PUMP_ASSERT(xcred_);
-			PUMP_ASSERT_EXPR(sv, __set_service(sv));
+			PUMP_ASSERT(xcred_ != nullptr);
+			PUMP_ASSERT_EXPR(sv != nullptr, __set_service(sv));
 			PUMP_ASSERT_EXPR(cbs.accepted_cb && cbs.stopped_cb, cbs_ = cbs);
 
-			handshaker_cbs_.handshaked_cb = function::bind(&tls_acceptor::on_handshaked_callback,
+			handshaker_cbs_.handshaked_cb = function::bind(&tls_acceptor::on_handshaked,
 				shared_from_this(), _1, _2);
-			handshaker_cbs_.stopped_cb = function::bind(&tls_acceptor::on_handshake_stopped_callback,
+			handshaker_cbs_.stopped_cb = function::bind(&tls_acceptor::on_handshake_stopped,
 				shared_from_this(), _1);
 
 			utils::scoped_defer defer([&]() {
 				__close_flow();
 				__stop_tracker();
-				__set_status(STATUS_STARTING, STATUS_ERROR);
+				__set_status(STATUS_STARTED, STATUS_ERROR);
 			});
 
 			if (!__open_flow())
@@ -106,8 +108,6 @@ namespace pump {
 			if (flow_->want_to_accept() != FLOW_ERR_NO)
 				return ERROR_FAULT;
 
-			PUMP_DEBUG_CHECK(__set_status(STATUS_STARTING, STATUS_STARTED));
-
 			defer.clear();
 
 			return ERROR_OK;
@@ -115,8 +115,7 @@ namespace pump {
 
 		void tls_acceptor::stop()
 		{
-			// When in started status at the moment, stopping can be done, Then tracker event callback
-			// will be triggered, we can trigger stopped callabck at there. 
+			// When stopping done, tracker event will trigger stopped callback.
 			if (__set_status(STATUS_STARTED, STATUS_STOPPING))
 			{
 				__close_flow();
@@ -138,7 +137,7 @@ namespace pump {
 				{
 					// If handshaker is started error, handshaked callback will be triggered. So we do nothing
 					// at here when started error. But if acceptor stopped befere here, we shuold stop handshaking.
-					PUMP_DEBUG_CHECK(handshaker->init(fd, false, xcred_, local_address, remote_address));
+					handshaker->init(fd, false, xcred_, local_address, remote_address);
 					if (handshaker->start(get_service(), handshake_timeout_, handshaker_cbs_))
 					{
 						if (__is_status(STATUS_STOPPING) || __is_status(STATUS_STOPPED))
@@ -152,11 +151,11 @@ namespace pump {
 			}
 
 			// Acceptor maybe be stopped, so we need check it in started status.
-			if (flow->want_to_accept() != FLOW_ERR_NO)
-				PUMP_ASSERT(!__is_status(STATUS_STARTED));
+			if (__is_status(STATUS_STARTED) && flow->want_to_accept() != FLOW_ERR_NO)
+				PUMP_ASSERT(false);
 		}
 
-		void tls_acceptor::on_handshaked_callback(
+		void tls_acceptor::on_handshaked(
 			tls_acceptor_wptr wptr,
 			tls_handshaker_ptr handshaker,
 			bool succ
@@ -164,7 +163,7 @@ namespace pump {
 			PUMP_LOCK_WPOINTER(acceptor, wptr);
 			if (acceptor == nullptr)
 			{
-				handshaker->stop(); 
+				handshaker->stop();
 				return;
 			}
 
@@ -176,19 +175,21 @@ namespace pump {
 				address local_address = handshaker->get_local_address();
 				address remote_address = handshaker->get_remote_address();
 				auto transport = tls_transport::create_instance();
-				PUMP_DEBUG_CHECK(transport->init(flow, local_address, remote_address));
+				transport->init(flow, local_address, remote_address);
 
 				acceptor->cbs_.accepted_cb(transport);
 			}			
 		}
 
-		void tls_acceptor::on_handshake_stopped_callback(
+		void tls_acceptor::on_handshake_stopped(
 			tls_acceptor_wptr wptr, 
 			tls_handshaker_ptr handshaker
 		) {
 			PUMP_LOCK_WPOINTER(acceptor, wptr);
-			if (acceptor)
-				acceptor->__remove_handshaker(handshaker);
+			if (acceptor == nullptr)
+				return;
+
+			acceptor->__remove_handshaker(handshaker);
 		}
 
 		bool tls_acceptor::__open_flow()

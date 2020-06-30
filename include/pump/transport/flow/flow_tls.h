@@ -91,6 +91,12 @@ namespace pump {
 				c_block_ptr read_from_ssl(int32_ptr size);
 
 				/*********************************************************************************
+				 * Check there are data to read or not
+				 ********************************************************************************/
+				PUMP_INLINE bool has_data_to_read() PUMP_CONST
+				{ return net_read_data_size_> net_read_data_pos_; }
+
+				/*********************************************************************************
 				 * Send to ssl
 				 * If sent completedly return true else return false.
 				 ********************************************************************************/

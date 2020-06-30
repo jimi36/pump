@@ -21,9 +21,6 @@ namespace pump {
 
 		void base_transport::on_tracker_event(int32 ev)
 		{
-			if (ev == TRACKER_EVENT_ADD)
-				return;
-
 			if (ev == TRACKER_EVENT_DEL)
 			{
 				if (tracker_cnt_.fetch_sub(1) - 1 == 0)
@@ -36,13 +33,13 @@ namespace pump {
 			}
 		}
 
-		bool base_transport::__start_all_trackers(poll::channel_sptr &ch)
+		bool base_transport::__start_all_trackers(poll::channel_sptr &ch, bool rt, bool wt)
 		{
 			PUMP_ASSERT(!r_tracker_ && !s_tracker_);
 			r_tracker_.reset(new poll::channel_tracker(ch, TRACK_READ, TRACK_MODE_LOOP));
 			s_tracker_.reset(new poll::channel_tracker(ch, TRACK_WRITE, TRACK_MODE_ONCE));
-			if (!get_service()->add_channel_tracker(s_tracker_, false) ||
-				!get_service()->add_channel_tracker(r_tracker_, true))
+			if (!get_service()->add_channel_tracker(r_tracker_, rt) || 
+				!get_service()->add_channel_tracker(s_tracker_, wt))
 				return false;
 
 			tracker_cnt_.fetch_add(2);
@@ -52,20 +49,20 @@ namespace pump {
 
 		bool base_transport::__awake_tracker(poll::channel_tracker_sptr tracker)
 		{
-			if (PUMP_UNLIKELY(!tracker))
+			if (!tracker)
 				return false;
-			else
-				PUMP_DEBUG_CHECK(get_service()->awake_channel_tracker(tracker.get()));
+
+			PUMP_DEBUG_CHECK(get_service()->awake_channel_tracker(tracker.get()));
 
 			return true;
 		}
 
 		bool base_transport::__pause_tracker(poll::channel_tracker_sptr tracker)
 		{
-			if (PUMP_UNLIKELY(!tracker))
+			if (!tracker)
 				return false;
-			else
-				PUMP_DEBUG_CHECK(get_service()->pause_channel_tracker(tracker.get()));
+
+			PUMP_DEBUG_CHECK(get_service()->pause_channel_tracker(tracker.get()));
 
 			return true;
 		}

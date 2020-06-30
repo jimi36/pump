@@ -28,20 +28,17 @@ namespace pump {
 		{
 		}
 
-		bool tls_handshaker::init(
+		void tls_handshaker::init(
 			int32 fd,
 			bool is_client,
 			void_ptr xcred,
 			PUMP_CONST address &local_address,
 			PUMP_CONST address &remote_address
 		) {
-			if (!__open_flow(fd, xcred, is_client))
-				return false;
-
-			local_address_  = local_address;
+			local_address_ = local_address;
 			remote_address_ = remote_address;
 
-			return true;
+			PUMP_ASSERT(__open_flow(fd, xcred, is_client));
 		}
 
 		bool tls_handshaker::start(
@@ -49,17 +46,17 @@ namespace pump {
 			int64 timeout, 
 			PUMP_CONST tls_handshaker_callbacks &cbs
 		) {
-			if (!__set_status(STATUS_INIT, STATUS_STARTING))
+			if (!__set_status(STATUS_INIT, STATUS_STARTED))
 				return false;
 
 			PUMP_ASSERT(flow_);
-			PUMP_ASSERT_EXPR(sv, __set_service(sv));
+			PUMP_ASSERT_EXPR(sv != nullptr, __set_service(sv));
 			PUMP_ASSERT_EXPR(cbs.handshaked_cb && cbs.stopped_cb, cbs_ = cbs);
 
 			utils::scoped_defer defer([&]() {
 				__close_flow();
 				__stop_tracker();
-				__set_status(STATUS_STARTING, STATUS_ERROR);
+				__set_status(STATUS_STARTED, STATUS_ERROR);
 			});
 
 			if (!__start_tracker())
@@ -67,8 +64,6 @@ namespace pump {
 
 			if (!__start_timer(timeout))
 				return false;
-
-			PUMP_DEBUG_CHECK(__set_status(STATUS_STARTING, STATUS_STARTED));
 
 			defer.clear();
 
@@ -81,17 +76,17 @@ namespace pump {
 			int64 timeout,
 			PUMP_CONST tls_handshaker_callbacks &cbs
 		) {
-			if (!__set_status(STATUS_INIT, STATUS_STARTING))
+			if (!__set_status(STATUS_INIT, STATUS_STARTED))
 				return false;
 
 			PUMP_ASSERT(flow_);
-			PUMP_ASSERT_EXPR(sv, __set_service(sv));
+			PUMP_ASSERT_EXPR(sv != nullptr, __set_service(sv));
 			PUMP_ASSERT_EXPR(cbs.handshaked_cb && cbs.stopped_cb, cbs_ = cbs);
 
 			utils::scoped_defer defer([&]() {
 				__close_flow();
 				__stop_tracker();
-				__set_status(STATUS_STARTING, STATUS_ERROR);
+				__set_status(STATUS_STARTED, STATUS_ERROR);
 			});
 
 			if (!__restart_tracker(tracker))
@@ -99,8 +94,6 @@ namespace pump {
 
 			if (!__start_timer(timeout))
 				return false;
-
-			PUMP_DEBUG_CHECK(__set_status(STATUS_STARTING, STATUS_STARTED));
 
 			defer.clear();
 
