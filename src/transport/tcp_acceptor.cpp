@@ -28,7 +28,7 @@ namespace pump {
 			service_ptr sv, 
 			PUMP_CONST acceptor_callbacks &cbs
 		) {
-			if (!__set_status(STATUS_INIT, STATUS_STARTED))
+			if (!__set_status(STATUS_NONE, STATUS_STARTING))
 				return ERROR_INVALID;
 
 			PUMP_ASSERT_EXPR(sv != nullptr, __set_service(sv));
@@ -37,7 +37,7 @@ namespace pump {
 			utils::scoped_defer defer([&]() {
 				__close_flow();
 				__stop_tracker();
-				__set_status(STATUS_STARTED, STATUS_ERROR);
+				__set_status(STATUS_STARTING, STATUS_ERROR);
 			});
 
 			if (!__open_flow())
@@ -51,6 +51,10 @@ namespace pump {
 				return ERROR_FAULT;
 
 			defer.clear();
+
+			PUMP_DEBUG_CHECK(
+				__set_status(STATUS_STARTING, STATUS_STARTED)
+			);
 
 			return ERROR_OK;
 		}

@@ -35,7 +35,8 @@ namespace pump {
 		 ********************************************************************************/
 		enum transport_status
 		{
-			STATUS_INIT = 0,
+			STATUS_NONE = 0,
+			STATUS_STARTING,
 			STATUS_STARTED,
 			STATUS_STOPPING,
 			STATUS_STOPPED,
@@ -63,8 +64,9 @@ namespace pump {
 		enum transport_error
 		{
 			ERROR_OK = 0,
+			ERROR_UNSTART,
 			ERROR_INVALID,
-			ERROR_DISABLED,
+			ERROR_DISABLE,
 			ERROR_AGAIN,
 			ERROR_FAULT
 		};
@@ -82,7 +84,7 @@ namespace pump {
 				service_getter(sv),
 				poll::channel(fd),
 				tracker_cnt_(0),
-				status_(STATUS_INIT),
+				status_(STATUS_NONE),
 				type_(type)
 			{}
 
@@ -176,14 +178,14 @@ namespace pump {
 			 * Send
 			 ********************************************************************************/
 			virtual transport_error send(c_block_ptr b, uint32 size)
-			{ return ERROR_DISABLED; }
+			{ return ERROR_DISABLE; }
 
 			/*********************************************************************************
 			 * Send
 			 * After sent success, the buffer has moved ownership to transport.
 			 ********************************************************************************/
 			virtual transport_error send(flow::buffer_ptr b)
-			{ return ERROR_DISABLED; }
+			{ return ERROR_DISABLE; }
 
 			/*********************************************************************************
 			 * Send
@@ -192,7 +194,7 @@ namespace pump {
 				c_block_ptr b,
 				uint32 size,
 				PUMP_CONST address &remote_address
-			) { return ERROR_DISABLED; }
+			) { return ERROR_DISABLE; }
 
 			/*********************************************************************************
 			 * Get pending send buffer size

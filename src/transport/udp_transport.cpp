@@ -31,7 +31,7 @@ namespace pump {
 			int32 max_pending_send_size,
 			PUMP_CONST transport_callbacks &cbs
 		) {
-			if (!__set_status(STATUS_INIT, STATUS_STARTED))
+			if (!__set_status(STATUS_NONE, STATUS_STARTING))
 				return ERROR_INVALID;
 
 			PUMP_ASSERT_EXPR(sv != nullptr, __set_service(sv));
@@ -40,7 +40,7 @@ namespace pump {
 			utils::scoped_defer defer([&]() {
 				__close_flow();
 				__stop_read_tracker();
-				__set_status(STATUS_STARTED, STATUS_ERROR);
+				__set_status(STATUS_STARTING, STATUS_ERROR);
 			});
 
 			if (!__open_flow())
@@ -53,6 +53,10 @@ namespace pump {
 				return ERROR_FAULT;
 
 			defer.clear();
+
+			PUMP_DEBUG_CHECK(
+				__set_status(STATUS_STARTING, STATUS_STARTED)
+			);
 
 			return ERROR_OK;
 		}
@@ -78,7 +82,7 @@ namespace pump {
 			PUMP_ASSERT(b && size > 0);
 
 			if (PUMP_UNLIKELY(!is_started()))
-				return ERROR_INVALID;
+				return ERROR_UNSTART;
 
 			flow_->send(b, size, remote_address);
 

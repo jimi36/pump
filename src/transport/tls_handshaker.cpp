@@ -46,7 +46,7 @@ namespace pump {
 			int64 timeout, 
 			PUMP_CONST tls_handshaker_callbacks &cbs
 		) {
-			if (!__set_status(STATUS_INIT, STATUS_STARTED))
+			if (!__set_status(STATUS_NONE, STATUS_STARTING))
 				return false;
 
 			PUMP_ASSERT(flow_);
@@ -56,7 +56,7 @@ namespace pump {
 			utils::scoped_defer defer([&]() {
 				__close_flow();
 				__stop_tracker();
-				__set_status(STATUS_STARTED, STATUS_ERROR);
+				__set_status(STATUS_STARTING, STATUS_ERROR);
 			});
 
 			if (!__start_tracker())
@@ -67,6 +67,10 @@ namespace pump {
 
 			defer.clear();
 
+			PUMP_DEBUG_CHECK(
+				__set_status(STATUS_STARTING, STATUS_STARTED)
+			);
+
 			return true;
 		}
 
@@ -76,7 +80,7 @@ namespace pump {
 			int64 timeout,
 			PUMP_CONST tls_handshaker_callbacks &cbs
 		) {
-			if (!__set_status(STATUS_INIT, STATUS_STARTED))
+			if (!__set_status(STATUS_NONE, STATUS_STARTING))
 				return false;
 
 			PUMP_ASSERT(flow_);
@@ -86,7 +90,7 @@ namespace pump {
 			utils::scoped_defer defer([&]() {
 				__close_flow();
 				__stop_tracker();
-				__set_status(STATUS_STARTED, STATUS_ERROR);
+				__set_status(STATUS_STARTING, STATUS_ERROR);
 			});
 
 			if (!__restart_tracker(tracker))
@@ -96,6 +100,10 @@ namespace pump {
 				return false;
 
 			defer.clear();
+
+			PUMP_DEBUG_CHECK(
+				__set_status(STATUS_STARTING, STATUS_STARTED)
+			);
 
 			return true;
 		}

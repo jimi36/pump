@@ -56,7 +56,7 @@ namespace pump {
 			int32 max_pending_send_size,
 			PUMP_CONST transport_callbacks &cbs
 		) {
-			if (!__set_status(STATUS_INIT, STATUS_STARTED))
+			if (!__set_status(STATUS_NONE, STATUS_STARTING))
 				return ERROR_INVALID;
 
 			PUMP_ASSERT(flow_);
@@ -67,7 +67,7 @@ namespace pump {
 				__close_flow();
 				__stop_read_tracker();
 				__stop_send_tracker();
-				__set_status(STATUS_STARTED, STATUS_ERROR);
+				__set_status(STATUS_STARTING, STATUS_ERROR);
 			});
 
 			if (max_pending_send_size > 0)
@@ -93,6 +93,10 @@ namespace pump {
 			}
 
 			defer.clear();
+
+			PUMP_DEBUG_CHECK(
+				__set_status(STATUS_STARTING, STATUS_STARTED)
+			);
 
 			return ERROR_OK;
 		}
@@ -152,7 +156,7 @@ namespace pump {
 			PUMP_ASSERT(b && b->data_size() > 0);
 
 			if (PUMP_UNLIKELY(!is_started()))
-				return ERROR_INVALID;
+				return ERROR_UNSTART;
 
 			if (PUMP_UNLIKELY(pending_send_size_.load() >= max_pending_send_size_))
 				return ERROR_AGAIN;
@@ -167,7 +171,7 @@ namespace pump {
 			PUMP_ASSERT(b && size > 0);
 
 			if (PUMP_UNLIKELY(!is_started()))
-				return ERROR_INVALID;
+				return ERROR_UNSTART;
 
 			if (PUMP_UNLIKELY(pending_send_size_.load() >= max_pending_send_size_))
 				return ERROR_AGAIN;
@@ -186,6 +190,13 @@ namespace pump {
 
 		void tls_transport::on_channel_event(uint32 ev)
 		{
+			// Wait starting finished
+			while (__is_status(STATUS_STARTING)) {}
+
+			// Do nothing when no in started status
+			if (!__is_status(STATUS_STARTED))
+				return;
+
 			auto flow = flow_.get();
 
 			__read_tls_data(flow);

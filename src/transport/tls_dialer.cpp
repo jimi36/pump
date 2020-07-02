@@ -38,8 +38,6 @@ namespace pump {
 			gnutls_certificate_credentials_t xcred;
 			if (gnutls_certificate_allocate_credentials(&xcred) != 0)
 				return;
-			//if (gnutls_certificate_set_x509_system_trust(xcred) != 0)
-			//	return;
 
 			xcred_ = xcred;
 #endif
@@ -49,7 +47,7 @@ namespace pump {
 			service_ptr sv, 
 			PUMP_CONST dialer_callbacks &cbs
 		) {
-			if (!__set_status(STATUS_INIT, STATUS_STARTED))
+			if (!__set_status(STATUS_NONE, STATUS_STARTING))
 				return ERROR_INVALID;
 
 			PUMP_ASSERT(xcred_ != nullptr);
@@ -59,7 +57,7 @@ namespace pump {
 			utils::scoped_defer defer([&]() {
 				__close_flow();
 				__stop_tracker();
-				__set_status(STATUS_STARTED, STATUS_ERROR);
+				__set_status(STATUS_STARTING, STATUS_ERROR);
 			});
 
 			if (!__open_flow())
@@ -76,6 +74,10 @@ namespace pump {
 				return ERROR_FAULT;
 
 			defer.clear();
+
+			PUMP_DEBUG_CHECK(
+				__set_status(STATUS_STARTING, STATUS_STARTED)
+			);
 
 			return ERROR_OK;
 		}
