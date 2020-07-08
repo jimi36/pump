@@ -36,7 +36,7 @@ public:
 	/*********************************************************************************
 	 * Tcp accepted event callback
 	 ********************************************************************************/
-	void on_accepted_callback(base_transport_sptr transp)
+	void on_accepted_callback(base_transport_sptr &&transp)
 	{
 		tls_transport_sptr transport = std::static_pointer_cast<tls_transport>(transp);
 		auto tctx = new transport_context(transport);

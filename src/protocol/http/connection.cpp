@@ -132,10 +132,7 @@ namespace pump {
 				}
 
 				if (pk->is_parse_finished())
-				{
-					http_cbs_.pocket_cb(coming_pocket_);
-					coming_pocket_.reset();
-				}
+					http_cbs_.pocket_cb(std::move(coming_pocket_));
 			}
 
 		}

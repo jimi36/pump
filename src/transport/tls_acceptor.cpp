@@ -187,7 +187,7 @@ namespace pump {
 				auto transport = tls_transport::create_instance();
 				transport->init(flow, local_address, remote_address);
 
-				acceptor->cbs_.accepted_cb(transport);
+				acceptor->cbs_.accepted_cb(std::move(transport));
 			}			
 		}
 

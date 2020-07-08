@@ -111,7 +111,7 @@ namespace pump {
 				__close_flow();
 			}
 
-			cbs_.dialed_cb(conn, success);
+			cbs_.dialed_cb(std::move(conn), success);
 		}
 
 		void tcp_dialer::on_timeout(tcp_dialer_wptr wptr)
@@ -171,7 +171,7 @@ namespace pump {
 
 		void tcp_sync_dialer::on_dialed(
 			tcp_sync_dialer_wptr wptr,
-			base_transport_sptr transp,
+			base_transport_sptr &&transp,
 			bool succ
 		) {
 			PUMP_LOCK_WPOINTER(dialer, wptr);

@@ -20,7 +20,7 @@ public:
 	/*********************************************************************************
 	 * Tls dialed event callback
 	 ********************************************************************************/
-	void on_dialed_callback(base_transport_sptr transp, bool succ)
+	void on_dialed_callback(base_transport_sptr &&transp, bool succ)
 	{
 		if (!succ)
 		{

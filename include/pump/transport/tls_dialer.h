@@ -173,7 +173,7 @@ namespace pump {
 			 ********************************************************************************/
 			static void on_dialed(
 				tls_sync_dialer_wptr wptr,
-				base_transport_sptr transp,
+				base_transport_sptr &&transp,
 				bool succ
 			);
 

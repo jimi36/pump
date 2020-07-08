@@ -102,7 +102,7 @@ namespace pump {
 				/*********************************************************************************
 				 * Handel connection response
 				 ********************************************************************************/
-				static void on_response(client_wptr wptr, pocket_sptr &pk);
+				static void on_response(client_wptr wptr, pocket_sptr &&pk);
 
 				/*********************************************************************************
 				 * Handel connection disconnected

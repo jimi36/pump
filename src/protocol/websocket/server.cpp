@@ -94,7 +94,7 @@ namespace pump {
 					acceptor_->stop();
 			}
 
-			void server::on_accepted(server_wptr wptr, transport::base_transport_sptr transp)
+			void server::on_accepted(server_wptr wptr, transport::base_transport_sptr &&transp)
 			{
 				PUMP_LOCK_WPOINTER(svr, wptr);
 				if (svr == nullptr)
@@ -134,7 +134,7 @@ namespace pump {
 			void server::on_upgrade_request(
 				server_wptr wptr,
 				http::connection_wptr wptr_http_conn,
-				http::pocket_sptr &pk
+				http::pocket_sptr &&pk
 			) {
 				PUMP_LOCK_WPOINTER(http_conn, wptr_http_conn);
 				if (http_conn == nullptr)

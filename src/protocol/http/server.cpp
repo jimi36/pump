@@ -108,7 +108,7 @@ namespace pump {
 					acceptor_->stop();
 			}
 
-			void server::on_accepted(server_wptr wptr, transport::base_transport_sptr transp)
+			void server::on_accepted(server_wptr wptr, transport::base_transport_sptr &&transp)
 			{
 				PUMP_LOCK_WPOINTER(svr, wptr);
 				if (svr == nullptr)
@@ -155,14 +155,13 @@ namespace pump {
 			void server::on_http_request(
 				server_wptr wptr,
 				connection_wptr wconn,
-				pocket_sptr &pk
+				pocket_sptr &&pk
 			) {
 				PUMP_LOCK_WPOINTER(svr, wptr);
 				if (svr == nullptr)
 					return;
 
-				auto req = std::static_pointer_cast<request>(pk);
-				svr->cbs_.request_cb(wconn, req);
+				svr->cbs_.request_cb(wconn, std::static_pointer_cast<request>(pk));
 			}
 
 			void server::on_http_error(

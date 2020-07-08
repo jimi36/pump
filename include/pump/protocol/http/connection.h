@@ -31,7 +31,7 @@ namespace pump {
 			struct http_callbacks
 			{
 				pump_function<
-					void(pocket_sptr &pk)
+					void(pocket_sptr &&pk)
 				> pocket_cb;
 
 				pump_function<

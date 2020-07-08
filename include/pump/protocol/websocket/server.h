@@ -146,7 +146,7 @@ namespace pump {
 				/*********************************************************************************
 				 * Acceptor accepted callback
 				 ********************************************************************************/
-				static void on_accepted(server_wptr wptr, transport::base_transport_sptr transp);
+				static void on_accepted(server_wptr wptr, transport::base_transport_sptr &&transp);
 
 				/*********************************************************************************
 				 * Acceptor stopped callback
@@ -159,7 +159,7 @@ namespace pump {
 				static void on_upgrade_request(
 					server_wptr wptr,
 					http::connection_wptr wptr_http_conn,
-					http::pocket_sptr &pk
+					http::pocket_sptr &&pk
 				);
 
 				/*********************************************************************************

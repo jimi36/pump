@@ -28,7 +28,7 @@ namespace pump {
 		struct acceptor_callbacks
 		{
 			pump_function<
-				void(base_transport_sptr)
+				void(base_transport_sptr&&)
 			> accepted_cb;
 
 			pump_function<
@@ -39,7 +39,7 @@ namespace pump {
 		struct dialer_callbacks
 		{
 			pump_function<
-				void(base_transport_sptr, bool)
+				void(base_transport_sptr&&, bool)
 			> dialed_cb;
 
 			pump_function<

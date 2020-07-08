@@ -1,6 +1,6 @@
 #include "http.h"
 
-void on_new_request(http::connection_wptr &wconn, http::request_sptr &req)
+void on_new_request(http::connection_wptr &wconn, http::request_sptr &&req)
 {
 	static std::string data = "hello world 1!!!";
 

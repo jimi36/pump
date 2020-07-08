@@ -104,7 +104,7 @@ namespace pump {
 				resp_cond_.notify_one();
 			}
 
-			void client::on_response(client_wptr wptr, pocket_sptr &pk)
+			void client::on_response(client_wptr wptr, pocket_sptr &&pk)
 			{
 				PUMP_LOCK_WPOINTER(cli, wptr);
 				if (cli == nullptr)

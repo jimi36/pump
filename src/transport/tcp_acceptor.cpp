@@ -82,7 +82,7 @@ namespace pump {
 				auto conn = tcp_transport::create_instance();
 				conn->init(fd, local_address, remote_address);
 
-				cbs_.accepted_cb(conn);
+				cbs_.accepted_cb(std::move(conn));
 			}
 
 			// Acceptor maybe be stopped, so we need check it in started status.

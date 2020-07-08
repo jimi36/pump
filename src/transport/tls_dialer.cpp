@@ -188,7 +188,7 @@ namespace pump {
 					transp->init(flow, local_address, remote_address);
 				}
 
-				dialer->cbs_.dialed_cb(transp, succ);
+				dialer->cbs_.dialed_cb(std::move(transp), succ);
 			}
 
 			dialer->handshaker_.reset();
@@ -251,7 +251,7 @@ namespace pump {
 
 		void tls_sync_dialer::on_dialed(
 			tls_sync_dialer_wptr wptr,
-			base_transport_sptr transp,
+			base_transport_sptr &&transp,
 			bool succ
 		) {
 			PUMP_LOCK_WPOINTER(dialer, wptr);

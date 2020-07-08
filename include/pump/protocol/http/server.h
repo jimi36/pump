@@ -32,7 +32,7 @@ namespace pump {
 			struct server_callbacks
 			{
 				pump_function<
-					void(connection_wptr&, request_sptr&)
+					void(connection_wptr&, request_sptr&&)
 				> request_cb;
 
 				pump_function<
@@ -86,7 +86,7 @@ namespace pump {
 				/*********************************************************************************
 				 * Acceptor accepted callback
 				 ********************************************************************************/
-				static void on_accepted(server_wptr wptr, transport::base_transport_sptr transp);
+				static void on_accepted(server_wptr wptr, transport::base_transport_sptr &&transp);
 
 				/*********************************************************************************
 				 * Acceptor stopped callback
@@ -100,7 +100,7 @@ namespace pump {
 				static void on_http_request(
 					server_wptr wptr,
 					connection_wptr conn,
-					pocket_sptr &pk
+					pocket_sptr &&pk
 				);
 
 				/*********************************************************************************
