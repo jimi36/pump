@@ -30,7 +30,7 @@ namespace pump {
 				/*********************************************************************************
 				 * Constructor
 				 ********************************************************************************/
-				flow_tcp_dialer() PUMP_NOEXCEPT;
+				flow_tcp_dialer() noexcept;
 
 				/*********************************************************************************
 				 * Deconstructor
@@ -43,7 +43,7 @@ namespace pump {
 				 *     FLOW_ERR_NO    => success
 				 *     FLOW_ERR_ABORT => error
 				 ********************************************************************************/
-				int32 init(poll::channel_sptr &ch, PUMP_CONST address &bind_address);
+				int32 init(poll::channel_sptr &ch, const address &bind_address);
 
 				/*********************************************************************************
 				 * Want to connect
@@ -52,14 +52,14 @@ namespace pump {
 				 *     FLOW_ERR_NO    => success
 				 *     FLOW_ERR_ABORT => error
 				 ********************************************************************************/
-				int32 want_to_connect(PUMP_CONST address &remote_address);
+				int32 want_to_connect(const address &remote_address);
 
 				/*********************************************************************************
 				 * Connect
 				 * Return socket error code.
 				 ********************************************************************************/
 				int32 connect(
-					net::iocp_task_ptr itask, 
+					void_ptr iocp_task,
 					address_ptr local_address, 
 					address_ptr remote_address
 				);
@@ -67,8 +67,9 @@ namespace pump {
 			private:
 				// IPV6
 				bool is_ipv6_;
+
 				// IOCP dial task
-				net::iocp_task_ptr dial_task_;
+				void_ptr dial_task_;
 			};
 			DEFINE_ALL_POINTER_TYPE(flow_tcp_dialer);
 

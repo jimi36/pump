@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#include "pump/net/iocp.h"
-#include "pump/net/socket.h"
+#include "iocp.h"
+#include "socket.h"
 
 namespace pump {
 	namespace net {
@@ -83,7 +83,7 @@ namespace pump {
 				if (link_cnt.fetch_sub(1) == 1)
 				{
 					__release_resource();
-					delete this;
+					object_delete(this);
 				}
 			}
 
@@ -97,174 +97,173 @@ namespace pump {
 			}
 #endif
 		};
+		DEFINE_RAW_POINTER_TYPE(iocp_task);
 
-		iocp_task_ptr new_iocp_task()
+		void_ptr new_iocp_task()
 		{
 #if defined(WIN32) && defined(USE_IOCP)
-			return new iocp_task;
+			return object_create<iocp_task>();
 #else
 			return nullptr;
 #endif
 		}
 
-		void reuse_iocp_task(iocp_task_ptr itask)
+		void reuse_iocp_task(void_ptr task)
 		{
 #if defined(WIN32) && defined(USE_IOCP)
+			iocp_task_ptr itask = (iocp_task_ptr)task;
 			PUMP_ASSERT_EXPR(itask,
 				memset(&itask->ol, 0, sizeof(itask->ol)));
 #endif
 		}
 
-		void link_iocp_task(iocp_task_ptr itask)
+		void link_iocp_task(void_ptr task)
 		{
 #if defined(WIN32) && defined(USE_IOCP)
-			PUMP_ASSERT_EXPR(itask,
-				itask->add_link());
+			PUMP_ASSERT_EXPR(task,
+				iocp_task_ptr(task)->add_link());
 #endif
 		}
 
-		void unlink_iocp_task(iocp_task_ptr itask)
+		void unlink_iocp_task(void_ptr task)
 		{
 #if defined(WIN32) && defined(USE_IOCP)
-			PUMP_ASSERT_EXPR(itask,
-				itask->sub_link());
+			PUMP_ASSERT_EXPR(task,
+				iocp_task_ptr(task)->sub_link());
 #endif
 		}
 
-		void set_iocp_task_type(iocp_task_ptr itask, uint32 task_type)
+		void set_iocp_task_type(void_ptr task, uint32 task_type)
 		{
 #if defined(WIN32) && defined(USE_IOCP)
-			PUMP_ASSERT_EXPR(itask, 
-				itask->type = task_type);
+			PUMP_ASSERT_EXPR(task, 
+				iocp_task_ptr(task)->type = task_type);
 #endif
 		}
 
-		uint32 get_iocp_task_type(iocp_task_ptr itask)
+		uint32 get_iocp_task_type(void_ptr task)
 		{
 #if defined(WIN32) && defined(USE_IOCP)
-			PUMP_ASSERT_EXPR(itask,
-				return itask->type);
+			PUMP_ASSERT_EXPR(task,
+				return iocp_task_ptr(task)->type);
 #else
 			return IOCP_TASK_NONE;
 #endif
 		}
 
-		void set_iocp_task_fd(iocp_task_ptr itask, int32 fd)
+		void set_iocp_task_fd(void_ptr task, int32 fd)
 		{
 #if defined(WIN32) && defined(USE_IOCP)
-			PUMP_ASSERT_EXPR(itask,
-				itask->fd = fd);
+			PUMP_ASSERT_EXPR(task,
+				iocp_task_ptr(task)->fd = fd);
 #endif
 		}
 
-		int32 get_iocp_task_fd(iocp_task_ptr itask)
+		int32 get_iocp_task_fd(void_ptr task)
 		{
 #if defined(WIN32) && defined(USE_IOCP)
-			PUMP_ASSERT_EXPR(itask, 
-				return itask->fd);
+			PUMP_ASSERT_EXPR(task, 
+				return iocp_task_ptr(task)->fd);
 #else
 			return -1;
 #endif	
 		}
 
-		void set_iocp_task_client_fd(iocp_task_ptr itask, int32 client_fd)
+		void set_iocp_task_client_fd(void_ptr task, int32 client_fd)
 		{
 #if defined(WIN32) && defined(USE_IOCP)
-			PUMP_ASSERT_EXPR(itask,
-				itask->un.client_fd = client_fd);
+			PUMP_ASSERT_EXPR(task,
+				iocp_task_ptr(task)->un.client_fd = client_fd);
 #endif
 		}
 
-		int32 get_iocp_task_client_fd(iocp_task_ptr itask)
+		int32 get_iocp_task_client_fd(void_ptr task)
 		{
 #if defined(WIN32) && defined(USE_IOCP)
-			PUMP_ASSERT_EXPR(itask,
-				return itask->un.client_fd);
+			PUMP_ASSERT_EXPR(task,
+				return iocp_task_ptr(task)->un.client_fd);
 #else
 			return -1;
 #endif
 		}
 
-		void set_iocp_task_notifier(iocp_task_ptr itask, void_wptr ch)
+		void set_iocp_task_notifier(void_ptr task, void_wptr ch)
 		{
 #if defined(WIN32) && defined(USE_IOCP)
-			PUMP_ASSERT_EXPR(itask,
-				itask->ch_notifier = ch);
+			PUMP_ASSERT_EXPR(task,
+				iocp_task_ptr(task)->ch_notifier = ch);
 #endif
 		}
 
-		void_sptr get_iocp_task_notifier(iocp_task_ptr itask)
+		void_sptr get_iocp_task_notifier(void_ptr task)
 		{
 #if defined(WIN32) && defined(USE_IOCP)
-			PUMP_ASSERT_EXPR(itask,
-				return itask->ch_notifier.lock());
+			PUMP_ASSERT_EXPR(task,
+				return iocp_task_ptr(task)->ch_notifier.lock());
 #else
 			return void_sptr();
 #endif
 		}
 
-		void set_iocp_task_ec(iocp_task_ptr itask, int32 ec)
+		void set_iocp_task_ec(void_ptr task, int32 ec)
 		{
 #if defined(WIN32) && defined(USE_IOCP)
-			PUMP_ASSERT_EXPR(itask, 
-				itask->ec = ec);
+			PUMP_ASSERT_EXPR(task, 
+				iocp_task_ptr(task)->ec = ec);
 #endif
 		}
 
-		int32 get_iocp_task_ec(iocp_task_ptr itask)
+		int32 get_iocp_task_ec(void_ptr task)
 		{
 #if defined(WIN32) && defined(USE_IOCP)
-			PUMP_ASSERT_EXPR(itask,
-				return itask->ec);
+			PUMP_ASSERT_EXPR(task,
+				return iocp_task_ptr(task)->ec);
 #else
 			return -1;
 #endif
 		}
 
-		void set_iocp_task_buffer(iocp_task_ptr itask, block_ptr b, int32 size) 
+		void set_iocp_task_buffer(void_ptr task, block_ptr b, int32 size)
 		{
 #if defined(WIN32) && defined(USE_IOCP)
-			PUMP_ASSERT(itask);
-			itask->buf.buf = b;
-			itask->buf.len = (uint32)size;
+			iocp_task_ptr(task)->buf.buf = b;
+			iocp_task_ptr(task)->buf.len = (uint32)size;
 #endif
 		}
 
-		void set_iocp_task_processed_size(iocp_task_ptr itask, int32 size)
+		void set_iocp_task_processed_size(void_ptr task, int32 size)
 		{
 #if defined(WIN32) && defined(USE_IOCP)
-			PUMP_ASSERT_EXPR(itask,
-				itask->processed_size = size);
+			PUMP_ASSERT_EXPR(task,
+				iocp_task_ptr(task)->processed_size = size);
 #endif
 		}
 
-		int32 get_iocp_task_processed_size(iocp_task_ptr itask)
+		int32 get_iocp_task_processed_size(void_ptr task)
 		{
 #if defined(WIN32) && defined(USE_IOCP)
-			PUMP_ASSERT_EXPR(itask,
-				return itask->processed_size);
+			PUMP_ASSERT_EXPR(task,
+				return iocp_task_ptr(task)->processed_size);
 #else
 			return 0;
 #endif
 		}
 
-		block_ptr get_iocp_task_processed_data(iocp_task_ptr itask, int32_ptr size)
+		block_ptr get_iocp_task_processed_data(void_ptr task, int32_ptr size)
 		{
 #if defined(WIN32) && defined(USE_IOCP)
-			PUMP_ASSERT(itask);
-			*size = itask->processed_size;
-			return itask->buf.buf;
+			*size = iocp_task_ptr(task)->processed_size;
+			return iocp_task_ptr(task)->buf.buf;
 #else
 			return nullptr;
 #endif
 		}
 
-		sockaddr* get_iocp_task_remote_address(iocp_task_ptr itask, int32_ptr addrlen)
+		sockaddr* get_iocp_task_remote_address(void_ptr task, int32_ptr addrlen)
 		{
 #if defined(WIN32) && defined(USE_IOCP)
-			PUMP_ASSERT(itask);
-			*addrlen = itask->un.ip.addr_len;
-			return (sockaddr*)itask->un.ip.addr;
+			*addrlen = iocp_task_ptr(task)->un.ip.addr_len;
+			return (sockaddr*)iocp_task_ptr(task)->un.ip.addr;
 #else
 			return nullptr;
 #endif
@@ -285,18 +284,27 @@ namespace pump {
 #endif
 		}
 
-		bool post_iocp_accept(net_extension_ptr ext, iocp_task_ptr itask)
+		bool post_iocp_accept(void_ptr ex_fns, void_ptr task)
 		{
 #if defined(WIN32) && defined(USE_IOCP)
-			auto accept_ex = (LPFN_ACCEPTEX)get_accpet_ex_func(ext);
+			auto accept_ex = (LPFN_ACCEPTEX)get_iocp_accpet_fn(ex_fns);
 			if (!accept_ex)
 				return false;
 
+			iocp_task_ptr itask = (iocp_task_ptr)task;
 			PUMP_ASSERT_EXPR(itask, itask->add_link());
 			{
 				DWORD bytes = 0;
 				DWORD addrlen = sizeof(sockaddr_in) + 16;
-				if (accept_ex(itask->fd, itask->un.client_fd, itask->buf.buf, 0, addrlen, addrlen, &bytes, &(itask->ol)) == TRUE ||
+				if (accept_ex(
+						itask->fd, 
+						itask->un.client_fd, 
+						itask->buf.buf, 
+						0, 
+						addrlen, 
+						addrlen, 
+						&bytes, 
+						&(itask->ol)) == TRUE ||
 					net::last_errno() == ERROR_IO_PENDING)
 					return true;
 			}
@@ -309,41 +317,46 @@ namespace pump {
 		}
 
 		bool get_iocp_accepted_address(
-			net_extension_ptr ext,
-			iocp_task_ptr itask,
+			void_ptr ex_fns,
+			void_ptr task,
 			sockaddr **local,
 			int32_ptr llen,
 			sockaddr **remote,
 			int32_ptr rlen
 		) {
 #if defined(WIN32) && defined(USE_IOCP)
-			LPFN_GETACCEPTEXSOCKADDRS get_addrs = (LPFN_GETACCEPTEXSOCKADDRS)get_accepted_addrs_func(ext);
+			auto get_addrs = (LPFN_GETACCEPTEXSOCKADDRS)get_accept_addrs_fn(ex_fns);
 			if (!get_addrs)
 				return false;
 
-			PUMP_ASSERT(itask);
+			iocp_task_ptr itask = (iocp_task_ptr)task;
+
 			HANDLE fd = (HANDLE)itask->fd;
 			DWORD addrlen = sizeof(sockaddr_in) + 16;
 			get_addrs(itask->buf.buf, 0, addrlen, addrlen, local, llen, remote, rlen);
-			if (setsockopt(itask->un.client_fd, SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT, (char*)&fd, sizeof(fd)) == SOCKET_ERROR)
-				return false;
-
-			return true;
-#else
-			return false;
+			if (setsockopt(
+					itask->un.client_fd, 
+					SOL_SOCKET, 
+					SO_UPDATE_ACCEPT_CONTEXT, 
+					(block_ptr)&fd, 
+					sizeof(fd)) != SOCKET_ERROR)
+				return true;
 #endif
+			return false;
 		}
 
 		bool post_iocp_connect(
-			net_extension_ptr ext,
-			iocp_task_ptr itask,
-			PUMP_CONST sockaddr *addr,
+			void_ptr ex_fns,
+			void_ptr task,
+			const sockaddr *addr,
 			int32 addrlen
 		) {
 #if defined(WIN32) && defined(USE_IOCP)
-			auto connect_ex = (LPFN_CONNECTEX)get_connect_ex_func(ext);
+			auto connect_ex = (LPFN_CONNECTEX)get_iocp_connect_fn(ex_fns);
 			if (!connect_ex)
 				return false;
+
+			iocp_task_ptr itask = (iocp_task_ptr)task;
 
 			PUMP_ASSERT_EXPR(itask, itask->add_link());
 			{
@@ -358,31 +371,50 @@ namespace pump {
 			return false;
 		}
 
-		bool post_iocp_read(iocp_task_ptr itask)
+		bool post_iocp_read(void_ptr task)
 		{
 #if defined(WIN32) && defined(USE_IOCP)
+			iocp_task_ptr itask = (iocp_task_ptr)task;
+
 			PUMP_ASSERT_EXPR(itask, itask->add_link());
 			{
 				DWORD flags = 0;
-				if (::WSARecv(itask->fd, &itask->buf, 1, NULL, &flags, &(itask->ol), NULL) != SOCKET_ERROR ||
+				if (::WSARecv(
+						itask->fd, 
+						&itask->buf, 
+						1, 
+						NULL, 
+						&flags, 
+						&(itask->ol), 
+						NULL) != SOCKET_ERROR ||
 					net::last_errno() == WSA_IO_PENDING)
 					return true;
 			}
 			itask->sub_link();
-			return false;
-#else
-			return false;
 #endif
+			return false;
+
 		}
 
-		bool post_iocp_read_from(iocp_task_ptr itask)
+		bool post_iocp_read_from(void_ptr task)
 		{
 #if defined(WIN32) && defined(USE_IOCP)
+			iocp_task_ptr itask = (iocp_task_ptr)task;
+
 			PUMP_ASSERT_EXPR(itask, itask->add_link());
 			{
 				DWORD flags = 0;
 				itask->un.ip.addr_len = sizeof(itask->un.ip.addr);
-				if (::WSARecvFrom(itask->fd, &itask->buf, 1, NULL, &flags, (sockaddr*)itask->un.ip.addr, &itask->un.ip.addr_len, &itask->ol, NULL) != SOCKET_ERROR ||
+				if (::WSARecvFrom(
+						itask->fd,
+						&itask->buf,
+						1, 
+						NULL, 
+						&flags, 
+						(sockaddr*)itask->un.ip.addr,
+						&itask->un.ip.addr_len,
+						&itask->ol,
+						NULL) != SOCKET_ERROR ||
 					net::last_errno() == WSA_IO_PENDING)
 					return true;
 			}
@@ -391,20 +423,25 @@ namespace pump {
 			return false;
 		}
 
-		bool post_iocp_send(iocp_task_ptr itask)
+		bool post_iocp_send(void_ptr task)
 		{
 #if defined(WIN32) && defined(USE_IOCP)
+			iocp_task_ptr itask = (iocp_task_ptr)task;
+
 			PUMP_ASSERT_EXPR(itask, itask->add_link());
-			if (::WSASend(itask->fd, &itask->buf, 1, NULL, 0, (WSAOVERLAPPED*)&itask->ol, NULL) != SOCKET_ERROR || 
+			if (::WSASend(
+					itask->fd,
+					&itask->buf,
+					1, 
+					NULL, 
+					0, 
+					(WSAOVERLAPPED*)&itask->ol,
+					NULL) != SOCKET_ERROR || 
 				net::last_errno() == WSA_IO_PENDING)
 				return true;
 			itask->sub_link();
 #endif
 			return false;
-		}
-
-		void cancel_iocp_task(iocp_handler iocp, iocp_task_ptr itask)
-		{
 		}
 
 	}

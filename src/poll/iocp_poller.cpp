@@ -14,12 +14,14 @@
  * limitations under the License.
  */
 
-#include "pump/poll/iocp_poller.h"
+#include "net/iocp.h"
+#include "net/socket.h"
+#include "iocp_poller.h"
 
 namespace pump {
 	namespace poll {
 
-		iocp_poller::iocp_poller(bool pop_pending) PUMP_NOEXCEPT :
+		iocp_poller::iocp_poller(bool pop_pending) noexcept :
 			poller(pop_pending),
 			iocp_(nullptr)
 		{
@@ -44,7 +46,7 @@ namespace pump {
 			GetSystemInfo(&sys_info);
 			for (DWORD i = 0; i < (sys_info.dwNumberOfProcessors * 2); ++i)
 			{
-				std::thread *worker = new std::thread(
+				std::thread *worker = object_create<std::thread>(
 					function::bind(&iocp_poller::__work_thread, this)
 				);
 				workrs_.push_back(worker);
@@ -118,25 +120,25 @@ namespace pump {
 			ULONG_PTR completion_key = 0;
 
 			int32 task_type = 0;
-			net::iocp_task_ptr itask = nullptr;
+			void_ptr task = nullptr;
 
 			while (tracker_cnt > 0 || started_.load())
 			{
-				if (GetQueuedCompletionStatus(iocp_, &transferred, &completion_key, (LPOVERLAPPED*)&itask, INFINITE) == TRUE)
+				if (GetQueuedCompletionStatus(iocp_, &transferred, &completion_key, (LPOVERLAPPED*)&task, INFINITE) == TRUE)
 				{
-					if (!itask)
+					if (!task)
 						continue;
 
-					PUMP_LOCK_SPOINTER(vptr, net::get_iocp_task_notifier(itask));
+					PUMP_LOCK_SPOINTER(vptr, net::get_iocp_task_notifier(task));
 					if (vptr == nullptr)
 					{
-						net::unlink_iocp_task(itask); 
+						net::unlink_iocp_task(task); 
 						continue;
 					}
 					auto ch = (channel_ptr)vptr;
 
 					int32 event = IO_EVENT_NONE;
-					task_type = net::get_iocp_task_type(itask);
+					task_type = net::get_iocp_task_type(task);
 					if (task_type == IOCP_TASK_SEND || task_type == IOCP_TASK_CONNECT)
 						event |= IO_EVENT_SEND;
 					else if (task_type == IOCP_TASK_READ || task_type == IOCP_TASK_ACCEPT)
@@ -158,9 +160,9 @@ namespace pump {
 						}
 						*/
 
-						net::set_iocp_task_processed_size(itask, transferred);
+						net::set_iocp_task_processed_size(task, transferred);
 
-						ch->handle_io_event(event, itask);
+						ch->handle_io_event(event, task);
 					}
 					else
 					{
@@ -178,31 +180,31 @@ namespace pump {
 				}
 				else
 				{
-					if (!itask)
+					if (!task)
 						continue;
 
-					PUMP_LOCK_SPOINTER(vptr, net::get_iocp_task_notifier(itask));
+					PUMP_LOCK_SPOINTER(vptr, net::get_iocp_task_notifier(task));
 					if (vptr == nullptr)
 					{
-						net::unlink_iocp_task(itask);
+						net::unlink_iocp_task(task);
 						continue;
 					}
 					auto ch = (channel_ptr)vptr;
 
 					int32 event = IO_EVENT_NONE;
-					task_type = net::get_iocp_task_type(itask);
+					task_type = net::get_iocp_task_type(task);
 					if (task_type == IOCP_TASK_SEND || task_type == IOCP_TASK_CONNECT)
 						event |= IO_EVENT_SEND;
 					if (task_type == IOCP_TASK_READ || task_type == IOCP_TASK_ACCEPT)
 						event |= IO_EVNET_READ;
 
-					net::set_iocp_task_processed_size(itask, 0);
-					net::set_iocp_task_ec(itask, net::last_errno());
+					net::set_iocp_task_processed_size(task, 0);
+					net::set_iocp_task_ec(task, net::last_errno());
 
-					ch->handle_io_event(event, itask);
+					ch->handle_io_event(event, task);
 				}
 
-				net::unlink_iocp_task(itask);
+				net::unlink_iocp_task(task);
 			}
 			printf("worker exit\n");
 #endif
@@ -211,11 +213,11 @@ namespace pump {
 		void iocp_poller::push_channel_event(channel_sptr &c, uint32 ev)
 		{
 #if defined(WIN32) && defined(USE_IOCP)
-			auto itask = net::new_iocp_task();
-			net::set_iocp_task_notifier(itask, c);
-			net::set_iocp_task_type(itask, IOCP_TASK_CHANNEL);
+			auto task = net::new_iocp_task();
+			net::set_iocp_task_notifier(task, c);
+			net::set_iocp_task_type(task, IOCP_TASK_CHANNEL);
 
-			PostQueuedCompletionStatus(iocp_, 1, ev, (LPOVERLAPPED)itask);
+			PostQueuedCompletionStatus(iocp_, 1, ev, (LPOVERLAPPED)task);
 #endif
 		}
 

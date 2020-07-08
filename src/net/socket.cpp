@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "pump/net/socket.h"
+#include "socket.h"
 
 namespace pump {
 	namespace net {

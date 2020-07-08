@@ -18,7 +18,6 @@
 #define pump_transport_tls_acceptor_h
 
 #include "pump/transport/base_acceptor.h"
-#include "pump/transport/tls_handshaker.h"
 #include "pump/transport/flow/flow_tls_acceptor.h"
 
 namespace pump {
@@ -26,6 +25,9 @@ namespace pump {
 
 		class tls_acceptor;
 		DEFINE_ALL_POINTER_TYPE(tls_acceptor);
+
+		class tls_handshaker;
+		DEFINE_ALL_POINTER_TYPE(tls_handshaker);
 
 		class LIB_PUMP tls_acceptor : 
 			public base_acceptor,
@@ -35,29 +37,35 @@ namespace pump {
 			/*********************************************************************************
 			 * Create instance
 			 ********************************************************************************/
-			PUMP_INLINE PUMP_STATIC tls_acceptor_sptr create_instance_with_file(
-				PUMP_CONST std::string &cert,
-				PUMP_CONST std::string &key,
-				PUMP_CONST address &listen_address,
+			PUMP_INLINE static tls_acceptor_sptr create_instance_with_file(
+				const std::string &cert,
+				const std::string &key,
+				const address &listen_address,
 				int64 handshake_timeout = 0
 			) {
-				return tls_acceptor_sptr(
-					new tls_acceptor(true, cert, key, listen_address, handshake_timeout)
+				INLINE_OBJECT_CREATE(
+					obj, 
+					tls_acceptor, 
+					(true, cert, key, listen_address, handshake_timeout)
 				);
+				return tls_acceptor_sptr(obj, object_delete<tls_acceptor>);
 			}
 
 			/*********************************************************************************
 			 * Create instance
 			 ********************************************************************************/
-			PUMP_INLINE PUMP_STATIC tls_acceptor_sptr create_instance_with_memory(
-				PUMP_CONST std::string &cert,
-				PUMP_CONST std::string &key,
-				PUMP_CONST address &listen_address,
+			PUMP_INLINE static tls_acceptor_sptr create_instance_with_memory(
+				const std::string &cert,
+				const std::string &key,
+				const address &listen_address,
 				int64 handshake_timeout = 0
 			) {
-				return tls_acceptor_sptr(
-					new tls_acceptor(false, cert, key, listen_address, handshake_timeout)
+				INLINE_OBJECT_CREATE(
+					obj, 
+					tls_acceptor, 
+					(false, cert, key, listen_address, handshake_timeout)
 				);
+				return tls_acceptor_sptr(obj, object_delete<tls_acceptor>);
 			}
 
 			/*********************************************************************************
@@ -70,7 +78,7 @@ namespace pump {
 			 ********************************************************************************/
 			virtual transport_error start(
 				service_ptr sv, 
-				PUMP_CONST acceptor_callbacks &cbs
+				const acceptor_callbacks &cbs
 			) override;
 
 			/*********************************************************************************
@@ -82,13 +90,13 @@ namespace pump {
 			/*********************************************************************************
 			 * Read event callback
 			 ********************************************************************************/
-			virtual void on_read_event(net::iocp_task_ptr itask) override;
+			virtual void on_read_event(void_ptr iocp_task) override;
 
 		protected:
 			/*********************************************************************************
 			 * TLS handshaked callback
 			 ********************************************************************************/
-			PUMP_STATIC void on_handshaked(
+			static void on_handshaked(
 				tls_acceptor_wptr wptr,
 				tls_handshaker_ptr handshaker,
 				bool succ
@@ -97,7 +105,7 @@ namespace pump {
 			/*********************************************************************************
 			 * Tls handskake stopped callback
 			 ********************************************************************************/
-			PUMP_STATIC void on_handshake_stopped(
+			static void on_handshake_stopped(
 				tls_acceptor_wptr wptr,
 				tls_handshaker_ptr handshaker
 			);
@@ -108,9 +116,9 @@ namespace pump {
 			 ********************************************************************************/
 			tls_acceptor(
 				bool use_file,
-				PUMP_CONST std::string &cert_mem,
-				PUMP_CONST std::string &key_mem,
-				PUMP_CONST address &listen_address,
+				const std::string &cert_mem,
+				const std::string &key_mem,
+				const address &listen_address,
 				int64 handshake_timeout
 			);
 
@@ -148,8 +156,6 @@ namespace pump {
 			// Handshakers
 			std::mutex handshaker_mx_;
 			std::unordered_map<tls_handshaker_ptr, tls_handshaker_sptr> handshakers_;
-			// Handshaker callbacks
-			tls_handshaker::tls_handshaker_callbacks handshaker_cbs_;
 
 			// Acceptor flow
 			flow::flow_tls_acceptor_sptr flow_;

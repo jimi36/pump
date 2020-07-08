@@ -17,8 +17,6 @@
 #ifndef pump_transport_flow_h
 #define pump_transport_flow_h
 
-#include "pump/net/iocp.h"
-#include "pump/net/socket.h"
 #include "pump/poll/channel.h"
 #include "pump/transport/address.h"
 #include "pump/transport/flow/buffer.h"
@@ -34,19 +32,18 @@ namespace pump {
 			#define FLOW_ERR_NO_DATA 4
 
 			class flow_base : 
-				public utils::noncopyable
+				public toolkit::noncopyable
 			{
 			public:
 				/*********************************************************************************
 				 * Constructor
 				 ********************************************************************************/
-				flow_base() PUMP_NOEXCEPT;
+				flow_base() noexcept;
 
 				/*********************************************************************************
 				 * Deconstructor
 				 ********************************************************************************/
-				virtual ~flow_base()
-				{ close(); }
+				virtual ~flow_base() {}
 
 				/*********************************************************************************
 				 * Unbind fd
@@ -62,22 +59,23 @@ namespace pump {
 				/*********************************************************************************
 				 * Get fd
 				 ********************************************************************************/
-				PUMP_INLINE int32 get_fd() PUMP_CONST
+				PUMP_INLINE int32 get_fd() const
 				{ return fd_; }
 
 				/*********************************************************************************
 				 * Check flow valid status
 				 ********************************************************************************/
-				PUMP_INLINE bool is_valid() PUMP_CONST
+				PUMP_INLINE bool is_valid() const
 				{ return fd_ > 0; }
 
 			protected:
-				// FD
+				// Channel fd
 				int32 fd_;
 				// Channel
 				poll::channel_wptr ch_;
-				// Net extension for ICOP
-				net::net_extension_ptr ext_;
+
+				// IOCP extra function
+				void_ptr extra_fns_;
 			};
 			DEFINE_ALL_POINTER_TYPE(flow_base);
 

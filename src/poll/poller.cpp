@@ -14,12 +14,13 @@
  * limitations under the License.
  */
 
+#include "net/socket.h"
 #include "pump/poll/poller.h"
 
 namespace pump {
 	namespace poll {
 
-		poller::poller(bool pop_pending) PUMP_NOEXCEPT:
+		poller::poller(bool pop_pending) noexcept :
 			started_(false),
 			pop_pending_channel_(pop_pending),
 			cev_cnt_(0),
@@ -36,7 +37,7 @@ namespace pump {
 
 			started_.store(true);
 
-			worker_.reset(new std::thread([&]() {
+			worker_.reset(object_create<std::thread>([&]() {
 				while (started_.load() || !trackers_.empty())
 				{
 					__handle_channel_events();
@@ -45,7 +46,7 @@ namespace pump {
 
 					__poll(3);
 				}
-			}));
+			}), object_delete<std::thread>);
 
 			return true;
 		}
@@ -65,7 +66,7 @@ namespace pump {
 			{
 				tracker->__set_tracked(tracking);
 
-				auto tev = new channel_tracker_event(tracker, TRACKER_EVENT_ADD);
+				auto tev = object_create<channel_tracker_event>(tracker, TRACKER_EVENT_ADD);
 				PUMP_DEBUG_CHECK(tevents_.enqueue(tev));
 				tev_cnt_++;
 
@@ -77,7 +78,7 @@ namespace pump {
 
 		void poller::remove_channel_tracker(channel_tracker_sptr &tracker)
 		{
-			auto tev = new channel_tracker_event(tracker, TRACKER_EVENT_DEL);
+			auto tev = object_create<channel_tracker_event>(tracker, TRACKER_EVENT_DEL);
 			PUMP_DEBUG_CHECK(tevents_.enqueue(tev));
 			tev_cnt_++;
 		}
@@ -102,7 +103,7 @@ namespace pump {
 		{
 			if (started_.load())
 			{
-				auto cev = new channel_event(c, event);
+				auto cev = object_create<channel_event>(c, event);
 				PUMP_DEBUG_CHECK(cevents_.enqueue(cev));
 				cev_cnt_++;
 			}
@@ -118,7 +119,7 @@ namespace pump {
 				if (ch)
 					ch->handle_channel_event(ev->event);
 
-				delete ev;
+				object_delete(ev);
 
 				cnt--;
 			}
@@ -158,7 +159,7 @@ namespace pump {
 
 				} while (false);
 
-				delete ev;
+				object_delete(ev);
 
 				cnt--;
 			}

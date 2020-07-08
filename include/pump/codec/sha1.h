@@ -17,7 +17,7 @@
 #ifndef pump_codec_sha1_h
 #define pump_codec_sha1_h
 
-#include "pump/deps.h"
+#include "pump/headers.h"
 
 namespace pump {
 	namespace codec {

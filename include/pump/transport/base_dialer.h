@@ -31,10 +31,10 @@ namespace pump {
 			 ********************************************************************************/
 			base_dialer(
 				transport_type type,
-				PUMP_CONST address &local_address,
-				PUMP_CONST address &remote_address,
+				const address &local_address,
+				const address &remote_address,
 				int64 connect_timeout
-			) PUMP_NOEXCEPT : 
+			) noexcept :
 				base_channel(type, nullptr, -1),
 				local_address_(local_address),
 				remote_address_(remote_address),
@@ -52,7 +52,7 @@ namespace pump {
 			 ********************************************************************************/
 			virtual transport_error start(
 				service_ptr sv, 
-				PUMP_CONST dialer_callbacks &cbs
+				const dialer_callbacks &cbs
 			) = 0;
 
 			/*********************************************************************************
@@ -63,13 +63,13 @@ namespace pump {
 			/*********************************************************************************
 			 * Get local address
 			 ********************************************************************************/
-			PUMP_INLINE PUMP_CONST address& get_local_address() PUMP_CONST
+			PUMP_INLINE const address& get_local_address() const
 			{ return local_address_; }
 
 			/*********************************************************************************
 			 * Get remote address
 			 ********************************************************************************/
-			PUMP_INLINE PUMP_CONST address& get_remote_address() PUMP_CONST
+			PUMP_INLINE const address& get_remote_address() const
 			{ return remote_address_; }
 
 		protected:
@@ -92,7 +92,7 @@ namespace pump {
 			/*********************************************************************************
 			 * Start connect timer
 			 ********************************************************************************/
-			bool __start_connect_timer(PUMP_CONST time::timer_callback &cb);
+			bool __start_connect_timer(const time::timer_callback &cb);
 
 			/*********************************************************************************
 			 * Stop connect timer

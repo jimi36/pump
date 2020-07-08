@@ -18,22 +18,26 @@
 #define pump_timer_queue_h
 
 #include "pump/time/timer.h"
-#include "function/function.h"
 
 namespace pump {
 	namespace time {
 
 		class timer_queue : 
-			public utils::noncopyable
+			public toolkit::noncopyable
 		{
 		protected:
-			typedef function::function<void(timer_wptr&)> timer_pending_callback;
+			typedef pump_function<void(timer_wptr&)> timer_pending_callback;
 
 		public:
-			/*********************************************************************************
-			 * Constructor
-			 ********************************************************************************/
-			timer_queue() PUMP_NOEXCEPT;
+			PUMP_INLINE static timer_queue_sptr create_instance()
+			{
+				INLINE_OBJECT_CREATE(
+					obj, 
+					timer_queue, 
+					()
+				);
+				return timer_queue_sptr(obj, object_delete<timer_queue>);
+			}
 
 			/*********************************************************************************
 			 * Deconstructor
@@ -43,7 +47,7 @@ namespace pump {
 			/*********************************************************************************
 			 * Start
 			 ********************************************************************************/
-			bool start(PUMP_CONST timer_pending_callback &cb);
+			bool start(const timer_pending_callback &cb);
 
 			/*********************************************************************************
 			 * Stop
@@ -76,6 +80,12 @@ namespace pump {
 			 * Observe timers
 			 ********************************************************************************/
 			void __observe();
+
+		private:
+			/*********************************************************************************
+			 * Constructor
+			 ********************************************************************************/
+			timer_queue() noexcept;
 
 		private:
 			// Started status

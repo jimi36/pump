@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
+#include "net/iocp.h"
 #include "pump/init.h"
-#include "pump/net/iocp.h"
 
 #if defined(USE_GNUTLS)
 extern "C" {
-#include <gnutls/gnutls.h>
+	#include <gnutls/gnutls.h>
 }
 #endif
 

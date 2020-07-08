@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-
 #include "pump/transport/base_acceptor.h"
 
 namespace pump {
@@ -36,7 +35,10 @@ namespace pump {
 		{
 			PUMP_ASSERT(!tracker_);
 
-			tracker_.reset(new poll::channel_tracker(ch, TRACK_READ, TRACK_MODE_LOOP));
+			tracker_.reset(
+				object_create<poll::channel_tracker>(ch, TRACK_READ, TRACK_MODE_LOOP), 
+				object_delete<poll::channel_tracker>
+			);
 			if (!get_service()->add_channel_tracker(tracker_, true))
 				return false;
 

@@ -21,23 +21,24 @@ namespace pump {
 
 		#define TIMER_DEFAULT_INTERVAL 1000
 
-		timer_queue::timer_queue() PUMP_NOEXCEPT : 
+		timer_queue::timer_queue() noexcept :
 			started_(false),
 			next_observe_time_(0)
 		{
 		}
 
-		bool timer_queue::start(PUMP_CONST timer_pending_callback &cb)
+		bool timer_queue::start(const timer_pending_callback &cb)
 		{
 			if (!started_.load())
 			{
 				started_.store(true);
 
-				PUMP_ASSERT_EXPR(cb, pending_cb_ = cb);
+				PUMP_DEBUG_ASSIGN(cb, pending_cb_, cb);
 
-				observer_.reset(new std::thread(
-					function::bind(&timer_queue::__observe_thread, this)
-				));
+				observer_.reset(
+					object_create<std::thread>(pump_bind(&timer_queue::__observe_thread, this)),
+					object_delete<std::thread>
+				);
 			}
 
 			return started_.load();

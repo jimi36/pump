@@ -4,7 +4,7 @@ static service *sv;
 
 static int count = 1;
 static int max_send_cont = 1024 * 256 * 10;
-static int send_loop = 1;
+static int send_loop = 126;
 static int send_pocket_size = 1024*4;
 
 class my_tcp_dialer :
@@ -24,7 +24,7 @@ public:
 	/*********************************************************************************
 	 * Tcp dialed event callback
 	 ********************************************************************************/
-	void on_dialed_callback(base_transport_sptr transp, bool succ)
+	void on_dialed_callback(pump::base_transport_sptr transp, bool succ)
 	{
 		if (!succ)
 		{
@@ -33,11 +33,11 @@ public:
 		}
 
 		pump::transport_callbacks cbs;
-		cbs.read_cb = function::bind(&my_tcp_dialer::on_read_callback, this, transp.get(), _1, _2);
-		cbs.stopped_cb = function::bind(&my_tcp_dialer::on_stopped_callback, this, transp.get());
-		cbs.disconnected_cb = function::bind(&my_tcp_dialer::on_disconnected_callback, this, transp.get());
+		cbs.read_cb = pump_bind(&my_tcp_dialer::on_read_callback, this, transp.get(), _1, _2);
+		cbs.stopped_cb = pump_bind(&my_tcp_dialer::on_stopped_callback, this, transp.get());
+		cbs.disconnected_cb = pump_bind(&my_tcp_dialer::on_disconnected_callback, this, transp.get());
 
-		transport_ = std::static_pointer_cast<tcp_transport>(transp);
+		transport_ = std::static_pointer_cast<pump::tcp_transport>(transp);
 		if (transport_->start(sv, 4096*1024, cbs) != 0)
 			return;
 		
@@ -143,12 +143,12 @@ public:
 			{
 				auto pen_ps = my_dialers[i]->transport_->get_pending_send_size();
 				auto new_ps = my_dialers[i]->transport_->get_max_pending_send_size();
-				if (new_ps <= 4096 * 8)
-					new_ps -= 4096;
-				else
-					new_ps /= 2;
-				printf("ps %u %u\n", pen_ps, new_ps);
-				my_dialers[i]->transport_->set_max_pending_send_size(new_ps);
+				//if (new_ps <= 4096 * 8)
+				//	new_ps -= 4096;
+				//else
+				//	new_ps /= 2;
+				//printf("ps %u %u\n", pen_ps, new_ps);
+				//my_dialers[i]->transport_->set_max_pending_send_size(new_ps);
 			}
 
 			read_size += size;
@@ -174,9 +174,9 @@ void start_tcp_client(const std::string &ip, uint16 port)
 		my_dialers.push_back(my_dialer);
 
 		pump::dialer_callbacks cbs;
-		cbs.dialed_cb = function::bind(&my_tcp_dialer::on_dialed_callback, my_dialer.get(), _1, _2);
-		cbs.stopped_cb = function::bind(&my_tcp_dialer::on_stopped_dialing_callback, my_dialer.get());
-		cbs.timeout_cb = function::bind(&my_tcp_dialer::on_dialed_timeout_callback, my_dialer.get());
+		cbs.dialed_cb = pump_bind(&my_tcp_dialer::on_dialed_callback, my_dialer.get(), _1, _2);
+		cbs.stopped_cb = pump_bind(&my_tcp_dialer::on_stopped_dialing_callback, my_dialer.get());
+		cbs.timeout_cb = pump_bind(&my_tcp_dialer::on_dialed_timeout_callback, my_dialer.get());
 
 		if (dialer->start(sv, cbs) != 0)
 		{
@@ -184,8 +184,8 @@ void start_tcp_client(const std::string &ip, uint16 port)
 		}
 	}
 
-	pump::timer_callback cb = function::bind(&time_report::on_timer_timeout);
-	timer_sptr t = pump::timer::create_instance(1000*1, cb, true);
+	time::timer_callback cb = pump_bind(&time_report::on_timer_timeout);
+	time::timer_sptr t = time::timer::create_instance(1000*1, cb, true);
 	sv->start_timer(t);
 
 	sv->wait_stopped();

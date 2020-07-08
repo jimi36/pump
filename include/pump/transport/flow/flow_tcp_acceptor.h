@@ -30,7 +30,7 @@ namespace pump {
 				/*********************************************************************************
 				 * Constructor
 				 ********************************************************************************/
-				flow_tcp_acceptor() PUMP_NOEXCEPT;
+				flow_tcp_acceptor() noexcept;
 
 				/*********************************************************************************
 				 * Deconstructor
@@ -43,7 +43,7 @@ namespace pump {
 				 *     FLOW_ERR_NO    => success
 				 *     FLOW_ERR_ABORT => error
 				 ********************************************************************************/
-				int32 init(poll::channel_sptr &ch, PUMP_CONST address &listen_address);
+				int32 init(poll::channel_sptr &ch, const address &listen_address);
 
 				/*********************************************************************************
 				 * Want to accept
@@ -58,7 +58,7 @@ namespace pump {
 				 * Accept
 				 ********************************************************************************/
 				int32 accept(
-					net::iocp_task_ptr itask, 
+					void_ptr iocp_task,
 					address_ptr local_address, 
 					address_ptr remote_address
 				);
@@ -66,8 +66,10 @@ namespace pump {
 			private:
 				// IPV6
 				bool is_ipv6_;
+
 				// IOCP accept task
-				net::iocp_task_ptr accept_task_;
+				void_ptr accept_task_;
+
 				// This buffer is for iocp
 				std::string tmp_cache_;
 			};

@@ -58,8 +58,8 @@ void start_udp_client(const std::string &ip, uint16 port)
 	udp_transport_sptr transport = udp_transport::create_instance(localaddr);
 
 	pump::transport_callbacks cbs;
-	cbs.read_from_cb = function::bind(&my_udp_client::on_read_callback, udp_client.get(), transport.get(), _1, _2, _3);
-	cbs.stopped_cb = function::bind(&my_udp_client::on_stopped_callback, udp_client.get(), transport.get());
+	cbs.read_from_cb = pump_bind(&my_udp_client::on_read_callback, udp_client.get(), transport.get(), _1, _2, _3);
+	cbs.stopped_cb = pump_bind(&my_udp_client::on_stopped_callback, udp_client.get(), transport.get());
 
 	if (!transport->start(sv, 0, cbs))
 	{

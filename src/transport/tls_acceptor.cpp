@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#include "net/socket.h"
+#include "tls_handshaker.h"
 #include "pump/transport/tls_acceptor.h"
 #include "pump/transport/tls_transport.h"
 
@@ -28,9 +30,9 @@ namespace pump {
 
 		tls_acceptor::tls_acceptor(
 			bool use_file,
-			PUMP_CONST std::string &cert,
-			PUMP_CONST std::string &key,
-			PUMP_CONST address &listen_address,
+			const std::string &cert,
+			const std::string &key,
+			const address &listen_address,
 			int64 handshake_timeout
 		) : 
 			base_acceptor(TYPE_TLS_ACCEPTOR, listen_address),
@@ -78,21 +80,19 @@ namespace pump {
 
 		transport_error tls_acceptor::start(
 			service_ptr sv, 
-			PUMP_CONST acceptor_callbacks &cbs
+			const acceptor_callbacks &cbs
 		) {
 			if (!__set_status(STATUS_NONE, STATUS_STARTING))
 				return ERROR_INVALID;
 
 			PUMP_ASSERT(xcred_ != nullptr);
-			PUMP_ASSERT_EXPR(sv != nullptr, __set_service(sv));
-			PUMP_ASSERT_EXPR(cbs.accepted_cb && cbs.stopped_cb, cbs_ = cbs);
 
-			handshaker_cbs_.handshaked_cb = function::bind(&tls_acceptor::on_handshaked,
-				shared_from_this(), _1, _2);
-			handshaker_cbs_.stopped_cb = function::bind(&tls_acceptor::on_handshake_stopped,
-				shared_from_this(), _1);
+			PUMP_ASSERT(sv != nullptr);
+			__set_service(sv);
 
-			utils::scoped_defer defer([&]() {
+			PUMP_DEBUG_ASSIGN(cbs.accepted_cb && cbs.stopped_cb, cbs_, cbs);
+
+			toolkit::defer defer([&]() {
 				__close_flow();
 				__stop_tracker();
 				__set_status(STATUS_STARTING, STATUS_ERROR);
@@ -128,21 +128,27 @@ namespace pump {
 			}
 		}
 
-		void tls_acceptor::on_read_event(net::iocp_task_ptr itask)
+		void tls_acceptor::on_read_event(void_ptr iocp_task)
 		{
 			auto flow = flow_.get();
 
 			address local_address, remote_address;
-			int32 fd = flow->accept(itask, &local_address, &remote_address);
+			int32 fd = flow->accept(iocp_task, &local_address, &remote_address);
 			if (PUMP_LIKELY(fd > 0))
 			{
 				tls_handshaker_ptr handshaker = __create_handshaker();
 				if (PUMP_LIKELY(handshaker != nullptr))
 				{
+					tls_handshaker::tls_handshaker_callbacks handshaker_cbs;
+					handshaker_cbs.handshaked_cb = pump_bind(&tls_acceptor::on_handshaked,
+						shared_from_this(), _1, _2);
+					handshaker_cbs.stopped_cb = pump_bind(&tls_acceptor::on_handshake_stopped,
+						shared_from_this(), _1);
+
 					// If handshaker is started error, handshaked callback will be triggered. So we do nothing
 					// at here when started error. But if acceptor stopped befere here, we shuold stop handshaking.
 					handshaker->init(fd, false, xcred_, local_address, remote_address);
-					if (handshaker->start(get_service(), handshake_timeout_, handshaker_cbs_))
+					if (handshaker->start(get_service(), handshake_timeout_, handshaker_cbs))
 					{
 						if (__is_status(STATUS_STOPPING) || __is_status(STATUS_STOPPED))
 							handshaker->stop();
@@ -200,7 +206,11 @@ namespace pump {
 		{
 			// Setup flow
 			PUMP_ASSERT(!flow_);
-			flow_.reset(new flow::flow_tls_acceptor());
+			flow_.reset(
+				object_create<flow::flow_tls_acceptor>(), 
+				object_delete<flow::flow_tls_acceptor>
+			);
+
 			poll::channel_sptr ch = shared_from_this();
 			if (flow_->init(ch, listen_address_) != FLOW_ERR_NO)
 				return false;
@@ -213,11 +223,16 @@ namespace pump {
 
 		tls_handshaker_ptr tls_acceptor::__create_handshaker()
 		{
-			tls_handshaker_sptr handshaker(new tls_handshaker);
+			tls_handshaker_sptr handshaker(
+				object_create<tls_handshaker>(), 
+				object_delete<tls_handshaker>
+			);
+
 			{
 				std::lock_guard<std::mutex> lock(handshaker_mx_);
 				handshakers_[handshaker.get()] = handshaker;
 			}
+
 			return handshaker.get();
 		}
 

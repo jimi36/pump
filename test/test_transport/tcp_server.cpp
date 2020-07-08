@@ -45,9 +45,9 @@ public:
 		transport->set_context(tctx);
 
 		pump::transport_callbacks cbs;
-		cbs.read_cb = function::bind(&my_tcp_acceptor::on_read_callback, this, transp.get(), _1, _2);
-		cbs.stopped_cb = function::bind(&my_tcp_acceptor::on_stopped_callback, this, transp.get());
-		cbs.disconnected_cb = function::bind(&my_tcp_acceptor::on_disconnected_callback, this, transp.get());
+		cbs.read_cb = pump_bind(&my_tcp_acceptor::on_read_callback, this, transp.get(), _1, _2);
+		cbs.stopped_cb = pump_bind(&my_tcp_acceptor::on_stopped_callback, this, transp.get());
+		cbs.disconnected_cb = pump_bind(&my_tcp_acceptor::on_disconnected_callback, this, transp.get());
 
 		if (transport->start(sv, 0, cbs) == 0)
 		{
@@ -135,8 +135,8 @@ void start_tcp_server(const std::string &ip, uint16 port)
 	my_tcp_acceptor *my_acceptor = new my_tcp_acceptor;
 
 	pump::acceptor_callbacks cbs;
-	cbs.accepted_cb = function::bind(&my_tcp_acceptor::on_accepted_callback, my_acceptor, _1);
-	cbs.stopped_cb = function::bind(&my_tcp_acceptor::on_stopped_accepting_callback, my_acceptor);
+	cbs.accepted_cb = pump_bind(&my_tcp_acceptor::on_accepted_callback, my_acceptor, _1);
+	cbs.stopped_cb = pump_bind(&my_tcp_acceptor::on_stopped_accepting_callback, my_acceptor);
 
 	address listen_address(ip, port);
 	tcp_acceptor_sptr acceptor = tcp_acceptor::create_instance(listen_address);

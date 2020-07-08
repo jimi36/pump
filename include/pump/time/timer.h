@@ -17,8 +17,8 @@
 #ifndef pump_time_timer_h
 #define pump_time_timer_h
 
-#include "pump/utils/features.h"
 #include "pump/time/timestamp.h"
+#include "pump/toolkit/features.h"
 
 namespace pump {
 	namespace time {
@@ -27,9 +27,9 @@ namespace pump {
 		DEFINE_ALL_POINTER_TYPE(timer);
 
 		class timer_queue;
-		DEFINE_RAW_POINTER_TYPE(timer_queue);
+		DEFINE_ALL_POINTER_TYPE(timer_queue);
 
-		typedef function::function<void()> timer_callback;
+		typedef pump_function<void()> timer_callback;
 
 		class LIB_PUMP timer : 
 			public std::enable_shared_from_this<timer>
@@ -41,12 +41,17 @@ namespace pump {
 			/*********************************************************************************
 			 * Create instance
 			 ********************************************************************************/
-			PUMP_INLINE PUMP_STATIC timer_sptr create_instance(
+			PUMP_INLINE static timer_sptr create_instance(
 				uint64 timeout, 
-				PUMP_CONST timer_callback &cb,
+				const timer_callback &cb,
 				bool repeated = false
 			) {
-				return timer_sptr(new timer(timeout, cb, repeated));
+				INLINE_OBJECT_CREATE(
+					obj, 
+					timer, 
+					(timeout, cb, repeated)
+				);
+				return timer_sptr(obj, object_delete<timer>);
 			}
 
 			/*********************************************************************************
@@ -67,26 +72,26 @@ namespace pump {
 			/*********************************************************************************
 			 * Get overtime
 			 ********************************************************************************/
-			PUMP_INLINE uint64 time() PUMP_CONST
+			PUMP_INLINE uint64 time() const
 			{ return overtime_; }
 
 			/*********************************************************************************
 			 * Get starting state
 			 ********************************************************************************/
-			PUMP_INLINE bool is_started() PUMP_CONST
+			PUMP_INLINE bool is_started() const
 			{ return status_.load() >= 2; }
 
 			/*********************************************************************************
 			 * Get repeated status
 			 ********************************************************************************/
-			PUMP_INLINE bool is_repeated() PUMP_CONST
+			PUMP_INLINE bool is_repeated() const
 			{ return repeated_; }
 
 		private:
 			/*********************************************************************************
 			 * Constructor
 			 ********************************************************************************/
-			timer(uint64 timeout, PUMP_CONST timer_callback &cb, bool repeated) PUMP_NOEXCEPT;
+			timer(uint64 timeout, const timer_callback &cb, bool repeated) noexcept;
 
 			/*********************************************************************************
 			 * Start

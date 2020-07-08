@@ -5,6 +5,10 @@ PROJECT(pump_main)
 # Specifies library name
 SET(LIBRARY_NAME "pump")
 
+SET(pump_MAJOR_VERSION 1)
+SET(pump_MINOR_VERSION 1)
+SET(pump_BUILD_VERSION 4)
+
 # Specifies root dir
 SET(ROOT_DIR ${PROJECT_SOURCE_DIR})
 

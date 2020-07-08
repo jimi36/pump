@@ -31,9 +31,9 @@ public:
 		transport_ = std::static_pointer_cast<tls_transport>(transp);
 
 		pump::transport_callbacks cbs;
-		cbs.read_cb = function::bind(&my_tls_dialer::on_read_callback, this, transp.get(), _1, _2);
-		cbs.stopped_cb = function::bind(&my_tls_dialer::on_stopped_callback, this, transp.get());
-		cbs.disconnected_cb = function::bind(&my_tls_dialer::on_disconnected_callback, this, transp.get());
+		cbs.read_cb = pump_bind(&my_tls_dialer::on_read_callback, this, transp.get(), _1, _2);
+		cbs.stopped_cb = pump_bind(&my_tls_dialer::on_stopped_callback, this, transp.get());
+		cbs.disconnected_cb = pump_bind(&my_tls_dialer::on_disconnected_callback, this, transp.get());
 
 		if (transport_->start(sv, 0, cbs) != 0)
 			return;
@@ -162,9 +162,9 @@ void start_tls_client(const std::string &ip, uint16 port)
 		my_dialers.push_back(my_dialer);
 
 		pump::dialer_callbacks cbs;
-		cbs.dialed_cb = function::bind(&my_tls_dialer::on_dialed_callback, my_dialer.get(), _1, _2);
-		cbs.stopped_cb = function::bind(&my_tls_dialer::on_stopped_dialing_callback, my_dialer.get());
-		cbs.timeout_cb = function::bind(&my_tls_dialer::on_dialed_timeout_callback, my_dialer.get());
+		cbs.dialed_cb = pump_bind(&my_tls_dialer::on_dialed_callback, my_dialer.get(), _1, _2);
+		cbs.stopped_cb = pump_bind(&my_tls_dialer::on_stopped_dialing_callback, my_dialer.get());
+		cbs.timeout_cb = pump_bind(&my_tls_dialer::on_dialed_timeout_callback, my_dialer.get());
 
 		if (dialer->start(sv, cbs) != 0)
 		{
@@ -172,8 +172,8 @@ void start_tls_client(const std::string &ip, uint16 port)
 		}
 	}
 
-	pump::timer_callback cb = function::bind(&tls_time_report::on_timer_timeout);
-	timer_sptr t = pump::timer::create_instance(1000, cb, true);
+	time::timer_callback cb = pump_bind(&tls_time_report::on_timer_timeout);
+	time::timer_sptr t = time::timer::create_instance(1000, cb, true);
 	sv->start_timer(t);
 
 	Sleep(2000);

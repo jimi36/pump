@@ -14,22 +14,25 @@
  * limitations under the License.
  */
 
+#include "tls_handshaker.h"
 #include "pump/transport/tls_dialer.h"
 #include "pump/transport/tls_transport.h"
 
 #if defined(USE_GNUTLS)
+extern "C" {
 	#include <gnutls/gnutls.h>
+}
 #endif
 
 namespace pump {
 	namespace transport {
 
 		tls_dialer::tls_dialer(
-			PUMP_CONST address &local_address,
-			PUMP_CONST address &remote_address,
+			const address &local_address,
+			const address &remote_address,
 			int64 dial_timeout,
 			int64 handshake_timeout
-		) PUMP_NOEXCEPT : 
+		) noexcept :
 			base_dialer(TYPE_TLS_DIALER, local_address, remote_address, dial_timeout),
 			xcred_(nullptr),
 			handshake_timeout_(handshake_timeout)
@@ -45,16 +48,19 @@ namespace pump {
 
 		transport_error tls_dialer::start(
 			service_ptr sv, 
-			PUMP_CONST dialer_callbacks &cbs
+			const dialer_callbacks &cbs
 		) {
 			if (!__set_status(STATUS_NONE, STATUS_STARTING))
 				return ERROR_INVALID;
 
 			PUMP_ASSERT(xcred_ != nullptr);
-			PUMP_ASSERT_EXPR(sv != nullptr, __set_service(sv));
-			PUMP_ASSERT_EXPR(cbs.dialed_cb && cbs.stopped_cb && cbs.timeout_cb, cbs_ = cbs);
 
-			utils::scoped_defer defer([&]() {
+			PUMP_ASSERT(sv != nullptr);
+			__set_service(sv);
+
+			PUMP_DEBUG_ASSIGN(cbs.dialed_cb && cbs.stopped_cb && cbs.timeout_cb, cbs_, cbs);
+
+			toolkit::defer defer([&]() {
 				__close_flow();
 				__stop_tracker();
 				__set_status(STATUS_STARTING, STATUS_ERROR);
@@ -70,7 +76,7 @@ namespace pump {
 			if (flow_->want_to_connect(remote_address_) != FLOW_ERR_NO)
 				return ERROR_FAULT;
 
-			if (!__start_connect_timer(function::bind(&tls_dialer::on_timeout, shared_from_this())))
+			if (!__start_connect_timer(pump_bind(&tls_dialer::on_timeout, shared_from_this())))
 				return ERROR_FAULT;
 
 			defer.clear();
@@ -101,14 +107,14 @@ namespace pump {
 				return;
 		}
 
-		void tls_dialer::on_send_event(net::iocp_task_ptr itask)
+		void tls_dialer::on_send_event(void_ptr iocp_task)
 		{
 			auto flow = flow_.get();
 
 			__stop_connect_timer();
 
 			address local_address, remote_address;
-			if (flow->connect(itask, &local_address, &remote_address) != 0)
+			if (flow->connect(iocp_task, &local_address, &remote_address) != 0)
 			{
 				if (__set_status(STATUS_STARTED, STATUS_ERROR))
 				{
@@ -122,16 +128,18 @@ namespace pump {
 				return;
 
 			tls_handshaker::tls_handshaker_callbacks tls_cbs;
-			tls_cbs.handshaked_cb = function::bind(&tls_dialer::on_handshaked,
+			tls_cbs.handshaked_cb = pump_bind(&tls_dialer::on_handshaked,
 				shared_from_this(), _1, _2);
-			tls_cbs.stopped_cb = function::bind(&tls_dialer::on_handshake_stopped,
+			tls_cbs.stopped_cb = pump_bind(&tls_dialer::on_handshake_stopped,
 				shared_from_this(), _1);
 
 			// If handshaker is started error, handshaked callback will be triggered. So we do nothing
 			// at here when started error. But if dialer stopped befere here, we shuold stop handshaking.
-			auto fd = flow->unbind_fd();
-			handshaker_.reset(new tls_handshaker);
-			handshaker_->init(fd, true, xcred_, local_address, remote_address);
+			handshaker_.reset(
+				object_create<tls_handshaker>(), 
+				object_delete<tls_handshaker>
+			);
+			handshaker_->init(flow->unbind_fd(), true, xcred_, local_address, remote_address);
 
 			poll::channel_tracker_sptr tracker(std::move(tracker_));
 			if (handshaker_->start(get_service(), tracker, handshake_timeout_, tls_cbs))
@@ -202,7 +210,11 @@ namespace pump {
 		{
 			// Setup flow
 			PUMP_ASSERT(!flow_);
-			flow_.reset(new flow::flow_tcp_dialer());
+			flow_.reset(
+				object_create<flow::flow_tcp_dialer>(), 
+				object_delete<flow::flow_tcp_dialer>
+			);
+
 			poll::channel_sptr ch = shared_from_this();
 			if (flow_->init(ch, local_address_) != FLOW_ERR_NO)
 				return false;
@@ -215,8 +227,8 @@ namespace pump {
 
 		base_transport_sptr tls_sync_dialer::dial(
 			service_ptr sv,
-			PUMP_CONST address &local_address,
-			PUMP_CONST address &remote_address,
+			const address &local_address,
+			const address &remote_address,
 			int64 connect_timeout,
 			int64 handshake_timeout
 		) {
@@ -224,11 +236,11 @@ namespace pump {
 				return base_transport_sptr();
 
 			dialer_callbacks cbs;
-			cbs.dialed_cb = function::bind(&tls_sync_dialer::on_dialed,
+			cbs.dialed_cb = pump_bind(&tls_sync_dialer::on_dialed,
 				shared_from_this(), _1, _2);
-			cbs.timeout_cb = function::bind(&tls_sync_dialer::on_timeouted,
+			cbs.timeout_cb = pump_bind(&tls_sync_dialer::on_timeouted,
 				shared_from_this());
-			cbs.stopped_cb = function::bind(&tls_sync_dialer::on_stopped);
+			cbs.stopped_cb = pump_bind(&tls_sync_dialer::on_stopped);
 
 			dialer_ = tls_dialer::create_instance(local_address, remote_address, connect_timeout, handshake_timeout);
 			if (dialer_->start(sv, cbs) != ERROR_OK)

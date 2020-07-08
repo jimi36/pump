@@ -17,20 +17,18 @@
 #ifndef pump_poll_poller_h
 #define pump_poll_poller_h
 
-#include "pump/net/socket.h"
-#include "pump/utils/spin_mutex.h"
-#include "pump/poll/channel_tracker.h"
+#include "pump/poll/channel.h"
 
 namespace pump {
 	namespace poll {
 
 		class poller : 
-			public utils::noncopyable
+			public toolkit::noncopyable
 		{
 		protected:
 			struct channel_event
 			{
-				channel_event(std::shared_ptr<channel> &c, uint32 ev) PUMP_NOEXCEPT : 
+				channel_event(std::shared_ptr<channel> &c, uint32 ev) noexcept :
 					ch(c),
 					event(ev)
 				{}
@@ -41,7 +39,7 @@ namespace pump {
 
 			struct channel_tracker_event
 			{
-				channel_tracker_event(channel_tracker_sptr &t, int32 ev) PUMP_NOEXCEPT : 
+				channel_tracker_event(channel_tracker_sptr &t, int32 ev) noexcept :
 					tracker(t),
 					event(ev)
 				{}
@@ -54,7 +52,7 @@ namespace pump {
 			/*********************************************************************************
 			 * Constructor
 			 ********************************************************************************/
-			poller(bool pop_pending = false) PUMP_NOEXCEPT;
+			poller(bool pop_pending = false) noexcept;
 
 			/*********************************************************************************
 			 * Deconstructor

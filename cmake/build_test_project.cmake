@@ -11,9 +11,6 @@
 MACRO(build_test_project NAME)
 	set_complie_flags(${EXE_COMPILE_FLAGS})
 
-	IF(JEMALLOC_LIBRARY)
-		FILE(GLOB COM_SOURCES ${ROOT_DIR}/*.cpp)
-	ENDIF()
 	FILE(GLOB_RECURSE SOURCES ${ROOT_DIR}/test/${NAME}/*)
 
 	IF(WIN32)
@@ -48,3 +45,7 @@ build_test_project("test_transport")
 build_test_project("test_simple")
 
 build_test_project("test_timer")
+
+build_test_project("test_http")
+
+build_test_project("test_ws")

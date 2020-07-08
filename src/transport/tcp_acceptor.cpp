@@ -20,21 +20,23 @@
 namespace pump {
 	namespace transport {
 
-		tcp_acceptor::tcp_acceptor(PUMP_CONST address &listen_address) PUMP_NOEXCEPT : 
+		tcp_acceptor::tcp_acceptor(const address &listen_address) noexcept :
 			base_acceptor(TYPE_TCP_ACCEPTOR, listen_address)
 		{}
 
 		transport_error tcp_acceptor::start(
 			service_ptr sv, 
-			PUMP_CONST acceptor_callbacks &cbs
+			const acceptor_callbacks &cbs
 		) {
 			if (!__set_status(STATUS_NONE, STATUS_STARTING))
 				return ERROR_INVALID;
 
-			PUMP_ASSERT_EXPR(sv != nullptr, __set_service(sv));
-			PUMP_ASSERT_EXPR(cbs.accepted_cb && cbs.stopped_cb, cbs_ = cbs);
+			PUMP_ASSERT(sv != nullptr);
+			__set_service(sv);
 
-			utils::scoped_defer defer([&]() {
+			PUMP_DEBUG_ASSIGN(cbs.accepted_cb && cbs.stopped_cb, cbs_, cbs);
+
+			toolkit::defer defer([&]() {
 				__close_flow();
 				__stop_tracker();
 				__set_status(STATUS_STARTING, STATUS_ERROR);
@@ -69,12 +71,12 @@ namespace pump {
 			}
 		}
 
-		void tcp_acceptor::on_read_event(net::iocp_task_ptr itask)
+		void tcp_acceptor::on_read_event(void_ptr iocp_task)
 		{
 			auto flow = flow_.get();
 
 			address local_address, remote_address;
-			int32 fd = flow->accept(itask, &local_address, &remote_address);
+			int32 fd = flow->accept(iocp_task, &local_address, &remote_address);
 			if (fd > 0)
 			{
 				auto conn = tcp_transport::create_instance();
@@ -92,8 +94,12 @@ namespace pump {
 		{
 			// Setup flow
 			PUMP_ASSERT(!flow_);
+			flow_.reset(
+				object_create<flow::flow_tcp_acceptor>(), 
+				object_delete<flow::flow_tcp_acceptor>
+			);
+
 			poll::channel_sptr ch = shared_from_this();
-			flow_.reset(new flow::flow_tcp_acceptor());
 			if (flow_->init(ch, listen_address_) != FLOW_ERR_NO)
 				return false;
 

@@ -20,24 +20,79 @@ namespace pump {
 	namespace transport {
 		namespace flow {
 
-			bool buffer::append(c_block_ptr b, int32 size)
+			buffer::buffer() noexcept :
+				buffer_(nullptr),
+				buffer_size_(0),
+				data_pos_(0),
+				data_size_(0)
+			{
+			}
+
+			buffer::~buffer()
+			{
+				if (buffer_ != nullptr)
+					pump_free(buffer_);
+			}
+
+			bool buffer::append(c_block_ptr b, uint32 size)
 			{
 				if (!b || size == 0)
 					return false;
 
-				if (rpos_ != 0 && rpos_ == (int32)raw_.size())
+				if (data_pos_ != 0 && data_pos_ == buffer_size_)
 					reset();
 
-				raw_.append(b, size);
+				if (buffer_ == nullptr)
+				{
+					buffer_ = (block_ptr)pump_malloc(size);
+					if (buffer_ == nullptr)
+						return false;
+					buffer_size_ = size;
+
+					memcpy(buffer_, b, size);
+			
+					data_pos_ = 0;
+					data_size_ = size;
+				}
+				else 
+				{
+					uint32 left = buffer_size_ - data_pos_ - data_size_;
+					if (size < left)
+					{
+						memcpy(buffer_ + data_pos_ + data_size_, b, size);
+						data_size_ += size;
+					}
+					else if (size + data_size_ < buffer_size_)
+					{
+						memcpy(buffer_, buffer_ + data_pos_, data_size_);
+						memcpy(buffer_+ data_size_, b, size);
+
+						data_pos_ = 0;
+						data_size_ += size;
+					}
+					else
+					{
+						uint32 new_size_ = buffer_size_ + size * 2;
+						buffer_ = (block_ptr)pump_realloc(buffer_, new_size_);
+						buffer_size_ = new_size_;
+
+						memcpy(buffer_ + data_pos_ + data_size_, b, size);
+
+						data_size_ += size;
+					}
+				}
 
 				return true;
 			}
 
-			bool buffer::shift(int32 size)
+			bool buffer::shift(uint32 size)
 			{
-				if ((int32)raw_.size() < rpos_ + size)
+				if (size > data_size_)
 					return false;
-				rpos_ += size;
+
+				data_pos_ += size;
+				data_size_ -= size;
+
 				return true;
 			}
 

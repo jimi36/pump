@@ -14,7 +14,8 @@
  * limitations under the License.
  */
 
-#include "pump/poll/epoll_poller.h"
+#include "net/socket.h"
+#include "epoll_poller.h"
 
 namespace pump {
 	namespace poll {
@@ -28,12 +29,12 @@ namespace pump {
 		#define EL_ERROR_EVENT	(EPOLLERR | EPOLLHUP)
 #endif
 
-		epoll_poller::epoll_poller(bool pop_pending) PUMP_NOEXCEPT :
+		epoll_poller::epoll_poller(bool pop_pending) noexcept :
 			poller(pop_pending)
 		{
 #if defined(__GNUC__)
 			epoll_fd_ = ::epoll_create1(0);
-			epoll_mem_ = malloc(sizeof(struct epoll_event) * EPOLL_EVENT_SIZE);
+			epoll_mem_ = pump_malloc(sizeof(struct epoll_event) * EPOLL_EVENT_SIZE);
 #endif
 		}
 
@@ -43,7 +44,7 @@ namespace pump {
 			if (epoll_fd_ != -1)
 				close(epoll_fd_);
 			if (epoll_mem_)
-				free(epoll_mem_);
+				pump_free(epoll_mem_);
 #endif
 		}
 

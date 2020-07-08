@@ -30,7 +30,7 @@ namespace pump {
 				/*********************************************************************************
 				 * Constructor
 				 ********************************************************************************/
-				flow_tcp() PUMP_NOEXCEPT;
+				flow_tcp() noexcept;
 
 				/*********************************************************************************
 				 * Deconstructor
@@ -57,7 +57,7 @@ namespace pump {
 				/*********************************************************************************
 				 * Read
 				 ********************************************************************************/
-				c_block_ptr read(net::iocp_task_ptr itask, int32_ptr size);
+				c_block_ptr read(void_ptr iocp_task, int32_ptr size);
 
 				/*********************************************************************************
 				 * Want to send
@@ -76,25 +76,23 @@ namespace pump {
 				 *     FLOW_ERR_NO_DATA => no data to send
 				 *     FLOW_ERR_ABORT   => error
 				 ********************************************************************************/
-				int32 send(net::iocp_task_ptr itask);
+				int32 send(void_ptr iocp_task);
 
 				/*********************************************************************************
 				 * Check there are data to send or not
 				 ********************************************************************************/
-				PUMP_INLINE bool has_data_to_send() PUMP_CONST
+				PUMP_INLINE bool has_data_to_send() const
 				{ return (send_buffer_ != nullptr && send_buffer_->data_size() > 0); }
 
 			private:
 				// IOCP read task
-				net::iocp_task_ptr read_task_;
+				void_ptr read_task_;
 
 				// Read cache
-				int32 net_read_cache_raw_size_;
-				block_ptr net_read_cache_raw_;
-				std::string read_cache_;
+				block read_cache_[MAX_FLOW_BUFFER_SIZE];
 
 				// IOCP send task
-				net::iocp_task_ptr send_task_;
+				void_ptr send_task_;
 
 				// Send buffer
 				buffer_ptr send_buffer_;

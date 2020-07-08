@@ -3,9 +3,15 @@
 
 #include <stdio.h>
 
-#include <pump/times.h>
 #include <pump/service.h>
-#include <pump/transports.h>
+#include <pump/time/timer.h>
+#include <pump/transport/tcp_dialer.h>
+#include <pump/transport/tcp_acceptor.h>
+
+namespace pump
+{
+	using namespace transport;
+}
 
 using namespace pump;
 

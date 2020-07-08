@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-#include "pump/utils/features.h"
+#include "pump/toolkit/features.h"
 #include "pump/transport/udp_transport.h"
 
 namespace pump {
 	namespace transport {
 
-		udp_transport::udp_transport(PUMP_CONST address &local_address) PUMP_NOEXCEPT :
+		udp_transport::udp_transport(const address &local_address) noexcept :
 			base_transport(TYPE_UDP_TRANSPORT, nullptr, -1)
 		{
 			local_address_ = local_address;
@@ -29,15 +29,17 @@ namespace pump {
 			transport_error udp_transport::start(
 			service_ptr sv, 
 			int32 max_pending_send_size,
-			PUMP_CONST transport_callbacks &cbs
+			const transport_callbacks &cbs
 		) {
 			if (!__set_status(STATUS_NONE, STATUS_STARTING))
 				return ERROR_INVALID;
 
-			PUMP_ASSERT_EXPR(sv != nullptr, __set_service(sv));
-			PUMP_ASSERT_EXPR(cbs.read_from_cb && cbs.stopped_cb, cbs_ = cbs);
+			PUMP_ASSERT(sv != nullptr);
+			__set_service(sv);
 
-			utils::scoped_defer defer([&]() {
+			PUMP_DEBUG_ASSIGN(cbs.read_from_cb && cbs.stopped_cb, cbs_, cbs);
+
+			toolkit::defer defer([&]() {
 				__close_flow();
 				__stop_read_tracker();
 				__set_status(STATUS_STARTING, STATUS_ERROR);
@@ -77,7 +79,7 @@ namespace pump {
 		transport_error udp_transport::send(
 			c_block_ptr b, 
 			uint32 size, 
-			PUMP_CONST address &remote_address
+			const address &remote_address
 		) {
 			PUMP_ASSERT(b && size > 0);
 
@@ -89,21 +91,25 @@ namespace pump {
 			return ERROR_OK;
 		}
 
-		void udp_transport::on_read_event(net::iocp_task_ptr itask)
+		void udp_transport::on_read_event(void_ptr iocp_task)
 		{
+			auto flow = flow_.get();
+
 			address addr;
 			int32 size = 0;
-			auto flow = flow_.get();
-			c_block_ptr b = flow->read_from(itask, &size, &addr);
+			c_block_ptr b = flow->read_from(iocp_task, &size, &addr);
 			if (size > 0)
 				cbs_.read_from_cb(b, size, addr);
 
-			if (__is_status(STATUS_STARTED) && flow->want_to_read() == FLOW_ERR_ABORT)
+			if (!read_paused_.load())
 			{
-				if (__set_status(STATUS_STARTED, STATUS_ERROR))
+				if (__is_status(STATUS_STARTED) && flow->want_to_read() == FLOW_ERR_ABORT)
 				{
-					__close_flow();
-					__stop_read_tracker();
+					if (__set_status(STATUS_STARTED, STATUS_ERROR))
+					{
+						__close_flow();
+						__stop_read_tracker();
+					}
 				}
 			}
 		}
@@ -112,7 +118,11 @@ namespace pump {
 		{
 			// Setup flow.
 			PUMP_ASSERT(!flow_);
-			flow_.reset(new flow::flow_udp());
+			flow_.reset(
+				object_create<flow::flow_udp>(), 
+				object_delete<flow::flow_udp>
+			);
+
 			poll::channel_sptr ch = shared_from_this();
 			if (flow_->init(ch, local_address_) != FLOW_ERR_NO)
 				return false;
@@ -127,7 +137,11 @@ namespace pump {
 		{
 			PUMP_ASSERT(!r_tracker_);
 			poll::channel_sptr ch = shared_from_this();
-			r_tracker_.reset(new poll::channel_tracker(ch, TRACK_READ, TRACK_MODE_LOOP));
+			r_tracker_.reset(
+				object_create<poll::channel_tracker>(ch, TRACK_READ, TRACK_MODE_LOOP),
+				object_delete<poll::channel_tracker>
+			);
+
 			if (!get_service()->add_channel_tracker(r_tracker_, true))
 				return false;
 

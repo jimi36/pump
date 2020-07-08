@@ -31,8 +31,8 @@ namespace pump {
 			 ********************************************************************************/
 			base_acceptor(
 				transport_type type, 
-				PUMP_CONST address &listen_address
-			) PUMP_NOEXCEPT : 
+				const address &listen_address
+			) noexcept :
 				base_channel(type, nullptr, -1),
 				listen_address_(listen_address)
 			{}
@@ -48,7 +48,7 @@ namespace pump {
 			 ********************************************************************************/
 			virtual transport_error start(
 				service_ptr sv, 
-				PUMP_CONST acceptor_callbacks &cbs
+				const acceptor_callbacks &cbs
 			) = 0;
 
 			/*********************************************************************************
@@ -59,7 +59,7 @@ namespace pump {
 			/*********************************************************************************
 			 * Get local address
 			 ********************************************************************************/
-			PUMP_INLINE PUMP_CONST address& get_listen_address() PUMP_CONST
+			PUMP_INLINE const address& get_listen_address() const
 			{ return listen_address_; }
 
 		protected:

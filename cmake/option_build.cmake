@@ -33,6 +33,7 @@ LINK_DIRECTORIES(${ROOT_DIR}/lib)
 LINK_DIRECTORIES(${CMAKE_BINARY_DIR})
 
 # Specifies include path
+INCLUDE_DIRECTORIES(${ROOT_DIR}/src)
 INCLUDE_DIRECTORIES(${ROOT_DIR}/include)
 
 # Specifies unicode character set on windows

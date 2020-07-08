@@ -34,10 +34,15 @@ namespace pump {
 			/*********************************************************************************
 			 * Create instance
 			 ********************************************************************************/
-			PUMP_INLINE PUMP_STATIC tcp_acceptor_sptr create_instance(
-				PUMP_CONST address &listen_address
+			PUMP_INLINE static tcp_acceptor_sptr create_instance(
+				const address &listen_address
 			) {
-				return tcp_acceptor_sptr(new tcp_acceptor(listen_address));
+				INLINE_OBJECT_CREATE(
+					obj, 
+					tcp_acceptor, 
+					(listen_address)
+				);
+				return tcp_acceptor_sptr(obj, object_delete<tcp_acceptor>);
 			}
 
 			/*********************************************************************************
@@ -50,7 +55,7 @@ namespace pump {
 			 ********************************************************************************/
 			virtual transport_error start(
 				service_ptr sv, 
-				PUMP_CONST acceptor_callbacks &cbs
+				const acceptor_callbacks &cbs
 			) override;
 
 			/*********************************************************************************
@@ -62,7 +67,7 @@ namespace pump {
 			/*********************************************************************************
 			 * Read event callback
 			 ********************************************************************************/
-			virtual void on_read_event(net::iocp_task_ptr itask) override;
+			virtual void on_read_event(void_ptr iocp_task) override;
 
 		private:
 			/*********************************************************************************
@@ -80,7 +85,7 @@ namespace pump {
 			/*********************************************************************************
 			 * Constructor
 			 ********************************************************************************/
-			tcp_acceptor(PUMP_CONST address &listen_address) PUMP_NOEXCEPT;
+			tcp_acceptor(const address &listen_address) noexcept;
 
 		private:
 			// Acceptor flow

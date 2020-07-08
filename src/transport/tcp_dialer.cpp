@@ -20,25 +20,27 @@ namespace pump {
 	namespace transport {
 
 		tcp_dialer::tcp_dialer(
-			PUMP_CONST address &local_address,
-			PUMP_CONST address &remote_address,
+			const address &local_address,
+			const address &remote_address,
 			int64 connect_timeout
-		) PUMP_NOEXCEPT : 
+		) noexcept :
 			base_dialer(TYPE_TCP_DIALER, local_address, remote_address, connect_timeout)
 		{
 		}
 
 		transport_error tcp_dialer::start(
 			service_ptr sv, 
-			PUMP_CONST dialer_callbacks &cbs
+			const dialer_callbacks &cbs
 		) {
 			if (!__set_status(STATUS_NONE, STATUS_STARTING))
 				return ERROR_INVALID;
 
-			PUMP_ASSERT_EXPR(sv != nullptr, __set_service(sv));
-			PUMP_ASSERT_EXPR(cbs.dialed_cb && cbs.stopped_cb && cbs.timeout_cb, cbs_ = cbs);
+			PUMP_ASSERT(sv != nullptr);
+			__set_service(sv);
 
-			utils::scoped_defer defer([&]() {
+			PUMP_DEBUG_ASSIGN(cbs.dialed_cb && cbs.stopped_cb && cbs.timeout_cb, cbs_, cbs);
+
+			toolkit::defer defer([&]() {
 				__close_flow();
 				__stop_tracker();
 				__set_status(STATUS_STARTING, STATUS_ERROR);
@@ -54,7 +56,7 @@ namespace pump {
 			if (flow_->want_to_connect(remote_address_) != FLOW_ERR_NO)
 				return ERROR_FAULT;
 
-			if (!__start_connect_timer(function::bind(&tcp_dialer::on_timeout, shared_from_this())))
+			if (!__start_connect_timer(pump_bind(&tcp_dialer::on_timeout, shared_from_this())))
 				return ERROR_FAULT;
 
 			defer.clear();
@@ -84,12 +86,12 @@ namespace pump {
 				return;
 		}
 
-		void tcp_dialer::on_send_event(net::iocp_task_ptr itask)
+		void tcp_dialer::on_send_event(void_ptr iocp_task)
 		{
 			auto flow = flow_.get();
 
 			address local_address, remote_address;
-			bool success = (flow->connect(itask, &local_address, &remote_address) == 0);
+			bool success = (flow->connect(iocp_task, &local_address, &remote_address) == 0);
 
 			int32 next_status = success ? STATUS_FINISHED : STATUS_ERROR;
 			if (!__set_status(STATUS_STARTED, next_status))
@@ -129,7 +131,11 @@ namespace pump {
 		{
 			// Setup flow
 			PUMP_ASSERT(!flow_);
-			flow_.reset(new flow::flow_tcp_dialer());
+			flow_.reset(
+				object_create<flow::flow_tcp_dialer>(), 
+				object_delete<flow::flow_tcp_dialer>
+			);
+
 			poll::channel_sptr ch = shared_from_this();
 			if (flow_->init(ch, local_address_) != FLOW_ERR_NO)
 				return false;
@@ -142,8 +148,8 @@ namespace pump {
 
 		base_transport_sptr tcp_sync_dialer::dial(
 			service_ptr sv,
-			PUMP_CONST address &local_address,
-			PUMP_CONST address &remote_address,
+			const address &local_address,
+			const address &remote_address,
 			int64 connect_timeout
 		) {
 			base_transport_sptr transp;
@@ -152,9 +158,9 @@ namespace pump {
 				return base_transport_sptr();
 
 			dialer_callbacks cbs;
-			cbs.dialed_cb = function::bind(&tcp_sync_dialer::on_dialed, shared_from_this(), _1, _2);
-			cbs.timeout_cb = function::bind(&tcp_sync_dialer::on_timeouted, shared_from_this());
-			cbs.stopped_cb = function::bind(&tcp_sync_dialer::on_stopped);
+			cbs.dialed_cb = pump_bind(&tcp_sync_dialer::on_dialed, shared_from_this(), _1, _2);
+			cbs.timeout_cb = pump_bind(&tcp_sync_dialer::on_timeouted, shared_from_this());
+			cbs.stopped_cb = pump_bind(&tcp_sync_dialer::on_stopped);
 
 			dialer_ = tcp_dialer::create_instance(local_address, remote_address, connect_timeout);
 			if (dialer_->start(sv, cbs) != ERROR_OK)

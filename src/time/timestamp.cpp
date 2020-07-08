@@ -37,7 +37,7 @@ namespace pump {
 				).time_since_epoch().count();
 		}
 
-		std::string timestamp::to_string() PUMP_CONST
+		std::string timestamp::to_string() const
 		{
 			struct tm tm_time;
 			char date[64] = { 0 };
@@ -59,7 +59,7 @@ namespace pump {
 			return date;
 		}
 
-		std::string timestamp::format(PUMP_CONST std::string &format) PUMP_CONST
+		std::string timestamp::format(const std::string &format) const
 		{
 			struct tm tm_time;
 			char date[64] = { 0 };

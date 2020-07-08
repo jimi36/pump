@@ -16,9 +16,10 @@
 
 #include "pump/service.h"
 #include "pump/time/timer_queue.h"
-#include "pump/poll/iocp_poller.h"
-#include "pump/poll/epoll_poller.h"
-#include "pump/poll/select_poller.h"
+
+#include "poll/iocp_poller.h"
+#include "poll/epoll_poller.h"
+#include "poll/select_poller.h"
 
 namespace pump {
 
@@ -31,19 +32,19 @@ namespace pump {
 		if (has_poller)
 		{
 #if defined(WIN32) && defined(USE_IOCP)
-			iocp_poller_ = new poll::iocp_poller(false);
+			iocp_poller_ = object_create<poll::iocp_poller>(false);
 #else
-#	if  defined(WIN32)
-			loop_poller_ = new poll::select_poller(false);
-			once_poller_ = new poll::select_poller(true);
-#	else
-			loop_poller_ = new poll::epoll_poller(false);
-			once_poller_ = new poll::epoll_poller(true);
-#	endif
+	#if  defined(WIN32)
+			loop_poller_ = object_create<poll::select_poller>(false);
+			once_poller_ = object_create<poll::select_poller>(true);
+	#else
+			loop_poller_ = object_create<poll::epoll_poller>(false);
+			once_poller_ = object_create<poll::epoll_poller>(true);
+	#endif
 #endif
 		}
 
-		tqueue_.reset(new time::timer_queue());
+		tqueue_ = time::timer_queue::create_instance();
 	}
 
 	service::~service()
@@ -64,7 +65,7 @@ namespace pump {
 		running_ = true;
 
 		if (tqueue_ != nullptr)
-			tqueue_->start(function::bind(&service::__post_timeout_timer, this, _1));
+			tqueue_->start(pump_bind(&service::__post_timeout_timer, this, _1));
 		if (iocp_poller_ != nullptr)
 			iocp_poller_->start();
 		if (loop_poller_ != nullptr)
@@ -177,30 +178,36 @@ namespace pump {
 
 	void service::__start_posted_task_worker()
 	{
-		posted_task_worker_.reset(new std::thread([&]() {
-			while (running_)
-			{
-				post_task_type task;
-				if (posted_tasks_.wait_dequeue_timed(task, std::chrono::seconds(1)))
-					task();
-			}
-		}));
+		posted_task_worker_.reset(
+			object_create<std::thread>([&]() {
+				while (running_)
+				{
+					post_task_type task;
+					if (posted_tasks_.wait_dequeue_timed(task, std::chrono::seconds(1)))
+						task();
+				}
+			}),
+			object_delete<std::thread>
+		);
 	}
 
 	void service::__start_timeout_timer_worker()
 	{
-		timeout_timer_worker_.reset(new std::thread([&]() {
-			while (running_)
-			{
-				time::timer_wptr wptr;
-				if (timeout_timers_.wait_dequeue_timed(wptr, std::chrono::seconds(1)))
+		timeout_timer_worker_.reset(
+			object_create<std::thread>([&]() {
+				while (running_)
 				{
-					PUMP_LOCK_WPOINTER(timer, wptr);
-					if (timer)
-						timer->handle_timeout();
+					time::timer_wptr wptr;
+					if (timeout_timers_.wait_dequeue_timed(wptr, std::chrono::seconds(1)))
+					{
+						PUMP_LOCK_WPOINTER(timer, wptr);
+						if (timer)
+							timer->handle_timeout();
+					}
 				}
-			}
-		}));
+			}),
+			object_delete<std::thread>
+		);
 	}
 
 }

@@ -17,7 +17,7 @@
 #ifndef pump_codec_base64_h
 #define pump_codec_base64_h
 
-#include "pump/deps.h"
+#include "pump/headers.h"
 
 namespace pump {
 	namespace codec {
@@ -25,22 +25,22 @@ namespace pump {
 		/*********************************************************************************
 		 * Base64 encode string length
 		 ********************************************************************************/
-		LIB_PUMP uint32 base64_encode_length(PUMP_CONST std::string &in);
+		LIB_PUMP uint32 base64_encode_length(const std::string &in);
 
 		/*********************************************************************************
 		 * Base64 encode
 		 ********************************************************************************/
-		LIB_PUMP bool base64_encode(PUMP_CONST std::string &in, std::string &out);
+		LIB_PUMP std::string base64_encode(const std::string &in);
 
 		/*********************************************************************************
 		 * Base64 decode string length
 		 ********************************************************************************/
-		LIB_PUMP uint32 base64_decode_length(PUMP_CONST std::string &in);
+		LIB_PUMP uint32 base64_decode_length(const std::string &in);
 
 		/*********************************************************************************
 		 * Base64 decode
 		 ********************************************************************************/
-		LIB_PUMP bool base64_decode(PUMP_CONST std::string &in, std::string &out);
+		LIB_PUMP std::string base64_decode(const std::string &in);
 
 	}
 }

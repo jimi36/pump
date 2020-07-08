@@ -14,12 +14,13 @@
  * limitations under the License.
  */
 
+#include "pump/toolkit/features.h"
 #include "pump/transport/tls_transport.h"
 
 namespace pump {
 	namespace transport {
 
-		tls_transport::tls_transport() PUMP_NOEXCEPT :
+		tls_transport::tls_transport() noexcept :
 			base_transport(TYPE_TLS_TRANSPORT, nullptr, -1),
 			last_send_buffer_size_(0),
 			last_send_buffer_(nullptr),
@@ -35,10 +36,10 @@ namespace pump {
 
 		void tls_transport::init(
 			flow::flow_tls_sptr &flow,
-			PUMP_CONST address &local_address,
-			PUMP_CONST address &remote_address
+			const address &local_address,
+			const address &remote_address
 		) {
-			PUMP_ASSERT_EXPR(flow, flow_ = flow);
+			PUMP_DEBUG_ASSIGN(flow, flow_, flow);
 
 			// Flow rebind channel 
 			poll::channel_sptr ch = shared_from_this();
@@ -54,16 +55,19 @@ namespace pump {
 		transport_error tls_transport::start(
 			service_ptr sv, 
 			int32 max_pending_send_size,
-			PUMP_CONST transport_callbacks &cbs
+			const transport_callbacks &cbs
 		) {
 			if (!__set_status(STATUS_NONE, STATUS_STARTING))
 				return ERROR_INVALID;
 
 			PUMP_ASSERT(flow_);
-			PUMP_ASSERT_EXPR(sv != nullptr, __set_service(sv));
-			PUMP_ASSERT_EXPR(cbs.read_cb && cbs.disconnected_cb && cbs.stopped_cb, cbs_ = cbs);
 
-			utils::scoped_defer defer([&]() {
+			PUMP_ASSERT(sv != nullptr);
+			__set_service(sv);
+
+			PUMP_DEBUG_ASSIGN(cbs.read_cb && cbs.disconnected_cb && cbs.stopped_cb, cbs_, cbs);
+
+			toolkit::defer defer([&]() {
 				__close_flow();
 				__stop_read_tracker();
 				__stop_send_tracker();
@@ -151,21 +155,6 @@ namespace pump {
 				return;
 		}
 
-		transport_error tls_transport::send(flow::buffer_ptr b)
-		{
-			PUMP_ASSERT(b && b->data_size() > 0);
-
-			if (PUMP_UNLIKELY(!is_started()))
-				return ERROR_UNSTART;
-
-			if (PUMP_UNLIKELY(pending_send_size_.load() >= max_pending_send_size_))
-				return ERROR_AGAIN;
-
-			__async_send(b);
-
-			return ERROR_OK;
-		}
-
 		transport_error tls_transport::send(c_block_ptr b, uint32 size)
 		{
 			PUMP_ASSERT(b && size > 0);
@@ -176,10 +165,11 @@ namespace pump {
 			if (PUMP_UNLIKELY(pending_send_size_.load() >= max_pending_send_size_))
 				return ERROR_AGAIN;
 
-			auto buffer = new flow::buffer;
-			if (!buffer->append(b, size))
+			auto buffer = object_create<flow::buffer>();
+			if (PUMP_UNLIKELY(buffer == nullptr || !buffer->append(b, size)))
 			{
-				delete buffer;
+				if (buffer != nullptr)
+					object_delete(buffer);
 				return ERROR_FAULT;
 			}
 
@@ -207,10 +197,10 @@ namespace pump {
 				__try_doing_disconnected_process();
 		}
 
-		void tls_transport::on_read_event(net::iocp_task_ptr itask)
+		void tls_transport::on_read_event(void_ptr iocp_task)
 		{
 			auto flow = flow_.get();
-			auto ret = flow->read_from_net(itask);
+			auto ret = flow->read_from_net(iocp_task);
 			if (PUMP_UNLIKELY(ret == FLOW_ERR_ABORT))
 			{
 				__try_doing_disconnected_process();
@@ -219,14 +209,17 @@ namespace pump {
 
 			__read_tls_data(flow);
 
-			if (__is_status(STATUS_STARTED) && flow->want_to_read() == FLOW_ERR_ABORT)
-				__try_doing_disconnected_process();
+			if (!read_paused_.load())
+			{
+				if (__is_status(STATUS_STARTED) && flow->want_to_read() == FLOW_ERR_ABORT)
+					__try_doing_disconnected_process();
+			}
 		}
 
-		void tls_transport::on_send_event(net::iocp_task_ptr itask)
+		void tls_transport::on_send_event(void_ptr iocp_task)
 		{
 			auto flow = flow_.get();
-			auto ret = flow->send_to_net(itask);
+			auto ret = flow->send_to_net(iocp_task);
 			if (ret == FLOW_ERR_AGAIN)
 			{
 				__awake_tracker(s_tracker_);
@@ -278,7 +271,7 @@ namespace pump {
 			if (last_send_buffer_ != nullptr)
 			{
 				// Free last send buffer.
-				delete last_send_buffer_;
+				object_delete(last_send_buffer_);
 				last_send_buffer_ = nullptr;
 
 				// Reset last send buffer data size.
@@ -327,12 +320,12 @@ namespace pump {
 		void tls_transport::__clear_send_pockets()
 		{
 			if (last_send_buffer_)
-				delete last_send_buffer_;
+				object_delete(last_send_buffer_);
 
 			flow::buffer_ptr buffer;
 			while (sendlist_.try_dequeue(buffer))
 			{
-				delete buffer;
+				object_delete(buffer);
 			}
 		}
 

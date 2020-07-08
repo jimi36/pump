@@ -38,7 +38,7 @@ namespace pump {
 				/*********************************************************************************
 				 * Constructor
 				 ********************************************************************************/
-				flow_tls() PUMP_NOEXCEPT;
+				flow_tls() noexcept;
 
 				/*********************************************************************************
 				 * Deconstructor
@@ -83,7 +83,7 @@ namespace pump {
 				 *     FLOW_ERR_AGAIN => no more data on net
 				 *     FLOW_ERR_ABORT => error
 				 ********************************************************************************/
-				int32 read_from_net(net::iocp_task_ptr itask);
+				int32 read_from_net(void_ptr iocp_task);
 
 				/*********************************************************************************
 				 * Read from ssl
@@ -93,7 +93,7 @@ namespace pump {
 				/*********************************************************************************
 				 * Check there are data to read or not
 				 ********************************************************************************/
-				PUMP_INLINE bool has_data_to_read() PUMP_CONST
+				PUMP_INLINE bool has_data_to_read() const
 				{ return net_read_data_size_> net_read_data_pos_; }
 
 				/*********************************************************************************
@@ -120,18 +120,18 @@ namespace pump {
 				 *     FLOW_ERR_NO_DATA => no data to send
 				 *     FLOW_ERR_ABORT   => error
 				 ********************************************************************************/
-				int32 send_to_net(net::iocp_task_ptr itask);
+				int32 send_to_net(void_ptr iocp_task);
 
 				/*********************************************************************************
 				 * Check there are data to send or not
 				 ********************************************************************************/
-				PUMP_INLINE bool has_data_to_send() PUMP_CONST
+				PUMP_INLINE bool has_data_to_send() const
 				{ return net_send_buffer_.data_size() > 0; }
 
 				/*********************************************************************************
 				 * Check handshaked status
 				 ********************************************************************************/
-				PUMP_INLINE bool is_handshaked() PUMP_CONST
+				PUMP_INLINE bool is_handshaked() const
 				{ return is_handshaked_; }
 
 			private:
@@ -143,8 +143,8 @@ namespace pump {
 				/*********************************************************************************
 				 * Send to net send cache
 				 ********************************************************************************/
-				PUMP_INLINE void __send_to_net_send_cache(c_block_ptr tls_buffer, int32 size)
-				{ net_send_buffer_.append(tls_buffer, size); }
+				PUMP_INLINE void __send_to_net_send_cache(c_block_ptr b, int32 size)
+				{ net_send_buffer_.append(b, size); }
 
 				/*********************************************************************************
 				 * Get ssl session
@@ -160,22 +160,24 @@ namespace pump {
 				tls_session_ptr session_;
 
 				// IOCP read task
-				net::iocp_task_ptr read_task_;
+				void_ptr read_task_;
 
 				// Net read cache
 				int32 net_read_data_pos_;
 				int32 net_read_data_size_;
-				int32 net_read_cache_raw_size_;
-				block_ptr net_read_cache_raw_;
-				std::string net_read_cache_;
+				//int32 net_read_cache_raw_size_;
+				//block_ptr net_read_cache_raw_;
+				//std::string net_read_cache_;
+				block net_read_cache_[MAX_FLOW_BUFFER_SIZE];
 
 				// TLS read cache
-				int32 ssl_read_cache_raw_size_;
-				block_ptr ssl_read_cache_raw_;
-				std::string ssl_read_cache_;
+				//int32 ssl_read_cache_raw_size_;
+				//block_ptr ssl_read_cache_raw_;
+				//std::string ssl_read_cache_;
+				block ssl_read_cache_[MAX_FLOW_BUFFER_SIZE];
 				
 				// IOCP send task
-				net::iocp_task_ptr send_task_;
+				void_ptr send_task_;
 
 				// Net send buffer
 				buffer net_send_buffer_;

@@ -39,7 +39,10 @@ namespace pump {
 		{
 			PUMP_ASSERT(!tracker_);
 
-			tracker_.reset(new poll::channel_tracker(ch, TRACK_WRITE, TRACK_MODE_ONCE));
+			tracker_.reset(
+				object_create<poll::channel_tracker>(ch, TRACK_WRITE, TRACK_MODE_ONCE), 
+				object_delete<poll::channel_tracker>
+			);
 			if (!get_service()->add_channel_tracker(tracker_, true))
 				return false;
 
@@ -57,7 +60,7 @@ namespace pump {
 			}
 		}
 
-		bool base_dialer::__start_connect_timer(PUMP_CONST time::timer_callback &cb)
+		bool base_dialer::__start_connect_timer(const time::timer_callback &cb)
 		{
 			if (connect_timeout_ <= 0)
 				return true;

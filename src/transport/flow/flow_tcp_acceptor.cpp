@@ -14,13 +14,15 @@
  * limitations under the License.
  */
 
+#include "net/iocp.h"
+#include "net/socket.h"
 #include "pump/transport/flow/flow_tcp_acceptor.h"
 
 namespace pump {
 	namespace transport {
 		namespace flow {
 
-			flow_tcp_acceptor::flow_tcp_acceptor() PUMP_NOEXCEPT : 
+			flow_tcp_acceptor::flow_tcp_acceptor() noexcept :
 				is_ipv6_(false),
 				accept_task_(nullptr)
 			{
@@ -28,15 +30,17 @@ namespace pump {
 
 			flow_tcp_acceptor::~flow_tcp_acceptor()
 			{
+				close();
+
 #if defined(WIN32) && defined(USE_IOCP)
 				if (accept_task_)
 					net::unlink_iocp_task(accept_task_);
 #endif
 			}
 
-			int32 flow_tcp_acceptor::init(poll::channel_sptr &ch, PUMP_CONST address &listen_address)
+			int32 flow_tcp_acceptor::init(poll::channel_sptr &ch, const address &listen_address)
 			{
-				PUMP_ASSERT_EXPR(ch, ch_ = ch);
+				PUMP_DEBUG_ASSIGN(ch, ch_, ch);
 
 				is_ipv6_ = listen_address.is_ipv6();
 				int32 domain = is_ipv6_ ? AF_INET6 : AF_INET;
@@ -46,17 +50,18 @@ namespace pump {
 				if (fd_ == -1)
 					return FLOW_ERR_ABORT;
 
-				ext_ = net::new_net_extension(fd_);
-				if (!ext_)
+				extra_fns_ = net::new_iocp_extra_function(fd_);
+				if (!extra_fns_)
 					return FLOW_ERR_ABORT;
 
 				tmp_cache_.resize(ADDRESS_MAX_LEN * 3);
 
-				accept_task_ = net::new_iocp_task();
-				net::set_iocp_task_fd(accept_task_, fd_);
-				net::set_iocp_task_notifier(accept_task_, ch_);
-				net::set_iocp_task_type(accept_task_, IOCP_TASK_ACCEPT);
-				net::set_iocp_task_buffer(accept_task_, (block_ptr)tmp_cache_.data(), (uint32)tmp_cache_.size());
+				auto accept_task = net::new_iocp_task();
+				net::set_iocp_task_fd(accept_task, fd_);
+				net::set_iocp_task_notifier(accept_task, ch_);
+				net::set_iocp_task_type(accept_task, IOCP_TASK_ACCEPT);
+				net::set_iocp_task_buffer(accept_task, (block_ptr)tmp_cache_.data(), (uint32)tmp_cache_.size());
+				accept_task_ = accept_task;
 #else
 				fd_ = net::create_socket(domain, SOCK_STREAM);
 				if (fd_ == -1)
@@ -85,7 +90,7 @@ namespace pump {
 					return FLOW_ERR_ABORT;
 
 				net::set_iocp_task_client_fd(accept_task_, client);
-				if (!net::post_iocp_accept(ext_, accept_task_))
+				if (!net::post_iocp_accept(extra_fns_, accept_task_))
 				{
 					net::close(client);
 					return FLOW_ERR_ABORT;
@@ -95,13 +100,13 @@ namespace pump {
 			}
 
 			int32 flow_tcp_acceptor::accept(
-				net::iocp_task_ptr itask, 
+				void_ptr iocp_task, 
 				address_ptr local_address, 
 				address_ptr remote_address
 			) {
 #if defined(WIN32) && defined(USE_IOCP)
-				int32 ec = net::get_iocp_task_ec(itask);
-				int32 client_fd = net::get_iocp_task_client_fd(itask);
+				int32 ec = net::get_iocp_task_ec(iocp_task);
+				int32 client_fd = net::get_iocp_task_client_fd(iocp_task);
 				if (ec != 0 || client_fd == -1)
 				{
 					net::close(client_fd);
@@ -112,7 +117,7 @@ namespace pump {
 				sockaddr *remote = nullptr;
 				int32 llen = sizeof(sockaddr_in);
 				int32 rlen = sizeof(sockaddr_in);
-				if (!net::get_iocp_accepted_address(ext_, itask, &local, &llen, &remote, &rlen))
+				if (!net::get_iocp_accepted_address(extra_fns_, iocp_task, &local, &llen, &remote, &rlen))
 				{
 					net::close(client_fd);
 					return -1;
@@ -120,7 +125,7 @@ namespace pump {
 				local_address->set(local, llen);
 				remote_address->set(remote, rlen);
 
-				net::set_iocp_task_client_fd(itask, 0);
+				net::set_iocp_task_client_fd(iocp_task, 0);
 #else
 				int32 addrlen = ADDRESS_MAX_LEN;
 				int32 client_fd = net::accept(fd_, (struct sockaddr*)tmp_cache_.data(), &addrlen);

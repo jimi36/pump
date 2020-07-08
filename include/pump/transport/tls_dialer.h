@@ -18,7 +18,6 @@
 #define pump_transport_tls_dialer_h
 
 #include "pump/transport/base_dialer.h"
-#include "pump/transport/tls_handshaker.h"
 #include "pump/transport/flow/flow_tls_dialer.h"
 
 namespace pump {
@@ -26,6 +25,9 @@ namespace pump {
 
 		class tls_dialer;
 		DEFINE_ALL_POINTER_TYPE(tls_dialer);
+
+		class tls_handshaker;
+		DEFINE_ALL_POINTER_TYPE(tls_handshaker);
 
 		class LIB_PUMP tls_dialer : 
 			public base_dialer,
@@ -35,18 +37,18 @@ namespace pump {
 			/*********************************************************************************
 			 * Create instance
 			 ********************************************************************************/
-			PUMP_INLINE PUMP_STATIC tls_dialer_sptr create_instance(
-				PUMP_CONST address &local_address,
-				PUMP_CONST address &remote_address,
+			PUMP_INLINE static tls_dialer_sptr create_instance(
+				const address &local_address,
+				const address &remote_address,
 				int64 dial_timeout = 0,
 				int64 handshake_timeout = 0
 			) {
-				return tls_dialer_sptr(new tls_dialer(
-					local_address, 
-					remote_address, 
-					dial_timeout, 
-					handshake_timeout
-				));
+				INLINE_OBJECT_CREATE(
+					obj, 
+					tls_dialer, 
+					(local_address, remote_address, dial_timeout, handshake_timeout)
+				);
+				return tls_dialer_sptr(obj, object_delete<tls_dialer>);
 			}
 
 			/*********************************************************************************
@@ -59,7 +61,7 @@ namespace pump {
 			 ********************************************************************************/
 			virtual transport_error start(
 				service_ptr sv, 
-				PUMP_CONST dialer_callbacks &cbs
+				const dialer_callbacks &cbs
 			) override;
 
 			/*********************************************************************************
@@ -71,18 +73,18 @@ namespace pump {
 			/*********************************************************************************
 			 * Send event callback
 			 ********************************************************************************/
-			virtual void on_send_event(net::iocp_task_ptr itask) override;
+			virtual void on_send_event(void_ptr iocp_task) override;
 
 		protected:
 			/*********************************************************************************
 			 * Timeout event callback
 			 ********************************************************************************/
-			PUMP_STATIC void on_timeout(tls_dialer_wptr wptr);
+			static void on_timeout(tls_dialer_wptr wptr);
 
 			/*********************************************************************************
 			 * TLS handshake success callback
 			 ********************************************************************************/
-			PUMP_STATIC void on_handshaked(
+			static void on_handshaked(
 				tls_dialer_wptr wptr,
 				tls_handshaker_ptr handshaker,
 				bool succ
@@ -91,7 +93,7 @@ namespace pump {
 			/*********************************************************************************
 			 * Tls handskake stopped callback
 			 ********************************************************************************/
-			PUMP_STATIC void on_handshake_stopped(
+			static void on_handshake_stopped(
 				tls_dialer_wptr wptr,
 				tls_handshaker_ptr handshaker
 			);
@@ -101,11 +103,11 @@ namespace pump {
 			 * Constructor
 			 ********************************************************************************/
 			tls_dialer(
-				PUMP_CONST address &local_address,
-				PUMP_CONST address &remote_address,
+				const address &local_address,
+				const address &remote_address,
 				int64 dial_timeout,
 				int64 handshake_timeout
-			) PUMP_NOEXCEPT;
+			) noexcept;
 
 			/*********************************************************************************
 			 * Open flow
@@ -139,9 +141,14 @@ namespace pump {
 			/*********************************************************************************
 			 * Create instance
 			 ********************************************************************************/
-			PUMP_STATIC tls_sync_dialer_sptr create_instance()
+			static tls_sync_dialer_sptr create_instance()
 			{
-				return tls_sync_dialer_sptr(new tls_sync_dialer);
+				INLINE_OBJECT_CREATE(
+					obj, 
+					tls_sync_dialer, 
+					()
+				);
+				return tls_sync_dialer_sptr(obj, object_delete<tls_sync_dialer>);
 			}
 
 			/*********************************************************************************
@@ -154,8 +161,8 @@ namespace pump {
 			 ********************************************************************************/
 			base_transport_sptr dial(
 				service_ptr sv,
-				PUMP_CONST address &local_address,
-				PUMP_CONST address &remote_address,
+				const address &local_address,
+				const address &remote_address,
 				int64 connect_timeout,
 				int64 handshake_timeout
 			);
@@ -164,7 +171,7 @@ namespace pump {
 			/*********************************************************************************
 			 * Dialed callback
 			 ********************************************************************************/
-			PUMP_STATIC void on_dialed(
+			static void on_dialed(
 				tls_sync_dialer_wptr wptr,
 				base_transport_sptr transp,
 				bool succ
@@ -173,18 +180,18 @@ namespace pump {
 			/*********************************************************************************
 			 * Dial timeouted callback
 			 ********************************************************************************/
-			PUMP_STATIC void on_timeouted(tls_sync_dialer_wptr wptr);
+			static void on_timeouted(tls_sync_dialer_wptr wptr);
 
 			/*********************************************************************************
 			 * Dial stopped callback
 			 ********************************************************************************/
-			PUMP_STATIC void on_stopped();
+			static void on_stopped();
 
 		private:
 			/*********************************************************************************
 			 * Constructor
 			 ********************************************************************************/
-			tls_sync_dialer() PUMP_NOEXCEPT
+			tls_sync_dialer() noexcept
 			{}
 
 			/*********************************************************************************

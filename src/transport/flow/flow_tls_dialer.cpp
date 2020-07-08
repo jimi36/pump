@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#include "net/socket.h"
 #include "pump/transport/flow/flow_tls_dialer.h"
 
 namespace pump {

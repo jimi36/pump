@@ -17,7 +17,7 @@
 #ifndef pump_transport_tcp_transport_h
 #define pump_transport_tcp_transport_h
 
-#include "pump/utils/features.h"
+#include "pump/toolkit/features.h"
 #include "pump/transport/flow/flow_tcp.h"
 #include "pump/transport/base_transport.h"
 
@@ -35,9 +35,14 @@ namespace pump {
 			/*********************************************************************************
 			 * Create instance
 			 ********************************************************************************/
-			PUMP_INLINE PUMP_STATIC tcp_transport_sptr create_instance()
+			PUMP_INLINE static tcp_transport_sptr create_instance()
 			{
-				return tcp_transport_sptr(new tcp_transport);
+				INLINE_OBJECT_CREATE(
+					obj, 
+					tcp_transport, 
+					()
+				);
+				return tcp_transport_sptr(obj, object_delete<tcp_transport>);
 			}
 
 			/*********************************************************************************
@@ -50,8 +55,8 @@ namespace pump {
 			 ********************************************************************************/
 			void init(
 				int32 fd, 
-				PUMP_CONST address &local_address, 
-				PUMP_CONST address &remote_address
+				const address &local_address, 
+				const address &remote_address
 			);
 
 			/*********************************************************************************
@@ -60,7 +65,7 @@ namespace pump {
 			virtual transport_error start(
 				service_ptr sv, 
 				int32 max_pending_send_size,
-				PUMP_CONST transport_callbacks &cbs
+				const transport_callbacks &cbs
 			) override;
 
 			/*********************************************************************************
@@ -78,28 +83,22 @@ namespace pump {
 			 ********************************************************************************/
 			virtual transport_error send(c_block_ptr b, uint32 size) override;
 
-			/*********************************************************************************
-			 * Send
-			 * After sent success, the buffer has moved ownership to transport.
-			 ********************************************************************************/
-			virtual transport_error send(flow::buffer_ptr b) override;
-
 		protected:
 			/*********************************************************************************
 			 * Read event callback
 			 ********************************************************************************/
-			virtual void on_read_event(net::iocp_task_ptr itask) override;
+			virtual void on_read_event(void_ptr iocp_task) override;
 
 			/*********************************************************************************
 			 * Send event callback
 			 ********************************************************************************/
-			virtual void on_send_event(net::iocp_task_ptr itask) override;
+			virtual void on_send_event(void_ptr iocp_task) override;
 
 		private:
 			/*********************************************************************************
 			 * Constructor
 			 ********************************************************************************/
-			tcp_transport() PUMP_NOEXCEPT;
+			tcp_transport() noexcept;
 
 			/*********************************************************************************
 			 * open flow

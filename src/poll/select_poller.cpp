@@ -14,17 +14,18 @@
  * limitations under the License.
  */
 
-#include "pump/poll/select_poller.h"
+#include "net/socket.h"
+#include "select_poller.h"
 
 namespace pump {
 	namespace poll {
 
-		PUMP_INLINE PUMP_STATIC bool is_selectable(int32 fd)
+		PUMP_INLINE static bool is_selectable(int32 fd)
 		{
 			return  fd < 1024 && fd >= 0;
 		}
 
-		select_poller::select_poller(bool pop_pending) PUMP_NOEXCEPT : 
+		select_poller::select_poller(bool pop_pending) noexcept :
 			poller(pop_pending)
 		{
 			tv_.tv_sec = 0;
@@ -71,7 +72,7 @@ namespace pump {
 				__dispatch_pending_event(&rfds_, &wfds_);
 		}
 
-		void select_poller::__dispatch_pending_event(PUMP_CONST fd_set *rfds, PUMP_CONST fd_set *wfds)
+		void select_poller::__dispatch_pending_event(const fd_set *rfds, const fd_set *wfds)
 		{
 			auto beg = trackers_.begin();
 			channel_tracker_ptr tracker = nullptr;

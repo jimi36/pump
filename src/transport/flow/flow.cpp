@@ -14,15 +14,17 @@
  * limitations under the License.
  */
 
+#include "net/iocp.h"
+#include "net/socket.h"
 #include "pump/transport/flow/flow.h"
 
 namespace pump {
 	namespace transport {
 		namespace flow {
 
-			flow_base::flow_base() PUMP_NOEXCEPT :
+			flow_base::flow_base() noexcept :
 				fd_(-1),
-				ext_(nullptr)
+				extra_fns_(nullptr)
 			{
 			}
 
@@ -35,10 +37,10 @@ namespace pump {
 
 			void flow_base::close()
 			{
-				if (ext_)
+				if (extra_fns_)
 				{
-					net::delete_net_extension(ext_);
-					ext_ = nullptr;
+					net::delete_iocp_extra_function(extra_fns_);
+					extra_fns_ = nullptr;
 				}
 				
 				if (fd_ > 0)

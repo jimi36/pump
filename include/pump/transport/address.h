@@ -17,7 +17,7 @@
 #ifndef pump_transport_address_h
 #define pump_transport_address_h
 
-#include "pump/net/socket.h"
+#include "pump/headers.h"
 
 namespace pump {
 	namespace transport {
@@ -30,9 +30,9 @@ namespace pump {
 			/*********************************************************************************
 			 * Constructor
 			 ********************************************************************************/
-			address() PUMP_NOEXCEPT;
-			address(PUMP_CONST std::string &ip, uint16 port);
-			address(PUMP_CONST struct sockaddr *addr, int32 addrlen);
+			address() noexcept;
+			address(const std::string &ip, uint16 port);
+			address(const struct sockaddr *addr, int32 addrlen);
 
 			/*********************************************************************************
 			 * Deconstructor
@@ -42,55 +42,55 @@ namespace pump {
 			/*********************************************************************************
 			 * Set and Get address
 			 ********************************************************************************/
-			bool set(PUMP_CONST std::string &ip, uint16 port);
-			bool set(PUMP_CONST struct sockaddr *addr, int32 addrlen);
+			bool set(const std::string &ip, uint16 port);
+			bool set(const struct sockaddr *addr, int32 addrlen);
 
 			/*********************************************************************************
 			 * Get address struct
 			 ********************************************************************************/
 			PUMP_INLINE struct sockaddr* get()
 			{ return (struct sockaddr*)addr_; }
-			PUMP_INLINE PUMP_CONST struct sockaddr* get() PUMP_CONST
-			{ return (PUMP_CONST struct sockaddr*)addr_; }
+			PUMP_INLINE const struct sockaddr* get() const
+			{ return (const struct sockaddr*)addr_; }
 
 			/*********************************************************************************
 			 * Set and Get address struct size
 			 ********************************************************************************/
-			PUMP_INLINE int32 len() PUMP_CONST
+			PUMP_INLINE int32 len() const
 			{ return addrlen_; }
 
 			/*********************************************************************************
 			 * Get port
 			 ********************************************************************************/
-			PUMP_INLINE uint16 port() PUMP_CONST
+			PUMP_INLINE uint16 port() const
 			{ return port_; }
 
 			/*********************************************************************************
 			 * Get ip
 			 ********************************************************************************/
-			PUMP_INLINE PUMP_CONST std::string& ip() PUMP_CONST
+			PUMP_INLINE const std::string& ip() const
 			{ return ip_; }
 
 			/*********************************************************************************
 			 * Is ipv6 or not
 			 ********************************************************************************/
-			PUMP_INLINE bool is_ipv6() PUMP_CONST
+			PUMP_INLINE bool is_ipv6() const
 			{ return is_v6_; }
 
 			/*********************************************************************************
 			 * Address to string
 			 ********************************************************************************/
-			std::string to_string() PUMP_CONST;
+			std::string to_string() const;
 
 			/*********************************************************************************
 			 * Operator ==
 			 ********************************************************************************/
-			bool operator ==(const address& other) PUMP_CONST PUMP_NOEXCEPT;
+			bool operator ==(const address& other) const noexcept;
 
 			/*********************************************************************************
 			 * Operator ==
 			 ********************************************************************************/
-			bool operator <(const address& other) PUMP_CONST PUMP_NOEXCEPT;
+			bool operator <(const address& other) const noexcept;
 
 		private:
 			/*********************************************************************************

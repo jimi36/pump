@@ -17,7 +17,6 @@
 #ifndef pump_transport_callbacks_h
 #define pump_transport_callbacks_h
 
-#include "pump/deps.h"
 #include "pump/transport/address.h"
 
 namespace pump {
@@ -28,45 +27,45 @@ namespace pump {
 
 		struct acceptor_callbacks
 		{
-			function::function<
+			pump_function<
 				void(base_transport_sptr)
 			> accepted_cb;
 
-			function::function<
+			pump_function<
 				void()
 			> stopped_cb;
 		};
 
 		struct dialer_callbacks
 		{
-			function::function<
+			pump_function<
 				void(base_transport_sptr, bool)
 			> dialed_cb;
 
-			function::function<
+			pump_function<
 				void()
 			> timeout_cb;
 
-			function::function<
+			pump_function<
 				void()
 			> stopped_cb;
 		};
 
 		struct transport_callbacks
 		{
-			function::function<
+			pump_function<
 				void(c_block_ptr, int32)
 			> read_cb;
 
-			function::function<
+			pump_function<
 				void(c_block_ptr, int32, const address&)
 			> read_from_cb;
 
-			function::function<
+			pump_function<
 				void()
 			> disconnected_cb;
 
-			function::function<
+			pump_function<
 				void()
 			> stopped_cb;
 		};

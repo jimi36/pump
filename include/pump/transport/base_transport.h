@@ -80,7 +80,7 @@ namespace pump {
 			*******************************************
 			 * Constructor
 			 ********************************************************************************/
-			base_channel(transport_type type, service_ptr sv, int32 fd) PUMP_NOEXCEPT :
+			base_channel(transport_type type, service_ptr sv, int32 fd) noexcept :
 				service_getter(sv),
 				poll::channel(fd),
 				tracker_cnt_(0),
@@ -96,13 +96,13 @@ namespace pump {
 			/*********************************************************************************
 			 * Get transport type
 			 ********************************************************************************/
-			PUMP_INLINE transport_type get_type() PUMP_CONST
+			PUMP_INLINE transport_type get_type() const
 			{ return type_; }
 
 			/*********************************************************************************
 			 * Get started status
 			 ********************************************************************************/
-			PUMP_INLINE bool is_started() PUMP_CONST
+			PUMP_INLINE bool is_started() const
 			{ return __is_status(STATUS_STARTED); }
 
 		protected:
@@ -115,7 +115,7 @@ namespace pump {
 			/*********************************************************************************
 			 * Check transport is in status
 			 ********************************************************************************/
-			PUMP_INLINE bool __is_status(uint32 status) PUMP_CONST
+			PUMP_INLINE bool __is_status(uint32 status) const
 			{ return status_.load() == status; }
 
 			/*********************************************************************************
@@ -142,6 +142,7 @@ namespace pump {
 			 ********************************************************************************/
 			base_transport(transport_type type, service_ptr sv, int32 fd) :
 				base_channel(type, sv, fd),
+				read_paused_(false),
 				max_pending_send_size_(-1),
 				pending_send_size_(0)
 			{}
@@ -161,7 +162,7 @@ namespace pump {
 			virtual transport_error start(
 				service_ptr sv, 
 				int32 max_pending_send_size, 
-				PUMP_CONST transport_callbacks &cbs
+				const transport_callbacks &cbs
 			) = 0;
 
 			/*********************************************************************************
@@ -175,16 +176,29 @@ namespace pump {
 			virtual void force_stop() = 0;
 
 			/*********************************************************************************
-			 * Send
+			 * Rest transport callbacks
+			 * Note that this is not thread-safe.
+			 * User should do this in read callback function.
 			 ********************************************************************************/
-			virtual transport_error send(c_block_ptr b, uint32 size)
-			{ return ERROR_DISABLE; }
+			bool reset_callbacks(const transport_callbacks &cbs);
+
+			/*********************************************************************************
+			 * Pause read
+			 * If transport is not stared, this will return false.
+			 * Note that user must call this in read callback function. 
+			 ********************************************************************************/
+			void pause_read();
+
+			/*********************************************************************************
+			 * Continue read
+			 * If transport is not read paused, this will return false.
+			 ********************************************************************************/
+			transport_error continue_read();
 
 			/*********************************************************************************
 			 * Send
-			 * After sent success, the buffer has moved ownership to transport.
 			 ********************************************************************************/
-			virtual transport_error send(flow::buffer_ptr b)
+			virtual transport_error send(c_block_ptr b, uint32 size)
 			{ return ERROR_DISABLE; }
 
 			/*********************************************************************************
@@ -193,19 +207,19 @@ namespace pump {
 			virtual transport_error send(
 				c_block_ptr b,
 				uint32 size,
-				PUMP_CONST address &remote_address
+				const address &remote_address
 			) { return ERROR_DISABLE; }
 
 			/*********************************************************************************
 			 * Get pending send buffer size
 			 ********************************************************************************/
-			uint32 get_pending_send_size() PUMP_CONST
+			uint32 get_pending_send_size() const
 			{ return pending_send_size_; }
 
 			/*********************************************************************************
 			 * Get max pending send buffer size
 			 ********************************************************************************/
-			uint32 get_max_pending_send_size() PUMP_CONST
+			uint32 get_max_pending_send_size() const
 			{ return max_pending_send_size_; }
 
 			/*********************************************************************************
@@ -217,13 +231,13 @@ namespace pump {
 			/*********************************************************************************
 			 * Get local address
 			 ********************************************************************************/
-			PUMP_CONST address& get_local_address() PUMP_CONST
+			const address& get_local_address() const
 			{ return local_address_; }
 
 			/*********************************************************************************
 			 * Get remote address
 			 ********************************************************************************/
-			PUMP_CONST address& get_remote_address() PUMP_CONST
+			const address& get_remote_address() const
 			{ return remote_address_; }
 
 		protected:
@@ -263,6 +277,9 @@ namespace pump {
 			// Channel trackers
 			poll::channel_tracker_sptr r_tracker_;
 			poll::channel_tracker_sptr s_tracker_;
+
+			// Read pause status
+			std::atomic_bool read_paused_;
 
 			// Pending send buffer size
 			uint32 max_pending_send_size_;

@@ -36,16 +36,17 @@ namespace pump {
 			/*********************************************************************************
 			 * Create instance
 			 ********************************************************************************/
-			PUMP_INLINE PUMP_STATIC tcp_dialer_sptr create_instance(
-				PUMP_CONST address &local_address,
-				PUMP_CONST address &remote_address,
+			PUMP_INLINE static tcp_dialer_sptr create_instance(
+				const address &local_address,
+				const address &remote_address,
 				int64 connect_timeout = 0
 			) {
-				return tcp_dialer_sptr(new tcp_dialer(
-					local_address, 
-					remote_address, 
-					connect_timeout
-				));
+				INLINE_OBJECT_CREATE(
+					obj, 
+					tcp_dialer, 
+					(local_address, remote_address, connect_timeout)
+				);
+				return tcp_dialer_sptr(obj, object_delete<tcp_dialer>);
 			}
 
 			/*********************************************************************************
@@ -58,7 +59,7 @@ namespace pump {
 			 ********************************************************************************/
 			virtual transport_error start(
 				service_ptr sv, 
-				PUMP_CONST dialer_callbacks &cbs
+				const dialer_callbacks &cbs
 			) override;
 
 			/*********************************************************************************
@@ -70,13 +71,13 @@ namespace pump {
 			/*********************************************************************************
 			 * Send event callback
 			 ********************************************************************************/
-			virtual void on_send_event(net::iocp_task_ptr itask) override;
+			virtual void on_send_event(void_ptr iocp_task) override;
 
 		protected:
 			/*********************************************************************************
 			 * Timeout event callback
 			 ********************************************************************************/
-			PUMP_STATIC void on_timeout(tcp_dialer_wptr wptr);
+			static void on_timeout(tcp_dialer_wptr wptr);
 
 		private:
 			/*********************************************************************************
@@ -95,10 +96,10 @@ namespace pump {
 			 * Constructor
 			 ********************************************************************************/
 			tcp_dialer(
-				PUMP_CONST address &local_address,
-				PUMP_CONST address &remote_address,
+				const address &local_address,
+				const address &remote_address,
 				int64 connect_timeout
-			) PUMP_NOEXCEPT;
+			) noexcept;
 
 		private:
 			// Dialer flow
@@ -115,7 +116,7 @@ namespace pump {
 			/*********************************************************************************
 			 * Create instance
 			 ********************************************************************************/
-			PUMP_STATIC tcp_sync_dialer_sptr create_instance()
+			static tcp_sync_dialer_sptr create_instance()
 			{
 				return tcp_sync_dialer_sptr(new tcp_sync_dialer);
 			}
@@ -130,8 +131,8 @@ namespace pump {
 			 ********************************************************************************/
 			base_transport_sptr dial(
 				service_ptr sv,
-				PUMP_CONST address &local_address,
-				PUMP_CONST address &remote_address,
+				const address &local_address,
+				const address &remote_address,
 				int64 connect_timeout = 0
 			);
 
@@ -148,18 +149,18 @@ namespace pump {
 			/*********************************************************************************
 			 * Dialed timeout callback
 			 ********************************************************************************/
-			PUMP_STATIC void on_timeouted(tcp_sync_dialer_wptr wptr);
+			static void on_timeouted(tcp_sync_dialer_wptr wptr);
 
 			/*********************************************************************************
 			 * Stopped dial event callback
 			 ********************************************************************************/
-			PUMP_STATIC void on_stopped();
+			static void on_stopped();
 
 		private:
 			/*********************************************************************************
 			 * Constructor
 			 ********************************************************************************/
-			tcp_sync_dialer() PUMP_NOEXCEPT
+			tcp_sync_dialer() noexcept
 			{}
 
 			/*********************************************************************************

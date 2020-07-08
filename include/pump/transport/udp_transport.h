@@ -34,10 +34,15 @@ namespace pump {
 			/*********************************************************************************
 			 * Create instance
 			 ********************************************************************************/
-			PUMP_INLINE PUMP_STATIC udp_transport_sptr create_instance(
-				PUMP_CONST address &local_address
+			PUMP_INLINE static udp_transport_sptr create_instance(
+				const address &local_address
 			) {
-				return udp_transport_sptr(new udp_transport(local_address));
+				INLINE_OBJECT_CREATE(
+					obj, 
+					udp_transport, 
+					(local_address)
+				);
+				return udp_transport_sptr(obj, object_delete<udp_transport>);
 			}
 
 			/*********************************************************************************
@@ -52,7 +57,7 @@ namespace pump {
 			virtual transport_error start(
 				service_ptr sv, 
 				int32 max_pending_send_size,
-				PUMP_CONST transport_callbacks &cbs
+				const transport_callbacks &cbs
 			) override;
 
 			/*********************************************************************************
@@ -72,20 +77,20 @@ namespace pump {
 			virtual transport_error send(
 				c_block_ptr b, 
 				uint32 size, 
-				PUMP_CONST address &remote_address
+				const address &remote_address
 			) override;
 
 		protected:
 			/*********************************************************************************
 			 * Read event callback
 			 ********************************************************************************/
-			virtual void on_read_event(net::iocp_task_ptr itask) override;
+			virtual void on_read_event(void_ptr iocp_task) override;
 
 		private:
 			/*********************************************************************************
 			 * Constructor
 			 ********************************************************************************/
-			udp_transport(PUMP_CONST address &local_address) PUMP_NOEXCEPT;
+			udp_transport(const address &local_address) noexcept;
 
 			/*********************************************************************************
 			 * Open flow

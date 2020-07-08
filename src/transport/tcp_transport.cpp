@@ -20,7 +20,7 @@
 namespace pump {
 	namespace transport {
 
-		tcp_transport::tcp_transport() PUMP_NOEXCEPT : 
+		tcp_transport::tcp_transport() noexcept :
 			base_transport(TYPE_TCP_TRANSPORT, nullptr, -1),
 			last_send_buffer_size_(0),
 			last_send_buffer_(nullptr),
@@ -36,10 +36,10 @@ namespace pump {
 
 		void tcp_transport::init(
 			int32 fd, 
-			PUMP_CONST address &local_address, 
-			PUMP_CONST address &remote_address
+			const address &local_address, 
+			const address &remote_address
 		) {
-			PUMP_ASSERT(__open_flow(fd));
+			PUMP_DEBUG_CHECK(__open_flow(fd));
 
 			local_address_  = local_address;
 			remote_address_ = remote_address;
@@ -48,16 +48,19 @@ namespace pump {
 		transport_error tcp_transport::start(
 			service_ptr sv, 
 			int32 max_pending_send_size,
-			PUMP_CONST transport_callbacks &cbs
+			const transport_callbacks &cbs
 		) {
 			if (!__set_status(STATUS_NONE, STATUS_STARTING))
 				return ERROR_INVALID;
 
 			PUMP_ASSERT(flow_);
-			PUMP_ASSERT_EXPR(sv != nullptr, __set_service(sv));
-			PUMP_ASSERT_EXPR(cbs.read_cb && cbs.disconnected_cb && cbs.stopped_cb, cbs_ = cbs);
 
-			utils::scoped_defer defer([&]() {
+			PUMP_ASSERT(sv != nullptr);
+			__set_service(sv);
+
+			PUMP_DEBUG_ASSIGN(cbs.read_cb && cbs.disconnected_cb && cbs.stopped_cb, cbs_, cbs);
+
+			toolkit::defer defer([&]() {
 				__close_flow();
 				__stop_read_tracker();
 				__stop_send_tracker();
@@ -133,21 +136,6 @@ namespace pump {
 				return;
 		}
 
-		transport_error tcp_transport::send(flow::buffer_ptr b)
-		{
-			PUMP_ASSERT(b && b->data_size() > 0);
-
-			if (PUMP_UNLIKELY(!is_started()))
-				return ERROR_UNSTART;
-
-			if (PUMP_UNLIKELY(pending_send_size_.load() >= max_pending_send_size_))
-				return ERROR_AGAIN;
-
-			__async_send(b);
-
-			return ERROR_OK;
-		}
-
 		transport_error tcp_transport::send(c_block_ptr b, uint32 size)
 		{
 			PUMP_ASSERT(b && size > 0);
@@ -158,11 +146,11 @@ namespace pump {
 			if (PUMP_UNLIKELY(pending_send_size_.load() >= max_pending_send_size_))
 				return ERROR_AGAIN;
 
-			auto buffer = new flow::buffer;
+			auto buffer = object_create<flow::buffer>();
 			if (PUMP_UNLIKELY(buffer == nullptr || !buffer->append(b, size)))
 			{
 				if (buffer != nullptr)
-					delete buffer;
+					object_delete(buffer);
 				return ERROR_FAULT;
 			}
 
@@ -171,19 +159,22 @@ namespace pump {
 			return ERROR_OK;
 		}
 
-		void tcp_transport::on_read_event(net::iocp_task_ptr itask)
+		void tcp_transport::on_read_event(void_ptr iocp_task)
 		{
 			int32 size = 0;
 			auto flow = flow_.get();
-			c_block_ptr b = flow->read(itask, &size); // Read size must be equal or greater than zero.
+			c_block_ptr b = flow->read(iocp_task, &size); // Read size must be equal or greater than zero.
 			if (PUMP_LIKELY(size > 0))
 			{
 				// Read callback
 				cbs_.read_cb(b, size);
 
-				// Begin new read task
-				if (__is_status(STATUS_STARTED) && flow->want_to_read() == FLOW_ERR_ABORT)
-					__try_doing_disconnected_process();
+				if (!read_paused_.load())
+				{
+					// Begin new read task
+					if (__is_status(STATUS_STARTED) && flow->want_to_read() == FLOW_ERR_ABORT)
+						__try_doing_disconnected_process();
+				}
 			}
 			else
 			{
@@ -191,10 +182,10 @@ namespace pump {
 			}
 		}
 
-		void tcp_transport::on_send_event(net::iocp_task_ptr itask)
+		void tcp_transport::on_send_event(void_ptr iocp_task)
 		{
 			auto flow = flow_.get();
-			auto ret = flow->send(itask);
+			auto ret = flow->send(iocp_task);
 			if (ret == FLOW_ERR_AGAIN)
 			{
 				__awake_tracker(s_tracker_);
@@ -233,7 +224,11 @@ namespace pump {
 		{
 			// Setup flow
 			PUMP_ASSERT(!flow_);
-			flow_.reset(new flow::flow_tcp());
+			flow_.reset(
+				object_create<flow::flow_tcp>(), 
+				object_delete<flow::flow_tcp>
+			);
+
 			poll::channel_sptr ch = shared_from_this();
 			if (flow_->init(ch, fd) != FLOW_ERR_NO)
 				return false;
@@ -261,7 +256,7 @@ namespace pump {
 			if (last_send_buffer_ != nullptr)
 			{
 				// Free last send buffer.
-				delete last_send_buffer_;
+				object_delete(last_send_buffer_);
 				last_send_buffer_ = nullptr;
 
 				// Reset last send buffer data size.
@@ -297,12 +292,12 @@ namespace pump {
 		void tcp_transport::__clear_sendlist()
 		{
 			if (last_send_buffer_ != nullptr)
-				delete last_send_buffer_;
+				object_delete(last_send_buffer_);
 
 			flow::buffer_ptr buffer;
 			while (sendlist_.try_dequeue(buffer))
 			{
-				delete buffer;
+				object_delete(buffer);
 			}
 		}
 

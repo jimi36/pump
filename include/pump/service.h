@@ -17,18 +17,17 @@
 #ifndef pump_service_h
 #define pump_service_h
 
-#include "pump/net/iocp.h"
 #include "pump/poll/poller.h"
+#include "pump/toolkit/features.h"
 #include "pump/time/timer_queue.h"
-#include "pump/utils/features.h"
 
 namespace pump {
 
 	class LIB_PUMP service: 
-		public utils::noncopyable
+		public toolkit::noncopyable
 	{
 	protected:
-		typedef function::function<void()> post_task_type;
+		typedef pump_function<void()> post_task_type;
 		
 	public:
 		/*********************************************************************************

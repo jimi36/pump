@@ -3,29 +3,29 @@
 namespace pump {
 	namespace codec {
 
-		PUMP_STATIC c_block_ptr kBase64Alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+		static c_block_ptr kBase64Alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
 		/* 'Private' declarations */
 		PUMP_INLINE void a3_to_a4(uint8_ptr a4, uint8_ptr a3);
 		PUMP_INLINE void a4_to_a3(uint8_ptr a3, uint8_ptr a4);
 		PUMP_INLINE uint8 b64_lookup(uint8 c);
 
-		PUMP_INLINE PUMP_STATIC uint32 encoded_length(uint32 length)
+		PUMP_INLINE static uint32 encoded_length(uint32 length)
 		{
 			return (length + 2 - ((length + 2) % 3)) / 3 * 4;
 		}
 
-		PUMP_INLINE PUMP_STATIC uint32 encoded_length(PUMP_CONST std::string &in)
+		PUMP_INLINE static uint32 encoded_length(const std::string &in)
 		{
 			return encoded_length((uint32)in.length());
 		}
 
-		uint32 base64_encode_length(PUMP_CONST std::string &in)
+		uint32 base64_encode_length(const std::string &in)
 		{
 			return encoded_length((uint32)in.length());
 		}
 
-		bool base64_encode(PUMP_CONST std::string &in, std::string &out) 
+		std::string base64_encode(const std::string &in)
 		{
 			int32 i = 0, j = 0;
 			int32 enc_len = 0;
@@ -35,8 +35,7 @@ namespace pump {
 			uint32 input_len = (uint32)in.size();
 			std::string::const_iterator input = in.begin();
 
-			if (out.size() < encoded_length(in))
-				return false;
+			std::string out(encoded_length(in), 0);
 
 			while (input_len--) 
 			{
@@ -73,10 +72,10 @@ namespace pump {
 				}
 			}
 
-			return (enc_len == (int32)out.size());
+			return std::move(out);
 		}
 
-		PUMP_STATIC uint32 decoded_length(PUMP_CONST std::string &in)
+		PUMP_INLINE static uint32 decoded_length(const std::string &in)
 		{
 			uint32 eq_cnt = 0;
 			uint32 n = (uint32)in.size();
@@ -89,12 +88,12 @@ namespace pump {
 			return ((6 * n) / 8) - eq_cnt;
 		}
 
-		uint32 base64_decode_length(PUMP_CONST std::string &in)
+		uint32 base64_decode_length(const std::string &in)
 		{
 			return decoded_length(in);
 		}
 
-		bool base64_decode(PUMP_CONST std::string &in, std::string &out)
+		std::string base64_decode(const std::string &in)
 		{
 			int32 i = 0, j = 0;
 			int32 dec_len = 0;
@@ -104,8 +103,7 @@ namespace pump {
 			uint32 input_len = (uint32)in.size();
 			std::string::const_iterator input = in.begin();
 
-			if (out.size() < decoded_length(in))
-				return false;
+			std::string out(decoded_length(in), 0);
 
 			while (input_len--) 
 			{
@@ -153,7 +151,7 @@ namespace pump {
 				}
 			}
 
-			return (dec_len == (int32)out.size());
+			return std::move(out);
 		}
 
 		PUMP_INLINE void a3_to_a4(uint8_ptr a4, uint8_ptr a3)

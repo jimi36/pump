@@ -17,7 +17,6 @@
 #ifndef pump_transport_tls_transport_h
 #define pump_transport_tls_transport_h
 
-#include "pump/utils/features.h"
 #include "pump/transport/flow/flow_tls.h"
 #include "pump/transport/base_transport.h"
 
@@ -35,9 +34,14 @@ namespace pump {
 			/*********************************************************************************
 			 * Create instance
 			 ********************************************************************************/
-			PUMP_INLINE PUMP_STATIC tls_transport_sptr create_instance()
+			PUMP_INLINE static tls_transport_sptr create_instance()
 			{
-				return tls_transport_sptr(new tls_transport);
+				INLINE_OBJECT_CREATE(
+					obj, 
+					tls_transport, 
+					()
+				);
+				return tls_transport_sptr(obj, object_delete<tls_transport>);
 			}
 
 			/*********************************************************************************
@@ -50,8 +54,8 @@ namespace pump {
 			 ********************************************************************************/
 			void init(
 				flow::flow_tls_sptr &flow,
-				PUMP_CONST address &local_address,
-				PUMP_CONST address &remote_address
+				const address &local_address,
+				const address &remote_address
 			);
 
 			/*********************************************************************************
@@ -60,7 +64,7 @@ namespace pump {
 			virtual transport_error start(
 				service_ptr sv,
 				int32 max_pending_send_size,
-				PUMP_CONST transport_callbacks &cbs
+				const transport_callbacks &cbs
 			) override;
 
 			/*********************************************************************************
@@ -79,12 +83,6 @@ namespace pump {
 			 ********************************************************************************/
 			virtual transport_error send(c_block_ptr b, uint32 size) override;
 
-			/*********************************************************************************
-			 * Send
-			 * After called success, the transport got the buffer onwership.
-			 ********************************************************************************/
-			virtual transport_error send(flow::buffer_ptr b) override;
-
 		protected:
 			/*********************************************************************************
 			 * Channel event callback
@@ -94,18 +92,18 @@ namespace pump {
 			/*********************************************************************************
 			 * Read event callback
 			 ********************************************************************************/
-			virtual void on_read_event(net::iocp_task_ptr itask) override;
+			virtual void on_read_event(void_ptr iocp_task) override;
 
 			/*********************************************************************************
 			 * Send event callback
 			 ********************************************************************************/
-			virtual void on_send_event(net::iocp_task_ptr itask) override;
+			virtual void on_send_event(void_ptr iocp_task) override;
 
 		private:
 			/*********************************************************************************
 			 * Constructor
 			 ********************************************************************************/
-			tls_transport() PUMP_NOEXCEPT;
+			tls_transport() noexcept;
 
 			/*********************************************************************************
 			 * Close flow

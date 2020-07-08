@@ -19,6 +19,50 @@
 namespace pump {
 	namespace transport {
 
+		bool base_transport::reset_callbacks(const transport_callbacks &cbs)
+		{
+			if (!is_started())
+				return false;
+
+			PUMP_ASSERT(cbs.read_cb || cbs.read_from_cb);
+			PUMP_ASSERT(cbs.disconnected_cb && cbs.stopped_cb);
+			cbs_ = cbs;
+
+			return true;
+		}
+
+		void base_transport::pause_read()
+		{
+			if (is_started())
+			{
+				auto tracker = r_tracker_;
+				if (!tracker)
+					return;
+
+				get_service()->pause_channel_tracker(tracker.get());
+
+				read_paused_.store(true);
+			}
+		}
+
+		transport_error base_transport::continue_read()
+		{
+			if (PUMP_UNLIKELY(!is_started()))
+				return ERROR_UNSTART;
+
+			PUMP_LOCK_SPOINTER(tracker, r_tracker_);
+			if (tracker == nullptr)
+				return ERROR_INVALID;
+
+			bool paused = true;
+			if (!read_paused_.compare_exchange_strong(paused, false))
+				return ERROR_INVALID;
+
+			get_service()->awake_channel_tracker(tracker);
+
+			return ERROR_OK;
+		}
+
 		void base_transport::on_tracker_event(int32 ev)
 		{
 			if (ev == TRACKER_EVENT_DEL)
@@ -36,8 +80,14 @@ namespace pump {
 		bool base_transport::__start_all_trackers(poll::channel_sptr &ch, bool rt, bool wt)
 		{
 			PUMP_ASSERT(!r_tracker_ && !s_tracker_);
-			r_tracker_.reset(new poll::channel_tracker(ch, TRACK_READ, TRACK_MODE_LOOP));
-			s_tracker_.reset(new poll::channel_tracker(ch, TRACK_WRITE, TRACK_MODE_ONCE));
+			r_tracker_.reset(
+				object_create<poll::channel_tracker>(ch, TRACK_READ, TRACK_MODE_LOOP),
+				object_delete<poll::channel_tracker>
+			);
+			s_tracker_.reset(
+				object_create<poll::channel_tracker>(ch, TRACK_WRITE, TRACK_MODE_ONCE),
+				object_delete<poll::channel_tracker>
+			);
 			if (!get_service()->add_channel_tracker(r_tracker_, rt) || 
 				!get_service()->add_channel_tracker(s_tracker_, wt))
 				return false;

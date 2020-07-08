@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#include "net/iocp.h"
+#include "net/socket.h"
 #include "pump/transport/flow/flow_tls.h"
 
 #if defined(USE_GNUTLS)
@@ -29,7 +31,7 @@ namespace pump {
 			struct tls_session
 			{
 #if defined(USE_GNUTLS)
-				tls_session() PUMP_NOEXCEPT : 
+				tls_session() noexcept :
 					session(nullptr)
 				{}
 
@@ -69,22 +71,20 @@ namespace pump {
 #endif
 			};
 
-			flow_tls::flow_tls() PUMP_NOEXCEPT : 
+			flow_tls::flow_tls() noexcept :
 				is_handshaked_(false),
 				session_(nullptr),
 				read_task_(nullptr),
 				net_read_data_pos_(0),
 				net_read_data_size_(0),
-				net_read_cache_raw_size_(0),
-				net_read_cache_raw_(nullptr),
-				ssl_read_cache_raw_size_(0),
-				ssl_read_cache_raw_(nullptr),
 				send_task_(nullptr)
 			{
 			}
 
 			flow_tls::~flow_tls()
 			{
+				close();
+
 #if defined(USE_GNUTLS)
 				if (session_)
 					delete session_;
@@ -99,11 +99,11 @@ namespace pump {
 			int32 flow_tls::init(poll::channel_sptr &ch, int32 fd, void_ptr xcred, bool client)
 			{
 #if defined(USE_GNUTLS)
-				PUMP_ASSERT_EXPR(ch, ch_ = ch);
-				PUMP_ASSERT_EXPR(fd > 0, fd_ = fd);
+				PUMP_DEBUG_ASSIGN(ch, ch_, ch);
+				PUMP_DEBUG_ASSIGN(fd > 0, fd_, fd);
 
 				PUMP_ASSERT(!session_);
-				session_ = new tls_session();
+				session_ = object_create<tls_session>();
 				if (client)
 					gnutls_init(&session_->session, GNUTLS_CLIENT | GNUTLS_NONBLOCK);
 				else 
@@ -122,25 +122,20 @@ namespace pump {
 				gnutls_transport_set_pull_function(session_->session, ssl_net_layer::data_pull);
 				// Set the callback that allows GnuTls to Get error if PULL or PUSH function error
 				gnutls_transport_set_errno_function(session_->session, ssl_net_layer::get_error);
-				
-				ssl_read_cache_.resize(MAX_FLOW_BUFFER_SIZE);
-				ssl_read_cache_raw_size_ = ssl_read_cache_.size();
-				ssl_read_cache_raw_ = (block_ptr)ssl_read_cache_.data();
 
-				net_read_cache_.resize(MAX_FLOW_BUFFER_SIZE*2);
-				net_read_cache_raw_size_ = net_read_cache_.size();
-				net_read_cache_raw_ = (block_ptr)net_read_cache_.data();
+				auto read_task = net::new_iocp_task();
+				net::set_iocp_task_fd(read_task, fd_);
+				net::set_iocp_task_notifier(read_task, ch_);
+				net::set_iocp_task_type(read_task, IOCP_TASK_READ);
+				net::set_iocp_task_buffer(read_task, net_read_cache_, sizeof(net_read_cache_));
 
-				read_task_ = net::new_iocp_task();
-				net::set_iocp_task_fd(read_task_, fd_);
-				net::set_iocp_task_notifier(read_task_, ch_);
-				net::set_iocp_task_type(read_task_, IOCP_TASK_READ);
-				net::set_iocp_task_buffer(read_task_, net_read_cache_raw_, net_read_cache_raw_size_);
+				auto send_task = net::new_iocp_task();
+				net::set_iocp_task_fd(send_task, fd_);
+				net::set_iocp_task_notifier(send_task, ch_);
+				net::set_iocp_task_type(send_task, IOCP_TASK_SEND);
 
-				send_task_ = net::new_iocp_task();
-				net::set_iocp_task_fd(send_task_, fd_);
-				net::set_iocp_task_notifier(send_task_, ch_);
-				net::set_iocp_task_type(send_task_, IOCP_TASK_SEND);
+				read_task_ = read_task;
+				send_task_ = send_task;
 
 				return FLOW_ERR_NO;
 #else
@@ -151,7 +146,7 @@ namespace pump {
 			void flow_tls::rebind_channel(poll::channel_sptr &ch)
 			{
 #if defined(USE_GNUTLS)
-				PUMP_ASSERT_EXPR(ch, ch_ = ch);
+				PUMP_DEBUG_ASSIGN(ch, ch_, ch);
 
 				net::set_iocp_task_notifier(read_task_, ch_);
 				net::set_iocp_task_notifier(send_task_, ch_);
@@ -198,13 +193,13 @@ namespace pump {
 #endif
 			}
 
-			int32 flow_tls::read_from_net(net::iocp_task_ptr itask)
+			int32 flow_tls::read_from_net(void_ptr iocp_task)
 			{
 #if defined(USE_GNUTLS)
 	#if defined(WIN32) && defined(USE_IOCP)
-				int32 size = net::get_iocp_task_processed_size(itask);
+				int32 size = net::get_iocp_task_processed_size(iocp_task);
 	#else
-				int32 size = net::read(fd_, net_read_cache_raw_, net_read_cache_raw_size_);
+				int32 size = net::read(fd_, net_read_cache_, sizeof(net_read_cache_));
 	#endif
 				if (PUMP_LIKELY(size > 0))
 				{
@@ -219,10 +214,10 @@ namespace pump {
 			c_block_ptr flow_tls::read_from_ssl(int32_ptr size)
 			{
 #if defined(USE_GNUTLS)
-				*size = (int32)gnutls_read(session_->session, ssl_read_cache_raw_, ssl_read_cache_raw_size_);
+				*size = (int32)gnutls_read(session_->session, ssl_read_cache_, sizeof(ssl_read_cache_));
 				if (*size <= 0 && gnutls_error_is_fatal(*size) != 0)
 					return nullptr;
-				return ssl_read_cache_raw_;
+				return ssl_read_cache_;
 #else
 				*size = -1;
 				return nullptr;
@@ -237,7 +232,7 @@ namespace pump {
 				if (size > 0)
 				{
 					// Copy read data to buffer.
-					memcpy(b, net_read_cache_raw_ + net_read_data_pos_, size);
+					memcpy(b, net_read_cache_ + net_read_data_pos_, size);
 					net_read_data_pos_ += size;
 					net_read_data_size_ -= size;
 				}
@@ -267,7 +262,11 @@ namespace pump {
 			{
 #if defined(USE_GNUTLS)
 	#if defined(WIN32) && defined(USE_IOCP)
-				net::set_iocp_task_buffer(send_task_, (int8_ptr)net_send_buffer_.data(), net_send_buffer_.data_size());
+				net::set_iocp_task_buffer(
+					send_task_, 
+					(block_ptr)net_send_buffer_.data(), 
+					net_send_buffer_.data_size()
+				);
 				if (net::post_iocp_send(send_task_))
 					return FLOW_ERR_NO;
 	#else
@@ -286,7 +285,7 @@ namespace pump {
 				return FLOW_ERR_ABORT;
 			}
 
-			int32 flow_tls::send_to_net(net::iocp_task_ptr itask)
+			int32 flow_tls::send_to_net(void_ptr iocp_task)
 			{
 #if defined(USE_GNUTLS)
 				auto data_size = net_send_buffer_.data_size();
@@ -294,7 +293,7 @@ namespace pump {
 					return FLOW_ERR_NO;
 
 	#if defined(WIN32) && defined(USE_IOCP)
-				int32 size = net::get_iocp_task_processed_size(itask);
+				int32 size = net::get_iocp_task_processed_size(iocp_task);
 				if (PUMP_LIKELY(size > 0))
 				{
 					PUMP_DEBUG_CHECK(net_send_buffer_.shift(size));
@@ -302,7 +301,11 @@ namespace pump {
 					data_size -= size;
 					if (data_size > 0)
 					{
-						net::set_iocp_task_buffer(send_task_, (block_ptr)net_send_buffer_.data(), data_size);
+						net::set_iocp_task_buffer(
+							send_task_, 
+							(block_ptr)net_send_buffer_.data(), 
+							data_size
+						);
 						if (net::post_iocp_send(send_task_))
 							return FLOW_ERR_AGAIN;
 					}

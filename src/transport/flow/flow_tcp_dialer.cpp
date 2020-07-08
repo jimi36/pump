@@ -14,13 +14,15 @@
  * limitations under the License.
  */
 
+#include "net/iocp.h"
+#include "net/socket.h"
 #include "pump/transport/flow/flow_tcp_dialer.h"
 
 namespace pump {
 	namespace transport {
 		namespace flow {
 
-			flow_tcp_dialer::flow_tcp_dialer() PUMP_NOEXCEPT : 
+			flow_tcp_dialer::flow_tcp_dialer() noexcept :
 				is_ipv6_(false),
 				dial_task_(nullptr)
 			{
@@ -28,15 +30,17 @@ namespace pump {
 
 			flow_tcp_dialer::~flow_tcp_dialer()
 			{
+				close();
+
 #if defined(WIN32) && defined(USE_IOCP)
 				if (dial_task_)
 					net::unlink_iocp_task(dial_task_);
 #endif
 			}
 
-			int32 flow_tcp_dialer::init(poll::channel_sptr &ch, PUMP_CONST address &bind_address)
+			int32 flow_tcp_dialer::init(poll::channel_sptr &ch, const address &bind_address)
 			{
-				PUMP_ASSERT_EXPR(ch, ch_ = ch);
+				PUMP_DEBUG_ASSIGN(ch, ch_, ch);
 	
 				is_ipv6_ = bind_address.is_ipv6();
 				int32 domain = is_ipv6_ ? AF_INET6 : AF_INET;
@@ -46,14 +50,15 @@ namespace pump {
 				if (fd_ == -1)
 					return FLOW_ERR_ABORT;
 
-				ext_ = net::new_net_extension(fd_);
-				if (!ext_)
+				extra_fns_ = net::new_iocp_extra_function(fd_);
+				if (!extra_fns_)
 					return FLOW_ERR_ABORT;
 
-				dial_task_ = net::new_iocp_task();
-				net::set_iocp_task_fd(dial_task_, fd_);
-				net::set_iocp_task_notifier(dial_task_, ch_);
-				net::set_iocp_task_type(dial_task_, IOCP_TASK_CONNECT);
+				auto dial_task = net::new_iocp_task();
+				net::set_iocp_task_fd(dial_task, fd_);
+				net::set_iocp_task_notifier(dial_task, ch_);
+				net::set_iocp_task_type(dial_task, IOCP_TASK_CONNECT);
+				dial_task_ = dial_task;
 #else
 				if ((fd_ = net::create_socket(domain, SOCK_STREAM)) == -1)
 					return FLOW_ERR_ABORT;
@@ -68,10 +73,15 @@ namespace pump {
 				return FLOW_ERR_NO;
 			}
 
-			int32 flow_tcp_dialer::want_to_connect(PUMP_CONST address &remote_address)
+			int32 flow_tcp_dialer::want_to_connect(const address &remote_address)
 			{
 #if defined(WIN32) && defined(USE_IOCP)
-				if (!net::post_iocp_connect(ext_, dial_task_, remote_address.get(), remote_address.len()))
+				if (!net::post_iocp_connect(
+						extra_fns_, 
+						dial_task_, 
+						remote_address.get(), 
+						remote_address.len())
+					)
 					return FLOW_ERR_ABORT;
 #else
 				if (!net::connect(fd_, (sockaddr*)remote_address.get(), remote_address.len()))
@@ -81,13 +91,13 @@ namespace pump {
 			}
 
 			int32 flow_tcp_dialer::connect(
-				net::iocp_task_ptr itask, 
+				void_ptr iocp_task,
 				address_ptr local_address, 
 				address_ptr remote_address
 			) {
 #if defined(WIN32) && defined(USE_IOCP)
-				PUMP_ASSERT(itask);
-				int32 ec = net::get_iocp_task_ec(itask);
+				PUMP_ASSERT(iocp_task);
+				int32 ec = net::get_iocp_task_ec(iocp_task);
 #else
 				int32 ec = net::get_socket_error(fd_);
 #endif

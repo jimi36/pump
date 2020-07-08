@@ -17,7 +17,7 @@
 #ifndef pump_transport_flow_buffer_h
 #define pump_transport_flow_buffer_h
 
-#include "pump/deps.h"
+#include "pump/headers.h"
 
 namespace pump {
 	namespace transport {
@@ -31,53 +31,59 @@ namespace pump {
 				/*********************************************************************************
 				 * Constructor
 				 ********************************************************************************/
-				buffer() PUMP_NOEXCEPT : 
-					rpos_(0)
-				{}
+				buffer() noexcept;
+
+				/*********************************************************************************
+				 * Deconstructor
+				 ********************************************************************************/
+				~buffer();
 
 				/*********************************************************************************
 				 * Append
 				 ********************************************************************************/
-				bool append(c_block_ptr b, int32 size);
+				bool append(c_block_ptr b, uint32 size);
 
 				/*********************************************************************************
 				 * Reset
 				 ********************************************************************************/
 				PUMP_INLINE void reset()
-				{ rpos_ = 0; raw_.clear(); }
+				{ data_pos_ = data_size_ = 0; }
 
 				/*********************************************************************************
 				 * Shift
 				 ********************************************************************************/
-				bool shift(int32 size);
+				bool shift(uint32 size);
 
 				/*********************************************************************************
 				 * Get buffer raw ptr
 				 ********************************************************************************/
-				PUMP_INLINE c_block_ptr raw() PUMP_CONST
-				{ return raw_.empty() ? nullptr : (c_block_ptr)raw_.data(); }
+				PUMP_INLINE c_block_ptr raw() const
+				{ return buffer_; }
 
 				/*********************************************************************************
 				 * Get buffer raw size
 				 ********************************************************************************/
-				PUMP_INLINE int32 raw_size() PUMP_CONST
-				{  return (int32)raw_.size(); }
+				PUMP_INLINE uint32 raw_size() const
+				{  return buffer_size_; }
 
 				/*********************************************************************************
 				 * Get data ptr
 				 ********************************************************************************/
-				PUMP_INLINE c_block_ptr data() PUMP_CONST
-				{ return raw_.empty() ? nullptr : raw_.data() + rpos_; }
+				PUMP_INLINE c_block_ptr data() const
+				{ return data_size_ == 0 ? nullptr : (buffer_ + data_pos_); }
 
 				/*********************************************************************************
 				 * Get data size
 				 ********************************************************************************/
-				PUMP_INLINE int32 data_size() PUMP_CONST
-				{ return (int32)raw_.size() - rpos_; }
+				PUMP_INLINE uint32 data_size() const
+				{ return data_size_; }
 
 			private:
-				int32 rpos_;
-				std::string raw_;
+				block_ptr buffer_;
+				uint32 buffer_size_;
+
+				uint32 data_pos_;
+				uint32 data_size_;
 			};
 			DEFINE_ALL_POINTER_TYPE(buffer);
 

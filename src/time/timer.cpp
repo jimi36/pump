@@ -25,7 +25,7 @@ namespace pump {
 		#define TIMER_STARTED 2
 		#define TIMER_PENDING 3
 
-		timer::timer(uint64 timeout, const timer_callback &cb, bool repeated) PUMP_NOEXCEPT : 
+		timer::timer(uint64 timeout, const timer_callback &cb, bool repeated) noexcept :
 			queue_(nullptr),
 			status_(TIMER_INIT),
 			cb_(cb),

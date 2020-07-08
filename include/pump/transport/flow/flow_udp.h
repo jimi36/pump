@@ -23,6 +23,8 @@ namespace pump {
 	namespace transport {
 		namespace flow {
 
+			#define UDP_BUFFER_SIZE 1024*64
+
 			class flow_udp: 
 				public flow_base
 			{
@@ -30,7 +32,7 @@ namespace pump {
 				/*********************************************************************************
 				 * Constructor
 				 ********************************************************************************/
-				flow_udp() PUMP_NOEXCEPT;
+				flow_udp() noexcept;
 
 				/*********************************************************************************
 				 * Deconstructor
@@ -43,7 +45,7 @@ namespace pump {
 				 *     FLOW_ERR_NO    => success
 				 *     FLOW_ERR_ABORT => error
 				 ********************************************************************************/
-				int32 init(poll::channel_sptr &ch, PUMP_CONST address &local_address);
+				int32 init(poll::channel_sptr &ch, const address &local_address);
 
 				/*********************************************************************************
 				 * Begin read task
@@ -58,7 +60,7 @@ namespace pump {
 				 * Read from
 				 ********************************************************************************/
 				c_block_ptr read_from(
-					net::iocp_task_ptr itask, 
+					void_ptr iocp_task, 
 					int32_ptr size, 
 					address_ptr remote_address
 				);
@@ -66,13 +68,14 @@ namespace pump {
 				/*********************************************************************************
 				 * Send to
 				 ********************************************************************************/
-				int32 send(c_block_ptr b, uint32 size, PUMP_CONST address &remote_address);
+				int32 send(c_block_ptr b, uint32 size, const address &remote_address);
 
 			private:
 				// Read task for IOCP
-				net::iocp_task_ptr read_task_;
+				void_ptr read_task_;
+
 				// Read cache
-				std::string read_cache_;
+				block read_cache_[UDP_BUFFER_SIZE];
 			};
 			DEFINE_ALL_POINTER_TYPE(flow_udp);
 

@@ -14,13 +14,14 @@
  * limitations under the License.
  */
 
-#include "pump/utils/strings.h"
+#include "net/socket.h"
+#include "pump/utils.h"
 #include "pump/transport/address.h"
 
 namespace pump {
 	namespace transport {
 
-		address::address() PUMP_NOEXCEPT : 
+		address::address() noexcept :
 			is_v6_(false),
 			addrlen_(0),
 			port_(0)
@@ -28,7 +29,7 @@ namespace pump {
 			memset(&addr_, 0, sizeof(addr_));
 		}
 
-		address::address(PUMP_CONST std::string &ip, uint16 port)
+		address::address(const std::string &ip, uint16 port)
 		{
 			if (net::string_to_address(ip, port, (struct sockaddr*)addr_, &addrlen_))
 			{
@@ -41,7 +42,7 @@ namespace pump {
 			}
 		}
 
-		address::address(PUMP_CONST struct sockaddr *addr, int32 addr_len)
+		address::address(const struct sockaddr *addr, int32 addr_len)
 		{
 			addrlen_ = addr_len;
 			memcpy(&addr_, addr, addr_len);
@@ -53,7 +54,7 @@ namespace pump {
 			__update();
 		}
 
-		bool address::set(PUMP_CONST std::string &ip, uint16 port)
+		bool address::set(const std::string &ip, uint16 port)
 		{
 			if (net::string_to_address(ip, port, (struct sockaddr*)addr_, &addrlen_))
 			{
@@ -72,7 +73,7 @@ namespace pump {
 			return true;
 		}
 
-		bool address::set(PUMP_CONST struct sockaddr *addr, int32 addrlen)
+		bool address::set(const struct sockaddr *addr, int32 addrlen)
 		{
 			if (addrlen == sizeof(struct sockaddr_in6))
 				is_v6_ = true;
@@ -89,14 +90,14 @@ namespace pump {
 			return true;
 		}
 
-		std::string address::to_string() PUMP_CONST
+		std::string address::to_string() const
 		{
 			block tmp[126] = { 0 };
 			pump_snprintf(tmp, sizeof(tmp) - 1, "%s:%d", ip_.c_str(), port_);
 			return std::move(std::string(tmp));
 		}
 
-		bool address::operator ==(PUMP_CONST address& other) PUMP_CONST PUMP_NOEXCEPT
+		bool address::operator ==(const address& other) const noexcept
 		{
 			if (is_v6_ == other.is_v6_ &&
 				addrlen_ == other.addrlen_ &&
@@ -106,7 +107,7 @@ namespace pump {
 			return false;
 		}
 
-		bool address::operator <(const address& other) PUMP_CONST PUMP_NOEXCEPT
+		bool address::operator <(const address& other) const noexcept
 		{
 			if (addrlen_ < other.addrlen_)
 				return true;

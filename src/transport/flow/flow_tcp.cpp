@@ -14,16 +14,16 @@
  * limitations under the License.
  */
 
+#include "net/iocp.h"
+#include "net/socket.h"
 #include "pump/transport/flow/flow_tcp.h"
 
 namespace pump {
 	namespace transport {
 		namespace flow {
 
-			flow_tcp::flow_tcp() PUMP_NOEXCEPT : 
+			flow_tcp::flow_tcp() noexcept :
 				read_task_(nullptr),
-				net_read_cache_raw_size_(0),
-				net_read_cache_raw_(nullptr),
 				send_task_(nullptr),
 				send_buffer_(nullptr)
 			{
@@ -31,6 +31,8 @@ namespace pump {
 
 			flow_tcp::~flow_tcp()
 			{
+				close();
+
 				if (read_task_)
 					net::unlink_iocp_task(read_task_);
 				if (send_task_)
@@ -39,24 +41,24 @@ namespace pump {
 
 			int32 flow_tcp::init(poll::channel_sptr &ch, int32 fd)
 			{
-				PUMP_ASSERT_EXPR(ch, ch_ = ch);
-				PUMP_ASSERT_EXPR(fd > 0, fd_ = fd);
-				
-				read_cache_.resize(MAX_FLOW_BUFFER_SIZE);
-				net_read_cache_raw_size_ = (int32)read_cache_.size();
-				net_read_cache_raw_ = (block_ptr)read_cache_.data();
+				PUMP_DEBUG_ASSIGN(ch, ch_, ch);
+				PUMP_DEBUG_ASSIGN(fd > 0, fd_, fd);
 
-				read_task_ = net::new_iocp_task();
-				net::set_iocp_task_fd(read_task_, fd_);
-				net::set_iocp_task_notifier(read_task_, ch_);
-				net::set_iocp_task_type(read_task_, IOCP_TASK_READ);
-				net::set_iocp_task_buffer(read_task_, net_read_cache_raw_, net_read_cache_raw_size_);
+#if defined(WIN32) && defined(USE_IOCP)
+				auto read_task = net::new_iocp_task();
+				net::set_iocp_task_fd(read_task, fd_);
+				net::set_iocp_task_notifier(read_task, ch_);
+				net::set_iocp_task_type(read_task, IOCP_TASK_READ);
+				net::set_iocp_task_buffer(read_task, read_cache_, sizeof(read_cache_));
 
-				send_task_ = net::new_iocp_task();
-				net::set_iocp_task_fd(send_task_, fd_);
-				net::set_iocp_task_notifier(send_task_, ch_);
-				net::set_iocp_task_type(send_task_, IOCP_TASK_SEND);
+				auto send_task = net::new_iocp_task();
+				net::set_iocp_task_fd(send_task, fd_);
+				net::set_iocp_task_notifier(send_task, ch_);
+				net::set_iocp_task_type(send_task, IOCP_TASK_SEND);
 
+				read_task_ = read_task;
+				send_task_ = send_task;
+#endif
 				return FLOW_ERR_NO;
 			}
 
@@ -69,22 +71,26 @@ namespace pump {
 				return FLOW_ERR_NO;
 			}
 
-			c_block_ptr flow_tcp::read(net::iocp_task_ptr itask, int32_ptr size)
+			c_block_ptr flow_tcp::read(void_ptr iocp_task, int32_ptr size)
 			{
 #if defined(WIN32) && defined(USE_IOCP)
-				net::get_iocp_task_processed_data(itask, size);
+				net::get_iocp_task_processed_data(iocp_task, size);
 #else
-				*size = net::read(fd_, net_read_cache_raw_, net_read_cache_raw_size_);
+				*size = net::read(fd_, read_cache_, sizeof(read_cache_));
 #endif
-				return net_read_cache_raw_;
+				return read_cache_;
 			}
 
 			int32 flow_tcp::want_to_send(buffer_ptr sb)
 			{
-				PUMP_ASSERT_EXPR(sb, send_buffer_ = sb);
+				PUMP_DEBUG_ASSIGN(sb, send_buffer_, sb);
 
 #if defined(WIN32) && defined(USE_IOCP)
-				net::set_iocp_task_buffer(send_task_, (block_ptr)send_buffer_->data(), send_buffer_->data_size());
+				net::set_iocp_task_buffer(
+					send_task_, 
+					(block_ptr)send_buffer_->data(), 
+					send_buffer_->data_size()
+				);
 				if (net::post_iocp_send(send_task_))
 					return FLOW_ERR_NO;
 #else
@@ -102,10 +108,10 @@ namespace pump {
 				return FLOW_ERR_ABORT;
 			}
 
-			int32 flow_tcp::send(net::iocp_task_ptr itask)
+			int32 flow_tcp::send(void_ptr iocp_task)
 			{
 #if defined(WIN32) && defined(USE_IOCP)
-				int32 size = net::get_iocp_task_processed_size(itask);
+				int32 size = net::get_iocp_task_processed_size(iocp_task);
 				if (size > 0)
 				{
 					PUMP_DEBUG_CHECK(send_buffer_->shift(size));
@@ -113,12 +119,16 @@ namespace pump {
 					if (data_size == 0)
 						return FLOW_ERR_NO_DATA;
 
-					net::set_iocp_task_buffer(send_task_, (block_ptr)send_buffer_->data(), data_size);
+					net::set_iocp_task_buffer(
+						send_task_, 
+						(block_ptr)send_buffer_->data(), 
+						data_size
+					);
 					if (net::post_iocp_send(send_task_))
 						return FLOW_ERR_AGAIN;
 				}
 #else
-				auto data_size = send_buffer_->data_size();
+				auto data_size = (int32)send_buffer_->data_size();
 				if (data_size == 0)
 					return FLOW_ERR_NO_DATA;
 
