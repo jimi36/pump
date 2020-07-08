@@ -60,7 +60,7 @@ namespace pump {
 			out.resize(outlen, 0);
 			block_ptr pdes = (block_ptr)out.data();
 
-			size_t ret = iconv(cd, &psrc, &inlen, &pdes, &outlen);
+			iconv(cd, &psrc, &inlen, &pdes, &outlen);
 			out.reserve(outlen);
 
 			iconv_close(cd);
@@ -92,7 +92,7 @@ namespace pump {
 			out.resize(outlen, 0);
 			block_ptr pdes = (block_ptr)out.c_str();
 
-			size_t ret = iconv(cd, &psrc, &inlen, &pdes, &outlen);
+			iconv(cd, &psrc, &inlen, &pdes, &outlen);
 			out.reserve(outlen);
 
 			iconv_close(cd);

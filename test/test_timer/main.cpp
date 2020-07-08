@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include <pump/times.h>
+#include <pump/time/timer.h>
 #include <pump/service.h>
 
 class Timeout: 
@@ -14,8 +14,8 @@ public:
 	void start()
 	{
 		printf("new timeout\n");
-		pump::timer_callback cb = function::bind(&Timeout::on_timer_timeout, this);
-		t_= pump::timer::create_instance(1000, cb, true);
+		pump::time::timer_callback cb = pump_bind(&Timeout::on_timer_timeout, this);
+		t_= pump::time::timer::create_instance(1000, cb, true);
 		if (!sv_->start_timer(t_))
 		{
 			printf("start timeout error\n");
@@ -32,7 +32,7 @@ public:
 
 private:
 	pump::service *sv_;
-	std::shared_ptr<pump::timer> t_;
+	std::shared_ptr<pump::time::timer> t_;
 };
 
 int main(int argc, const char **argv)

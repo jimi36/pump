@@ -176,7 +176,7 @@ void start_tls_client(const std::string &ip, uint16 port)
 	time::timer_sptr t = time::timer::create_instance(1000, cb, true);
 	sv->start_timer(t);
 
-	Sleep(2000);
+	std::this_thread::sleep_for(std::chrono::seconds(3));
 
  	//auto b = pump::get_clock_microsecond();
 	for (auto t : my_dialers)

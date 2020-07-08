@@ -95,7 +95,7 @@ BUILD_OBJECT_CREATE_FUNCTION(9)
 #define INLINE_OBJECT_CREATE(obj, TYPE, args) \
 	TYPE* obj = (TYPE*)pump_malloc(sizeof(TYPE)); \
 	if (PUMP_UNLIKELY(obj != nullptr)) \
-		new (obj) TYPE##args;
+		new (obj) TYPE args;
 
 template <typename T>
 PUMP_INLINE void object_delete(T *p)

@@ -166,7 +166,8 @@ namespace pump {
 				cbs.data_cb = pump_bind(&client::on_data, wptr, _1, _2, _3);
 
 				connection_sptr conn(new connection(true));
-				if (!conn->upgrade(http_cli->get_connection()) || !conn->start(cbs))
+				auto http_conn = http_cli->get_connection();
+				if (!conn->upgrade(http_conn) || !conn->start(cbs))
 					return false;
 
 				conn_ = conn;

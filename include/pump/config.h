@@ -19,7 +19,7 @@
 
 #define PUMP_MAJOR_VERSION 1
 #define PUMP_MINOR_VERSION 1
-#define PUMP_BUILD_VERSION 3
+#define PUMP_BUILD_VERSION 4
 
 #define WITHOUT_IOCP
 #if defined(WITH_IOCP)
