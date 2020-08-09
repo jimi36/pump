@@ -2,7 +2,7 @@
 # Config build environment
 #
 
-# Specifies comiler on linux
+# Specifies compiler on linux
 IF(UNIX)
 	SET(CMAKE_C_COMPILER gcc)
 	SET(CMAKE_CXX_COMPILER g++)

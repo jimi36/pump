@@ -31,8 +31,8 @@ INCLUDE(option_jemalloc)
 OPTION(WITH_GNUTLS "Option build with gnutls" OFF)
 INCLUDE(option_gnutls)
 
-# Load set_complie_flags
-INCLUDE(set_complie_flags)
+# Load set_compile_flags
+INCLUDE(set_compile_flags)
 
 # Build pump library
 INCLUDE(build_pump_library)

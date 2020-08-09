@@ -9,7 +9,7 @@
 #
 
 MACRO(build_test_project NAME)
-	set_complie_flags(${EXE_COMPILE_FLAGS})
+	set_compile_flags(${EXE_COMPILE_FLAGS})
 
 	FILE(GLOB_RECURSE SOURCES ${ROOT_DIR}/test/${NAME}/*)
 

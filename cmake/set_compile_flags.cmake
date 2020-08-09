@@ -4,7 +4,7 @@
 #	EXE_COMPILE_FLAGS - compile exe flags
 # 
 # Export functions:
-#	set_complie_flags(flags)
+#	set_compile_flags(flags)
 #
 
 IF(WIN32)
@@ -26,7 +26,7 @@ ELSEIF(UNIX)
 ENDIF()
 
 
-MACRO(set_complie_flags FLAGS)
+MACRO(set_compile_flags FLAGS)
 	IF(WIN32)
 		IF(BUILD_DEBUG)
 			SET(CMAKE_CXX_FLAGS_DEBUG ${FLAGS})

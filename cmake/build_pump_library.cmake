@@ -12,7 +12,7 @@ MACRO(build_pump_library)
 		"${ROOT_DIR}/include/pump/config.h"
 	)
 
-	set_complie_flags(${LIB_COMPILE_FLAGS})
+	set_compile_flags(${LIB_COMPILE_FLAGS})
 
 	FILE(GLOB_RECURSE LIB_SOURCES ${ROOT_DIR}/src/*.*)
 	FILE(GLOB_RECURSE LIB_HEADERS ${ROOT_DIR}/include/pump/*.h)
