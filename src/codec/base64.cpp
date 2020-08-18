@@ -72,7 +72,7 @@ namespace pump {
 				}
 			}
 
-			return std::move(out);
+			return out;
 		}
 
 		PUMP_INLINE static uint32 decoded_length(const std::string &in)
@@ -151,7 +151,7 @@ namespace pump {
 				}
 			}
 
-			return std::move(out);
+			return out;
 		}
 
 		PUMP_INLINE void a3_to_a4(uint8_ptr a4, uint8_ptr a3)

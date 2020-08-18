@@ -67,7 +67,7 @@ namespace pump {
 		}
 
 #endif
-		return std::move(out);
+		return out;
 	}
 
 	std::string utf8_to_gbk(const std::string &in)
@@ -98,43 +98,43 @@ namespace pump {
 			iconv_close(cd);
 		}
 #endif	
-		return std::move(out);
+		return out;
 	}
 
 	std::string join_strings(
 		const std::vector<std::string> &src,
 		const std::string &sep
 	) {
-		std::string result;
+		std::string out;
 
 		if (src.empty())
-			return result;
+			return out;
 
 		auto beg = src.begin();
-		result = *(beg++);
+		out = *(beg++);
 
 		for (; beg != src.end(); beg++)
 		{
-			result += sep + *beg;
+			out += sep + *beg;
 		}
 
-		return std::move(result);
+		return out;
 	}
 
 	std::vector<std::string> split_string(
 		const std::string &src,
 		const std::string &sep
 	) {
-		std::vector<std::string> result;
+		std::vector<std::string> out;
 
 		std::regex regx(sep);
-		result.insert(
-			result.end(),
+		out.insert(
+			out.end(),
 			std::sregex_token_iterator(src.begin(), src.end(), regx, -1),
 			std::sregex_token_iterator()
 		);
 
-		return std::move(result);
+		return out;
 	}
 
 }
