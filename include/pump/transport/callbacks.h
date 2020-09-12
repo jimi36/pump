@@ -20,57 +20,36 @@
 #include "pump/transport/address.h"
 
 namespace pump {
-	namespace transport {
+namespace transport {
 
-		class base_transport;
-		DEFINE_ALL_POINTER_TYPE(base_transport);
+    class base_transport;
+    DEFINE_ALL_POINTER_TYPE(base_transport);
 
-		struct acceptor_callbacks
-		{
-			pump_function<
-				void(base_transport_sptr&&)
-			> accepted_cb;
+    struct acceptor_callbacks {
+        pump_function<void(base_transport_sptr &)> accepted_cb;
 
-			pump_function<
-				void()
-			> stopped_cb;
-		};
+        pump_function<void()> stopped_cb;
+    };
 
-		struct dialer_callbacks
-		{
-			pump_function<
-				void(base_transport_sptr&&, bool)
-			> dialed_cb;
+    struct dialer_callbacks {
+        pump_function<void(base_transport_sptr &, bool)> dialed_cb;
 
-			pump_function<
-				void()
-			> timeout_cb;
+        pump_function<void()> timeout_cb;
 
-			pump_function<
-				void()
-			> stopped_cb;
-		};
+        pump_function<void()> stopped_cb;
+    };
 
-		struct transport_callbacks
-		{
-			pump_function<
-				void(c_block_ptr, int32)
-			> read_cb;
+    struct transport_callbacks {
+        pump_function<void(c_block_ptr, int32)> read_cb;
 
-			pump_function<
-				void(c_block_ptr, int32, const address&)
-			> read_from_cb;
+        pump_function<void(c_block_ptr, int32, const address &)> read_from_cb;
 
-			pump_function<
-				void()
-			> disconnected_cb;
+        pump_function<void()> disconnected_cb;
 
-			pump_function<
-				void()
-			> stopped_cb;
-		};
+        pump_function<void()> stopped_cb;
+    };
 
-	}
-}
+}  // namespace transport
+}  // namespace pump
 
 #endif

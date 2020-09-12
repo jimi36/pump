@@ -17,150 +17,140 @@
 #ifndef pump_transport_tls_acceptor_h
 #define pump_transport_tls_acceptor_h
 
+#include <unordered_map>
+
 #include "pump/transport/base_acceptor.h"
+#include "pump/transport/tls_handshaker.h"
 #include "pump/transport/flow/flow_tls_acceptor.h"
 
 namespace pump {
-	namespace transport {
+namespace transport {
 
-		class tls_acceptor;
-		DEFINE_ALL_POINTER_TYPE(tls_acceptor);
+    class tls_acceptor;
+    DEFINE_ALL_POINTER_TYPE(tls_acceptor);
 
-		class tls_handshaker;
-		DEFINE_ALL_POINTER_TYPE(tls_handshaker);
+    class LIB_PUMP tls_acceptor : public base_acceptor,
+                                  public std::enable_shared_from_this<tls_acceptor> {
+      public:
+        /*********************************************************************************
+         * Create instance
+         ********************************************************************************/
+        PUMP_INLINE static tls_acceptor_sptr create_instance_with_file(
+            const std::string &cert,
+            const std::string &key,
+            const address &listen_address,
+            int64 handshake_timeout = 0) {
+            INLINE_OBJECT_CREATE(
+                obj, tls_acceptor, (true, cert, key, listen_address, handshake_timeout));
+            return tls_acceptor_sptr(obj, object_delete<tls_acceptor>);
+        }
 
-		class LIB_PUMP tls_acceptor : 
-			public base_acceptor,
-			public std::enable_shared_from_this<tls_acceptor>
-		{
-		public:
-			/*********************************************************************************
-			 * Create instance
-			 ********************************************************************************/
-			PUMP_INLINE static tls_acceptor_sptr create_instance_with_file(
-				const std::string &cert,
-				const std::string &key,
-				const address &listen_address,
-				int64 handshake_timeout = 0
-			) {
-				INLINE_OBJECT_CREATE(
-					obj, 
-					tls_acceptor, 
-					(true, cert, key, listen_address, handshake_timeout)
-				);
-				return tls_acceptor_sptr(obj, object_delete<tls_acceptor>);
-			}
+        /*********************************************************************************
+         * Create instance
+         ********************************************************************************/
+        PUMP_INLINE static tls_acceptor_sptr create_instance_with_memory(
+            const std::string &cert,
+            const std::string &key,
+            const address &listen_address,
+            int64 handshake_timeout = 0) {
+            INLINE_OBJECT_CREATE(
+                obj, tls_acceptor, (false, cert, key, listen_address, handshake_timeout));
+            return tls_acceptor_sptr(obj, object_delete<tls_acceptor>);
+        }
 
-			/*********************************************************************************
-			 * Create instance
-			 ********************************************************************************/
-			PUMP_INLINE static tls_acceptor_sptr create_instance_with_memory(
-				const std::string &cert,
-				const std::string &key,
-				const address &listen_address,
-				int64 handshake_timeout = 0
-			) {
-				INLINE_OBJECT_CREATE(
-					obj, 
-					tls_acceptor, 
-					(false, cert, key, listen_address, handshake_timeout)
-				);
-				return tls_acceptor_sptr(obj, object_delete<tls_acceptor>);
-			}
+        /*********************************************************************************
+         * Deconstructor
+         ********************************************************************************/
+        virtual ~tls_acceptor();
 
-			/*********************************************************************************
-			 * Deconstructor
-			 ********************************************************************************/
-			virtual ~tls_acceptor();
+        /*********************************************************************************
+         * Start
+         ********************************************************************************/
+        virtual transport_error start(service_ptr sv,
+                                      const acceptor_callbacks &cbs) override;
 
-			/*********************************************************************************
-			 * Start
-			 ********************************************************************************/
-			virtual transport_error start(
-				service_ptr sv, 
-				const acceptor_callbacks &cbs
-			) override;
+        /*********************************************************************************
+         * Stop
+         ********************************************************************************/
+        virtual void stop() override;
 
-			/*********************************************************************************
-			 * Stop
-			 ********************************************************************************/
-			virtual void stop() override;
+      protected:
+        /*********************************************************************************
+         * Read event callback
+         ********************************************************************************/
+#if defined(PUMP_HAVE_IOCP)
+        virtual void on_read_event(void_ptr iocp_task) override;
+#else
+        virtual void on_read_event() override;
+#endif
 
-		protected:
-			/*********************************************************************************
-			 * Read event callback
-			 ********************************************************************************/
-			virtual void on_read_event(void_ptr iocp_task) override;
+      protected:
+        /*********************************************************************************
+         * TLS handshaked callback
+         ********************************************************************************/
+        static void on_handshaked(tls_acceptor_wptr wptr,
+                                  tls_handshaker_ptr handshaker,
+                                  bool succ);
 
-		protected:
-			/*********************************************************************************
-			 * TLS handshaked callback
-			 ********************************************************************************/
-			static void on_handshaked(
-				tls_acceptor_wptr wptr,
-				tls_handshaker_ptr handshaker,
-				bool succ
-			);
+        /*********************************************************************************
+         * Tls handskake stopped callback
+         ********************************************************************************/
+        static void on_handshake_stopped(tls_acceptor_wptr wptr,
+                                         tls_handshaker_ptr handshaker);
 
-			/*********************************************************************************
-			 * Tls handskake stopped callback
-			 ********************************************************************************/
-			static void on_handshake_stopped(
-				tls_acceptor_wptr wptr,
-				tls_handshaker_ptr handshaker
-			);
+      private:
+        /*********************************************************************************
+         * Constructor
+         ********************************************************************************/
+        tls_acceptor(bool use_file,
+                     const std::string &cert_mem,
+                     const std::string &key_mem,
+                     const address &listen_address,
+                     int64 handshake_timeout);
 
-		private:
-			/*********************************************************************************
-			 * Constructor
-			 ********************************************************************************/
-			tls_acceptor(
-				bool use_file,
-				const std::string &cert_mem,
-				const std::string &key_mem,
-				const address &listen_address,
-				int64 handshake_timeout
-			);
+        /*********************************************************************************
+         * Open flow
+         ********************************************************************************/
+        bool __open_flow();
 
-			/*********************************************************************************
-			 * Open flow
-			 ********************************************************************************/
-			bool __open_flow();
+        /*********************************************************************************
+         * Close flow
+         ********************************************************************************/
+        PUMP_INLINE void __close_flow() {
+            if (flow_)
+                flow_->close();
+        }
 
-			/*********************************************************************************
-			 * Close flow
-			 ********************************************************************************/
-			PUMP_INLINE void __close_flow()
-			{ if (flow_) flow_->close(); }
+        /*********************************************************************************
+         * Create handshaker
+         ********************************************************************************/
+        tls_handshaker_ptr __create_handshaker();
 
-			/*********************************************************************************
-			 * Create handshaker
-			 ********************************************************************************/
-			tls_handshaker_ptr __create_handshaker();
+        /*********************************************************************************
+         * Remove handshaker
+         ********************************************************************************/
+        void __remove_handshaker(tls_handshaker_ptr handshaker);
 
-			/*********************************************************************************
-			 * Remove handshaker
-			 ********************************************************************************/
-			void __remove_handshaker(tls_handshaker_ptr handshaker);
+        /*********************************************************************************
+         * Stop all handshakers
+         ********************************************************************************/
+        void __stop_all_handshakers();
 
-			/*********************************************************************************
-			 * Stop all handshakers
-			 ********************************************************************************/
-			void __stop_all_handshakers();
+      private:
+        // GNUTLS credentials
+        void_ptr xcred_;
 
-		private:
-			// GNUTLS credentials
-			void_ptr xcred_;
-			// GNUTLS handshake timeout time
-			int64 handshake_timeout_;
-			// Handshakers
-			std::mutex handshaker_mx_;
-			std::unordered_map<tls_handshaker_ptr, tls_handshaker_sptr> handshakers_;
+        // GNUTLS handshake timeout time
+        int64 handshake_timeout_;
 
-			// Acceptor flow
-			flow::flow_tls_acceptor_sptr flow_;
-		};
-	}
-}
+        // Handshakers
+        std::mutex handshaker_mx_;
+        std::unordered_map<tls_handshaker_ptr, tls_handshaker_sptr> handshakers_;
+
+        // Acceptor flow
+        flow::flow_tls_acceptor_sptr flow_;
+    };
+}  // namespace transport
+}  // namespace pump
 
 #endif

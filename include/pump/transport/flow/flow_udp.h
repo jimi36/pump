@@ -20,67 +20,67 @@
 #include "pump/transport/flow/flow.h"
 
 namespace pump {
-	namespace transport {
-		namespace flow {
+namespace transport {
+    namespace flow {
 
-			#define UDP_BUFFER_SIZE 1024*64
+        class flow_udp : public flow_base {
+          public:
+            /*********************************************************************************
+             * Constructor
+             ********************************************************************************/
+            flow_udp() noexcept;
 
-			class flow_udp: 
-				public flow_base
-			{
-			public:
-				/*********************************************************************************
-				 * Constructor
-				 ********************************************************************************/
-				flow_udp() noexcept;
+            /*********************************************************************************
+             * Deconstructor
+             ********************************************************************************/
+            virtual ~flow_udp();
 
-				/*********************************************************************************
-				 * Deconstructor
-				 ********************************************************************************/
-				virtual ~flow_udp();
+            /*********************************************************************************
+             * Init flow
+             * Return results:
+             *     FLOW_ERR_NO    => success
+             *     FLOW_ERR_ABORT => error
+             ********************************************************************************/
+            flow_error init(poll::channel_sptr &&ch, const address &local_address);
 
-				/*********************************************************************************
-				 * Init flow
-				 * Return results:
-				 *     FLOW_ERR_NO    => success
-				 *     FLOW_ERR_ABORT => error
-				 ********************************************************************************/
-				int32 init(poll::channel_sptr &ch, const address &local_address);
+#if defined(PUMP_HAVE_IOCP)
+            /*********************************************************************************
+             * Begin read task
+             * If using IOCP this post an IOCP task for reading, else do nothing.
+             * Return results:
+             *     FLOW_ERR_NO    => success
+             *     FLOW_ERR_ABORT => error
+             ********************************************************************************/
+            flow_error want_to_read();
+#endif
 
-				/*********************************************************************************
-				 * Begin read task
-				 * If using IOCP this post an IOCP task for reading, else do nothing.
-				 * Return results:
-				 *     FLOW_ERR_NO    => success
-				 *     FLOW_ERR_ABORT => error
-				 ********************************************************************************/
-				int32 want_to_read();
+            /*********************************************************************************
+             * Read from
+             ********************************************************************************/
+#if defined(PUMP_HAVE_IOCP)
+            c_block_ptr read_from(void_ptr iocp_task,
+                                  int32_ptr size,
+                                  address_ptr remote_address);
+#else
+            c_block_ptr read_from(int32_ptr size, address_ptr remote_address);
+#endif
 
-				/*********************************************************************************
-				 * Read from
-				 ********************************************************************************/
-				c_block_ptr read_from(
-					void_ptr iocp_task, 
-					int32_ptr size, 
-					address_ptr remote_address
-				);
+            /*********************************************************************************
+             * Send to
+             ********************************************************************************/
+            int32 send(c_block_ptr b, uint32 size, const address &remote_address);
 
-				/*********************************************************************************
-				 * Send to
-				 ********************************************************************************/
-				int32 send(c_block_ptr b, uint32 size, const address &remote_address);
+          private:
+            // Read task for IOCP
+            void_ptr read_task_;
 
-			private:
-				// Read task for IOCP
-				void_ptr read_task_;
+            // Read cache
+            std::string read_cache_;
+        };
+        DEFINE_ALL_POINTER_TYPE(flow_udp);
 
-				// Read cache
-				block read_cache_[UDP_BUFFER_SIZE];
-			};
-			DEFINE_ALL_POINTER_TYPE(flow_udp);
-
-		}
-	}
-}
+    }  // namespace flow
+}  // namespace transport
+}  // namespace pump
 
 #endif

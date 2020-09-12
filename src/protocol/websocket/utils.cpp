@@ -14,73 +14,66 @@
  * limitations under the License.
  */
 
+#include <random>
+
 #include "pump/codec/sha1.h"
 #include "pump/codec/base64.h"
 #include "pump/protocol/websocket/utils.h"
 
 namespace pump {
-	namespace protocol {
-		namespace websocket {
+namespace protocol {
+    namespace websocket {
 
-			uint8 random_uint8()
-			{
-				static std::default_random_engine e((uint32)::time(0));
-				static std::uniform_int_distribution<uint16> u(0, 255);
-				return (uint8)u(e);
-			}
+        uint8 random_uint8() {
+            static std::default_random_engine e((uint32)::time(0));
+            static std::uniform_int_distribution<uint16> u(0, 255);
+            return (uint8)u(e);
+        }
 
-			std::string compute_sec_key()
-			{
-				std::string tmp(16, 0);
-				for (int32 i = 0; i < 8; i++)
-				{
-					tmp[i * 2] = random_uint8();
-				}
+        std::string compute_sec_key() {
+            std::string tmp(16, 0);
+            for (int32 i = 0; i < 8; i++) {
+                tmp[i * 2] = random_uint8();
+            }
 
-				return codec::base64_encode(tmp);
-			}
+            return codec::base64_encode(tmp);
+        }
 
-			std::string compute_sec_accept_key(const std::string &sec_key)
-			{
-				std::string hash(20, 0);
-				std::string tmp = sec_key + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
-				codec::sha1(tmp.c_str(), (uint32)tmp.size(), (block_ptr)hash.c_str());
+        std::string compute_sec_accept_key(const std::string &sec_key) {
+            std::string hash(20, 0);
+            std::string tmp = sec_key + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+            codec::sha1(tmp.c_str(), (uint32)tmp.size(), (block_ptr)hash.c_str());
 
-				return codec::base64_encode(hash);
-			}
+            return codec::base64_encode(hash);
+        }
 
-			std::string match_protocol(
-				const std::vector<std::string> &srcs,
-				const std::string &des
-			) {
-				std::string protocol;
-				if (std::find(srcs.begin(), srcs.end(), des) != srcs.end())
-					protocol = des;
-				return protocol;
-			}
+        std::string match_protocol(const std::vector<std::string> &srcs,
+                                   const std::string &des) {
+            std::string protocol;
+            if (std::find(srcs.begin(), srcs.end(), des) != srcs.end())
+                protocol = des;
+            return protocol;
+        }
 
-			void send_http_error_response(
-				http::connection_ptr conn,
-				int32 status_code,
-				const std::string &reason
-			) {
-				http::response resp;
-				resp.set_http_version(http::VERSION_11);
-				resp.set_status_code(status_code);
+        void send_http_error_response(http::connection_ptr conn,
+                                      int32 status_code,
+                                      const std::string &reason) {
+            http::response resp;
+            resp.set_http_version(http::VERSION_11);
+            resp.set_status_code(status_code);
 
-				if (!reason.empty())
-				{
-					resp.get_header()->set("Content-Length", reason.size());
+            if (!reason.empty()) {
+                resp.get_header()->set("Content-Length", (int32)reason.size());
 
-					http::content_sptr ct(new http::content);
-					ct->append(reason);
+                http::content_sptr ct(new http::content);
+                ct->append(reason);
 
-					resp.set_content(ct);
-				}
+                resp.set_content(ct);
+            }
 
-				conn->send(&resp);
-			}
+            conn->send(&resp);
+        }
 
-		}
-	}
-}
+    }  // namespace websocket
+}  // namespace protocol
+}  // namespace pump

@@ -22,121 +22,124 @@
 #include "pump/transport/tcp_transport.h"
 
 namespace pump {
-	namespace protocol {
-		namespace http {
+namespace protocol {
+    namespace http {
 
-			class connection;
-			DEFINE_ALL_POINTER_TYPE(connection);
+        class connection;
+        DEFINE_ALL_POINTER_TYPE(connection);
 
-			struct http_callbacks
-			{
-				pump_function<
-					void(pocket_sptr &&pk)
-				> pocket_cb;
+        struct http_callbacks {
+            pump_function<void(pocket_sptr &&pk)> pocket_cb;
 
-				pump_function<
-					void(const std::string&)
-				> error_cb;
-			};
+            pump_function<void(const std::string &)> error_cb;
+        };
 
-			class LIB_PUMP connection :
-				public std::enable_shared_from_this<connection>
-			{
-			public:
-				/*********************************************************************************
-				 * Constructor
-				 ********************************************************************************/
-				connection(bool server, transport::base_transport_sptr &transp) noexcept;
+        class LIB_PUMP connection : public std::enable_shared_from_this<connection> {
+          public:
+            /*********************************************************************************
+             * Constructor
+             ********************************************************************************/
+            connection(bool server, transport::base_transport_sptr &transp) noexcept;
 
-				/*********************************************************************************
-				 * Deconstructor
-				 ********************************************************************************/
-				virtual ~connection();
+            /*********************************************************************************
+             * Deconstructor
+             ********************************************************************************/
+            virtual ~connection();
 
-				/*********************************************************************************
-				 * Start http connection
-				 ********************************************************************************/
-				bool start(service_ptr sv, const http_callbacks &cbs);
+            /*********************************************************************************
+             * Start http connection
+             ********************************************************************************/
+            bool start(service_ptr sv, const http_callbacks &cbs);
 
-				/*********************************************************************************
-				 * Stop http connection
-				 ********************************************************************************/
-				void stop();
+            /*********************************************************************************
+             * Stop http connection
+             ********************************************************************************/
+            void stop();
 
-				/*********************************************************************************
-				 * Send http pocket
-				 ********************************************************************************/
-				bool send(c_pocket_ptr pk);
+            /*********************************************************************************
+             * Read next http pocket
+             ********************************************************************************/
+            bool read_next_pocket();
 
-				/*********************************************************************************
-				 * Send http content
-				 ********************************************************************************/
-				bool send(c_content_ptr ct);
+            /*********************************************************************************
+             * Send http pocket
+             ********************************************************************************/
+            bool send(c_pocket_ptr pk);
 
-				/*********************************************************************************
-				 * Check connection is valid or not
-				 ********************************************************************************/
-				PUMP_INLINE transport::base_transport_sptr get_transport()
-				{ return transp_; }
+            /*********************************************************************************
+             * Send http content
+             ********************************************************************************/
+            bool send(c_content_ptr ct);
 
-				/*********************************************************************************
-				 * Check connection is valid or not
-				 ********************************************************************************/
-				PUMP_INLINE transport::base_transport_sptr pop_transport()
-				{ return std::move(transp_); }
+            /*********************************************************************************
+             * Check connection is valid or not
+             ********************************************************************************/
+            PUMP_INLINE transport::base_transport_sptr get_transport() {
+                return transp_;
+            }
 
-				/*********************************************************************************
-				 * Check connection is valid or not
-				 ********************************************************************************/
-				PUMP_INLINE bool is_valid() const
-				{ return transp_ && transp_->is_started(); }
+            /*********************************************************************************
+             * Check connection is valid or not
+             ********************************************************************************/
+            PUMP_INLINE transport::base_transport_sptr pop_transport() {
+                return std::move(transp_);
+            }
 
-			protected:
-				/*********************************************************************************
-				 * Read event callback
-				 ********************************************************************************/
-				static void on_read(connection_wptr wptr, c_block_ptr b, int32 size);
+            /*********************************************************************************
+             * Check connection is valid or not
+             ********************************************************************************/
+            PUMP_INLINE bool is_valid() const {
+                return transp_ && transp_->is_started();
+            }
 
-				/*********************************************************************************
-				 * Disconnected event callback
-				 ********************************************************************************/
-				static void on_disconnected(connection_wptr wptr);
+          protected:
+            /*********************************************************************************
+             * Read event callback
+             ********************************************************************************/
+            static void on_read(connection_wptr wptr, c_block_ptr b, int32 size);
 
-				/*********************************************************************************
-				 * Stopped event callback
-				 ********************************************************************************/
-				static void on_stopped(connection_wptr wptr);
+            /*********************************************************************************
+             * Disconnected event callback
+             ********************************************************************************/
+            static void on_disconnected(connection_wptr wptr);
 
-			private:
-				/*********************************************************************************
-				 * Handle http data
-				 ********************************************************************************/
-				void __handle_http_data(c_block_ptr b, int32 size);
+            /*********************************************************************************
+             * Stopped event callback
+             ********************************************************************************/
+            static void on_stopped(connection_wptr wptr);
 
-				/*********************************************************************************
-				 * Stop transport
-				 ********************************************************************************/
-				PUMP_INLINE void __stop_transport()
-				{ if (transp_) transp_->stop(); }
+          private:
+            /*********************************************************************************
+             * Handle http data
+             ********************************************************************************/
+            void __handle_http_data(c_block_ptr b, int32 size);
 
-			private:
-				// Read cache
-				std::string read_cache_;
+            /*********************************************************************************
+             * Stop transport
+             ********************************************************************************/
+            PUMP_INLINE void __stop_transport() {
+                if (transp_)
+                    transp_->stop();
+            }
 
-				// Coming http pocket
-				pocket_sptr coming_pocket_;
-				pump_function<pocket_ptr()> create_coming_pocket_;
+          private:
+            // Read cache
+            std::string read_cache_;
 
-				// Transport
-				transport::base_transport_sptr transp_;
+            // Coming http pocket
+            pocket_sptr coming_pocket_;
+            pump_function<pocket_ptr()> create_coming_pocket_;
 
-				// Http callbacks
-				http_callbacks http_cbs_;
-			};
-			DEFINE_ALL_POINTER_TYPE(connection);
+            // Transport
+            transport::base_transport_sptr transp_;
 
-		}
-	}
-}
+            // Http callbacks
+            http_callbacks http_cbs_;
+        };
+        DEFINE_ALL_POINTER_TYPE(connection);
+
+    }  // namespace http
+}  // namespace protocol
+}  // namespace pump
 
 #endif

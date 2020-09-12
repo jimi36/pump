@@ -17,137 +17,143 @@
 #ifndef pump_transport_tcp_transport_h
 #define pump_transport_tcp_transport_h
 
-#include "pump/toolkit/features.h"
 #include "pump/transport/flow/flow_tcp.h"
 #include "pump/transport/base_transport.h"
 
 namespace pump {
-	namespace transport {
+namespace transport {
 
-		class tcp_transport;
-		DEFINE_ALL_POINTER_TYPE(tcp_transport);
+    class tcp_transport;
+    DEFINE_ALL_POINTER_TYPE(tcp_transport);
 
-		class LIB_PUMP tcp_transport : 
-			public base_transport,
-			public std::enable_shared_from_this<tcp_transport>
-		{
-		public:
-			/*********************************************************************************
-			 * Create instance
-			 ********************************************************************************/
-			PUMP_INLINE static tcp_transport_sptr create_instance()
-			{
-				INLINE_OBJECT_CREATE(
-					obj, 
-					tcp_transport, 
-					()
-				);
-				return tcp_transport_sptr(obj, object_delete<tcp_transport>);
-			}
+    class LIB_PUMP tcp_transport : public base_transport,
+                                   public std::enable_shared_from_this<tcp_transport> {
+      public:
+        /*********************************************************************************
+         * Create instance
+         ********************************************************************************/
+        PUMP_INLINE static tcp_transport_sptr create_instance() {
+            INLINE_OBJECT_CREATE(obj, tcp_transport, ());
+            return tcp_transport_sptr(obj, object_delete<tcp_transport>);
+        }
 
-			/*********************************************************************************
-			 * Deconstructor
-			 ********************************************************************************/
-			virtual ~tcp_transport();
+        /*********************************************************************************
+         * Deconstructor
+         ********************************************************************************/
+        virtual ~tcp_transport();
 
-			/*********************************************************************************
-			 * Init
-			 ********************************************************************************/
-			void init(
-				int32 fd, 
-				const address &local_address, 
-				const address &remote_address
-			);
+        /*********************************************************************************
+         * Init
+         ********************************************************************************/
+        void init(int32 fd, const address &local_address, const address &remote_address);
 
-			/*********************************************************************************
-			 * Start
-			 ********************************************************************************/
-			virtual transport_error start(
-				service_ptr sv, 
-				int32 max_pending_send_size,
-				const transport_callbacks &cbs
-			) override;
+        /*********************************************************************************
+         * Start
+         ********************************************************************************/
+        virtual transport_error start(service_ptr sv,
+                                      int32 max_pending_send_size,
+                                      const transport_callbacks &cbs) override;
 
-			/*********************************************************************************
-			 * Stop
-			 ********************************************************************************/
-			virtual void stop() override;
+        /*********************************************************************************
+         * Stop
+         ********************************************************************************/
+        virtual void stop() override;
 
-			/*********************************************************************************
-			 * Force stop
-			 ********************************************************************************/
-			virtual void force_stop() override;
+        /*********************************************************************************
+         * Force stop
+         ********************************************************************************/
+        virtual void force_stop() override;
 
-			/*********************************************************************************
-			 * Send
-			 ********************************************************************************/
-			virtual transport_error send(c_block_ptr b, uint32 size) override;
+        /*********************************************************************************
+         * Read for once
+         ********************************************************************************/
+        virtual transport_error read_for_once();
 
-		protected:
-			/*********************************************************************************
-			 * Read event callback
-			 ********************************************************************************/
-			virtual void on_read_event(void_ptr iocp_task) override;
+        /*********************************************************************************
+         * Read for loop
+         ********************************************************************************/
+        virtual transport_error read_for_loop();
 
-			/*********************************************************************************
-			 * Send event callback
-			 ********************************************************************************/
-			virtual void on_send_event(void_ptr iocp_task) override;
+        /*********************************************************************************
+         * Send
+         ********************************************************************************/
+        virtual transport_error send(c_block_ptr b, uint32 size) override;
 
-		private:
-			/*********************************************************************************
-			 * Constructor
-			 ********************************************************************************/
-			tcp_transport() noexcept;
+      protected:
+        /*********************************************************************************
+         * Read event callback
+         ********************************************************************************/
+#if defined(PUMP_HAVE_IOCP)
+        virtual void on_read_event(void_ptr iocp_task) override;
+#else
+        virtual void on_read_event() override;
+#endif
 
-			/*********************************************************************************
-			 * open flow
-			 ********************************************************************************/
-			bool __open_flow(int32 fd);
+        /*********************************************************************************
+         * Send event callback
+         ********************************************************************************/
+#if defined(PUMP_HAVE_IOCP)
+        virtual void on_send_event(void_ptr iocp_task) override;
+#else
+        virtual void on_send_event() override;
+#endif
 
-			/*********************************************************************************
-			 * Close flow
-			 ********************************************************************************/
-			PUMP_INLINE void __close_flow()
-			{ if (flow_) flow_->close(); }
+      private:
+        /*********************************************************************************
+         * Constructor
+         ********************************************************************************/
+        tcp_transport() noexcept;
 
-			/*********************************************************************************
-			 * Async send
-			 ********************************************************************************/
-			bool __async_send(flow::buffer_ptr b);
+        /*********************************************************************************
+         * open flow
+         ********************************************************************************/
+        bool __open_flow(int32 fd);
 
-			/*********************************************************************************
-			 * Send once
-			 ********************************************************************************/
-			bool __send_once(flow::flow_tcp_ptr flow);
+        /*********************************************************************************
+         * Close flow
+         ********************************************************************************/
+        PUMP_INLINE void __close_flow() {
+            if (flow_)
+                flow_->close();
+        }
 
-			/*********************************************************************************
-			 * Try doing dissconnected process
-			 ********************************************************************************/
-			void __try_doing_disconnected_process();
+        /*********************************************************************************
+         * Async send
+         ********************************************************************************/
+        bool __async_send(flow::buffer_ptr b);
 
-			/*********************************************************************************
-			 * Clear sendlist
-			 ********************************************************************************/
-			void __clear_sendlist();
+        /*********************************************************************************
+         * Send once
+         ********************************************************************************/
+        bool __send_once(flow::flow_tcp_ptr flow, bool resume);
 
-		private:
-			// Transport flow
-			flow::flow_tcp_sptr flow_;
+        /*********************************************************************************
+         * Try doing dissconnected process
+         ********************************************************************************/
+        void __try_doing_disconnected_process();
 
-			// Last send buffer
-			volatile uint32 last_send_buffer_size_;
-			volatile flow::buffer_ptr last_send_buffer_;
+        /*********************************************************************************
+         * Clear sendlist
+         ********************************************************************************/
+        void __clear_sendlist();
 
-			// When sending data, transport will append buffer to sendlist at first. On triggering send
-			// event, transport will send buffer in the sendlist.
-			moodycamel::ConcurrentQueue<flow::buffer_ptr> sendlist_;
+      private:
+        // Transport flow
+        flow::flow_tcp_sptr flow_;
 
-			// Who got next send chance, who can send next buffer.
-			std::atomic_flag next_send_chance_;
-		};
+        // Last send buffer
+        volatile uint32 last_send_buffer_size_;
+        volatile flow::buffer_ptr last_send_buffer_;
 
-	}
-}
+        // When sending data, transport will append buffer to sendlist at first. On
+        // triggering send event, transport will send buffer in the sendlist.
+        moodycamel::ConcurrentQueue<flow::buffer_ptr> sendlist_;
+
+        // Who got next send chance, who can send next buffer.
+        std::atomic_flag next_send_chance_;
+    };
+
+}  // namespace transport
+}  // namespace pump
 
 #endif

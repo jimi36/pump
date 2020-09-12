@@ -1,43 +1,38 @@
 #include "ws.h"
 
-void on_started(websocket::client_ptr cli, bool succ)
-{
-	printf("ws client started %s\n", succ ? "true" : "false");
-	if (succ)
-	{
-		if (!cli->send("123", 3))
-			PUMP_ASSERT(false);
-	}
+void on_started(websocket::client_ptr cli, bool succ) {
+    printf("ws client started %s\n", succ ? "true" : "false");
+    if (succ) {
+        if (!cli->send("123", 3)) PUMP_ASSERT(false);
+    }
 }
 
-void on_error(websocket::client_ptr cli, const std::string &msg)
-{
-	printf("ws client erorr %s\n", msg.c_str());
+void on_error(websocket::client_ptr cli, const std::string &msg) {
+    printf("ws client erorr %s\n", msg.c_str());
 }
 
-void on_data(websocket::client_ptr cli, pump::c_block_ptr b, pump::uint32 size, bool msg_end)
-{
-	std::string data(b, size);
-	std::string msg = pump::utf8_to_gbk(data);
-	printf("dara %s msg %s\n", data.c_str(), msg.c_str());
+void on_data(websocket::client_ptr cli, pump::c_block_ptr b, pump::uint32 size,
+             bool msg_end) {
+    std::string data(b, size);
+    std::string msg = pump::utf8_to_gbk(data);
+    printf("dara %s msg %s\n", data.c_str(), msg.c_str());
 }
 
-void start_ws_client(pump::service_ptr sv, const std::string &url)
-{
-	websocket::client_sptr cli = websocket::client::create_instance();
+void start_ws_client(pump::service_ptr sv, const std::string &url) {
+    websocket::client_sptr cli = websocket::client::create_instance();
 
-	websocket::client_callbacks cbs;
-	cbs.error_cb = pump_bind(&on_error, cli.get(), _1);
-	cbs.data_cb = pump_bind(&on_data, cli.get(), _1, _2, _3);
+    websocket::client_callbacks cbs;
+    cbs.error_cb = pump_bind(&on_error, cli.get(), _1);
+    cbs.data_cb = pump_bind(&on_data, cli.get(), _1, _2, _3);
 
-	std::map<std::string, std::string> headers;
+    std::map<std::string, std::string> headers;
 
-	if (!cli->start(sv, cbs, url, headers))
-		printf("websocket client start error\n");
-	else
-		printf("websocket client startd\n");
+    if (!cli->start(sv, cbs, url, headers))
+        printf("websocket client start error\n");
+    else
+        printf("websocket client startd\n");
 
-	cli->send("123", 3);
+    cli->send("123", 3);
 
-	sv->wait_stopped();
+    sv->wait_stopped();
 }

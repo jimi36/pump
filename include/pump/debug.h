@@ -17,21 +17,25 @@
 #ifndef pump_defines_h
 #define pump_defines_h
 
+#include <assert.h>
+
 // Pump assert
 #define PUMP_ASSERT(x) assert(x)
 
 // Pump debug assign
 #if defined(NDEBUG)
-	#define PUMP_DEBUG_ASSIGN(c, d, s) d = s
+#define PUMP_DEBUG_ASSIGN(c, d, s) d = s
 #else
-	#define PUMP_DEBUG_ASSIGN(c, d, s) PUMP_ASSERT(c); d = s
+#define PUMP_DEBUG_ASSIGN(c, d, s) \
+    PUMP_ASSERT(c);                \
+    d = s
 #endif
 
 // Pump debug check
 #if defined(NDEBUG)
-	#define PUMP_DEBUG_CHECK(x) x
+#define PUMP_DEBUG_CHECK(x) x
 #else
-	#define PUMP_DEBUG_CHECK(x) PUMP_ASSERT(x)
+#define PUMP_DEBUG_CHECK(x) PUMP_ASSERT(x)
 #endif
 
 // Pump static assert

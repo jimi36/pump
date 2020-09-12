@@ -20,7 +20,7 @@
 #include <functional>
 
 #define pump_bind std::bind
-#define pump_function std::function 
+#define pump_function std::function
 
 using namespace std::placeholders;
 

@@ -14,42 +14,34 @@
  * limitations under the License.
  */
 
-#include "net/iocp.h"
-#include "net/socket.h"
 #include "pump/transport/flow/flow.h"
 
 namespace pump {
-	namespace transport {
-		namespace flow {
+namespace transport {
+    namespace flow {
 
-			flow_base::flow_base() noexcept :
-				fd_(-1),
-				extra_fns_(nullptr)
-			{
-			}
+        flow_base::flow_base() noexcept : fd_(-1), extra_fns_(nullptr) {
+        }
 
-			int32 flow_base::unbind_fd()
-			{
-				int32 fd = fd_; 
-				fd_ = -1;
-				return fd;
-			}
+        int32 flow_base::unbind_fd() {
+            int32 fd = fd_;
+            fd_ = -1;
+            return fd;
+        }
 
-			void flow_base::close()
-			{
-				if (extra_fns_)
-				{
-					net::delete_iocp_extra_function(extra_fns_);
-					extra_fns_ = nullptr;
-				}
-				
-				if (fd_ > 0)
-				{
-					net::close(fd_);
-					fd_ = -1;
-				}
-			}
+        void flow_base::close() {
+#if defined(PUMP_HAVE_IOCP)
+            if (extra_fns_) {
+                net::delete_iocp_extra_function(extra_fns_);
+                extra_fns_ = nullptr;
+            }
+#endif
+            if (fd_ > 0) {
+                net::close(fd_);
+                fd_ = -1;
+            }
+        }
 
-		}
-	}
-}
+    }  // namespace flow
+}  // namespace transport
+}  // namespace pump

@@ -14,73 +14,76 @@
  * limitations under the License.
  */
 
-#include "net/iocp.h"
-#include "pump/init.h"
+#if !defined(WIN32)
+#include <signal.h>
+#endif
 
-#if defined(USE_GNUTLS)
+#if defined(PUMP_HAVE_GNUTLS)
 extern "C" {
-	#include <gnutls/gnutls.h>
+#include <gnutls/gnutls.h>
 }
 #endif
+
+// Import "memset" on linux
+#include <string.h>
+
+#include "pump/init.h"
+#include "pump/net/iocp.h"
 
 namespace pump {
 
-#if !defined(WIN32) 
-	typedef void(*sighandler_t)(int32);
-	static bool setup_signal(int32 sig, int32 flags, sighandler_t hdl)
-	{
-		// Blocking the same signal when signal hander is running
-		struct sigaction act;
+#if !defined(WIN32)
+typedef void (*sighandler_t)(int32);
+static bool setup_signal(int32 sig, int32 flags, sighandler_t hdl) {
+    // Blocking the same signal when signal hander is running
+    struct sigaction act;
 
-		memset(&act, 0, sizeof(act));
-		sigaddset(&act.sa_mask, sig);
-		act.sa_flags = flags;
-		act.sa_handler = hdl;
+    memset(&act, 0, sizeof(act));
+    sigaddset(&act.sa_mask, sig);
+    act.sa_flags = flags;
+    act.sa_handler = hdl;
 
-		if (sigaction(sig, &act, NULL) != 0)
-		{
-			return false;
-		}
+    if (sigaction(sig, &act, NULL) != 0) {
+        return false;
+    }
 
-		return true;
-	}
-#endif
-
-	bool init()
-	{
-#if defined(WIN32)
-		WSADATA wsaData;
-		WORD wVersionRequested;
-		wVersionRequested = MAKEWORD(2, 2);
-		::WSAStartup(wVersionRequested, &wsaData);
-#else
-		setup_signal(SIGPIPE, 0, SIG_IGN);
-#endif
-
-#if defined(USE_GNUTLS)
-		if (gnutls_global_init() != 0)
-			return false;
-		gnutls_global_set_log_level(0);
-#endif
-
-		return true;
-	}
-
-	void uninit()
-	{
-#if defined(WIN32)
-		::WSACleanup();
-#else
-		setup_signal(SIGPIPE, 0, SIG_DFL);
-#endif
-
-#if defined(WIN32) && defined(USE_IOCP)
-		CloseHandle(net::get_iocp_handler());
-#endif
-
-#if defined(USE_GNUTLS)
-		gnutls_global_deinit();
-#endif
-	}
-
+    return true;
 }
+#endif
+
+bool init() {
+#if defined(WIN32)
+    WSADATA wsaData;
+    WORD wVersionRequested;
+    wVersionRequested = MAKEWORD(2, 2);
+    ::WSAStartup(wVersionRequested, &wsaData);
+#else
+    setup_signal(SIGPIPE, 0, SIG_IGN);
+#endif
+
+#if defined(PUMP_HAVE_GNUTLS)
+    if (gnutls_global_init() != 0)
+        return false;
+    gnutls_global_set_log_level(0);
+#endif
+
+    return true;
+}
+
+void uninit() {
+#if defined(WIN32)
+    ::WSACleanup();
+#else
+    setup_signal(SIGPIPE, 0, SIG_DFL);
+#endif
+
+#if defined(WIN32) && defined(PUMP_HAVE_IOCP)
+    CloseHandle(net::get_iocp_handler());
+#endif
+
+#if defined(PUMP_HAVE_GNUTLS)
+    gnutls_global_deinit();
+#endif
+}
+
+}  // namespace pump

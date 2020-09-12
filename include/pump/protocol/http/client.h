@@ -22,116 +22,117 @@
 #include "pump/protocol/http/connection.h"
 
 namespace pump {
-	namespace protocol {
-		namespace http {
+namespace protocol {
+    namespace http {
 
-			class client;
-			DEFINE_ALL_POINTER_TYPE(client);
+        class client;
+        DEFINE_ALL_POINTER_TYPE(client);
 
-			class LIB_PUMP client : 
-				public toolkit::noncopyable,
-				public std::enable_shared_from_this<client>
-			{
-			public:
-				/*********************************************************************************
-				 * Create instance
-				 ********************************************************************************/
-				PUMP_INLINE static client_sptr create_instance(service_ptr sv)
-				{
-					return client_sptr(new client(sv));
-				}
+        class LIB_PUMP client : public toolkit::noncopyable,
+                                public std::enable_shared_from_this<client> {
+          public:
+            /*********************************************************************************
+             * Create instance
+             ********************************************************************************/
+            PUMP_INLINE static client_sptr create_instance(service_ptr sv) {
+                return client_sptr(new client(sv));
+            }
 
-				/*********************************************************************************
-				 * Deconstructor
-				 ********************************************************************************/
-				~client();
+            /*********************************************************************************
+             * Deconstructor
+             ********************************************************************************/
+            ~client();
 
-				/*********************************************************************************
-				 * Set connect timeout time
-				 ********************************************************************************/
-				PUMP_INLINE void set_connect_timeout(int64 timeout)
-				{ dial_timeout_ = timeout > 0 ? timeout : 0; }
+            /*********************************************************************************
+             * Set connect timeout time
+             ********************************************************************************/
+            PUMP_INLINE void set_connect_timeout(int64 timeout) {
+                dial_timeout_ = timeout > 0 ? timeout : 0;
+            }
 
-				/*********************************************************************************
-				 * Set tls handshake timeout time
-				 ********************************************************************************/
-				PUMP_INLINE void set_tls_handshake_timeout(int64 timeout)
-				{ tls_handshake_timeout_ = timeout > 0 ? timeout : 0; }
+            /*********************************************************************************
+             * Set tls handshake timeout time
+             ********************************************************************************/
+            PUMP_INLINE void set_tls_handshake_timeout(int64 timeout) {
+                tls_handshake_timeout_ = timeout > 0 ? timeout : 0;
+            }
 
-				/*********************************************************************************
-				 * Request
-				 * At first this will create http connection if there no valid http connection,
-				 * then send http request to http server.
-				 ********************************************************************************/
-				response_sptr request(request_sptr &req);
+            /*********************************************************************************
+             * Request
+             * At first this will create http connection if there no valid http
+             *connection, then send http request to http server.
+             ********************************************************************************/
+            response_sptr request(request_sptr &req);
 
-				/*********************************************************************************
-				 * Close
-				 ********************************************************************************/
-				PUMP_INLINE void close()
-				{ __destroy_connection(); }
+            /*********************************************************************************
+             * Close
+             ********************************************************************************/
+            PUMP_INLINE void close() {
+                __destroy_connection();
+            }
 
-				/*********************************************************************************
-				 * Get http connection
-				 ********************************************************************************/
-				PUMP_INLINE connection_sptr get_connection()
-				{ return conn_; }
+            /*********************************************************************************
+             * Get http connection
+             ********************************************************************************/
+            PUMP_INLINE connection_sptr get_connection() {
+                return conn_;
+            }
 
-			private:
-				/*********************************************************************************
-				 * Constructor
-				 ********************************************************************************/
-				client(service_ptr sv);
+          private:
+            /*********************************************************************************
+             * Constructor
+             ********************************************************************************/
+            client(service_ptr sv);
 
-				/*********************************************************************************
-				 * Create http connection
-				 ********************************************************************************/
-				bool __create_connection(bool https, const transport::address &peer_address);
+            /*********************************************************************************
+             * Create http connection
+             ********************************************************************************/
+            bool __create_connection(bool https, const transport::address &peer_address);
 
-				/*********************************************************************************
-				 * Destroy http connection
-				 ********************************************************************************/
-				void __destroy_connection();
+            /*********************************************************************************
+             * Destroy http connection
+             ********************************************************************************/
+            void __destroy_connection();
 
-				/*********************************************************************************
-				 * Destroy http connection
-				 ********************************************************************************/
-				void __notify_response(response_sptr &resp);
+            /*********************************************************************************
+             * Destroy http connection
+             ********************************************************************************/
+            void __notify_response(response_sptr &resp);
 
-			private:
-				/*********************************************************************************
-				 * Handel connection response
-				 ********************************************************************************/
-				static void on_response(client_wptr wptr, pocket_sptr &&pk);
+          private:
+            /*********************************************************************************
+             * Handel connection response
+             ********************************************************************************/
+            static void on_response(client_wptr wptr, pocket_sptr &&pk);
 
-				/*********************************************************************************
-				 * Handel connection disconnected
-				 ********************************************************************************/
-				static void on_error(client_wptr wptr, const std::string& msg);
+            /*********************************************************************************
+             * Handel connection disconnected
+             ********************************************************************************/
+            static void on_error(client_wptr wptr, const std::string &msg);
 
-			private:
-				// Service 
-				service_ptr sv_;
-				// TLS credentials
-				void_ptr cert_;
+          private:
+            // Service
+            service_ptr sv_;
+            // TLS credentials
+            void_ptr cert_;
 
-				// Dial timeout ms tims
-				int64 dial_timeout_;
+            // Dial timeout ms tims
+            int64 dial_timeout_;
 
-				// TLS handshake timeout ms time
-				int64 tls_handshake_timeout_;
+            // TLS handshake timeout ms time
+            int64 tls_handshake_timeout_;
 
-				// Http connection
-				connection_sptr conn_;
+            // Http connection
+            connection_sptr conn_;
 
-				// Response condition
-				std::mutex resp_mx_;
-				std::condition_variable resp_cond_;
-				response_sptr resp_;
-			};
+            // Response condition
+            std::mutex resp_mx_;
+            std::condition_variable resp_cond_;
+            response_sptr resp_;
+        };
 
-		}
-	}
-}
+    }  // namespace http
+}  // namespace protocol
+}  // namespace pump
 
 #endif

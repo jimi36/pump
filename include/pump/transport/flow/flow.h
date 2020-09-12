@@ -17,70 +17,78 @@
 #ifndef pump_transport_flow_h
 #define pump_transport_flow_h
 
+#include "pump/debug.h"
+#include "pump/net/iocp.h"
+#include "pump/net/socket.h"
 #include "pump/poll/channel.h"
 #include "pump/transport/address.h"
 #include "pump/transport/flow/buffer.h"
 
 namespace pump {
-	namespace transport {
-		namespace flow {
+namespace transport {
+    namespace flow {
 
-			#define FLOW_ERR_NO      0
-			#define	FLOW_ERR_ABORT   1
-			#define FLOW_ERR_BUSY    2
-			#define FLOW_ERR_AGAIN   3
-			#define FLOW_ERR_NO_DATA 4
+        enum flow_error {
+            FLOW_ERR_NO = 0,
+            FLOW_ERR_ABORT,
+            FLOW_ERR_BUSY,
+            FLOW_ERR_AGAIN,
+            FLOW_ERR_NO_DATA,
+            FLOW_ERR_COUNT
+        };
 
-			class flow_base : 
-				public toolkit::noncopyable
-			{
-			public:
-				/*********************************************************************************
-				 * Constructor
-				 ********************************************************************************/
-				flow_base() noexcept;
+        class flow_base : public toolkit::noncopyable {
+          public:
+            /*********************************************************************************
+             * Constructor
+             ********************************************************************************/
+            flow_base() noexcept;
 
-				/*********************************************************************************
-				 * Deconstructor
-				 ********************************************************************************/
-				virtual ~flow_base() {}
+            /*********************************************************************************
+             * Deconstructor
+             ********************************************************************************/
+            virtual ~flow_base() {
+            }
 
-				/*********************************************************************************
-				 * Unbind fd
-				 * This will return and unbind the fd from the flow.
-				 ********************************************************************************/
-				int32 unbind_fd();
+            /*********************************************************************************
+             * Unbind fd
+             * This will return and unbind the fd from the flow.
+             ********************************************************************************/
+            int32 unbind_fd();
 
-				/*********************************************************************************
-				 * Close
-				 ********************************************************************************/
-				void close();
+            /*********************************************************************************
+             * Close
+             ********************************************************************************/
+            void close();
 
-				/*********************************************************************************
-				 * Get fd
-				 ********************************************************************************/
-				PUMP_INLINE int32 get_fd() const
-				{ return fd_; }
+            /*********************************************************************************
+             * Get fd
+             ********************************************************************************/
+            PUMP_INLINE int32 get_fd() const {
+                return fd_;
+            }
 
-				/*********************************************************************************
-				 * Check flow valid status
-				 ********************************************************************************/
-				PUMP_INLINE bool is_valid() const
-				{ return fd_ > 0; }
+            /*********************************************************************************
+             * Check flow valid status
+             ********************************************************************************/
+            PUMP_INLINE bool is_valid() const {
+                return fd_ > 0;
+            }
 
-			protected:
-				// Channel fd
-				int32 fd_;
-				// Channel
-				poll::channel_wptr ch_;
+          protected:
+            // Channel fd
+            int32 fd_;
 
-				// IOCP extra function
-				void_ptr extra_fns_;
-			};
-			DEFINE_ALL_POINTER_TYPE(flow_base);
+            // Channel
+            poll::channel_wptr ch_;
 
-		}
-	}
-}
+            // IOCP extra function
+            void_ptr extra_fns_;
+        };
+        DEFINE_ALL_POINTER_TYPE(flow_base);
+
+    }  // namespace flow
+}  // namespace transport
+}  // namespace pump
 
 #endif

@@ -1,192 +1,204 @@
 #include "tcp_transport_test.h"
 
+static int count = 10;
+static int send_loop = 1;
+static int send_pocket_size = 1024 * 4;
+
+class my_tcp_dialer;
+
 static service *sv;
 
-static int count = 1;
-static int max_send_cont = 1024 * 256 * 10;
-static int send_loop = 126;
-static int send_pocket_size = 1024*4;
+static uint16 server_port;
+static std::string server_ip;
 
-class my_tcp_dialer :
-	public std::enable_shared_from_this<my_tcp_dialer>
-{
-public:
-	my_tcp_dialer()
-	{
-		read_size_ = 0;
-		read_pocket_size_ = 0;
-		all_read_size_ = 0;
-		last_report_time_ = 0;
-		max_send_count_ = max_send_cont;
-		send_data_.resize(send_pocket_size);
-	}
+static std::mutex dial_mx;
+static std::map<my_tcp_dialer *, std::shared_ptr<my_tcp_dialer>> my_dialers;
 
-	/*********************************************************************************
-	 * Tcp dialed event callback
-	 ********************************************************************************/
-	void on_dialed_callback(pump::base_transport_sptr &&transp, bool succ)
-	{
-		if (!succ)
-		{
-			printf("tcp client dialed error\n");
-			return;
-		}
+class my_tcp_dialer : public std::enable_shared_from_this<my_tcp_dialer> {
+  public:
+    my_tcp_dialer() {
+        read_size_ = 0;
+        read_pocket_size_ = 0;
+        all_read_size_ = 0;
+        last_report_time_ = 0;
+        send_data_.resize(send_pocket_size);
+    }
 
-		pump::transport_callbacks cbs;
-		cbs.read_cb = pump_bind(&my_tcp_dialer::on_read_callback, this, transp.get(), _1, _2);
-		cbs.stopped_cb = pump_bind(&my_tcp_dialer::on_stopped_callback, this, transp.get());
-		cbs.disconnected_cb = pump_bind(&my_tcp_dialer::on_disconnected_callback, this, transp.get());
+    virtual ~my_tcp_dialer() {
+    }
 
-		transport_ = std::static_pointer_cast<pump::tcp_transport>(transp);
-		if (transport_->start(sv, 4096*1024, cbs) != 0)
-			return;
-		
-		printf("tcp client dialed\n");
+    /*********************************************************************************
+     * Tcp dialed event callback
+     ********************************************************************************/
+    void on_dialed_callback(pump::base_transport_sptr &transp, bool succ) {
+        if (!succ) {
+            printf("tcp client dialed error\n");
+            return;
+        }
 
-		for (int i = 0; i < send_loop; i++)
-		{
-			send_data();
-		}
-	}
+        pump::transport_callbacks cbs;
+        cbs.read_cb =
+            pump_bind(&my_tcp_dialer::on_read_callback, this, transp.get(), _1, _2);
+        cbs.stopped_cb =
+            pump_bind(&my_tcp_dialer::on_stopped_callback, this, transp.get());
+        cbs.disconnected_cb =
+            pump_bind(&my_tcp_dialer::on_disconnected_callback, this, transp.get());
 
-	/*********************************************************************************
-	 * Tcp dialed timeout event callback
-	 ********************************************************************************/
-	void on_dialed_timeout_callback()
-	{
-		printf("tcp client dial timeout\n");
-	}
+        transport_ = std::static_pointer_cast<pump::tcp_transport>(transp);
+        if (transport_->start(sv, 4096 * 1024, cbs) != 0)
+            return;
 
-	/*********************************************************************************
-	 * Stopped dial event callback
-	 ********************************************************************************/
-	void on_stopped_dialing_callback()
-	{
-		printf("tcp client dial stopped\n");
-	}
+        transport_->read_for_loop();
 
-	/*********************************************************************************
-	 * Tcp read event callback
-	 ********************************************************************************/
-	void on_read_callback(base_transport_ptr transp, c_block_ptr b, int32 size)
-	{
-		read_size_ += size;
-		all_read_size_ += size;
-		read_pocket_size_ += size;
+        printf("tcp client dialed\n");
 
-		if (read_pocket_size_ >= send_pocket_size)
-		{
-			read_pocket_size_ -= send_pocket_size;
-			send_data();
-		}
-	}
+        for (int i = 0; i < send_loop; i++) {
+            send_data();
+        }
+    }
 
-	/*********************************************************************************
-	 * Tcp disconnected event callback
-	 ********************************************************************************/
-	void on_disconnected_callback(base_transport_ptr transp)
-	{
-		printf("client tcp transport disconnected read msg %d\n", all_read_size_ / 4096);
-		transport_.reset();
-	}
+    /*********************************************************************************
+     * Tcp dialed timeout event callback
+     ********************************************************************************/
+    void on_dialed_timeout_callback() {
+        printf("tcp client dial timeout\n");
+    }
 
-	/*********************************************************************************
-	 * Tcp stopped event callback
-	 ********************************************************************************/
-	void on_stopped_callback(base_transport_ptr transp)
-	{
-		printf("client tcp transport stopped read msg %d\n", all_read_size_ / 4096);
-		transport_.reset();
-	}
+    /*********************************************************************************
+     * Stopped dial event callback
+     ********************************************************************************/
+    void on_stopped_dialing_callback() {
+        printf("tcp client dial stopped\n");
+    }
 
-	void set_dialer(tcp_dialer_sptr d)
-	{
-		dialer_ = d;
-	}
+    /*********************************************************************************
+     * Tcp read event callback
+     ********************************************************************************/
+    void on_read_callback(base_transport_ptr transp, c_block_ptr b, int32 size) {
+        read_size_ += size;
+        all_read_size_ += size;
+        read_pocket_size_ += size;
 
-	inline bool send_data()
-	{
-		if (transport_->send(send_data_.data(), send_data_.size()) != 0)
-		{
-			return false;
-		}
-		
-		return true;
-	}
+        if (read_pocket_size_ >= send_pocket_size) {
+            read_pocket_size_ -= send_pocket_size;
+            send_data();
+        }
+    }
 
-public:
-	volatile int32 read_size_;
-	volatile int32 read_pocket_size_;
-	int32 all_read_size_;
-	int64 last_report_time_;
+    /*********************************************************************************
+     * Tcp disconnected event callback
+     ********************************************************************************/
+    void on_disconnected_callback(base_transport_ptr transp) {
+        printf("client tcp transport disconnected read msg %d\n", all_read_size_ / 4096);
+        // transport_.reset();
+        dial_mx.lock();
+        my_dialers.erase(this);
+        dial_mx.unlock();
+    }
 
-	int64 max_send_count_;
+    /*********************************************************************************
+     * Tcp stopped event callback
+     ********************************************************************************/
+    void on_stopped_callback(base_transport_ptr transp) {
+        printf("client tcp transport stopped read msg %d\n", all_read_size_ / 4096);
+        // transport_.reset();
+        dial_mx.lock();
+        if (my_dialers.erase(this)!= 1) {
+            printf("erase dialer error\n");
+        }
+        dial_mx.unlock();
+    }
 
-	std::string send_data_;
+    void set_dialer(tcp_dialer_sptr d) {
+        dialer_ = d;
+    }
 
-	tcp_dialer_sptr dialer_;
-	tcp_transport_sptr transport_;
+    inline bool send_data() {
+        if (transport_->send(send_data_.data(), send_data_.size()) != 0) {
+            printf("send error\n");
+            return false;
+        }
+
+        return true;
+    }
+
+  public:
+    volatile int32 read_size_;
+    volatile int32 read_pocket_size_;
+    int32 all_read_size_;
+    int64 last_report_time_;
+
+    std::string send_data_;
+
+    tcp_dialer_sptr dialer_;
+    tcp_transport_sptr transport_;
 };
 
-static std::vector< std::shared_ptr<my_tcp_dialer>> my_dialers;
+void start_once_dialer() {
+    address bind_address("0.0.0.0", 0);
+    address peer_address(server_ip, server_port);
+    tcp_dialer_sptr dialer = tcp_dialer::create_instance(bind_address, peer_address);
 
-class time_report
-{
-public:
-	static void on_timer_timeout()
-	{
-		int read_size = 0;
-		for (int i = 0; i < count; i++)
-		{
-			int size = my_dialers[i]->read_size_;
-			if (size > 1024 * 1024 * 10)
-			{
-				auto pen_ps = my_dialers[i]->transport_->get_pending_send_size();
-				auto new_ps = my_dialers[i]->transport_->get_max_pending_send_size();
-				//if (new_ps <= 4096 * 8)
-				//	new_ps -= 4096;
-				//else
-				//	new_ps /= 2;
-				//printf("ps %u %u\n", pen_ps, new_ps);
-				//my_dialers[i]->transport_->set_max_pending_send_size(new_ps);
-			}
+    std::shared_ptr<my_tcp_dialer> my_dialer(new my_tcp_dialer);
+    my_dialer->set_dialer(dialer);
 
-			read_size += size;
-			my_dialers[i]->read_size_ = 0;
-		}
-		printf("client read speed is %fMB/s at %llu\n", (double)read_size / 1024 / 1024 / 1, ::time(0));
-	}
+    pump::dialer_callbacks cbs;
+    cbs.dialed_cb =
+        pump_bind(&my_tcp_dialer::on_dialed_callback, my_dialer.get(), _1, _2);
+    cbs.stopped_cb =
+        pump_bind(&my_tcp_dialer::on_stopped_dialing_callback, my_dialer.get());
+    cbs.timeout_cb =
+        pump_bind(&my_tcp_dialer::on_dialed_timeout_callback, my_dialer.get());
+
+    if (dialer->start(sv, cbs) != 0) {
+        printf("tcp dialer start error\n");
+        return;
+    }
+
+    my_dialers[my_dialer.get()] = my_dialer;
+}
+
+class time_report {
+  public:
+    static void on_timer_timeout() {
+        int read_size = 0;
+
+        dial_mx.lock();
+        for (auto b = my_dialers.begin(); b != my_dialers.end(); b++) {
+            int size = b->second->read_size_;
+            read_size += size;
+            b->second->read_size_ = 0;
+
+            if (b->second->all_read_size_ >= 100 * 1024 * 1024 &&
+                b->second->transport_->is_started()) {
+                b->second->transport_->force_stop();
+                start_once_dialer();
+            }
+        }
+        dial_mx.unlock();
+
+        printf("client read speed is %fMB/s at %llu\n",
+               (double)read_size / 1024 / 1024 / 1,
+               ::time(0));
+    }
 };
 
-void start_tcp_client(const std::string &ip, uint16 port)
-{
-	sv = new service;
-	sv->start();
+void start_tcp_client(const std::string &ip, uint16 port) {
+    server_ip = ip;
+    server_port = port;
 
-	for (int i = 0; i < count; i++)
-	{
-		address bind_address("0.0.0.0", 0);
-		address peer_address(ip, port);
-		tcp_dialer_sptr dialer = tcp_dialer::create_instance(bind_address, peer_address);
+    sv = new service;
+    sv->start();
 
-		std::shared_ptr<my_tcp_dialer> my_dialer(new my_tcp_dialer);
-		my_dialer->set_dialer(dialer);
-		my_dialers.push_back(my_dialer);
+    dial_mx.lock();
+    for (int i = 0; i < count; i++) {
+        start_once_dialer();
+    }
+    dial_mx.unlock();
 
-		pump::dialer_callbacks cbs;
-		cbs.dialed_cb = pump_bind(&my_tcp_dialer::on_dialed_callback, my_dialer.get(), _1, _2);
-		cbs.stopped_cb = pump_bind(&my_tcp_dialer::on_stopped_dialing_callback, my_dialer.get());
-		cbs.timeout_cb = pump_bind(&my_tcp_dialer::on_dialed_timeout_callback, my_dialer.get());
+    time::timer_callback cb = pump_bind(&time_report::on_timer_timeout);
+    time::timer_sptr t = time::timer::create_instance(1000 * 1, cb, true);
+    sv->start_timer(t);
 
-		if (dialer->start(sv, cbs) != 0)
-		{
-			printf("tcp dialer start error\n");
-		}
-	}
-
-	time::timer_callback cb = pump_bind(&time_report::on_timer_timeout);
-	time::timer_sptr t = time::timer::create_instance(1000*1, cb, true);
-	sv->start_timer(t);
-
-	sv->wait_stopped();
+    sv->wait_stopped();
 }

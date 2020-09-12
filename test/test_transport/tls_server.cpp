@@ -5,132 +5,125 @@ static service *sv;
 static int send_loop = 0;
 static int send_pocket_size = 1024 * 4;
 
-struct transport_context
-{
-	transport_context(tls_transport_sptr t)
-	{
-		transport = t;
-		read_size = 0;
-		read_pocket_size = 0;
-		last_report_time = ::time(0);
-		idx = t->get_fd();
-	}
+struct transport_context {
+    transport_context(tls_transport_sptr t) {
+        transport = t;
+        read_size = 0;
+        read_pocket_size = 0;
+        last_report_time = ::time(0);
+        idx = t->get_fd();
+    }
 
-	tls_transport_sptr transport;
-	uint64 read_size;
-	int32 read_pocket_size;
-	int32 last_report_time;
-	int32 idx;
-
+    tls_transport_sptr transport;
+    uint64 read_size;
+    int32 read_pocket_size;
+    int32 last_report_time;
+    int32 idx;
 };
 
-class my_tls_acceptor: 
-	public std::enable_shared_from_this<my_tls_acceptor>
-{
-public:
-	my_tls_acceptor()
-	{
-		send_data_.resize(send_pocket_size);
-	}
+class my_tls_acceptor : public std::enable_shared_from_this<my_tls_acceptor> {
+  public:
+    my_tls_acceptor() { send_data_.resize(send_pocket_size); }
 
-	/*********************************************************************************
-	 * Tcp accepted event callback
-	 ********************************************************************************/
-	void on_accepted_callback(base_transport_sptr &&transp)
-	{
-		tls_transport_sptr transport = std::static_pointer_cast<tls_transport>(transp);
-		auto tctx = new transport_context(transport);
-		transport->set_context(tctx);
+    /*********************************************************************************
+     * Tcp accepted event callback
+     ********************************************************************************/
+    void on_accepted_callback(base_transport_sptr &transp) {
+        tls_transport_sptr transport =
+            std::static_pointer_cast<tls_transport>(transp);
+        auto tctx = new transport_context(transport);
+        transport->set_context(tctx);
 
-		pump::transport_callbacks cbs;
-		cbs.read_cb = pump_bind(&my_tls_acceptor::on_read_callback, this, transp.get(), _1, _2);
-		cbs.stopped_cb = pump_bind(&my_tls_acceptor::on_stopped_callback, this, transp.get());
-		cbs.disconnected_cb = pump_bind(&my_tls_acceptor::on_disconnected_callback, this, transp.get());
+        pump::transport_callbacks cbs;
+        cbs.read_cb = pump_bind(&my_tls_acceptor::on_read_callback, this,
+                                transp.get(), _1, _2);
+        cbs.stopped_cb = pump_bind(&my_tls_acceptor::on_stopped_callback, this,
+                                   transp.get());
+        cbs.disconnected_cb = pump_bind(
+            &my_tls_acceptor::on_disconnected_callback, this, transp.get());
 
-		if (transport->start(sv, 0, cbs) == 0)
-		{
-			std::lock_guard<std::mutex> lock(mx_);
-			printf("server tls transport accepted %d\n", transp->get_fd());
-			transports_[transp.get()] = tctx;
-		}
-	}
+        if (transport->start(sv, 0, cbs) == 0) {
+            std::lock_guard<std::mutex> lock(mx_);
+            printf("server tls transport accepted %d\n", transp->get_fd());
+            transports_[transp.get()] = tctx;
+        }
 
-	/*********************************************************************************
-	 * Stopped accepting event callback
-	 ********************************************************************************/
-	void on_stopped_accepting_callback()
-	{
-	}
+        transport->read_for_loop();
+    }
 
-	/*********************************************************************************
-	 * Tcp read event callback
-	 ********************************************************************************/
-	void on_read_callback(base_transport_ptr transp, c_block_ptr b, int32 size)
-	{
-		static int last_fd = 0;
-		if (last_fd != transp->get_fd())
-		{
-			//printf("transport %d read\n", transp->get_fd());
-			last_fd = transp->get_fd();
-		}
+    /*********************************************************************************
+     * Stopped accepting event callback
+     ********************************************************************************/
+    void on_stopped_accepting_callback() {}
 
-		transport_context* ctx = (transport_context*)transp->get_context();
+    /*********************************************************************************
+     * Tcp read event callback
+     ********************************************************************************/
+    void on_read_callback(base_transport_ptr transp, c_block_ptr b,
+                          int32 size) {
+        static int last_fd = 0;
+        if (last_fd != transp->get_fd()) {
+            // printf("transport %d read\n", transp->get_fd());
+            last_fd = transp->get_fd();
+        }
 
-		ctx->read_pocket_size += size;
-		ctx->read_size += size;
+        transport_context *ctx = (transport_context *)transp->get_context();
 
-		if (ctx->read_pocket_size >= send_pocket_size)
-		{
-			ctx->read_pocket_size -= send_pocket_size;
-			send_data(transp);
-		}
-	}
+        ctx->read_pocket_size += size;
+        ctx->read_size += size;
 
-	/*********************************************************************************
-	 * Tcp disconnected event callback
-	 ********************************************************************************/
-	void on_disconnected_callback(base_transport_ptr transp)
-	{
-		std::lock_guard<std::mutex> lock(mx_);
-		auto it = transports_.find(transp);
-		if (it != transports_.end())
-		{
-			printf("tls transport %d disconnected all read size %fMB\n", transp->get_fd(), (double)it->second->read_size / 1024 / 1024);
-			printf("tls transport %d disconnected all read pocket %lld\n", transp->get_fd(), it->second->read_size / 4096);
-			delete it->second;
-			transports_.erase(it);
-		}
-	}
+        if (ctx->read_pocket_size >= send_pocket_size) {
+            ctx->read_pocket_size -= send_pocket_size;
+            send_data(transp);
+        }
+    }
 
-	/*********************************************************************************
-	 * Tcp stopped event callback
-	 ********************************************************************************/
-	void on_stopped_callback(base_transport_ptr transp)
-	{
-		std::lock_guard<std::mutex> lock(mx_);
-		auto it = transports_.find(transp);
-		if (it != transports_.end())
-		{
-			printf("tls transport disconnected all read size %fMB\n", (double)it->second->read_size / 1024 / 1024);
-			printf("tls transport disconnected all read pocket %llu\n", it->second->read_size / 4096);
-			delete it->second;
-		}
-	}
+    /*********************************************************************************
+     * Tcp disconnected event callback
+     ********************************************************************************/
+    void on_disconnected_callback(base_transport_ptr transp) {
+        std::lock_guard<std::mutex> lock(mx_);
+        auto it = transports_.find(transp);
+        if (it != transports_.end()) {
+            printf("tls transport %d disconnected all read size %fMB\n",
+                   transp->get_fd(),
+                   (double)it->second->read_size / 1024 / 1024);
+            printf("tls transport %d disconnected all read pocket %lld\n",
+                   transp->get_fd(), it->second->read_size / 4096);
+            delete it->second;
+            transports_.erase(it);
+        }
+    }
 
-	void send_data(base_transport_ptr transport)
-	{
-		if (transport->send(send_data_.data(), send_data_.size()) != 0)
-			printf("send data error\n");
-	}
+    /*********************************************************************************
+     * Tcp stopped event callback
+     ********************************************************************************/
+    void on_stopped_callback(base_transport_ptr transp) {
+        std::lock_guard<std::mutex> lock(mx_);
+        auto it = transports_.find(transp);
+        if (it != transports_.end()) {
+            printf("tls transport disconnected all read size %fMB\n",
+                   (double)it->second->read_size / 1024 / 1024);
+            printf("tls transport disconnected all read pocket %llu\n",
+                   it->second->read_size / 4096);
+            delete it->second;
+        }
+    }
 
-private:
-	std::string send_data_;
+    void send_data(base_transport_ptr transport) {
+        if (transport->send(send_data_.data(), send_data_.size()) != 0)
+            printf("send data error\n");
+    }
 
-	std::mutex mx_;
-	std::map<void_ptr, transport_context*> transports_;
+  private:
+    std::string send_data_;
+
+    std::mutex mx_;
+    std::map<void_ptr, transport_context *> transports_;
 };
 
-const char *cert = "\
+const char *cert =
+    "\
 -----BEGIN CERTIFICATE-----\
 MIIESjCCArKgAwIBAgIBBzANBgkqhkiG9w0BAQsFADA3MQwwCgYDVQQLEwN6aHQx\
 DDAKBgNVBAoTA3podDEMMAoGA1UECBMDemh0MQswCQYDVQQGEwJDTjAeFw0yMDAz\
@@ -158,7 +151,8 @@ bb07Ta+RRyRqMnF4cy6VyabNXfDCh/RDtdnb5IERZTMCI/Juzocn489IHaHDtH5I\
 -----END CERTIFICATE-----\
 ";
 
-const char *key = "\
+const char *key =
+    "\
 -----BEGIN RSA PRIVATE KEY-----\
 MIIG4wIBAAKCAYEArPK8IBbrmbnJRHUsQCipKxXFmqfvHSSj5yYoPBxlUkGoc3Mt\
 z0ftUxZnSotREkbwYw1zJwSC4pET8xZvNSn/b1J2yhZe0Jdwj9SSo7SnV12wdxQT\
@@ -200,25 +194,29 @@ tjiSDBXej+xcoYNOHSlaB+7fIqIq5IA6t5ZZB6xH3TwILG7AsUxV\
 -----END RSA PRIVATE KEY-----\
 ";
 
-void start_tls_server(const std::string &ip, uint16 port, const std::string &cert_file, const std::string &key_file)
-{
-	sv = new service;
-	sv->start();
+void start_tls_server(const std::string &ip, uint16 port,
+                      const std::string &cert_file,
+                      const std::string &key_file) {
+    sv = new service;
+    sv->start();
 
-	my_tls_acceptor *my_acceptor = new my_tls_acceptor;
+    my_tls_acceptor *my_acceptor = new my_tls_acceptor;
 
-	pump::acceptor_callbacks cbs;
-	cbs.accepted_cb = pump_bind(&my_tls_acceptor::on_accepted_callback, my_acceptor, _1);
-	cbs.stopped_cb = pump_bind(&my_tls_acceptor::on_stopped_accepting_callback, my_acceptor);
+    pump::acceptor_callbacks cbs;
+    cbs.accepted_cb =
+        pump_bind(&my_tls_acceptor::on_accepted_callback, my_acceptor, _1);
+    cbs.stopped_cb =
+        pump_bind(&my_tls_acceptor::on_stopped_accepting_callback, my_acceptor);
 
-	address listen_address(ip, port);
-	tls_acceptor_sptr acceptor = tls_acceptor::create_instance_with_memory(cert, key, listen_address);
-	//tls_acceptor_sptr acceptor = tls_acceptor::create_instance_with_file(cert_file, key_file, listen_address);
-	if (acceptor->start(sv, cbs) != 0)
-	{
-		printf("tls acceptor start error\n");
-	}
+    address listen_address(ip, port);
+    tls_acceptor_sptr acceptor =
+        tls_acceptor::create_instance_with_memory(cert, key, listen_address);
+    // tls_acceptor_sptr acceptor =
+    // tls_acceptor::create_instance_with_file(cert_file, key_file,
+    // listen_address);
+    if (acceptor->start(sv, cbs) != 0) {
+        printf("tls acceptor start error\n");
+    }
 
-	sv->wait_stopped();
+    sv->wait_stopped();
 }
-

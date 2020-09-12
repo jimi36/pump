@@ -18,83 +18,75 @@
 #include "pump/time/timer_queue.h"
 
 namespace pump {
-	namespace time {
+namespace time {
 
-		#define TIMER_INIT    0
-		#define TIMER_STOPPED 1
-		#define TIMER_STARTED 2
-		#define TIMER_PENDING 3
+    const static int32 TIMER_INIT = 0;
+    const static int32 TIMER_STOPPED = 1;
+    const static int32 TIMER_STARTED = 2;
+    const static int32 TIMER_PENDING = 3;
 
-		timer::timer(uint64 timeout, const timer_callback &cb, bool repeated) noexcept :
-			queue_(nullptr),
-			status_(TIMER_INIT),
-			cb_(cb),
-			repeated_(repeated),
-			timeout_(timeout),
-			overtime_(0)
-		{
-		}
+    timer::timer(uint64 timeout, const timer_callback &cb, bool repeated) noexcept
+        : queue_(nullptr),
+          status_(TIMER_INIT),
+          cb_(cb),
+          repeated_(repeated),
+          timeout_(timeout),
+          overtime_(0) {
+    }
 
-		bool timer::__start(timer_queue_ptr queue)
-		{
-			if (!__set_status(TIMER_INIT, TIMER_STARTED))
-				return false;
+    bool timer::__start(timer_queue_ptr queue) {
+        if (!__set_status(TIMER_INIT, TIMER_STARTED))
+            return false;
 
-			overtime_ = get_clock_milliseconds() + timeout_;
+        overtime_ = get_clock_milliseconds() + timeout_;
 
-			queue_ = queue;
+        queue_ = queue;
 
-			return true;
-		}
+        return true;
+    }
 
-		bool timer::__restart()
-		{
-			if (!is_started())
-				return false;
+    bool timer::__restart() {
+        if (!is_started())
+            return false;
 
-			overtime_ = get_clock_milliseconds() + timeout_;
+        overtime_ = get_clock_milliseconds() + timeout_;
 
-			return true;
-		}
+        return true;
+    }
 
-		void timer::stop()
-		{	
-			while (true)
-			{
-				if (__set_status(TIMER_INIT, TIMER_INIT))
-					return;
+    void timer::stop() {
+        while (true) {
+            if (__set_status(TIMER_INIT, TIMER_INIT))
+                return;
 
-				if (__set_status(TIMER_INIT, TIMER_INIT) ||
-					__set_status(TIMER_STOPPED, TIMER_STOPPED) || 
-					__set_status(TIMER_PENDING, TIMER_STOPPED))
-					break;
+            if (__set_status(TIMER_INIT, TIMER_INIT) ||
+                __set_status(TIMER_STOPPED, TIMER_STOPPED) ||
+                __set_status(TIMER_PENDING, TIMER_STOPPED))
+                break;
 
-				if (__set_status(TIMER_STARTED, TIMER_STOPPED))
-				{
-					if (PUMP_LIKELY(queue_ != nullptr))
-						queue_->delete_timer(this);
-					else
-						break;
-				}
-			}
+            if (__set_status(TIMER_STARTED, TIMER_STOPPED)) {
+                if (PUMP_LIKELY(queue_ != nullptr))
+                    queue_->delete_timer(this);
+                else
+                    break;
+            }
+        }
 
-			repeated_ = false;
-		}
+        repeated_ = false;
+    }
 
-		void timer::handle_timeout()
-		{
-			if (!__set_status(TIMER_STARTED, TIMER_PENDING))
-				return;
+    void timer::handle_timeout() {
+        if (!__set_status(TIMER_STARTED, TIMER_PENDING))
+            return;
 
-			if (cb_)
-				cb_();
+        if (cb_)
+            cb_();
 
-			if (repeated_ && queue_ &&__set_status(TIMER_PENDING, TIMER_STARTED))
-			{
-				auto sptr = shared_from_this();
-				queue_->add_timer(sptr, true);
-			}
-		}
+        if (repeated_ && queue_ && __set_status(TIMER_PENDING, TIMER_STARTED)) {
+            auto sptr = shared_from_this();
+            queue_->add_timer(sptr, true);
+        }
+    }
 
-	}
-}
+}  // namespace time
+}  // namespace pump

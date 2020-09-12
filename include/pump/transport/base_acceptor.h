@@ -20,76 +20,77 @@
 #include "pump/transport/base_transport.h"
 
 namespace pump {
-	namespace transport {
+namespace transport {
 
-		class LIB_PUMP base_acceptor : 
-			public base_channel
-		{
-		public:
-			/*********************************************************************************
-			 * Constructor
-			 ********************************************************************************/
-			base_acceptor(
-				transport_type type, 
-				const address &listen_address
-			) noexcept :
-				base_channel(type, nullptr, -1),
-				listen_address_(listen_address)
-			{}
+    class LIB_PUMP base_acceptor : public base_channel {
+      public:
+        /*********************************************************************************
+         * Constructor
+         ********************************************************************************/
+        base_acceptor(transport_type type, const address &listen_address) noexcept
+            : base_channel(type, nullptr, -1), listen_address_(listen_address) {
+        }
 
-			/*********************************************************************************
-			 * Deconstructor
-			 ********************************************************************************/
-			virtual ~base_acceptor()
-			{ __stop_tracker(); }
+        /*********************************************************************************
+         * Deconstructor
+         ********************************************************************************/
+        virtual ~base_acceptor() {
+#if !defined(PUMP_HAVE_IOCP)
+            __stop_tracker();
+#endif
+        }
 
-			/*********************************************************************************
-			 * Start
-			 ********************************************************************************/
-			virtual transport_error start(
-				service_ptr sv, 
-				const acceptor_callbacks &cbs
-			) = 0;
+        /*********************************************************************************
+         * Start
+         ********************************************************************************/
+        virtual transport_error start(service_ptr sv, const acceptor_callbacks &cbs) = 0;
 
-			/*********************************************************************************
-			 * Stop
-			 ********************************************************************************/
-			virtual void stop() = 0;
+        /*********************************************************************************
+         * Stop
+         ********************************************************************************/
+        virtual void stop() = 0;
 
-			/*********************************************************************************
-			 * Get local address
-			 ********************************************************************************/
-			PUMP_INLINE const address& get_listen_address() const
-			{ return listen_address_; }
+        /*********************************************************************************
+         * Get local address
+         ********************************************************************************/
+        PUMP_INLINE const address &get_listen_address() const {
+            return listen_address_;
+        }
 
-		protected:
-			/*********************************************************************************
-			 * Tracker event callback
-			 ********************************************************************************/
-			virtual void on_tracker_event(int32 ev) override;
+      protected:
+        /*********************************************************************************
+         * Channel event callback
+         ********************************************************************************/
+        virtual void on_channel_event(uint32 ev) override;
 
-		protected:
-			/*********************************************************************************
-			 * Start tracker
-			 ********************************************************************************/
-			bool __start_tracker(poll::channel_sptr &ch);
+#if !defined(PUMP_HAVE_IOCP)
+      protected:
+        /*********************************************************************************
+         * Start tracker
+         ********************************************************************************/
+        bool __start_tracker(poll::channel_sptr &&ch);
 
-			/*********************************************************************************
-			 * Stop tracker
-			 ********************************************************************************/
-			void __stop_tracker();
+        /*********************************************************************************
+         * Stop tracker
+         ********************************************************************************/
+        void __stop_tracker();
+#endif
 
-		protected:
-			// Listen address
-			address listen_address_;
-			// Channel tracker
-			poll::channel_tracker_sptr tracker_;
-			// Acceptor callbacks
-			acceptor_callbacks cbs_;
-		};
-		DEFINE_ALL_POINTER_TYPE(base_acceptor);
+      protected:
+        // Listen address
+        address listen_address_;
 
-	}
-}
+#if !defined(PUMP_HAVE_IOCP)
+        // Channel tracker
+        poll::channel_tracker_sptr tracker_;
+#endif
+
+        // Acceptor callbacks
+        acceptor_callbacks cbs_;
+    };
+    DEFINE_ALL_POINTER_TYPE(base_acceptor);
+
+}  // namespace transport
+}  // namespace pump
 
 #endif

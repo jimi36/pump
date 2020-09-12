@@ -17,166 +17,157 @@
 #ifndef pump_transport_tcp_dialer_h
 #define pump_transport_tcp_dialer_h
 
+#include <future>
+
 #include "pump/time/timer.h"
 #include "pump/transport/base_dialer.h"
-#include "pump/transport/tcp_transport.h"
 #include "pump/transport/flow/flow_tcp_dialer.h"
 
 namespace pump {
-	namespace transport {
+namespace transport {
 
-		class tcp_dialer;
-		DEFINE_ALL_POINTER_TYPE(tcp_dialer);
+    class tcp_dialer;
+    DEFINE_ALL_POINTER_TYPE(tcp_dialer);
 
-		class LIB_PUMP tcp_dialer : 
-			public base_dialer,
-			public std::enable_shared_from_this<tcp_dialer>
-		{
-		public:
-			/*********************************************************************************
-			 * Create instance
-			 ********************************************************************************/
-			PUMP_INLINE static tcp_dialer_sptr create_instance(
-				const address &local_address,
-				const address &remote_address,
-				int64 connect_timeout = 0
-			) {
-				INLINE_OBJECT_CREATE(
-					obj, 
-					tcp_dialer, 
-					(local_address, remote_address, connect_timeout)
-				);
-				return tcp_dialer_sptr(obj, object_delete<tcp_dialer>);
-			}
+    class LIB_PUMP tcp_dialer : public base_dialer,
+                                public std::enable_shared_from_this<tcp_dialer> {
+      public:
+        /*********************************************************************************
+         * Create instance
+         ********************************************************************************/
+        PUMP_INLINE static tcp_dialer_sptr create_instance(const address &local_address,
+                                                           const address &remote_address,
+                                                           int64 connect_timeout = 0) {
+            INLINE_OBJECT_CREATE(
+                obj, tcp_dialer, (local_address, remote_address, connect_timeout));
+            return tcp_dialer_sptr(obj, object_delete<tcp_dialer>);
+        }
 
-			/*********************************************************************************
-			 * Deconstructor
-			 ********************************************************************************/
-			virtual ~tcp_dialer() = default;
+        /*********************************************************************************
+         * Deconstructor
+         ********************************************************************************/
+        virtual ~tcp_dialer() = default;
 
-			/*********************************************************************************
-			 * Start
-			 ********************************************************************************/
-			virtual transport_error start(
-				service_ptr sv, 
-				const dialer_callbacks &cbs
-			) override;
+        /*********************************************************************************
+         * Start
+         ********************************************************************************/
+        virtual transport_error start(service_ptr sv,
+                                      const dialer_callbacks &cbs) override;
 
-			/*********************************************************************************
-			 * Stop
-			 ********************************************************************************/
-			virtual void stop() override;
+        /*********************************************************************************
+         * Stop
+         ********************************************************************************/
+        virtual void stop() override;
 
-		protected:
-			/*********************************************************************************
-			 * Send event callback
-			 ********************************************************************************/
-			virtual void on_send_event(void_ptr iocp_task) override;
+      protected:
+        /*********************************************************************************
+         * Send event callback
+         ********************************************************************************/
+#if defined(PUMP_HAVE_IOCP)
+        virtual void on_send_event(void_ptr iocp_task) override;
+#else
+        virtual void on_send_event() override;
+#endif
 
-		protected:
-			/*********************************************************************************
-			 * Timeout event callback
-			 ********************************************************************************/
-			static void on_timeout(tcp_dialer_wptr wptr);
+      protected:
+        /*********************************************************************************
+         * Timeout event callback
+         ********************************************************************************/
+        static void on_timeout(tcp_dialer_wptr wptr);
 
-		private:
-			/*********************************************************************************
-			 * Open flow
-			 ********************************************************************************/
-			bool __open_flow();
+      private:
+        /*********************************************************************************
+         * Open flow
+         ********************************************************************************/
+        bool __open_flow();
 
-			/*********************************************************************************
-			 * Close flow
-			 ********************************************************************************/
-			PUMP_INLINE void __close_flow()
-			{ if (flow_) flow_->close(); }
+        /*********************************************************************************
+         * Close flow
+         ********************************************************************************/
+        PUMP_INLINE void __close_flow() {
+            if (flow_)
+                flow_->close();
+        }
 
-		private:
-			/*********************************************************************************
-			 * Constructor
-			 ********************************************************************************/
-			tcp_dialer(
-				const address &local_address,
-				const address &remote_address,
-				int64 connect_timeout
-			) noexcept;
+      private:
+        /*********************************************************************************
+         * Constructor
+         ********************************************************************************/
+        tcp_dialer(const address &local_address,
+                   const address &remote_address,
+                   int64 connect_timeout) noexcept;
 
-		private:
-			// Dialer flow
-			flow::flow_tcp_dialer_sptr flow_;
-		};
+      private:
+        // Dialer flow
+        flow::flow_tcp_dialer_sptr flow_;
+    };
 
-		class tcp_sync_dialer;
-		DEFINE_ALL_POINTER_TYPE(tcp_sync_dialer);
+    class tcp_sync_dialer;
+    DEFINE_ALL_POINTER_TYPE(tcp_sync_dialer);
 
-		class LIB_PUMP tcp_sync_dialer : 
-			public std::enable_shared_from_this<tcp_sync_dialer>
-		{
-		public:
-			/*********************************************************************************
-			 * Create instance
-			 ********************************************************************************/
-			static tcp_sync_dialer_sptr create_instance()
-			{
-				return tcp_sync_dialer_sptr(new tcp_sync_dialer);
-			}
+    class LIB_PUMP tcp_sync_dialer
+        : public std::enable_shared_from_this<tcp_sync_dialer> {
+      public:
+        /*********************************************************************************
+         * Create instance
+         ********************************************************************************/
+        static tcp_sync_dialer_sptr create_instance() {
+            return tcp_sync_dialer_sptr(new tcp_sync_dialer);
+        }
 
-			/*********************************************************************************
-			 * Deconstructor
-			 ********************************************************************************/
-			virtual ~tcp_sync_dialer() = default;
+        /*********************************************************************************
+         * Deconstructor
+         ********************************************************************************/
+        virtual ~tcp_sync_dialer() = default;
 
-			/*********************************************************************************
-			 * Dial by sync
-			 ********************************************************************************/
-			base_transport_sptr dial(
-				service_ptr sv,
-				const address &local_address,
-				const address &remote_address,
-				int64 connect_timeout = 0
-			);
+        /*********************************************************************************
+         * Dial by sync
+         ********************************************************************************/
+        base_transport_sptr dial(service_ptr sv,
+                                 const address &local_address,
+                                 const address &remote_address,
+                                 int64 connect_timeout = 0);
 
-		protected:
-			/*********************************************************************************
-			 * Dialed callback
-			 ********************************************************************************/
-			static void on_dialed(
-				tcp_sync_dialer_wptr wptr,
-				base_transport_sptr &&transp,
-				bool succ
-			);
+      protected:
+        /*********************************************************************************
+         * Dialed callback
+         ********************************************************************************/
+        static void on_dialed(tcp_sync_dialer_wptr wptr,
+                              base_transport_sptr &transp,
+                              bool succ);
 
-			/*********************************************************************************
-			 * Dialed timeout callback
-			 ********************************************************************************/
-			static void on_timeouted(tcp_sync_dialer_wptr wptr);
+        /*********************************************************************************
+         * Dialed timeout callback
+         ********************************************************************************/
+        static void on_timeouted(tcp_sync_dialer_wptr wptr);
 
-			/*********************************************************************************
-			 * Stopped dial event callback
-			 ********************************************************************************/
-			static void on_stopped();
+        /*********************************************************************************
+         * Stopped dial event callback
+         ********************************************************************************/
+        static void on_stopped();
 
-		private:
-			/*********************************************************************************
-			 * Constructor
-			 ********************************************************************************/
-			tcp_sync_dialer() noexcept
-			{}
+      private:
+        /*********************************************************************************
+         * Constructor
+         ********************************************************************************/
+        tcp_sync_dialer() noexcept {
+        }
 
-			/*********************************************************************************
-			 * Reset sync dialer
-			 ********************************************************************************/
-			PUMP_INLINE void __reset()
-			{ dialer_.reset(); }
+        /*********************************************************************************
+         * Reset sync dialer
+         ********************************************************************************/
+        PUMP_INLINE void __reset() {
+            dialer_.reset();
+        }
 
-		private:
-			// Tcp dialer
-			tcp_dialer_sptr dialer_;
-			// Dial promise
-			std::promise<base_transport_sptr> dial_promise_;
-		};
+      private:
+        // Tcp dialer
+        tcp_dialer_sptr dialer_;
+        // Dial promise
+        std::promise<base_transport_sptr> dial_promise_;
+    };
 
-	}
-}
+}  // namespace transport
+}  // namespace pump
 
 #endif

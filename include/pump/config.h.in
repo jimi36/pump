@@ -22,18 +22,22 @@
 #define PUMP_BUILD_VERSION @pump_BUILD_VERSION@
 
 #define @pump_WITH_IOCP@
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
 #if defined(WITH_IOCP)
-	#define USE_IOCP
+#define PUMP_HAVE_IOCP
+#endif
+#elif defined(__linux__)
+#define PUMP_HAVE_EPOLL
 #endif
 
 #define @pump_WITH_GNUTLS@
 #if defined(WITH_GNUTLS)
-	#define USE_GNUTLS
+#define PUMP_HAVE_GNUTLS
 #endif
 
 #define @pump_WITH_JEMALLOC@
 #if defined(WITH_JEMALLOC)
-	#define USE_JEMALLOC
+#define PUMP_HAVE_JEMALLOC
 #endif
 
 #endif

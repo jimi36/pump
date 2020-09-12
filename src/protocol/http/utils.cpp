@@ -14,94 +14,77 @@
  * limitations under the License.
  */
 
+#include "pump/debug.h"
 #include "pump/protocol/http/utils.h"
 #include "pump/protocol/http/defines.h"
 
 namespace pump {
-	namespace protocol {
-		namespace http {
+namespace protocol {
+    namespace http {
 
-			c_block_ptr find_http_line_end(c_block_ptr src, int32 len)
-			{
-				if (len < HTTP_CR_LEN)
-					return nullptr;
+        c_block_ptr find_http_line_end(c_block_ptr src, int32 len) {
+            if (len < HTTP_CR_LEN)
+                return nullptr;
 
-				while (len >= HTTP_CR_LEN)
-				{
-					if (memcmp(src, HTTP_CR, HTTP_CR_LEN) == 0)
-					{
-						src += HTTP_CR_LEN;
-						return src;
-					}
-					len--;
-					src++;
-				}
+            while (len >= HTTP_CR_LEN) {
+                if (memcmp(src, HTTP_CR, HTTP_CR_LEN) == 0) {
+                    src += HTTP_CR_LEN;
+                    return src;
+                }
+                len--;
+                src++;
+            }
 
-				return nullptr;
-			}
+            return nullptr;
+        }
 
-			bool url_decode(const std::string &src, std::string &des)
-			{
-				uint32 len = (uint32)src.length();
-				for (uint32 i = 0; i < len; i++)
-				{
-					uint8 ch = src[i];
-					if (ch == '+')
-					{
-						ch = ' ';
-					}
-					else if (ch == '%')
-					{
-						if (i + 2 >= len)
-							return false;
-						ch = hexchar_to_decnum(src[i + 1]) << 4 | hexchar_to_decnum(src[i + 2]);
-						i += 2;
-					}
-					des.append(1, (block)ch);
-				}
-				return true;
-			}
+        bool url_decode(const std::string &src, std::string &des) {
+            uint32 len = (uint32)src.length();
+            for (uint32 i = 0; i < len; i++) {
+                uint8 ch = src[i];
+                if (ch == '+') {
+                    ch = ' ';
+                } else if (ch == '%') {
+                    if (i + 2 >= len)
+                        return false;
+                    ch = hexchar_to_decnum(src[i + 1]) << 4 |
+                         hexchar_to_decnum(src[i + 2]);
+                    i += 2;
+                }
+                des.append(1, (block)ch);
+            }
+            return true;
+        }
 
-			bool url_encode(const std::string &src, std::string &des)
-			{
-				uint32 len = (uint32)src.length();
-				for (uint32 i = 0; i < len; i++)
-				{
-					if (isalnum((uint8)src[i]) ||
-						(src[i] == '-') ||
-						(src[i] == '_') ||
-						(src[i] == '.') ||
-						(src[i] == '~'))
-					{
-						des.append(1, src[i]);
-					}
-					else if (src[i] == ' ')
-					{
-						des.append(1, '+');
-					}
-					else
-					{
-						des.append(1, '%');
-						des.append(1, decnum_to_hexchar((uint8)src[i] >> 4));
-						des.append(1, decnum_to_hexchar((uint8)src[i] % 16));
-					}
-				}
-				return true;
-			}
+        bool url_encode(const std::string &src, std::string &des) {
+            uint32 len = (uint32)src.length();
+            for (uint32 i = 0; i < len; i++) {
+                if (isalnum((uint8)src[i]) || (src[i] == '-') || (src[i] == '_') ||
+                    (src[i] == '.') || (src[i] == '~')) {
+                    des.append(1, src[i]);
+                } else if (src[i] == ' ') {
+                    des.append(1, '+');
+                } else {
+                    des.append(1, '%');
+                    des.append(1, decnum_to_hexchar((uint8)src[i] >> 4));
+                    des.append(1, decnum_to_hexchar((uint8)src[i] % 16));
+                }
+            }
+            return true;
+        }
 
-			transport::address host_to_address(bool https, const std::string &host)
-			{
-				auto results = split_string(host, "[:]");
-				if (results.empty())
-					PUMP_ASSERT(false);
+        transport::address host_to_address(bool https, const std::string &host) {
+            auto results = split_string(host, "[:]");
+            if (results.empty())
+                PUMP_ASSERT(false);
 
-				uint16 port = https ? 443 : 80;
-				if (results.size() > 1)
-					port = atoi(results[1].c_str());
+            uint16 port = https ? 443 : 80;
+            if (results.size() > 1)
+                port = atoi(results[1].c_str());
 
-				return transport::address(results[0], port);
-			}
+            return transport::address(results[0], port);
+        }
 
-		}
-	}
-}
+    }  // namespace http
+}  // namespace protocol
+}  // namespace pump

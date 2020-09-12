@@ -21,138 +21,147 @@
 #include "pump/transport/base_transport.h"
 
 namespace pump {
-	namespace transport {
+namespace transport {
 
-		class tls_transport;
-		DEFINE_ALL_POINTER_TYPE(tls_transport);
+    class tls_transport;
+    DEFINE_ALL_POINTER_TYPE(tls_transport);
 
-		class LIB_PUMP tls_transport : 
-			public base_transport,
-			public std::enable_shared_from_this<tls_transport>
-		{
-		public:
-			/*********************************************************************************
-			 * Create instance
-			 ********************************************************************************/
-			PUMP_INLINE static tls_transport_sptr create_instance()
-			{
-				INLINE_OBJECT_CREATE(
-					obj, 
-					tls_transport, 
-					()
-				);
-				return tls_transport_sptr(obj, object_delete<tls_transport>);
-			}
+    class LIB_PUMP tls_transport : public base_transport,
+                                   public std::enable_shared_from_this<tls_transport> {
+      public:
+        /*********************************************************************************
+         * Create instance
+         ********************************************************************************/
+        PUMP_INLINE static tls_transport_sptr create_instance() {
+            INLINE_OBJECT_CREATE(obj, tls_transport, ());
+            return tls_transport_sptr(obj, object_delete<tls_transport>);
+        }
 
-			/*********************************************************************************
-			 * Deconstructor
-			 ********************************************************************************/
-			virtual ~tls_transport();
+        /*********************************************************************************
+         * Deconstructor
+         ********************************************************************************/
+        virtual ~tls_transport();
 
-			/*********************************************************************************
-			 * Init
-			 ********************************************************************************/
-			void init(
-				flow::flow_tls_sptr &flow,
-				const address &local_address,
-				const address &remote_address
-			);
+        /*********************************************************************************
+         * Init
+         ********************************************************************************/
+        void init(flow::flow_tls_sptr &flow,
+                  const address &local_address,
+                  const address &remote_address);
 
-			/*********************************************************************************
-			 * Start tls transport
-			 ********************************************************************************/
-			virtual transport_error start(
-				service_ptr sv,
-				int32 max_pending_send_size,
-				const transport_callbacks &cbs
-			) override;
+        /*********************************************************************************
+         * Start tls transport
+         ********************************************************************************/
+        virtual transport_error start(service_ptr sv,
+                                      int32 max_pending_send_size,
+                                      const transport_callbacks &cbs) override;
 
-			/*********************************************************************************
-			 * Stop
-			 * Tls transport will delay stopping until all sendlist data is sent.
-			 ********************************************************************************/
-			virtual void stop() override;
+        /*********************************************************************************
+         * Stop
+         * Tls transport will delay stopping until all sendlist data is sent.
+         ********************************************************************************/
+        virtual void stop() override;
 
-			/*********************************************************************************
-			 * Force stop
-			 ********************************************************************************/
-			virtual void force_stop() override;
+        /*********************************************************************************
+         * Force stop
+         ********************************************************************************/
+        virtual void force_stop() override;
 
-			/*********************************************************************************
-			 * Send
-			 ********************************************************************************/
-			virtual transport_error send(c_block_ptr b, uint32 size) override;
+        /*********************************************************************************
+         * Read for once
+         ********************************************************************************/
+        virtual transport_error read_for_once();
 
-		protected:
-			/*********************************************************************************
-			 * Channel event callback
-			 ********************************************************************************/
-			virtual void on_channel_event(uint32 ev) override;
+        /*********************************************************************************
+         * Read for loop
+         ********************************************************************************/
+        virtual transport_error read_for_loop();
 
-			/*********************************************************************************
-			 * Read event callback
-			 ********************************************************************************/
-			virtual void on_read_event(void_ptr iocp_task) override;
+        /*********************************************************************************
+         * Send
+         ********************************************************************************/
+        virtual transport_error send(c_block_ptr b, uint32 size) override;
 
-			/*********************************************************************************
-			 * Send event callback
-			 ********************************************************************************/
-			virtual void on_send_event(void_ptr iocp_task) override;
+      protected:
+        /*********************************************************************************
+         * Channel event callback
+         ********************************************************************************/
+        virtual void on_channel_event(uint32 ev) override;
 
-		private:
-			/*********************************************************************************
-			 * Constructor
-			 ********************************************************************************/
-			tls_transport() noexcept;
+        /*********************************************************************************
+         * Read event callback
+         ********************************************************************************/
+#if defined(PUMP_HAVE_IOCP)
+        virtual void on_read_event(void_ptr iocp_task) override;
+#else
+        virtual void on_read_event() override;
+#endif
 
-			/*********************************************************************************
-			 * Close flow
-			 ********************************************************************************/
-			PUMP_INLINE void __close_flow()
-			{ if (flow_) flow_->close(); }
+        /*********************************************************************************
+         * Send event callback
+         ********************************************************************************/
+#if defined(PUMP_HAVE_IOCP)
+        virtual void on_send_event(void_ptr iocp_task) override;
+#else
+        virtual void on_send_event() override;
+#endif
 
-			/*********************************************************************************
-			 * Async send
-			 ********************************************************************************/
-			bool __async_send(flow::buffer_ptr b);
+      private:
+        /*********************************************************************************
+         * Constructor
+         ********************************************************************************/
+        tls_transport() noexcept;
 
-			/*********************************************************************************
-			 * Send once
-			 ********************************************************************************/
-			bool __send_once(flow::flow_tls_ptr flow);
+        /*********************************************************************************
+         * Close flow
+         ********************************************************************************/
+        PUMP_INLINE void __close_flow() {
+            if (flow_)
+                flow_->close();
+        }
 
-			/*********************************************************************************
-			 * Read tls data
-			 ********************************************************************************/
-			void __read_tls_data(flow::flow_tls_ptr flow);
+        /*********************************************************************************
+         * Async send
+         ********************************************************************************/
+        bool __async_send(flow::buffer_ptr b);
 
-			/*********************************************************************************
-			 * Try doing transport dissconnected process
-			 ********************************************************************************/
-			void __try_doing_disconnected_process();
+        /*********************************************************************************
+         * Send once
+         ********************************************************************************/
+        bool __send_once(flow::flow_tls_ptr flow, bool resume);
 
-			/*********************************************************************************
-			 * Clear send pockets
-			 ********************************************************************************/
-			void __clear_send_pockets();
+        /*********************************************************************************
+         * Read tls data
+         ********************************************************************************/
+        void __read_tls_data(flow::flow_tls_ptr flow);
 
-		private:
-			// TLS flow
-			flow::flow_tls_sptr flow_;
+        /*********************************************************************************
+         * Try doing transport dissconnected process
+         ********************************************************************************/
+        void __try_doing_disconnected_process();
 
-			// Last send buffer
-			volatile uint32 last_send_buffer_size_;
-			volatile flow::buffer_ptr last_send_buffer_;
+        /*********************************************************************************
+         * Clear send pockets
+         ********************************************************************************/
+        void __clear_send_pockets();
 
-			// When sending data, transport will append buffer to sendlist at first. On triggering send
-			// event, transport will send buffer in the sendlist.
-			moodycamel::ConcurrentQueue<flow::buffer_ptr> sendlist_;
+      private:
+        // TLS flow
+        flow::flow_tls_sptr flow_;
 
-			// Who got next send chance, who can send next buffer.
-			std::atomic_flag next_send_chance_;
-		};
+        // Last send buffer
+        volatile uint32 last_send_buffer_size_;
+        volatile flow::buffer_ptr last_send_buffer_;
 
-	}
-}
+        // When sending data, transport will append buffer to sendlist at first. On
+        // triggering send event, transport will send buffer in the sendlist.
+        moodycamel::ConcurrentQueue<flow::buffer_ptr> sendlist_;
+
+        // Who got next send chance, who can send next buffer.
+        std::atomic_flag next_send_chance_;
+    };
+
+}  // namespace transport
+}  // namespace pump
 
 #endif

@@ -21,99 +21,99 @@
 #include "pump/transport/base_transport.h"
 
 namespace pump {
-	namespace transport {
+namespace transport {
 
-		class udp_transport;
-		DEFINE_ALL_POINTER_TYPE(udp_transport);
+    class udp_transport;
+    DEFINE_ALL_POINTER_TYPE(udp_transport);
 
-		class LIB_PUMP udp_transport :
-			public base_transport,
-			public std::enable_shared_from_this<udp_transport>
-		{
-		public:
-			/*********************************************************************************
-			 * Create instance
-			 ********************************************************************************/
-			PUMP_INLINE static udp_transport_sptr create_instance(
-				const address &local_address
-			) {
-				INLINE_OBJECT_CREATE(
-					obj, 
-					udp_transport, 
-					(local_address)
-				);
-				return udp_transport_sptr(obj, object_delete<udp_transport>);
-			}
+    class LIB_PUMP udp_transport : public base_transport,
+                                   public std::enable_shared_from_this<udp_transport> {
+      public:
+        /*********************************************************************************
+         * Create instance
+         ********************************************************************************/
+        PUMP_INLINE static udp_transport_sptr create_instance(
+            const address &local_address) {
+            INLINE_OBJECT_CREATE(obj, udp_transport, (local_address));
+            return udp_transport_sptr(obj, object_delete<udp_transport>);
+        }
 
-			/*********************************************************************************
-			 * Deconstructor
-			 ********************************************************************************/
-			virtual ~udp_transport() = default;
+        /*********************************************************************************
+         * Deconstructor
+         ********************************************************************************/
+        virtual ~udp_transport() = default;
 
-			/*********************************************************************************
-			 * Start
-			 * max_pending_send_size is ignore on udp transport.
-			 ********************************************************************************/
-			virtual transport_error start(
-				service_ptr sv, 
-				int32 max_pending_send_size,
-				const transport_callbacks &cbs
-			) override;
+        /*********************************************************************************
+         * Start
+         * max_pending_send_size is ignore on udp transport.
+         ********************************************************************************/
+        virtual transport_error start(service_ptr sv,
+                                      int32 max_pending_send_size,
+                                      const transport_callbacks &cbs) override;
 
-			/*********************************************************************************
-			 * Stop 
-			 ********************************************************************************/
-			virtual void stop() override;
+        /*********************************************************************************
+         * Stop
+         ********************************************************************************/
+        virtual void stop() override;
 
-			/*********************************************************************************
-			 * Force stop
-			 ********************************************************************************/
-			virtual void force_stop() override
-			{ stop(); }
+        /*********************************************************************************
+         * Force stop
+         ********************************************************************************/
+        virtual void force_stop() override {
+            stop();
+        }
 
-			/*********************************************************************************
-			 * Send
-			 ********************************************************************************/
-			virtual transport_error send(
-				c_block_ptr b, 
-				uint32 size, 
-				const address &remote_address
-			) override;
+        /*********************************************************************************
+         * Read for once
+         ********************************************************************************/
+        virtual transport_error read_for_once();
 
-		protected:
-			/*********************************************************************************
-			 * Read event callback
-			 ********************************************************************************/
-			virtual void on_read_event(void_ptr iocp_task) override;
+        /*********************************************************************************
+         * Read for loop
+         ********************************************************************************/
+        virtual transport_error read_for_loop();
 
-		private:
-			/*********************************************************************************
-			 * Constructor
-			 ********************************************************************************/
-			udp_transport(const address &local_address) noexcept;
+        /*********************************************************************************
+         * Send
+         ********************************************************************************/
+        virtual transport_error send(c_block_ptr b,
+                                     uint32 size,
+                                     const address &remote_address) override;
 
-			/*********************************************************************************
-			 * Open flow
-			 ********************************************************************************/
-			bool __open_flow();
+      protected:
+        /*********************************************************************************
+         * Read event callback
+         ********************************************************************************/
+#if defined(PUMP_HAVE_IOCP)
+        virtual void on_read_event(void_ptr iocp_task) override;
+#else
+        virtual void on_read_event() override;
+#endif
 
-			/*********************************************************************************
-			 * Close flow
-			 ********************************************************************************/
-			PUMP_INLINE void __close_flow()
-			{ flow_.reset(); }
+      private:
+        /*********************************************************************************
+         * Constructor
+         ********************************************************************************/
+        udp_transport(const address &local_address) noexcept;
 
-			/*********************************************************************************
-			 * Start read tracker
-			 ********************************************************************************/
-			bool __start_read_tracker();
+        /*********************************************************************************
+         * Open flow
+         ********************************************************************************/
+        bool __open_flow();
 
-		private:
-			// Udp flow
-			flow::flow_udp_sptr flow_;
-		};
+        /*********************************************************************************
+         * Close flow
+         ********************************************************************************/
+        PUMP_INLINE void __close_flow() {
+            flow_.reset();
+        }
 
-	}
-}
+      private:
+        // Udp flow
+        flow::flow_udp_sptr flow_;
+    };
+
+}  // namespace transport
+}  // namespace pump
 
 #endif

@@ -20,61 +20,63 @@
 #include "pump/transport/flow/flow.h"
 
 namespace pump {
-	namespace transport {
-		namespace flow {
+namespace transport {
+    namespace flow {
 
-			class flow_tcp_dialer : 
-				public flow_base
-			{
-			public:
-				/*********************************************************************************
-				 * Constructor
-				 ********************************************************************************/
-				flow_tcp_dialer() noexcept;
+        class flow_tcp_dialer : public flow_base {
+          public:
+            /*********************************************************************************
+             * Constructor
+             ********************************************************************************/
+            flow_tcp_dialer() noexcept;
 
-				/*********************************************************************************
-				 * Deconstructor
-				 ********************************************************************************/
-				virtual ~flow_tcp_dialer();
+            /*********************************************************************************
+             * Deconstructor
+             ********************************************************************************/
+            virtual ~flow_tcp_dialer();
 
-				/*********************************************************************************
-				 * Init
-				 * Return results:
-				 *     FLOW_ERR_NO    => success
-				 *     FLOW_ERR_ABORT => error
-				 ********************************************************************************/
-				int32 init(poll::channel_sptr &ch, const address &bind_address);
+            /*********************************************************************************
+             * Init
+             * Return results:
+             *     FLOW_ERR_NO    => success
+             *     FLOW_ERR_ABORT => error
+             ********************************************************************************/
+            flow_error init(poll::channel_sptr &&ch, const address &bind_address);
 
-				/*********************************************************************************
-				 * Want to connect
-				 * If using iocp this post an iocp task for connecting.
-				 * Return results:
-				 *     FLOW_ERR_NO    => success
-				 *     FLOW_ERR_ABORT => error
-				 ********************************************************************************/
-				int32 want_to_connect(const address &remote_address);
+            /*********************************************************************************
+             * Want to connect
+             * If using iocp this post an iocp task for connecting.
+             * Return results:
+             *     FLOW_ERR_NO    => success
+             *     FLOW_ERR_ABORT => error
+             ********************************************************************************/
+            flow_error want_to_connect(const address &remote_address);
 
-				/*********************************************************************************
-				 * Connect
-				 * Return socket error code.
-				 ********************************************************************************/
-				int32 connect(
-					void_ptr iocp_task,
-					address_ptr local_address, 
-					address_ptr remote_address
-				);
+            /*********************************************************************************
+             * Connect
+             * Return socket error code.
+             ********************************************************************************/
+#if defined(PUMP_HAVE_IOCP)
+            int32 connect(void_ptr iocp_task,
+                          address_ptr local_address,
+                          address_ptr remote_address);
+#else
+            int32 connect(address_ptr local_address, address_ptr remote_address);
+#endif
 
-			private:
-				// IPV6
-				bool is_ipv6_;
+          private:
+            // IPV6
+            bool is_ipv6_;
 
-				// IOCP dial task
-				void_ptr dial_task_;
-			};
-			DEFINE_ALL_POINTER_TYPE(flow_tcp_dialer);
+#if defined(PUMP_HAVE_IOCP)
+            // IOCP dial task
+            void_ptr dial_task_;
+#endif
+        };
+        DEFINE_ALL_POINTER_TYPE(flow_tcp_dialer);
 
-		}
-	}
-}
+    }  // namespace flow
+}  // namespace transport
+}  // namespace pump
 
 #endif

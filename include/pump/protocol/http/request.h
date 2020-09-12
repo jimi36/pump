@@ -24,106 +24,109 @@
 #include "pump/protocol/http/connection.h"
 
 namespace pump {
-	namespace protocol {
-		namespace http {
+namespace protocol {
+    namespace http {
 
-			enum request_method
-			{
-				METHOD_UNKNOWN = 0,
-				METHOD_GET,
-				METHOD_POST,
-				METHOD_HEAD,
-				METHOD_PUT,
-				METHOD_DELETE
-			};
+        enum request_method {
+            METHOD_UNKNOWN = 0,
+            METHOD_GET,
+            METHOD_POST,
+            METHOD_HEAD,
+            METHOD_PUT,
+            METHOD_DELETE
+        };
 
-			class request;
-			DEFINE_ALL_POINTER_TYPE(request);
+        class request;
+        DEFINE_ALL_POINTER_TYPE(request);
 
-			class LIB_PUMP request :
-				public pocket
-			{
-			public:
-				/*********************************************************************************
-				 * Constructor
-				 * This construct a http request to serialize.
-				 ********************************************************************************/
-				request(void_ptr ctx = nullptr) noexcept;
+        class LIB_PUMP request : public pocket {
+          public:
+            /*********************************************************************************
+             * Constructor
+             * This construct a http request to serialize.
+             ********************************************************************************/
+            request(void_ptr ctx = nullptr) noexcept;
 
-				/*********************************************************************************
-				 * Deconstructor
-				 ********************************************************************************/
-				virtual ~request() = default;
+            /*********************************************************************************
+             * Deconstructor
+             ********************************************************************************/
+            virtual ~request() = default;
 
-				/*********************************************************************************
-				 * Set request method
-				 ********************************************************************************/
-				PUMP_INLINE void set_method(request_method method)
-				{ method_ = method; }
+            /*********************************************************************************
+             * Set request method
+             ********************************************************************************/
+            PUMP_INLINE void set_method(request_method method) {
+                method_ = method;
+            }
 
-				/*********************************************************************************
-				 * Get request method
-				 ********************************************************************************/
-				PUMP_INLINE request_method get_method() const
-				{ return method_; }
+            /*********************************************************************************
+             * Get request method
+             ********************************************************************************/
+            PUMP_INLINE request_method get_method() const {
+                return method_;
+            }
 
-				/*********************************************************************************
-				 * Set request url
-				 ********************************************************************************/
-				PUMP_INLINE void set_url(const std::string &url)
-				{ uri_.parse_url(url); }
+            /*********************************************************************************
+             * Set request url
+             ********************************************************************************/
+            PUMP_INLINE void set_url(const std::string &url) {
+                uri_.parse_url(url);
+            }
 
-				/*********************************************************************************
-				 * Get http uri
-				 ********************************************************************************/
-				PUMP_INLINE c_uri_ptr get_uri() const
-				{ return (c_uri_ptr)&uri_; }
-				PUMP_INLINE uri_ptr get_uri()
-				{ return &uri_; }
+            /*********************************************************************************
+             * Get http uri
+             ********************************************************************************/
+            PUMP_INLINE c_uri_ptr get_uri() const {
+                return (c_uri_ptr)&uri_;
+            }
+            PUMP_INLINE uri_ptr get_uri() {
+                return &uri_;
+            }
 
-				/*********************************************************************************
-				 * Get context
-				 ********************************************************************************/
-				PUMP_INLINE void_ptr get_context() const
-				{ return ctx_; }
+            /*********************************************************************************
+             * Get context
+             ********************************************************************************/
+            PUMP_INLINE void_ptr get_context() const {
+                return ctx_;
+            }
 
-				/*********************************************************************************
-				 * Parse
-				 * This parse http pocket, and return parsed size. If this return -1, it means
-				 * parsed error.
-				 ********************************************************************************/
-				virtual int32 parse(c_block_ptr b, int32 size) override;
+            /*********************************************************************************
+             * Parse
+             * This parse http pocket, and return parsed size. If this return -1, it
+             *means parsed error.
+             ********************************************************************************/
+            virtual int32 parse(c_block_ptr b, int32 size) override;
 
-				/*********************************************************************************
-				 * Serialize
-				 * This will serialize http pocket and return serialized size.
-				 ********************************************************************************/
-				virtual int32 serialize(std::string &buf) const override;
+            /*********************************************************************************
+             * Serialize
+             * This will serialize http pocket and return serialized size.
+             ********************************************************************************/
+            virtual int32 serialize(std::string &buf) const override;
 
-			private:
-				/*********************************************************************************
-				 * Parse http start line
-				 ********************************************************************************/
-				int32 __parse_start_line(c_block_ptr b, int32 size);
+          private:
+            /*********************************************************************************
+             * Parse http start line
+             ********************************************************************************/
+            int32 __parse_start_line(c_block_ptr b, int32 size);
 
-				/*********************************************************************************
-				 * Serialize http request line
-				 ********************************************************************************/
-				int32 __serialize_request_line(std::string &buffer) const;
+            /*********************************************************************************
+             * Serialize http request line
+             ********************************************************************************/
+            int32 __serialize_request_line(std::string &buffer) const;
 
-			private:
-				// Request context
-				void_ptr ctx_;
+          private:
+            // Request context
+            void_ptr ctx_;
 
-				// Request uri
-				uri uri_;
+            // Request uri
+            uri uri_;
 
-				// Request method
-				request_method method_;
-			};
+            // Request method
+            request_method method_;
+        };
 
-		}
-	}
-}
+    }  // namespace http
+}  // namespace protocol
+}  // namespace pump
 
 #endif

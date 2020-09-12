@@ -15,199 +15,161 @@
  */
 
 #include "pump/service.h"
+#include "pump/poll/epoller.h"
+#include "pump/poll/ipoller.h"
+#include "pump/poll/spoller.h"
 #include "pump/time/timer_queue.h"
-
-#include "poll/iocp_poller.h"
-#include "poll/epoll_poller.h"
-#include "poll/select_poller.h"
 
 namespace pump {
 
-	service::service(bool has_poller) : 
-		running_(false),
-		loop_poller_(nullptr),
-		once_poller_(nullptr),
-		iocp_poller_(nullptr)
-	{
-		if (has_poller)
-		{
-#if defined(WIN32) && defined(USE_IOCP)
-			iocp_poller_ = object_create<poll::iocp_poller>(false);
+service::service(bool has_poller)
+    : running_(false),
+      read_poller_(nullptr),
+      write_poller_(nullptr),
+      iocp_poller_(nullptr) {
+    if (has_poller) {
+#if defined(WIN32) && defined(PUMP_HAVE_IOCP)
+        iocp_poller_ = object_create<poll::iocp_poller>();
 #else
-	#if  defined(WIN32)
-			loop_poller_ = object_create<poll::select_poller>(false);
-			once_poller_ = object_create<poll::select_poller>(true);
-	#else
-			loop_poller_ = object_create<poll::epoll_poller>(false);
-			once_poller_ = object_create<poll::epoll_poller>(true);
-	#endif
-#endif
-		}
-
-		tqueue_ = time::timer_queue::create_instance();
-	}
-
-	service::~service()
-	{
-		if (loop_poller_)
-			delete loop_poller_;
-		if (once_poller_)
-			delete once_poller_;
-		if (iocp_poller_)
-			delete iocp_poller_;
-	}
-
-	bool service::start()
-	{
-		if (running_)
-			return false;
-
-		running_ = true;
-
-		if (tqueue_ != nullptr)
-			tqueue_->start(pump_bind(&service::__post_timeout_timer, this, _1));
-		if (iocp_poller_ != nullptr)
-			iocp_poller_->start();
-		if (loop_poller_ != nullptr)
-			loop_poller_->start();
-		if (once_poller_ != nullptr)
-			once_poller_->start();
-
-		__start_posted_task_worker();
-
-		__start_timeout_timer_worker();
-
-		return true;
-	}
-
-	void service::stop()
-	{
-		running_ = false;
-
-		if (tqueue_)
-			tqueue_->stop();
-		if (iocp_poller_)
-			iocp_poller_->stop();
-		if (loop_poller_)
-			loop_poller_->stop();
-		if (once_poller_)
-			once_poller_->stop();
-	}
-
-	void service::wait_stopped()
-	{
-		if (iocp_poller_)
-			iocp_poller_->wait_stopped();
-		if (loop_poller_)
-			loop_poller_->wait_stopped();
-		if (once_poller_)
-			once_poller_->wait_stopped();
-		if (tqueue_)
-			tqueue_->wait_stopped();
-		if (posted_task_worker_)
-			posted_task_worker_->join();
-		if (timeout_timer_worker_)
-			timeout_timer_worker_->join();
-	}
-
-	bool service::add_channel_tracker(poll::channel_tracker_sptr &tracker, bool tracking)
-	{
-#if defined(WIN32) && defined(USE_IOCP)
-		return iocp_poller_->add_channel_tracker(tracker, tracking);
+#if defined(WIN32)
+        read_poller_ = object_create<poll::select_poller>();
+        write_poller_ = object_create<poll::select_poller>();
 #else
-		if (tracker->get_mode() == TRACK_MODE_LOOP)
-			return loop_poller_->add_channel_tracker(tracker, tracking);
-		else
-			return once_poller_->add_channel_tracker(tracker, tracking);
+        read_poller_ = object_create<poll::epoll_poller>();
+        write_poller_ = object_create<poll::epoll_poller>();
 #endif
-	}
-
-	bool service::remove_channel_tracker(poll::channel_tracker_sptr &tracker)
-	{
-#if defined(WIN32) && defined(USE_IOCP)
-		iocp_poller_->remove_channel_tracker(tracker);
-#else
-		if (PUMP_UNLIKELY(tracker->get_mode() == TRACK_MODE_LOOP))
-			loop_poller_->remove_channel_tracker(tracker);
-		else
-			once_poller_->remove_channel_tracker(tracker);
 #endif
-		return true;
-	}
+    }
 
-	bool service::pause_channel_tracker(poll::channel_tracker_ptr tracker)
-	{
-#if !defined(USE_IOCP)
-		if (PUMP_LIKELY(tracker->get_mode() == TRACK_MODE_LOOP))
-			loop_poller_->pause_channel_tracker(tracker);
-		else
-			once_poller_->pause_channel_tracker(tracker);
-#endif
-		return true;
-	}
-
-	bool service::awake_channel_tracker(poll::channel_tracker_ptr tracker)
-	{
-#if !defined(USE_IOCP)
-		if (PUMP_UNLIKELY(tracker->get_mode() == TRACK_MODE_LOOP))
-			loop_poller_->awake_channel_tracker(tracker);
-		else
-			once_poller_->awake_channel_tracker(tracker);
-#endif
-		return true;
-	}
-
-	bool service::post_channel_event(poll::channel_sptr &ch, uint32 event)
-	{
-#if defined(WIN32) && defined(USE_IOCP)
-		iocp_poller_->push_channel_event(ch, event);
-#else
-		once_poller_->push_channel_event(ch, event);
-#endif
-		return true;
-	}
-
-	bool service::start_timer(time::timer_sptr &tr)
-	{
-		PUMP_LOCK_SPOINTER(queue, tqueue_);
-		if (PUMP_LIKELY(queue != nullptr))
-			return queue->add_timer(tr);
-		else
-			return false;
-	}
-
-	void service::__start_posted_task_worker()
-	{
-		posted_task_worker_.reset(
-			object_create<std::thread>([&]() {
-				while (running_)
-				{
-					post_task_type task;
-					if (posted_tasks_.wait_dequeue_timed(task, std::chrono::seconds(1)))
-						task();
-				}
-			}),
-			object_delete<std::thread>
-		);
-	}
-
-	void service::__start_timeout_timer_worker()
-	{
-		timeout_timer_worker_.reset(
-			object_create<std::thread>([&]() {
-				while (running_)
-				{
-					time::timer_wptr wptr;
-					if (timeout_timers_.wait_dequeue_timed(wptr, std::chrono::seconds(1)))
-					{
-						PUMP_LOCK_WPOINTER(timer, wptr);
-						if (timer)
-							timer->handle_timeout();
-					}
-				}
-			}),
-			object_delete<std::thread>
-		);
-	}
-
+    tqueue_ = time::timer_queue::create_instance();
 }
+
+service::~service() {
+    if (read_poller_)
+        delete read_poller_;
+    if (write_poller_)
+        delete write_poller_;
+    if (iocp_poller_)
+        delete iocp_poller_;
+}
+
+bool service::start() {
+    if (running_)
+        return false;
+
+    running_ = true;
+
+    if (tqueue_ != nullptr)
+        tqueue_->start(pump_bind(&service::__post_timeout_timer, this, _1));
+    if (iocp_poller_ != nullptr)
+        iocp_poller_->start();
+    if (read_poller_ != nullptr)
+        read_poller_->start();
+    if (write_poller_ != nullptr)
+        write_poller_->start();
+
+    __start_posted_task_worker();
+
+    __start_timeout_timer_worker();
+
+    return true;
+}
+
+void service::stop() {
+    running_ = false;
+
+    if (tqueue_)
+        tqueue_->stop();
+    if (iocp_poller_)
+        iocp_poller_->stop();
+    if (read_poller_)
+        read_poller_->stop();
+    if (write_poller_)
+        write_poller_->stop();
+}
+
+void service::wait_stopped() {
+    if (iocp_poller_)
+        iocp_poller_->wait_stopped();
+    if (read_poller_)
+        read_poller_->wait_stopped();
+    if (write_poller_)
+        write_poller_->wait_stopped();
+    if (tqueue_)
+        tqueue_->wait_stopped();
+    if (posted_task_worker_)
+        posted_task_worker_->join();
+    if (timeout_timer_worker_)
+        timeout_timer_worker_->join();
+}
+
+#if !defined(PUMP_HAVE_IOCP)
+bool service::add_channel_tracker(poll::channel_tracker_sptr &tracker, int32_t pt) {
+    if (pt == READ_POLLER)
+        return read_poller_->add_channel_tracker(tracker);
+    else
+        return write_poller_->add_channel_tracker(tracker);
+}
+
+bool service::remove_channel_tracker(poll::channel_tracker_sptr &tracker, int32_t pt) {
+    if (pt == READ_POLLER)
+        read_poller_->remove_channel_tracker(tracker);
+    else
+        write_poller_->remove_channel_tracker(tracker);
+    return true;
+}
+
+bool service::awake_channel_tracker(poll::channel_tracker_ptr tracker, int32_t pt) {
+    if (pt == READ_POLLER)
+        read_poller_->resume_channel_tracker(tracker);
+    else
+        write_poller_->resume_channel_tracker(tracker);
+    return true;
+}
+#endif
+
+bool service::post_channel_event(poll::channel_sptr &ch, uint32 event) {
+#if defined(PUMP_HAVE_IOCP)
+    iocp_poller_->push_channel_event(ch, event);
+#else
+    write_poller_->push_channel_event(ch, event);
+#endif
+    return true;
+}
+
+bool service::start_timer(time::timer_sptr &tr) {
+    PUMP_LOCK_SPOINTER(queue, tqueue_);
+    if (PUMP_LIKELY(queue != nullptr))
+        return queue->add_timer(tr);
+    else
+        return false;
+}
+
+void service::__start_posted_task_worker() {
+    auto func = [&]() {
+        while (running_) {
+            post_task_type task;
+            if (posted_tasks_.wait_dequeue_timed(task, std::chrono::seconds(1)))
+                task();
+        }
+    };
+    posted_task_worker_.reset(object_create<std::thread>(func),
+                              object_delete<std::thread>);
+}
+
+void service::__start_timeout_timer_worker() {
+    auto func = [&]() {
+        while (running_) {
+            time::timer_wptr wptr;
+            if (timeout_timers_.wait_dequeue_timed(wptr, std::chrono::seconds(1))) {
+                PUMP_LOCK_WPOINTER(timer, wptr);
+                if (timer)
+                    timer->handle_timeout();
+            }
+        }
+    };
+    timeout_timer_worker_.reset(object_create<std::thread>(func),
+                                object_delete<std::thread>);
+}
+
+}  // namespace pump

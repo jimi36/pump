@@ -22,141 +22,134 @@
 #include "pump/protocol/websocket/frame.h"
 
 namespace pump {
-	namespace protocol {
-		namespace websocket {
+namespace protocol {
+    namespace websocket {
 
-			class connection;
-			DEFINE_ALL_POINTER_TYPE(connection);
+        class connection;
+        DEFINE_ALL_POINTER_TYPE(connection);
 
-			struct connection_callbacks
-			{
-				pump_function<
-					void(c_block_ptr, uint32, bool)
-				> data_cb;
+        struct connection_callbacks {
+            pump_function<void(c_block_ptr, uint32, bool)> data_cb;
 
-				pump_function<
-					void(const std::string&)
-				> error_cb;
-			};
+            pump_function<void(const std::string &)> error_cb;
+        };
 
-			class LIB_PUMP connection :
-				public std::enable_shared_from_this<connection>
-			{
-			public:
-				/*********************************************************************************
-				 * Constructor
-				 ********************************************************************************/
-				connection(bool has_mask) noexcept;
+        class LIB_PUMP connection : public std::enable_shared_from_this<connection> {
+          public:
+            /*********************************************************************************
+             * Constructor
+             ********************************************************************************/
+            connection(bool has_mask) noexcept;
 
-				/*********************************************************************************
-				 * Deconstructor
-				 ********************************************************************************/
-				virtual ~connection() = default;
+            /*********************************************************************************
+             * Deconstructor
+             ********************************************************************************/
+            virtual ~connection() = default;
 
+            /*********************************************************************************
+             * Upgrade http connection
+             ********************************************************************************/
+            bool upgrade(http::connection_sptr &conn);
 
-				/*********************************************************************************
-				 * Upgrade http connection
-				 ********************************************************************************/
-				bool upgrade(http::connection_sptr &conn);
+            /*********************************************************************************
+             * Start
+             ********************************************************************************/
+            bool start(const connection_callbacks &cbs);
 
-				/*********************************************************************************
-				 * Start
-				 ********************************************************************************/
-				bool start(const connection_callbacks &cbs);
+            /*********************************************************************************
+             * Stop
+             ********************************************************************************/
+            void stop();
 
-				/*********************************************************************************
-				 * Stop
-				 ********************************************************************************/
-				void stop();
+            /*********************************************************************************
+             * Send
+             ********************************************************************************/
+            bool send(c_block_ptr b, uint32 size);
 
-				/*********************************************************************************
-				 * Send
-				 ********************************************************************************/
-				bool send(c_block_ptr b, uint32 size);
+            /*********************************************************************************
+             * Check connection is valid or not
+             ********************************************************************************/
+            PUMP_INLINE bool is_valid() const {
+                return transp_ && transp_->is_started();
+            }
 
-				/*********************************************************************************
-				 * Check connection is valid or not
-				 ********************************************************************************/
-				PUMP_INLINE bool is_valid() const
-				{ return transp_ && transp_->is_started(); }
+          protected:
+            /*********************************************************************************
+             * Read event callback
+             ********************************************************************************/
+            static void on_read(connection_wptr wptr, c_block_ptr b, int32 size);
 
-			protected:
-				/*********************************************************************************
-				 * Read event callback
-				 ********************************************************************************/
-				static void on_read(connection_wptr wptr, c_block_ptr b, int32 size);
+            /*********************************************************************************
+             * Disconnected event callback
+             ********************************************************************************/
+            static void on_disconnected(connection_wptr wptr);
 
-				/*********************************************************************************
-				 * Disconnected event callback
-				 ********************************************************************************/
-				static void on_disconnected(connection_wptr wptr);
+            /*********************************************************************************
+             * Stopped event callback
+             ********************************************************************************/
+            static void on_stopped(connection_wptr wptr);
 
-				/*********************************************************************************
-				 * Stopped event callback
-				 ********************************************************************************/
-				static void on_stopped(connection_wptr wptr);
+          protected:
+            /*********************************************************************************
+             * Handle connection closed
+             ********************************************************************************/
+            static void on_error(connection_wptr wptr, const std::string &msg);
 
-			protected:
-				/*********************************************************************************
-				 * Handle connection closed
-				 ********************************************************************************/
-				static void on_error(connection_wptr wptr, const std::string &msg);
+          private:
+            /*********************************************************************************
+             * Handle frame
+             ********************************************************************************/
+            int32 __handle_frame(c_block_ptr b, uint32 size);
 
-			private:
-				/*********************************************************************************
-				 * Handle frame
-				 ********************************************************************************/
-				int32 __handle_frame(c_block_ptr b, uint32 size);
+            /*********************************************************************************
+             * Send ping frame
+             ********************************************************************************/
+            void __send_ping_frame();
 
-				/*********************************************************************************
-				 * Send ping frame
-				 ********************************************************************************/
-				void __send_ping_frame();
+            /*********************************************************************************
+             * Send pong
+             ********************************************************************************/
+            void __send_pong_frame();
 
-				/*********************************************************************************
-				 * Send pong
-				 ********************************************************************************/
-				void __send_pong_frame();
+            /*********************************************************************************
+             * Send close frame
+             ********************************************************************************/
+            void __send_close_frame();
 
-				/*********************************************************************************
-				 * Send close frame
-				 ********************************************************************************/
-				void __send_close_frame();
+          private:
+            /*********************************************************************************
+             * Constructor
+             ********************************************************************************/
+            connection(bool server, transport::base_transport_sptr &transp) noexcept;
 
-			private:
-				/*********************************************************************************
-				 * Constructor
-				 ********************************************************************************/
-				connection(bool server, transport::base_transport_sptr &transp) noexcept;
+          private:
+            // Service
+            service_ptr sv_;
 
-			private:
-				// Service 
-				service_ptr sv_;
+            // Frame mask
+            bool has_mask_;
+            uint8 mask_key_[4];
 
-				// Frame mask
-				bool has_mask_;
-				uint8 mask_key_[4];
+            // Transport
+            transport::base_transport_sptr transp_;
 
-				// Transport
-				transport::base_transport_sptr transp_;
+            // Websocket closed status
+            std::atomic_flag closed_;
 
-				// Websocket closed status
-				std::atomic_flag closed_;
+            // Read Cache
+            std::string read_cache_;
 
-				// Read Cache
-				std::string read_cache_;
+            // Frame decode info
+            int16 decode_phase_;
+            frame_header decode_hdr_;
 
-				// Frame decode info
-				int16 decode_phase_;
-				frame_header decode_hdr_;
+            // Websocket callbacks
+            connection_callbacks cbs_;
+        };
+        DEFINE_ALL_POINTER_TYPE(connection);
 
-				// Websocket callbacks
-				connection_callbacks cbs_;
-			};
-			DEFINE_ALL_POINTER_TYPE(connection);
-
-		}
-	}
-}
+    }  // namespace websocket
+}  // namespace protocol
+}  // namespace pump
 
 #endif

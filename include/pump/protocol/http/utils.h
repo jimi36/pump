@@ -21,34 +21,31 @@
 #include "pump/transport/address.h"
 
 namespace pump {
-	namespace protocol {
-		namespace http {
+namespace protocol {
+    namespace http {
 
-			/*********************************************************************************
-			 * Find http line end position
-			 ********************************************************************************/
-			LIB_PUMP c_block_ptr find_http_line_end(c_block_ptr src, int32 len);
+        /*********************************************************************************
+         * Find http line end position
+         ********************************************************************************/
+        LIB_PUMP c_block_ptr find_http_line_end(c_block_ptr src, int32 len);
 
-			/*********************************************************************************
-			 * Decode url string
-			 ********************************************************************************/
-			LIB_PUMP bool url_decode(const std::string &src, std::string &des);
+        /*********************************************************************************
+         * Decode url string
+         ********************************************************************************/
+        LIB_PUMP bool url_decode(const std::string &src, std::string &des);
 
-			/*********************************************************************************
-			 * Encode to url string
-			 ********************************************************************************/
-			LIB_PUMP bool url_encode(const std::string &src, std::string &des);
+        /*********************************************************************************
+         * Encode to url string
+         ********************************************************************************/
+        LIB_PUMP bool url_encode(const std::string &src, std::string &des);
 
-			/*********************************************************************************
-			 * Host to address
-			 ********************************************************************************/
-			LIB_PUMP transport::address host_to_address(
-				bool https,
-				const std::string &host
-			);
+        /*********************************************************************************
+         * Host to address
+         ********************************************************************************/
+        LIB_PUMP transport::address host_to_address(bool https, const std::string &host);
 
-		}
-	}
-}
+    }  // namespace http
+}  // namespace protocol
+}  // namespace pump
 
 #endif

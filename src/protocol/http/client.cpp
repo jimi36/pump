@@ -14,117 +14,103 @@
  * limitations under the License.
  */
 
+#include "pump/protocol/http/client.h"
 #include "pump/transport/tcp_dialer.h"
 #include "pump/transport/tls_dialer.h"
-#include "pump/protocol/http/client.h"
 
 namespace pump {
-	namespace protocol {
-		namespace http {
+namespace protocol {
+    namespace http {
 
-			client::client(service_ptr sv) :
-				sv_(sv),
-				cert_(nullptr),
-				dial_timeout_(0),
-				tls_handshake_timeout_(0)
-			{
-			}
+        client::client(service_ptr sv)
+            : sv_(sv), cert_(nullptr), dial_timeout_(0), tls_handshake_timeout_(0) {
+        }
 
-			client::~client()
-			{
-			}
+        client::~client() {
+        }
 
-			response_sptr client::request(request_sptr &req)
-			{
-				std::unique_lock<std::mutex> lock(resp_mx_);
+        response_sptr client::request(request_sptr &req) {
+            std::unique_lock<std::mutex> lock(resp_mx_);
 
-				if (!conn_ || !conn_->is_valid())
-				{
-					auto uri = req->get_uri();
-					bool https = uri->get_type() == URI_HTTPS;
-					auto peer_address = host_to_address(https, uri->get_host());
-					if (!__create_connection(https, peer_address))
-						return response_sptr();
-				}
-				else
-				{
-					conn_->get_transport()->continue_read();
-				}
+            if (!conn_ || !conn_->is_valid()) {
+                auto uri = req->get_uri();
+                bool https = uri->get_type() == URI_HTTPS;
+                auto peer_address = host_to_address(https, uri->get_host());
+                if (!__create_connection(https, peer_address))
+                    return response_sptr();
+            }
 
-				if (!conn_->send(req.get()))
-					return response_sptr();
+            if (!conn_->send(req.get()))
+                return response_sptr();
 
-				if (resp_cond_.wait_for(lock, std::chrono::seconds(5)) == std::cv_status::timeout)
-					return response_sptr();
+            conn_->read_next_pocket();
 
-				return std::move(resp_);
-			}
+            if (resp_cond_.wait_for(lock, std::chrono::seconds(5)) ==
+                std::cv_status::timeout)
+                return response_sptr();
 
-			bool client::__create_connection(bool https, const transport::address &peer_address)
-			{
-				transport::base_transport_sptr transp;
+            return std::move(resp_);
+        }
 
-				if (https)
-				{
-					transport::address bind_address("0.0.0.0", 0);
-					auto dialer = transport::tls_sync_dialer::create_instance();
-					transp = dialer->dial(sv_, bind_address, peer_address, dial_timeout_, tls_handshake_timeout_);
-				}
-				else
-				{
-					transport::address bind_address("0.0.0.0", 0);
-					auto dialer = transport::tcp_sync_dialer::create_instance();
-					transp = dialer->dial(sv_, bind_address, peer_address, dial_timeout_);
-				}
+        bool client::__create_connection(bool https,
+                                         const transport::address &peer_address) {
+            transport::base_transport_sptr transp;
 
-				if (!transp)
-					return false;
+            if (https) {
+                transport::address bind_address("0.0.0.0", 0);
+                auto dialer = transport::tls_sync_dialer::create_instance();
+                transp = dialer->dial(sv_,
+                                      bind_address,
+                                      peer_address,
+                                      dial_timeout_,
+                                      tls_handshake_timeout_);
+            } else {
+                transport::address bind_address("0.0.0.0", 0);
+                auto dialer = transport::tcp_sync_dialer::create_instance();
+                transp = dialer->dial(sv_, bind_address, peer_address, dial_timeout_);
+            }
 
-				http_callbacks cbs;
-				client_wptr cli = shared_from_this();
-				cbs.error_cb = pump_bind(&client::on_error, cli, _1);
-				cbs.pocket_cb = pump_bind(&client::on_response, cli, _1);
-				conn_.reset(new connection(false, transp));
-				return conn_->start(sv_, cbs);
-			}
+            if (!transp)
+                return false;
 
-			void client::__destroy_connection()
-			{
-				if (conn_)
-				{
-					conn_->stop();
-					conn_.reset();
-				}
-			}
+            http_callbacks cbs;
+            client_wptr cli = shared_from_this();
+            cbs.error_cb = pump_bind(&client::on_error, cli, _1);
+            cbs.pocket_cb = pump_bind(&client::on_response, cli, _1);
+            conn_.reset(new connection(false, transp));
+            return conn_->start(sv_, cbs);
+        }
 
-			void client::__notify_response(response_sptr &resp)
-			{
-				std::unique_lock<std::mutex> lock(resp_mx_);
-				resp_ = resp;
-				resp_cond_.notify_one();
-			}
+        void client::__destroy_connection() {
+            if (conn_) {
+                conn_->stop();
+                conn_.reset();
+            }
+        }
 
-			void client::on_response(client_wptr wptr, pocket_sptr &&pk)
-			{
-				PUMP_LOCK_WPOINTER(cli, wptr);
-				if (cli == nullptr)
-					return;
+        void client::__notify_response(response_sptr &resp) {
+            std::unique_lock<std::mutex> lock(resp_mx_);
+            resp_ = resp;
+            resp_cond_.notify_one();
+        }
 
-				cli->conn_->get_transport()->pause_read();
+        void client::on_response(client_wptr wptr, pocket_sptr &&pk) {
+            PUMP_LOCK_WPOINTER(cli, wptr);
+            if (cli == nullptr)
+                return;
 
-				auto resp = std::static_pointer_cast<response>(pk);
-				cli->__notify_response(resp);
-			}
+            auto resp = std::static_pointer_cast<response>(pk);
+            cli->__notify_response(resp);
+        }
 
-			void client::on_error(client_wptr wptr, const std::string& msg)
-			{
-				PUMP_LOCK_WPOINTER(cli, wptr);
-				if (cli == nullptr)
-					return;
+        void client::on_error(client_wptr wptr, const std::string &msg) {
+            PUMP_LOCK_WPOINTER(cli, wptr);
+            if (cli == nullptr)
+                return;
 
-				response_sptr resp;
-				cli->__notify_response(resp);
-			}
-		}
-	}
-}
+            response_sptr resp;
+            cli->__notify_response(resp);
+        }
+    }  // namespace http
+}  // namespace protocol
+}  // namespace pump

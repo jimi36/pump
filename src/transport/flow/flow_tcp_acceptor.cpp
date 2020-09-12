@@ -14,139 +14,143 @@
  * limitations under the License.
  */
 
-#include "net/iocp.h"
-#include "net/socket.h"
 #include "pump/transport/flow/flow_tcp_acceptor.h"
 
 namespace pump {
-	namespace transport {
-		namespace flow {
+namespace transport {
+    namespace flow {
 
-			flow_tcp_acceptor::flow_tcp_acceptor() noexcept :
-				is_ipv6_(false),
-				accept_task_(nullptr)
-			{
-			}
-
-			flow_tcp_acceptor::~flow_tcp_acceptor()
-			{
-				close();
-
-#if defined(WIN32) && defined(USE_IOCP)
-				if (accept_task_)
-					net::unlink_iocp_task(accept_task_);
+        flow_tcp_acceptor::flow_tcp_acceptor() noexcept : is_ipv6_(false) {
+#if defined(PUMP_HAVE_IOCP)
+            accept_task_ = nullptr;
 #endif
-			}
+        }
 
-			int32 flow_tcp_acceptor::init(poll::channel_sptr &ch, const address &listen_address)
-			{
-				PUMP_DEBUG_ASSIGN(ch, ch_, ch);
+        flow_tcp_acceptor::~flow_tcp_acceptor() {
+            close();
 
-				is_ipv6_ = listen_address.is_ipv6();
-				int32 domain = is_ipv6_ ? AF_INET6 : AF_INET;
+#if defined(PUMP_HAVE_IOCP)
+            if (accept_task_)
+                net::unlink_iocp_task(accept_task_);
+#endif
+        }
 
-#if defined(WIN32) && defined(USE_IOCP)
-				fd_ = net::create_iocp_socket(domain, SOCK_STREAM, net::get_iocp_handler());
-				if (fd_ == -1)
-					return FLOW_ERR_ABORT;
+        flow_error flow_tcp_acceptor::init(poll::channel_sptr &&ch,
+                                           const address &listen_address) {
+            PUMP_DEBUG_ASSIGN(ch, ch_, ch);
 
-				extra_fns_ = net::new_iocp_extra_function(fd_);
-				if (!extra_fns_)
-					return FLOW_ERR_ABORT;
+            is_ipv6_ = listen_address.is_ipv6();
+            int32 domain = is_ipv6_ ? AF_INET6 : AF_INET;
 
-				tmp_cache_.resize(ADDRESS_MAX_LEN * 3);
+#if defined(PUMP_HAVE_IOCP)
+            fd_ = net::create_iocp_socket(domain, SOCK_STREAM, net::get_iocp_handler());
+            if (fd_ == -1)
+                return FLOW_ERR_ABORT;
 
-				auto accept_task = net::new_iocp_task();
-				net::set_iocp_task_fd(accept_task, fd_);
-				net::set_iocp_task_notifier(accept_task, ch_);
-				net::set_iocp_task_type(accept_task, IOCP_TASK_ACCEPT);
-				net::set_iocp_task_buffer(accept_task, (block_ptr)tmp_cache_.data(), (uint32)tmp_cache_.size());
-				accept_task_ = accept_task;
+            extra_fns_ = net::new_iocp_extra_function(fd_);
+            if (!extra_fns_)
+                return FLOW_ERR_ABORT;
+
+            tmp_cache_.resize(ADDRESS_MAX_LEN * 3);
+
+            auto accept_task = net::new_iocp_task();
+            net::set_iocp_task_fd(accept_task, fd_);
+            net::set_iocp_task_notifier(accept_task, ch_);
+            net::set_iocp_task_type(accept_task, IOCP_TASK_ACCEPT);
+            net::set_iocp_task_buffer(
+                accept_task, (block_ptr)tmp_cache_.data(), (uint32)tmp_cache_.size());
+            accept_task_ = accept_task;
 #else
-				fd_ = net::create_socket(domain, SOCK_STREAM);
-				if (fd_ == -1)
-					return FLOW_ERR_ABORT;
+            fd_ = net::create_socket(domain, SOCK_STREAM);
+            if (fd_ == -1)
+                return FLOW_ERR_ABORT;
 #endif
-				if (!net::set_reuse(fd_, 1))
-					return FLOW_ERR_ABORT;
-				if (!net::set_noblock(fd_, 1))
-					return FLOW_ERR_ABORT;
-				if (!net::set_nodelay(fd_, 1))
-					return FLOW_ERR_ABORT;
-				if (!net::bind(fd_, (sockaddr*)listen_address.get(), listen_address.len()))
-					return FLOW_ERR_ABORT;
-				if (!net::listen(fd_))
-					return FLOW_ERR_ABORT;
+            if (!net::set_reuse(fd_, 1))
+                return FLOW_ERR_ABORT;
+            if (!net::set_noblock(fd_, 1))
+                return FLOW_ERR_ABORT;
+            if (!net::set_nodelay(fd_, 1))
+                return FLOW_ERR_ABORT;
+            if (!net::bind(fd_, (sockaddr *)listen_address.get(), listen_address.len()))
+                return FLOW_ERR_ABORT;
+            if (!net::listen(fd_))
+                return FLOW_ERR_ABORT;
 
-				return FLOW_ERR_NO;
-			}
+            return FLOW_ERR_NO;
+        }
 
-			int32 flow_tcp_acceptor::want_to_accept()
-			{
-#if defined(WIN32) && defined (USE_IOCP)
-				int32 domain = is_ipv6_ ? AF_INET6 : AF_INET;
-				int32 client = net::create_iocp_socket(domain, SOCK_STREAM, net::get_iocp_handler());
-				if (client == -1)
-					return FLOW_ERR_ABORT;
+#if defined(PUMP_HAVE_IOCP)
+        flow_error flow_tcp_acceptor::want_to_accept() {
+            int32 domain = is_ipv6_ ? AF_INET6 : AF_INET;
+            int32 client =
+                net::create_iocp_socket(domain, SOCK_STREAM, net::get_iocp_handler());
+            if (client == -1)
+                return FLOW_ERR_ABORT;
 
-				net::set_iocp_task_client_fd(accept_task_, client);
-				if (!net::post_iocp_accept(extra_fns_, accept_task_))
-				{
-					net::close(client);
-					return FLOW_ERR_ABORT;
-				}
+            net::set_iocp_task_client_fd(accept_task_, client);
+            if (!net::post_iocp_accept(extra_fns_, accept_task_)) {
+                net::close(client);
+                return FLOW_ERR_ABORT;
+            }
+
+            return FLOW_ERR_NO;
+        }
 #endif
-				return FLOW_ERR_NO;
-			}
 
-			int32 flow_tcp_acceptor::accept(
-				void_ptr iocp_task, 
-				address_ptr local_address, 
-				address_ptr remote_address
-			) {
-#if defined(WIN32) && defined(USE_IOCP)
-				int32 ec = net::get_iocp_task_ec(iocp_task);
-				int32 client_fd = net::get_iocp_task_client_fd(iocp_task);
-				if (ec != 0 || client_fd == -1)
-				{
-					net::close(client_fd);
-					return -1;
-				}
+#if defined(PUMP_HAVE_IOCP)
+        int32 flow_tcp_acceptor::accept(void_ptr iocp_task,
+                                        address_ptr local_address,
+                                        address_ptr remote_address) {
+            int32 ec = net::get_iocp_task_ec(iocp_task);
+            int32 client_fd = net::get_iocp_task_client_fd(iocp_task);
+            if (ec != 0 || client_fd == -1) {
+                net::close(client_fd);
+                return -1;
+            }
 
-				sockaddr *local = nullptr;
-				sockaddr *remote = nullptr;
-				int32 llen = sizeof(sockaddr_in);
-				int32 rlen = sizeof(sockaddr_in);
-				if (!net::get_iocp_accepted_address(extra_fns_, iocp_task, &local, &llen, &remote, &rlen))
-				{
-					net::close(client_fd);
-					return -1;
-				}
-				local_address->set(local, llen);
-				remote_address->set(remote, rlen);
+            sockaddr *local = nullptr;
+            sockaddr *remote = nullptr;
+            int32 llen = sizeof(sockaddr_in);
+            int32 rlen = sizeof(sockaddr_in);
+            if (!net::get_iocp_accepted_address(
+                    extra_fns_, iocp_task, &local, &llen, &remote, &rlen)) {
+                net::close(client_fd);
+                return -1;
+            }
+            local_address->set(local, llen);
+            remote_address->set(remote, rlen);
 
-				net::set_iocp_task_client_fd(iocp_task, 0);
+            net::set_iocp_task_client_fd(iocp_task, 0);
+            if (!net::set_noblock(client_fd, 1) || !net::set_nodelay(client_fd, 1)) {
+                net::close(client_fd);
+                return -1;
+            }
+
+            return client_fd;
+        }
 #else
-				int32 addrlen = ADDRESS_MAX_LEN;
-				int32 client_fd = net::accept(fd_, (struct sockaddr*)tmp_cache_.data(), &addrlen);
-				if (client_fd == -1)
-					return -1;
-				remote_address->set((sockaddr*)tmp_cache_.data(), addrlen);
+        int32 flow_tcp_acceptor::accept(address_ptr local_address,
+                                        address_ptr remote_address) {
+            int32 addrlen = ADDRESS_MAX_LEN;
+            int32 client_fd =
+                net::accept(fd_, (struct sockaddr *)tmp_cache_.data(), &addrlen);
+            if (client_fd == -1)
+                return -1;
+            remote_address->set((sockaddr *)tmp_cache_.data(), addrlen);
 
-				addrlen = ADDRESS_MAX_LEN;
-				net::local_address(client_fd, (sockaddr*)tmp_cache_.data(), &addrlen);
-				local_address->set((sockaddr*)tmp_cache_.data(), addrlen);
+            addrlen = ADDRESS_MAX_LEN;
+            net::local_address(client_fd, (sockaddr *)tmp_cache_.data(), &addrlen);
+            local_address->set((sockaddr *)tmp_cache_.data(), addrlen);
+
+            if (!net::set_noblock(client_fd, 1) || !net::set_nodelay(client_fd, 1)) {
+                net::close(client_fd);
+                return -1;
+            }
+
+            return client_fd;
+        }
 #endif
-				if (!net::set_noblock(client_fd, 1) ||
-					!net::set_nodelay(client_fd, 1))
-				{
-					net::close(client_fd);
-					return -1;
-				}
 
-				return client_fd;
-			}
-
-		}
-	}
-}
+    }  // namespace flow
+}  // namespace transport
+}  // namespace pump

@@ -17,44 +17,33 @@
 #include "pump/transport/base_acceptor.h"
 
 namespace pump {
-	namespace transport {
+namespace transport {
 
-		void base_acceptor::on_tracker_event(int32 ev)
-		{
-			if (ev == TRACKER_EVENT_DEL)
-			{
-				if (tracker_cnt_.fetch_sub(1) - 1 == 0)
-				{
-					if (__set_status(STATUS_STOPPING, STATUS_STOPPED))
-						cbs_.stopped_cb();
-				}
-			}
-		}
+    void base_acceptor::on_channel_event(uint32 ev) {
+        if (__set_status(TRANSPORT_STOPPING, TRANSPORT_STOPPED))
+            cbs_.stopped_cb();
+    }
 
-		bool base_acceptor::__start_tracker(poll::channel_sptr &ch)
-		{
-			PUMP_ASSERT(!tracker_);
+#if !defined(PUMP_HAVE_IOCP)
+    bool base_acceptor::__start_tracker(poll::channel_sptr &&ch) {
+        if (tracker_)
+            return false;
 
-			tracker_.reset(
-				object_create<poll::channel_tracker>(ch, TRACK_READ, TRACK_MODE_LOOP), 
-				object_delete<poll::channel_tracker>
-			);
-			if (!get_service()->add_channel_tracker(tracker_, true))
-				return false;
+        tracker_.reset(object_create<poll::channel_tracker>(ch, TRACK_READ),
+                       object_delete<poll::channel_tracker>);
+        if (!get_service()->add_channel_tracker(tracker_, READ_POLLER))
+            return false;
 
-			tracker_cnt_.fetch_add(1);
+        return true;
+    }
 
-			return true;
-		}
+    void base_acceptor::__stop_tracker() {
+        if (tracker_) {
+            PUMP_DEBUG_CHECK(
+                get_service()->remove_channel_tracker(std::move(tracker_), READ_POLLER));
+        }
+    }
+#endif
 
-		void base_acceptor::__stop_tracker()
-		{
-			if (tracker_)
-			{
-				auto tracker = std::move(tracker_);
-				PUMP_DEBUG_CHECK(get_service()->remove_channel_tracker(tracker));
-			}
-		}
-
-	}
-}
+}  // namespace transport
+}  // namespace pump

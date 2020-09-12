@@ -18,152 +18,152 @@
 #define pump_service_h
 
 #include "pump/poll/poller.h"
-#include "pump/toolkit/features.h"
 #include "pump/time/timer_queue.h"
+#include "pump/toolkit/features.h"
 
 namespace pump {
 
-	class LIB_PUMP service: 
-		public toolkit::noncopyable
-	{
-	protected:
-		typedef pump_function<void()> post_task_type;
-		
-	public:
-		/*********************************************************************************
-		 * Constructor
-		 ********************************************************************************/
-		service(bool enable_poller = true);
+#define READ_POLLER 0
+#define WRITE_POLLER 1
 
-		/*********************************************************************************
-		 * Deconstructor
-		 ********************************************************************************/
-		~service();
+class LIB_PUMP service : public toolkit::noncopyable {
+  protected:
+    typedef pump_function<void()> post_task_type;
 
-		/*********************************************************************************
-		 * Start
-		 ********************************************************************************/
-		bool start();
+  public:
+    /*********************************************************************************
+     * Constructor
+     ********************************************************************************/
+    service(bool enable_poller = true);
 
-		/*********************************************************************************
-		 * Stop
-		 ********************************************************************************/
-		void stop();
+    /*********************************************************************************
+     * Deconstructor
+     ********************************************************************************/
+    ~service();
 
-		/*********************************************************************************
-		 * Wait stopping
-		 ********************************************************************************/
-		void wait_stopped();
+    /*********************************************************************************
+     * Start
+     ********************************************************************************/
+    bool start();
 
-		/*********************************************************************************
-		 * Add channel checker
-		 ********************************************************************************/
-		bool add_channel_tracker(poll::channel_tracker_sptr &tracker, bool tracking);
+    /*********************************************************************************
+     * Stop
+     ********************************************************************************/
+    void stop();
 
-		/*********************************************************************************
-		 * Delete channel
-		 ********************************************************************************/
-		bool remove_channel_tracker(poll::channel_tracker_sptr &tracker);
+    /*********************************************************************************
+     * Wait stopping
+     ********************************************************************************/
+    void wait_stopped();
 
-		/*********************************************************************************
-		 * Pause channel
-		 ********************************************************************************/
-		bool pause_channel_tracker(poll::channel_tracker_ptr tracker);
+#if !defined(PUMP_HAVE_IOCP)
+    /*********************************************************************************
+     * Add channel checker
+     ********************************************************************************/
+    bool add_channel_tracker(poll::channel_tracker_sptr &tracker, int32_t pt);
 
-		/*********************************************************************************
-		 * Awake channel
-		 ********************************************************************************/
-		bool awake_channel_tracker(poll::channel_tracker_ptr tracker);
+    /*********************************************************************************
+     * Delete channel
+     ********************************************************************************/
+    bool remove_channel_tracker(poll::channel_tracker_sptr &tracker, int32_t pt);
 
-		/*********************************************************************************
-		 * Post channel event
-		 ********************************************************************************/
-		bool post_channel_event(poll::channel_sptr &ch, uint32 event);
+    /*********************************************************************************
+     * Awake channel
+     ********************************************************************************/
+    bool awake_channel_tracker(poll::channel_tracker_ptr tracker, int32_t pt);
+#endif
 
-		/*********************************************************************************
-		 * Post callback task
-		 ********************************************************************************/
-		PUMP_INLINE void post(const post_task_type &task)
-		{ posted_tasks_.enqueue(task); }
+    /*********************************************************************************
+     * Post channel event
+     ********************************************************************************/
+    bool post_channel_event(poll::channel_sptr &ch, uint32 event);
 
-		/*********************************************************************************
-		 * Start timer
-		 ********************************************************************************/
-		bool start_timer(time::timer_sptr &tr);
+    /*********************************************************************************
+     * Post callback task
+     ********************************************************************************/
+    PUMP_INLINE void post(const post_task_type &task) {
+        posted_tasks_.enqueue(task);
+    }
 
-	private:
-		/*********************************************************************************
-		 * Post timeout timer
-		 ********************************************************************************/
-		PUMP_INLINE void __post_timeout_timer(time::timer_wptr &timer)
-		{ timeout_timers_.enqueue(timer); }
+    /*********************************************************************************
+     * Start timer
+     ********************************************************************************/
+    bool start_timer(time::timer_sptr &tr);
 
-		/*********************************************************************************
-		 * Start posted task worker
-		 ********************************************************************************/
-		void __start_posted_task_worker();
+  private:
+    /*********************************************************************************
+     * Post timeout timer
+     ********************************************************************************/
+    PUMP_INLINE void __post_timeout_timer(time::timer_wptr &timer) {
+        timeout_timers_.enqueue(timer);
+    }
 
-		/*********************************************************************************
-		 * Start timeout timer worker
-		 ********************************************************************************/
-		void __start_timeout_timer_worker();
+    /*********************************************************************************
+     * Start posted task worker
+     ********************************************************************************/
+    void __start_posted_task_worker();
 
-	private:
-		// Running status
-		bool running_;
+    /*********************************************************************************
+     * Start timeout timer worker
+     ********************************************************************************/
+    void __start_timeout_timer_worker();
 
-		// Loop poller
-		poll::poller_ptr loop_poller_;
-		// Once poller
-		poll::poller_ptr once_poller_;
-		// IOCP poller
-		poll::poller_ptr iocp_poller_;
+  private:
+    // Running status
+    bool running_;
 
-		// Timer queue
-		time::timer_queue_sptr tqueue_;
+    // Read poller
+    poll::poller_ptr read_poller_;
+    // Write poller
+    poll::poller_ptr write_poller_;
+    // IOCP poller
+    poll::poller_ptr iocp_poller_;
 
-		// Posted task worker
-		std::shared_ptr<std::thread> posted_task_worker_;
-		moodycamel::BlockingConcurrentQueue<post_task_type> posted_tasks_;
+    // Timer queue
+    time::timer_queue_sptr tqueue_;
 
-		// Timout timer worker
-		std::shared_ptr<std::thread> timeout_timer_worker_;
-		moodycamel::BlockingConcurrentQueue<time::timer_wptr> timeout_timers_;
-	};
-	DEFINE_ALL_POINTER_TYPE(service);
+    // Posted task worker
+    std::shared_ptr<std::thread> posted_task_worker_;
+    moodycamel::BlockingConcurrentQueue<post_task_type> posted_tasks_;
 
-	class LIB_PUMP service_getter
-	{
-	public:
-		/*********************************************************************************
-		 * Constructor
-		 ********************************************************************************/
-		service_getter(service_ptr sv): 
-			service_(sv)
-		{}
+    // Timout timer worker
+    std::shared_ptr<std::thread> timeout_timer_worker_;
+    moodycamel::BlockingConcurrentQueue<time::timer_wptr> timeout_timers_;
+};
+DEFINE_ALL_POINTER_TYPE(service);
 
-		/*********************************************************************************
-		 * Deconstructor
-		 ********************************************************************************/
-		~service_getter() = default;
+class LIB_PUMP service_getter {
+  public:
+    /*********************************************************************************
+     * Constructor
+     ********************************************************************************/
+    service_getter(service_ptr sv) : service_(sv) {
+    }
 
-		/*********************************************************************************
-		 * Get service
-		 ********************************************************************************/
-		PUMP_INLINE service_ptr get_service()
-		{ return service_; }
+    /*********************************************************************************
+     * Deconstructor
+     ********************************************************************************/
+    ~service_getter() = default;
 
-	protected:
-		/*********************************************************************************
-		 * Set service
-		 ********************************************************************************/
-		PUMP_INLINE void __set_service(service_ptr sv)
-		{ service_ = sv; }
+    /*********************************************************************************
+     * Get service
+     ********************************************************************************/
+    PUMP_INLINE service_ptr get_service() {
+        return service_;
+    }
 
-	private:
-		service_ptr service_;
-	};
+  protected:
+    /*********************************************************************************
+     * Set service
+     ********************************************************************************/
+    PUMP_INLINE void __set_service(service_ptr sv) {
+        service_ = sv;
+    }
 
-}
+  private:
+    service_ptr service_;
+};
+
+}  // namespace pump
 
 #endif

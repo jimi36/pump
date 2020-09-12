@@ -1,9 +1,12 @@
-# Compiled Object files, Static and Dynamic libs (Shared Objects)
+# Compiled object files, Static and Dynamic libs (Shared Objects)
 *.o
 *.a
 *.so
 *.lib
 *.dll
+
+# Cmake temporary header files
+include/pump/config.h
 
 # Include path
 include/*
@@ -16,4 +19,4 @@ lib/*
 !lib/README.md
 
 # Build path
-build
+build/*

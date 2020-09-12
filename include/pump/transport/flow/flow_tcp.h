@@ -20,87 +20,95 @@
 #include "pump/transport/flow/flow.h"
 
 namespace pump {
-	namespace transport {
-		namespace flow {
+namespace transport {
+    namespace flow {
 
-			class flow_tcp : 
-				public flow_base
-			{
-			public:
-				/*********************************************************************************
-				 * Constructor
-				 ********************************************************************************/
-				flow_tcp() noexcept;
+        class flow_tcp : public flow_base {
+          public:
+            /*********************************************************************************
+             * Constructor
+             ********************************************************************************/
+            flow_tcp() noexcept;
 
-				/*********************************************************************************
-				 * Deconstructor
-				 ********************************************************************************/
-				virtual ~flow_tcp();
+            /*********************************************************************************
+             * Deconstructor
+             ********************************************************************************/
+            virtual ~flow_tcp();
 
-				/*********************************************************************************
-				 * Init
-				 * Return results:
-				 *     FLOW_ERR_NO    => success
-				 *     FLOW_ERR_ABORT => error
-				 ********************************************************************************/
-				int32 init(poll::channel_sptr &ch, int32 fd);
+            /*********************************************************************************
+             * Init
+             * Return results:
+             *     FLOW_ERR_NO    => success
+             *     FLOW_ERR_ABORT => error
+             ********************************************************************************/
+            flow_error init(poll::channel_sptr &&ch, int32 fd);
 
-				/*********************************************************************************
-				 * Want to read
-				 * If using IOCP this post an IOCP task for reading, else do nothing.
-				 * Return results:
-				 *     FLOW_ERR_NO    => success
-				 *     FLOW_ERR_ABORT => error
-				 ********************************************************************************/
-				int32 want_to_read();
+#if defined(PUMP_HAVE_IOCP)
+            /*********************************************************************************
+             * Want to read
+             * If using IOCP this post an IOCP task for reading, else do nothing.
+             * Return results:
+             *     FLOW_ERR_NO    => success
+             *     FLOW_ERR_ABORT => error
+             ********************************************************************************/
+            flow_error want_to_read();
+#endif
 
-				/*********************************************************************************
-				 * Read
-				 ********************************************************************************/
-				c_block_ptr read(void_ptr iocp_task, int32_ptr size);
+            /*********************************************************************************
+             * Read
+             ********************************************************************************/
+#if defined(PUMP_HAVE_IOCP)
+            c_block_ptr read(void_ptr iocp_task, int32_ptr size);
+#else
+            c_block_ptr read(int32_ptr size);
+#endif
 
-				/*********************************************************************************
-				 * Want to send
-				 * If using IOCP this post an IOCP task for sending, else this try sending data.
-				 * Return results:
-				 *     FLOW_ERR_NO    => success
-				 *     FLOW_ERR_ABORT => error
-				 ********************************************************************************/
-				int32 want_to_send(buffer_ptr sb);
+            /*********************************************************************************
+             * Want to send
+             * If using IOCP this post an IOCP task for sending, else this try sending
+             *data. Return results: FLOW_ERR_NO    => success FLOW_ERR_ABORT => error
+             ********************************************************************************/
+            flow_error want_to_send(buffer_ptr sb);
 
-				/*********************************************************************************
-				 * Send
-				 * Return results:
-				 *     FLOW_ERR_NO      => send completely
-				 *     FLOW_ERR_AGAIN   => try to send again
-				 *     FLOW_ERR_NO_DATA => no data to send
-				 *     FLOW_ERR_ABORT   => error
-				 ********************************************************************************/
-				int32 send(void_ptr iocp_task);
+            /*********************************************************************************
+             * Send
+             * Return results:
+             *     FLOW_ERR_NO      => send completely
+             *     FLOW_ERR_AGAIN   => try to send again
+             *     FLOW_ERR_NO_DATA => no data to send
+             *     FLOW_ERR_ABORT   => error
+             ********************************************************************************/
+#if defined(PUMP_HAVE_IOCP)
+            flow_error send(void_ptr iocp_task);
+#else
+            flow_error send();
+#endif
 
-				/*********************************************************************************
-				 * Check there are data to send or not
-				 ********************************************************************************/
-				PUMP_INLINE bool has_data_to_send() const
-				{ return (send_buffer_ != nullptr && send_buffer_->data_size() > 0); }
+            /*********************************************************************************
+             * Check there are data to send or not
+             ********************************************************************************/
+            PUMP_INLINE bool has_data_to_send() const {
+                return (send_buffer_ != nullptr && send_buffer_->data_size() > 0);
+            }
 
-			private:
-				// IOCP read task
-				void_ptr read_task_;
+          private:
+            // Read cache
+            block read_cache_[MAX_FLOW_BUFFER_SIZE];
 
-				// Read cache
-				block read_cache_[MAX_FLOW_BUFFER_SIZE];
+            // Send buffer
+            buffer_ptr send_buffer_;
 
-				// IOCP send task
-				void_ptr send_task_;
+#if defined(PUMP_HAVE_IOCP)
+            // IOCP read task
+            void_ptr read_task_;
+            // IOCP send task
+            void_ptr send_task_;
+#endif
+        };
+        DEFINE_ALL_POINTER_TYPE(flow_tcp);
 
-				// Send buffer
-				buffer_ptr send_buffer_;
-			};
-			DEFINE_ALL_POINTER_TYPE(flow_tcp);
-
-		}
-	}
-}
+    }  // namespace flow
+}  // namespace transport
+}  // namespace pump
 
 #endif

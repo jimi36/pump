@@ -1,15 +1,13 @@
 #ifndef udp_server_h
 #define udp_server_h
 
-#include <stdio.h>
-
 #include <pump/service.h>
 #include <pump/time/timer.h>
 #include <pump/transport/udp_transport.h>
+#include <stdio.h>
 
-namespace pump
-{
-	using namespace transport;
+namespace pump {
+using namespace transport;
 }
 
 using namespace pump;

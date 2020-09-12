@@ -18,44 +18,57 @@
 #define pump_platform_h
 
 #if defined(WIN32)
-	#define PUMP_INLINE __forceinline
-#elif defined(__GNUC__)
-	#define PUMP_INLINE __inline__ __attribute__((always_inline))
+#include <windows.h>
+#pragma warning(disable : 4251)
+#endif
+
+#if defined(WIN32) && defined(pump_EXPORTS)
+#define LIB_PUMP __declspec(dllexport)
+#elif defined(WIN32)
+#define LIB_PUMP __declspec(dllimport)
 #else
-	#define PUMP_INLINE
+#define LIB_PUMP
+#endif
+
+#if defined(WIN32)
+#define PUMP_INLINE __forceinline
+#elif defined(__GNUC__)
+#define PUMP_INLINE __inline__ __attribute__((always_inline))
+#else
+#define PUMP_INLINE
 #endif
 
 #define PUMP_ENDIAD_KEY 0x01
 #if PUMP_ENDIAD_KEY == 0x0201 >> 8
-	#if !defined(BIG_ENDIAN)
-		#define BIG_ENDIAN
-	#endif
+#if !defined(BIG_ENDIAN)
+#define BIG_ENDIAN
+#endif
 #elif PUMP_ENDIAD_KEY == 0x0102 >> 8
-	#if !defined(LITTLE_ENDIAN)
-		#define LITTLE_ENDIAN
-	#endif
+#if !defined(LITTLE_ENDIAN)
+#define LITTLE_ENDIAN
+#endif
 #else
-	#error "Unknow endian"
+#error "Unknow endian"
 #endif
 
 #if defined(__GNUC__)
-	#define PUMP_LIKELY(x) __builtin_expect((x), true)
-	#define PUMP_UNLIKELY(x) __builtin_expect((x), false)
+#define PUMP_LIKELY(x) __builtin_expect((x), true)
+#define PUMP_UNLIKELY(x) __builtin_expect((x), false)
 #else
-	#define PUMP_LIKELY(x) (x)
-	#define PUMP_UNLIKELY(x) (x)
+#define PUMP_LIKELY(x) (x)
+#define PUMP_UNLIKELY(x) (x)
 #endif
 
 #if defined(WIN32)
-	#define pump_strncpy strcpy_s
-	#define pump_snprintf sprintf_s
-	#define pump_strncasecmp _strnicmp
-	#define pump_sched_yield SwitchToThread
+#define pump_strncpy strcpy_s
+#define pump_snprintf sprintf_s
+#define pump_strncasecmp _strnicmp
+#define pump_sched_yield SwitchToThread
 #elif defined(__GNUC__)
-	#define pump_strncpy strncpy
-	#define pump_snprintf snprintf
-	#define pump_strncasecmp strncasecmp
-	#define pump_sched_yield sched_yield
+#define pump_strncpy strncpy
+#define pump_snprintf snprintf
+#define pump_strncasecmp strncasecmp
+#define pump_sched_yield sched_yield
 #endif
 
 #endif

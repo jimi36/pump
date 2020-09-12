@@ -17,65 +17,50 @@
 #include "pump/transport/base_dialer.h"
 
 namespace pump {
-	namespace transport {
+namespace transport {
 
-		void base_dialer::on_tracker_event(int32 ev)
-		{
-			if (ev == TRACKER_EVENT_DEL)
-			{
-				if (tracker_cnt_.fetch_sub(1) - 1 == 0)
-				{
-					if (__is_status(STATUS_ERROR))
-						cbs_.dialed_cb(base_transport_sptr(), false);
-					else if (__set_status(STATUS_TIMEOUTING, STATUS_TIMEOUTED))
-						cbs_.timeout_cb();
-					else if (__set_status(STATUS_STOPPING, STATUS_STOPPED))
-						cbs_.stopped_cb();
-				}
-			}
-		}
+    void base_dialer::on_channel_event(uint32 ev) {
+        if (__set_status(TRANSPORT_TIMEOUTING, TRANSPORT_TIMEOUTED))
+            cbs_.timeout_cb();
+        else if (__set_status(TRANSPORT_STOPPING, TRANSPORT_STOPPED))
+            cbs_.stopped_cb();
+    }
 
-		bool base_dialer::__start_tracker(poll::channel_sptr &ch)
-		{
-			PUMP_ASSERT(!tracker_);
+#if !defined(PUMP_HAVE_IOCP)
+    bool base_dialer::__start_tracker(poll::channel_sptr &&ch) {
+        if (tracker_)
+            return false;
 
-			tracker_.reset(
-				object_create<poll::channel_tracker>(ch, TRACK_WRITE, TRACK_MODE_ONCE), 
-				object_delete<poll::channel_tracker>
-			);
-			if (!get_service()->add_channel_tracker(tracker_, true))
-				return false;
+        tracker_.reset(object_create<poll::channel_tracker>(ch, TRACK_WRITE),
+                       object_delete<poll::channel_tracker>);
+        if (!get_service()->add_channel_tracker(tracker_, WRITE_POLLER))
+            return false;
 
-			tracker_cnt_.fetch_add(1);
+        return true;
+    }
 
-			return true;
-		}
+    void base_dialer::__stop_tracker() {
+        if (tracker_) {
+            PUMP_DEBUG_CHECK(
+                get_service()->remove_channel_tracker(std::move(tracker_), WRITE_POLLER));
+        }
+    }
+#endif
 
-		void base_dialer::__stop_tracker()
-		{
-			if (tracker_)
-			{
-				auto tracker = std::move(tracker_);
-				PUMP_DEBUG_CHECK(get_service()->remove_channel_tracker(tracker));
-			}
-		}
+    bool base_dialer::__start_connect_timer(const time::timer_callback &cb) {
+        if (connect_timeout_ <= 0)
+            return true;
 
-		bool base_dialer::__start_connect_timer(const time::timer_callback &cb)
-		{
-			if (connect_timeout_ <= 0)
-				return true;
+        PUMP_ASSERT(!connect_timer_);
+        connect_timer_ = time::timer::create_instance(connect_timeout_, cb);
 
-			PUMP_ASSERT(!connect_timer_);
-			connect_timer_ = time::timer::create_instance(connect_timeout_, cb);
+        return get_service()->start_timer(connect_timer_);
+    }
 
-			return get_service()->start_timer(connect_timer_);
-		}
+    void base_dialer::__stop_connect_timer() {
+        if (connect_timer_)
+            connect_timer_->stop();
+    }
 
-		void base_dialer::__stop_connect_timer()
-		{
-			if (connect_timer_)
-				connect_timer_->stop();
-		}
-
-	}
-}
+}  // namespace transport
+}  // namespace pump

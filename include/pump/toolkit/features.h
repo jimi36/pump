@@ -17,45 +17,47 @@
 #ifndef pump_toolkit_features_h
 #define pump_toolkit_features_h
 
-#include "pump/headers.h"
+#include "pump/fncb.h"
+#include "pump/platform.h"
 
 namespace pump {
-	namespace toolkit {
+namespace toolkit {
 
-		/*********************************************************************************
-		 * Noncopyable base class 
-		 ********************************************************************************/
-		class LIB_PUMP noncopyable
-		{
-		protected:
-			noncopyable() = default;
-			~noncopyable() = default;
+    /*********************************************************************************
+     * Noncopyable base class
+     ********************************************************************************/
+    class LIB_PUMP noncopyable {
+      protected:
+        noncopyable() = default;
+        ~noncopyable() = default;
 
-			noncopyable(noncopyable&) = delete;
-			noncopyable& operator=(noncopyable&) = delete;
-		};
-		
-		/*********************************************************************************
-		 * Defer class
-		 ********************************************************************************/
-		class LIB_PUMP defer: 
-			public noncopyable
-		{
-		public:
-			defer(const pump_function<void()> &&cb)
-			{ cb_ = cb; }
+        noncopyable(noncopyable &) = delete;
+        noncopyable &operator=(noncopyable &) = delete;
+    };
 
-			~defer()
-			{ if (cb_) cb_(); }
+    /*********************************************************************************
+     * Defer class
+     ********************************************************************************/
+    class LIB_PUMP defer : public noncopyable {
+      public:
+        defer(const pump_function<void()> &&cb) {
+            cb_ = cb;
+        }
 
-			PUMP_INLINE void clear()
-			{ cb_ = pump_function<void()>(); }
+        ~defer() {
+            if (cb_)
+                cb_();
+        }
 
-		private:
-			pump_function<void()> cb_;
-		};
+        PUMP_INLINE void clear() {
+            cb_ = pump_function<void()>();
+        }
 
-	}
-}
+      private:
+        pump_function<void()> cb_;
+    };
+
+}  // namespace toolkit
+}  // namespace pump
 
 #endif

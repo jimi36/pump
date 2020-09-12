@@ -20,14 +20,14 @@
 #include "pump/transport/flow/flow_tcp_dialer.h"
 
 namespace pump {
-	namespace transport {
-		namespace flow {
+namespace transport {
+    namespace flow {
 
-			typedef flow_tcp_dialer flow_tls_dialer;
-			DEFINE_ALL_POINTER_TYPE(flow_tls_dialer);
+        typedef flow_tcp_dialer flow_tls_dialer;
+        DEFINE_ALL_POINTER_TYPE(flow_tls_dialer);
 
-		}
-	}
-}
+    }  // namespace flow
+}  // namespace transport
+}  // namespace pump
 
 #endif

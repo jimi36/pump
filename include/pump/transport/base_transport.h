@@ -24,272 +24,278 @@
 #include "pump/transport/flow/buffer.h"
 
 namespace pump {
-	namespace transport {
+namespace transport {
 
-		namespace flow {
-			class flow_base;
-		}
+    namespace flow {
+        class flow_base;
+    }
 
-		/*********************************************************************************
-		 * Transport status
-		 ********************************************************************************/
-		enum transport_status
-		{
-			STATUS_NONE = 0,
-			STATUS_STARTING,
-			STATUS_STARTED,
-			STATUS_STOPPING,
-			STATUS_STOPPED,
-			STATUS_DISCONNECTING,
-			STATUS_DISCONNECTED,
-			STATUS_TIMEOUTING,
-			STATUS_TIMEOUTED,
-			STATUS_ERROR,
-			STATUS_HANDSHAKING,
-			STATUS_FINISHED
-		};
+    /*********************************************************************************
+     * Transport type
+     ********************************************************************************/
+    enum transport_type {
+        UDP_TRANSPORT = 0,
+        TCP_ACCEPTOR,
+        TCP_DIALER,
+        TCP_TRANSPORT,
+        TLS_ACCEPTOR,
+        TLS_DIALER,
+        TLS_HANDSHAKER,
+        TLS_TRANSPORT
+    };
 
-		enum transport_type
-		{
-			TYPE_UDP_TRANSPORT = 0,
-			TYPE_TCP_ACCEPTOR,
-			TYPE_TCP_DIALER,
-			TYPE_TCP_TRANSPORT,
-			TYPE_TLS_ACCEPTOR,
-			TYPE_TLS_DIALER,
-			TYPE_TLS_HANDSHAKER,
-			TYPE_TLS_TRANSPORT
-		};
+    /*********************************************************************************
+     * Transport state
+     ********************************************************************************/
+    enum transport_state {
+        TRANSPORT_INITED = 0,
+        TRANSPORT_STARTING,
+        TRANSPORT_STARTED,
+        TRANSPORT_STOPPING,
+        TRANSPORT_STOPPED,
+        TRANSPORT_DISCONNECTING,
+        TRANSPORT_DISCONNECTED,
+        TRANSPORT_TIMEOUTING,
+        TRANSPORT_TIMEOUTED,
+        TRANSPORT_HANDSHAKING,
+        TRANSPORT_FINISHED,
+        TRANSPORT_ERROR
+    };
 
-		enum transport_error
-		{
-			ERROR_OK = 0,
-			ERROR_UNSTART,
-			ERROR_INVALID,
-			ERROR_DISABLE,
-			ERROR_AGAIN,
-			ERROR_FAULT
-		};
+    /*********************************************************************************
+     * Transport read state
+     ********************************************************************************/
+    enum transport_read_state { READ_NONE = 0, READ_ONCE, READ_LOOP, READ_PENDING };
 
-		class LIB_PUMP base_channel : 
-			public service_getter,
-			public poll::channel
-		{
-		public:
-			/**************************************
-			*******************************************
-			 * Constructor
-			 ********************************************************************************/
-			base_channel(transport_type type, service_ptr sv, int32 fd) noexcept :
-				service_getter(sv),
-				poll::channel(fd),
-				tracker_cnt_(0),
-				status_(STATUS_NONE),
-				type_(type)
-			{}
+    /*********************************************************************************
+     * Transport error
+     ********************************************************************************/
+    enum transport_error {
+        ERROR_OK = 0,
+        ERROR_UNSTART,
+        ERROR_INVALID,
+        ERROR_DISABLE,
+        ERROR_AGAIN,
+        ERROR_FAULT
+    };
 
-			/*********************************************************************************
-			 * Deconstructor
-			 ********************************************************************************/
-			virtual ~base_channel() = default;
+    class LIB_PUMP base_channel : public service_getter, public poll::channel {
+      public:
+        /**************************************
+        *******************************************
+        * Constructor
+        ********************************************************************************/
+        base_channel(transport_type type, service_ptr sv, int32 fd) noexcept
+            : service_getter(sv),
+              poll::channel(fd),
+              type_(type),
+              transport_state_(TRANSPORT_INITED) {
+        }
 
-			/*********************************************************************************
-			 * Get transport type
-			 ********************************************************************************/
-			PUMP_INLINE transport_type get_type() const
-			{ return type_; }
+        /*********************************************************************************
+         * Deconstructor
+         ********************************************************************************/
+        virtual ~base_channel() = default;
 
-			/*********************************************************************************
-			 * Get started status
-			 ********************************************************************************/
-			PUMP_INLINE bool is_started() const
-			{ return __is_status(STATUS_STARTED); }
+        /*********************************************************************************
+         * Get transport type
+         ********************************************************************************/
+        PUMP_INLINE transport_type get_type() const {
+            return type_;
+        }
 
-		protected:
-			/*********************************************************************************
-			 * Set channel status
-			 ********************************************************************************/
-			PUMP_INLINE bool __set_status(uint32 o, uint32 n)
-			{ return status_.compare_exchange_strong(o, n); }
+        /*********************************************************************************
+         * Get started status
+         ********************************************************************************/
+        PUMP_INLINE bool is_started() const {
+            return __is_status(TRANSPORT_STARTED);
+        }
 
-			/*********************************************************************************
-			 * Check transport is in status
-			 ********************************************************************************/
-			PUMP_INLINE bool __is_status(uint32 status) const
-			{ return status_.load() == status; }
+      protected:
+        /*********************************************************************************
+         * Set channel status
+         ********************************************************************************/
+        PUMP_INLINE bool __set_status(uint32 o, uint32 n) {
+            return transport_state_.compare_exchange_strong(o, n);
+        }
 
-			/*********************************************************************************
-			 * Post channel event
-			 ********************************************************************************/
-			PUMP_INLINE void __post_channel_event(poll::channel_sptr &ch, uint32 event)
-			{ get_service()->post_channel_event(ch, event); }
+        /*********************************************************************************
+         * Check transport is in status
+         ********************************************************************************/
+        PUMP_INLINE bool __is_status(uint32 status) const {
+            return transport_state_.load() == status;
+        }
 
-		protected:
-			// Tracked tracker count
-			std::atomic_int16_t tracker_cnt_;
-			// Channel status
-			std::atomic_uint status_;
-			// Channel type
-			transport_type type_;
-		};
+        /*********************************************************************************
+         * Post channel event
+         ********************************************************************************/
+        PUMP_INLINE void __post_channel_event(poll::channel_sptr &&ch, uint32 event) {
+            get_service()->post_channel_event(ch, event);
+        }
 
-		class LIB_PUMP base_transport :
-			public base_channel
-		{
-		public:
-			/*********************************************************************************
-			 * Constructor
-			 ********************************************************************************/
-			base_transport(transport_type type, service_ptr sv, int32 fd) :
-				base_channel(type, sv, fd),
-				read_paused_(false),
-				max_pending_send_size_(-1),
-				pending_send_size_(0)
-			{}
+      protected:
+        // Transport type
+        transport_type type_;
+        // Transport state
+        std::atomic_uint transport_state_;
+    };
 
-			/*********************************************************************************
-			 * Deconstructor
-			 ********************************************************************************/
-			virtual ~base_transport()
-			{
-				__stop_read_tracker();
-				__stop_send_tracker();
-			}
+    class LIB_PUMP base_transport : public base_channel {
+      public:
+        /*********************************************************************************
+         * Constructor
+         ********************************************************************************/
+        base_transport(transport_type type, service_ptr sv, int32 fd)
+            : base_channel(type, sv, fd),
+              read_state_(READ_NONE),
+              max_pending_send_size_(-1),
+              pending_send_size_(0) {
+        }
 
-			/*********************************************************************************
-			 * Start
-			 ********************************************************************************/
-			virtual transport_error start(
-				service_ptr sv, 
-				int32 max_pending_send_size, 
-				const transport_callbacks &cbs
-			) = 0;
+        /*********************************************************************************
+         * Deconstructor
+         ********************************************************************************/
+        virtual ~base_transport() {
+#if !defined(PUMP_HAVE_IOCP)
+            __stop_read_tracker();
+            __stop_send_tracker();
+#endif
+        }
 
-			/*********************************************************************************
-			 * Stop
-			 ********************************************************************************/
-			virtual void stop() = 0;
+        /*********************************************************************************
+         * Start
+         ********************************************************************************/
+        virtual transport_error start(service_ptr sv,
+                                      int32 max_pending_send_size,
+                                      const transport_callbacks &cbs) = 0;
 
-			/*********************************************************************************
-			 * Force stop
-			 ********************************************************************************/
-			virtual void force_stop() = 0;
+        /*********************************************************************************
+         * Stop
+         ********************************************************************************/
+        virtual void stop() = 0;
 
-			/*********************************************************************************
-			 * Rest transport callbacks
-			 * Note that this is not thread-safe.
-			 * User should do this in read callback function.
-			 ********************************************************************************/
-			bool reset_callbacks(const transport_callbacks &cbs);
+        /*********************************************************************************
+         * Force stop
+         ********************************************************************************/
+        virtual void force_stop() = 0;
 
-			/*********************************************************************************
-			 * Pause read
-			 * If transport is not stared, this will return false.
-			 * Note that user must call this in read callback function. 
-			 ********************************************************************************/
-			void pause_read();
+        /*********************************************************************************
+         * Rest transport callbacks
+         * Note that this is not thread-safe.
+         * User should do this in read callback function.
+         ********************************************************************************/
+        bool reset_callbacks(const transport_callbacks &cbs);
 
-			/*********************************************************************************
-			 * Continue read
-			 * If transport is not read paused, this will return false.
-			 ********************************************************************************/
-			transport_error continue_read();
+        /*********************************************************************************
+         * Read for once
+         ********************************************************************************/
+        virtual transport_error read_for_once() {
+            return ERROR_DISABLE;
+        }
 
-			/*********************************************************************************
-			 * Send
-			 ********************************************************************************/
-			virtual transport_error send(c_block_ptr b, uint32 size)
-			{ return ERROR_DISABLE; }
+        /*********************************************************************************
+         * Read for loop
+         ********************************************************************************/
+        virtual transport_error read_for_loop() {
+            return ERROR_DISABLE;
+        }
 
-			/*********************************************************************************
-			 * Send
-			 ********************************************************************************/
-			virtual transport_error send(
-				c_block_ptr b,
-				uint32 size,
-				const address &remote_address
-			) { return ERROR_DISABLE; }
+        /*********************************************************************************
+         * Send
+         ********************************************************************************/
+        virtual transport_error send(c_block_ptr b, uint32 size) {
+            return ERROR_DISABLE;
+        }
 
-			/*********************************************************************************
-			 * Get pending send buffer size
-			 ********************************************************************************/
-			uint32 get_pending_send_size() const
-			{ return pending_send_size_; }
+        /*********************************************************************************
+         * Send
+         ********************************************************************************/
+        virtual transport_error send(c_block_ptr b,
+                                     uint32 size,
+                                     const address &remote_address) {
+            return ERROR_DISABLE;
+        }
 
-			/*********************************************************************************
-			 * Get max pending send buffer size
-			 ********************************************************************************/
-			uint32 get_max_pending_send_size() const
-			{ return max_pending_send_size_; }
+        /*********************************************************************************
+         * Get pending send buffer size
+         ********************************************************************************/
+        uint32 get_pending_send_size() const {
+            return pending_send_size_;
+        }
 
-			/*********************************************************************************
-			 * Set max pending send buffer size
-			 ********************************************************************************/
-			void set_max_pending_send_size(uint32 max_size) 
-			{ max_pending_send_size_ = max_size; }
+        /*********************************************************************************
+         * Get max pending send buffer size
+         ********************************************************************************/
+        uint32 get_max_pending_send_size() const {
+            return max_pending_send_size_;
+        }
 
-			/*********************************************************************************
-			 * Get local address
-			 ********************************************************************************/
-			const address& get_local_address() const
-			{ return local_address_; }
+        /*********************************************************************************
+         * Set max pending send buffer size
+         ********************************************************************************/
+        void set_max_pending_send_size(uint32 max_size) {
+            max_pending_send_size_ = max_size;
+        }
 
-			/*********************************************************************************
-			 * Get remote address
-			 ********************************************************************************/
-			const address& get_remote_address() const
-			{ return remote_address_; }
+        /*********************************************************************************
+         * Get local address
+         ********************************************************************************/
+        const address &get_local_address() const {
+            return local_address_;
+        }
 
-		protected:
-			/*********************************************************************************
-			 * Tracker event callback
-			 ********************************************************************************/
-			virtual void on_tracker_event(int32 ev) override;
+        /*********************************************************************************
+         * Get remote address
+         ********************************************************************************/
+        const address &get_remote_address() const {
+            return remote_address_;
+        }
 
-		protected:
-			/*********************************************************************************
-			 * Start all trackers
-			 ********************************************************************************/
-			bool __start_all_trackers(poll::channel_sptr &ch, bool trackr, bool trackw);
+      protected:
+        /*********************************************************************************
+         * Channel event callback
+         ********************************************************************************/
+        virtual void on_channel_event(uint32 ev) override;
 
-			/*********************************************************************************
-			 * Awake tracker
-			 ********************************************************************************/
-			bool __awake_tracker(poll::channel_tracker_sptr tracker);
+#if !defined(PUMP_HAVE_IOCP)
+      protected:
+        /*********************************************************************************
+         * Start all trackers
+         ********************************************************************************/
+        bool __start_read_tracker(poll::channel_sptr &&ch);
+        bool __start_send_tracker(poll::channel_sptr &&ch);
 
-			/*********************************************************************************
-			 * Pause tracker
-			 ********************************************************************************/
-			bool __pause_tracker(poll::channel_tracker_sptr tracker);
+        /*********************************************************************************
+         * Stop tracker
+         ********************************************************************************/
+        void __stop_read_tracker();
+        void __stop_send_tracker();
+#endif
 
-			/*********************************************************************************
-			 * Stop tracker
-			 ********************************************************************************/
-			void __stop_read_tracker();
-			void __stop_send_tracker();
+      protected:
+        // Local address
+        address local_address_;
+        // Remote address
+        address remote_address_;
 
-		protected:
-			// Local address
-			address local_address_;
-			// Remote address
-			address remote_address_;
+#if !defined(PUMP_HAVE_IOCP)
+        // Channel trackers
+        poll::channel_tracker_sptr r_tracker_;
+        poll::channel_tracker_sptr s_tracker_;
+#endif
 
-			// Channel trackers
-			poll::channel_tracker_sptr r_tracker_;
-			poll::channel_tracker_sptr s_tracker_;
+        // Transport read state
+        std::atomic_uint read_state_;
 
-			// Read pause status
-			std::atomic_bool read_paused_;
+        // Pending send buffer size
+        uint32 max_pending_send_size_;
+        std::atomic_uint32_t pending_send_size_;
 
-			// Pending send buffer size
-			uint32 max_pending_send_size_;
-			std::atomic_uint32_t pending_send_size_;
+        // Transport callbacks
+        transport_callbacks cbs_;
+    };
 
-			// Transport callbacks
-			transport_callbacks cbs_;
-		};
-
-	}
-}
+}  // namespace transport
+}  // namespace pump
 
 #endif

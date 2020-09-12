@@ -1,12 +1,12 @@
 #ifndef test_http_h
 #define test_http_h
 
-#include <string>
-#include <stdio.h>
-
 #include <pump/init.h>
 #include <pump/protocol/websocket/client.h>
 #include <pump/protocol/websocket/server.h>
+#include <stdio.h>
+
+#include <string>
 
 using namespace pump::protocol;
 

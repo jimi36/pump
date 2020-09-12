@@ -20,100 +20,106 @@
 #include "pump/transport/base_transport.h"
 
 namespace pump {
-	namespace transport {
+namespace transport {
 
-		class LIB_PUMP base_dialer :
-			public base_channel
-		{
-		public:
-			/*********************************************************************************
-			 * Constructor
-			 ********************************************************************************/
-			base_dialer(
-				transport_type type,
-				const address &local_address,
-				const address &remote_address,
-				int64 connect_timeout
-			) noexcept :
-				base_channel(type, nullptr, -1),
-				local_address_(local_address),
-				remote_address_(remote_address),
-				connect_timeout_(connect_timeout)
-			{}
+    class LIB_PUMP base_dialer : public base_channel {
+      public:
+        /*********************************************************************************
+         * Constructor
+         ********************************************************************************/
+        base_dialer(transport_type type,
+                    const address &local_address,
+                    const address &remote_address,
+                    int64 connect_timeout) noexcept
+            : base_channel(type, nullptr, -1),
+              local_address_(local_address),
+              remote_address_(remote_address),
+              connect_timeout_(connect_timeout) {
+        }
 
-			/*********************************************************************************
-			 * Deconstructor
-			 ********************************************************************************/
-			virtual ~base_dialer()
-			{ __stop_tracker(); }
+        /*********************************************************************************
+         * Deconstructor
+         ********************************************************************************/
+        virtual ~base_dialer() {
+#if !defined(PUMP_HAVE_IOCP)
+            __stop_tracker();
+#endif
+        }
 
-			/*********************************************************************************
-			 * Start
-			 ********************************************************************************/
-			virtual transport_error start(
-				service_ptr sv, 
-				const dialer_callbacks &cbs
-			) = 0;
+        /*********************************************************************************
+         * Start
+         ********************************************************************************/
+        virtual transport_error start(service_ptr sv, const dialer_callbacks &cbs) = 0;
 
-			/*********************************************************************************
-			 * Stop
-			 ********************************************************************************/
-			virtual void stop() = 0;
+        /*********************************************************************************
+         * Stop
+         ********************************************************************************/
+        virtual void stop() = 0;
 
-			/*********************************************************************************
-			 * Get local address
-			 ********************************************************************************/
-			PUMP_INLINE const address& get_local_address() const
-			{ return local_address_; }
+        /*********************************************************************************
+         * Get local address
+         ********************************************************************************/
+        PUMP_INLINE const address &get_local_address() const {
+            return local_address_;
+        }
 
-			/*********************************************************************************
-			 * Get remote address
-			 ********************************************************************************/
-			PUMP_INLINE const address& get_remote_address() const
-			{ return remote_address_; }
+        /*********************************************************************************
+         * Get remote address
+         ********************************************************************************/
+        PUMP_INLINE const address &get_remote_address() const {
+            return remote_address_;
+        }
 
-		protected:
-			/*********************************************************************************
-			 * Tracker event callback
-			 ********************************************************************************/
-			virtual void on_tracker_event(int32 ev) override;
+      protected:
+        /*********************************************************************************
+         * Channel event callback
+         ********************************************************************************/
+        virtual void on_channel_event(uint32 ev) override;
 
-		protected:
-			/*********************************************************************************
-			 * Start tracker
-			 ********************************************************************************/
-			bool __start_tracker(poll::channel_sptr &ch);
+#if !defined(PUMP_HAVE_IOCP)
+      protected:
+        /*********************************************************************************
+         * Start tracker
+         ********************************************************************************/
+        bool __start_tracker(poll::channel_sptr &&ch);
 
-			/*********************************************************************************
-			 * Stop tracker
-			 ********************************************************************************/
-			void __stop_tracker();
+        /*********************************************************************************
+         * Stop tracker
+         ********************************************************************************/
+        void __stop_tracker();
+#endif
 
-			/*********************************************************************************
-			 * Start connect timer
-			 ********************************************************************************/
-			bool __start_connect_timer(const time::timer_callback &cb);
+      protected:
+        /*********************************************************************************
+         * Start connect timer
+         ********************************************************************************/
+        bool __start_connect_timer(const time::timer_callback &cb);
 
-			/*********************************************************************************
-			 * Stop connect timer
-			 ********************************************************************************/
-			void __stop_connect_timer();
+        /*********************************************************************************
+         * Stop connect timer
+         ********************************************************************************/
+        void __stop_connect_timer();
 
-		protected:
-			// Local address
-			address local_address_;
-			// Remote address
-			address remote_address_;
-			// Connect timer
-			int64 connect_timeout_;
-			std::shared_ptr<time::timer> connect_timer_;
-			// Channel tracker
-			poll::channel_tracker_sptr tracker_;
-			// Dialer callbacks
-			dialer_callbacks cbs_;
-		};
+      protected:
+        // Local address
+        address local_address_;
+        // Remote address
+        address remote_address_;
 
-	}
-}
+        // Connect timer
+        int64 connect_timeout_;
+        std::shared_ptr<time::timer> connect_timer_;
+
+#if !defined(PUMP_HAVE_IOCP)
+        // Channel tracker
+        poll::channel_tracker_sptr tracker_;
+#endif
+
+        // Dialer callbacks
+        dialer_callbacks cbs_;
+    };
+
+}  // namespace transport
+}  // namespace pump
 
 #endif
