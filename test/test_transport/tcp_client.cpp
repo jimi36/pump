@@ -1,6 +1,6 @@
 #include "tcp_transport_test.h"
 
-static int count = 10;
+static int count = 1;
 static int send_loop = 1;
 static int send_pocket_size = 1024 * 4;
 

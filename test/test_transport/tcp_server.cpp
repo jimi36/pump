@@ -118,9 +118,6 @@ void start_tcp_server(const std::string &ip, uint16 port) {
     sv = new service;
     sv->start();
 
-    sv1 = new service;
-    sv1->start();
-
     my_tcp_acceptor *my_acceptor = new my_tcp_acceptor;
 
     pump::acceptor_callbacks cbs;

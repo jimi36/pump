@@ -342,8 +342,7 @@ namespace transport {
             return true;
 #else
             if (!resume) {
-                if (s_tracker_->is_started())
-                    s_tracker_->set_tracked(true);
+                s_tracker_->set_tracked(true);
                 return true;
             }
 

@@ -38,9 +38,9 @@ namespace transport {
     }
 
     void base_acceptor::__stop_tracker() {
-        if (tracker_) {
+        if (tracker_ && tracker_->is_started()) {
             PUMP_DEBUG_CHECK(
-                get_service()->remove_channel_tracker(std::move(tracker_), READ_POLLER));
+                get_service()->remove_channel_tracker(tracker_, READ_POLLER));
         }
     }
 #endif

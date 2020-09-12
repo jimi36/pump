@@ -16,7 +16,7 @@ SET(ROOT_DIR ${PROJECT_SOURCE_DIR})
 LIST(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
 # Option build type debug or release (default Debug)
-OPTION(BUILD_DEBUG "Option build type debug or release" OFF)
+OPTION(BUILD_DEBUG "Option build type debug or release" ON)
 INCLUDE(option_build)
 
 # Option build with iocp, but ignored on linux (default OFF)

@@ -19,6 +19,8 @@
 
 #include <assert.h>
 
+#include "pump/config.h"
+
 // Pump assert
 #define PUMP_ASSERT(x) assert(x)
 
@@ -40,5 +42,11 @@
 
 // Pump static assert
 #define PUMP_STATIC_ASSERT(x, msg) static_assert((x), msg)
+
+#if defined(PUMP_HAVE_DEBUG_LOG)
+#define LOG printf
+#else
+#define LOG(...)
+#endif
 
 #endif

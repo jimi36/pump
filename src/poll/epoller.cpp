@@ -62,10 +62,12 @@ namespace poll {
         ev.events |= (listen_event & IO_EVNET_READ) ? EL_READ_EVENT : 0;
         ev.events |= (listen_event & IO_EVENT_SEND) ? EL_WRITE_EVENT : 0;
 
-        return epoll_ctl(fd_, EPOLL_CTL_ADD, tracker->get_fd(), &ev) == 0;
-#else
-        return false;
+        if (epoll_ctl(fd_, EPOLL_CTL_ADD, tracker->get_fd(), &ev) == 0 || 
+            epoll_ctl(fd_, EPOLL_CTL_MOD, tracker->get_fd(), &ev) == 0)
+            return true;
 #endif
+        return false;
+
     }
 
     void epoll_poller::__resume_channel_tracker(channel_tracker_ptr tracker) {

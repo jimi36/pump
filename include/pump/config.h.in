@@ -21,6 +21,11 @@
 #define PUMP_MINOR_VERSION @pump_MINOR_VERSION@
 #define PUMP_BUILD_VERSION @pump_BUILD_VERSION@
 
+#define @pump_WITH_DEBUG_LOG@
+#if defined(WITH_DEBUG_LOG)
+#define PUMP_HAVE_DEBUG_LOG
+#endif
+
 #define @pump_WITH_IOCP@
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
 #if defined(WITH_IOCP)

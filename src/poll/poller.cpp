@@ -129,12 +129,12 @@ namespace poll {
                     PUMP_DEBUG_CHECK(__add_channel_tracker(tracker));
                 } else if (ev->event == TRACKER_EVENT_DEL) {
                     // Try to untrack channel
-                    //__remove_channel_tracker(tracker);
+                    __remove_channel_tracker(tracker);
                     // Remove from tracker list
                     trackers_.erase(tracker);
                 }
 
-                ch->handle_tracker_event(ev->event);
+                //ch->handle_tracker_event(ev->event);
 
             } while (false);
 
