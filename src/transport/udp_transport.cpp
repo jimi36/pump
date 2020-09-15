@@ -27,25 +27,41 @@ namespace transport {
     transport_error udp_transport::start(service_ptr sv,
                                          int32 max_pending_send_size,
                                          const transport_callbacks &cbs) {
-        if (!__set_status(TRANSPORT_INITED, TRANSPORT_STARTING))
+        if (sv == nullptr) {
+            PUMP_ERR_LOG("transport::udp_transport::start: service invalid");
             return ERROR_INVALID;
+        }
 
-        PUMP_ASSERT(sv != nullptr);
+        if (!cbs.read_from_cb || !cbs.stopped_cb) {
+            PUMP_ERR_LOG("transport::udp_transport::start: callbacks invalid");
+            return ERROR_INVALID;
+        }
+
+        if (!__set_status(TRANSPORT_INITED, TRANSPORT_STARTING)) {
+            PUMP_ERR_LOG(
+                "transport::udp_transport::start: transport had be started before");
+            return ERROR_INVALID;
+        }
+
+        // Specifies callbacks
+        cbs_ = cbs;
+
+        // Specifies services
         __set_service(sv);
 
-        PUMP_DEBUG_ASSIGN(cbs.read_from_cb && cbs.stopped_cb, cbs_, cbs);
-
-        toolkit::defer defer([&]() {
+        toolkit::defer cleanup([&]() {
             __close_flow();
             __set_status(TRANSPORT_STARTING, TRANSPORT_ERROR);
         });
 
-        if (!__open_flow())
+        if (!__open_flow()) {
+            PUMP_ERR_LOG("transport::udp_transport::start: open flow failed");
             return ERROR_FAULT;
+        }
 
-        defer.clear();
+        __set_status(TRANSPORT_STARTING, TRANSPORT_STARTED);
 
-        PUMP_DEBUG_CHECK(__set_status(TRANSPORT_STARTING, TRANSPORT_STARTED));
+        cleanup.clear();
 
         return ERROR_OK;
     }
@@ -57,6 +73,7 @@ namespace transport {
 #if !defined(PUMP_HAVE_IOCP)
                 __stop_read_tracker();
 #endif
+                __post_channel_event(shared_from_this(), 0);
                 return;
             }
         }
@@ -64,8 +81,11 @@ namespace transport {
 
     transport_error udp_transport::read_for_once() {
         while (true) {
-            if (!is_started())
+            if (!is_started()) {
+                PUMP_ERR_LOG(
+                    "transport::udp_transport::read_for_once: transport not started");
                 return ERROR_UNSTART;
+            }
 
             uint32 old_state = read_state_.load();
             if (old_state == READ_ONCE || old_state == READ_LOOP) {
@@ -77,11 +97,20 @@ namespace transport {
             old_state = READ_NONE;
             if (read_state_.compare_exchange_strong(old_state, READ_ONCE)) {
 #if defined(PUMP_HAVE_IOCP)
-                if (!flow_->want_to_read() == flow::FLOW_ERR_ABORT)
-#else
-                if (!__start_read_tracker(shared_from_this()))
-#endif
+                if (!flow_->want_to_read() == flow::FLOW_ERR_ABORT) {
+                    PUMP_ERR_LOG(
+                        "transport::udp_transport::read_for_once: flow want_to_read "
+                        "fialed");
                     return ERROR_FAULT;
+                }
+#else
+                if (!__start_read_tracker(shared_from_this())) {
+                    PUMP_ERR_LOG(
+                        "transport::udp_transport::read_for_once: start read tracker "
+                        "fialed");
+                    return ERROR_FAULT;
+                }
+#endif
                 break;
             }
 
@@ -95,8 +124,11 @@ namespace transport {
 
     transport_error udp_transport::read_for_loop() {
         while (true) {
-            if (!is_started())
+            if (!is_started()) {
+                PUMP_ERR_LOG(
+                    "transport::udp_transport::read_for_loop: transport not started");
                 return ERROR_UNSTART;
+            }
 
             uint32 old_state = read_state_.load();
             if (old_state == READ_ONCE || old_state == READ_LOOP) {
@@ -108,12 +140,20 @@ namespace transport {
             old_state = READ_NONE;
             if (read_state_.compare_exchange_strong(old_state, READ_LOOP)) {
 #if defined(PUMP_HAVE_IOCP)
-                if (flow_->want_to_read() == flow::FLOW_ERR_ABORT)
-#else
-                if (!__start_read_tracker(shared_from_this()))
-#endif
+                if (!flow_->want_to_read() == flow::FLOW_ERR_ABORT) {
+                    PUMP_ERR_LOG(
+                        "transport::udp_transport::read_for_loop: flow want_to_read "
+                        "fialed");
                     return ERROR_FAULT;
-
+                }
+#else
+                if (!__start_read_tracker(shared_from_this())) {
+                    PUMP_ERR_LOG(
+                        "transport::udp_transport::read_for_loop: start read tracker "
+                        "fialed");
+                    return ERROR_FAULT;
+                }
+#endif
                 break;
             }
 
@@ -144,8 +184,10 @@ namespace transport {
     void udp_transport::on_read_event() {
 #endif
         auto flow = flow_.get();
-        if (!flow->is_valid())
+        if (!flow->is_valid()) {
+            PUMP_WARN_LOG("transport::udp_transport::on_read_event: flow invalid");
             return;
+        }
 
         uint32 pending_state = READ_PENDING;
         uint32 old_state = read_state_.exchange(pending_state);
@@ -157,7 +199,7 @@ namespace transport {
 #else
         c_block_ptr b = flow->read_from(&size, &addr);
 #endif
-        if (size > 0 && cbs_.read_from_cb)
+        if (size > 0)
             cbs_.read_from_cb(b, size, addr);
 
         if (old_state == READ_ONCE) {
@@ -168,16 +210,19 @@ namespace transport {
 #if defined(PUMP_HAVE_IOCP)
         flow->want_to_read();
 #else
-        if (r_tracker_->is_started())
-            r_tracker_->set_tracked(true);
+        if (!r_tracker_->is_started() || !r_tracker_->set_tracked(true)) {
+            PUMP_WARN_LOG("transport::udp_transport::on_read_event: track read failed");
+        }
 #endif
     }
 
     bool udp_transport::__open_flow() {
         PUMP_ASSERT(!flow_);
         flow_.reset(object_create<flow::flow_udp>(), object_delete<flow::flow_udp>);
-        if (flow_->init(shared_from_this(), local_address_) != flow::FLOW_ERR_NO)
+        if (flow_->init(shared_from_this(), local_address_) != flow::FLOW_ERR_NO) {
+            PUMP_ERR_LOG("transport::udp_transport::__open_flow: flow init failed");
             return false;
+        }
 
         // Set channel fd
         poll::channel::__set_fd(flow_->get_fd());

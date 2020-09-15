@@ -49,7 +49,10 @@ namespace transport {
              *     FLOW_ERR_NO    => success
              *     FLOW_ERR_ABORT => error
              ********************************************************************************/
-            flow_error init(poll::channel_sptr &ch, int32 fd, void_ptr xcred, bool client);
+            flow_error init(poll::channel_sptr &ch,
+                            int32 fd,
+                            void_ptr xcred,
+                            bool client);
 
             /*********************************************************************************
              * Rebind channel
@@ -97,15 +100,18 @@ namespace transport {
             /*********************************************************************************
              * Check there are data to read or not
              ********************************************************************************/
-            bool has_data_to_read() const;
+            PUMP_INLINE bool has_data_to_read() const {
+                return net_read_data_size_ > 0;
+            }
 
             /*********************************************************************************
              * Send to ssl
-             * If sent completedly return true else return false.
+             * Return results:
+             *     FLOW_ERR_NO      => success
+             *     FLOW_ERR_ABORT   => error
              ********************************************************************************/
-            bool send_to_ssl(buffer_ptr wb);
+            flow_error send_to_ssl(buffer_ptr wb);
 
-#if defined(PUMP_HAVE_IOCP)
             /*********************************************************************************
              * Want to send
              * If using iocp this post an iocp task for sending, else this try sending
@@ -115,7 +121,6 @@ namespace transport {
              *     FLOW_ERR_ABORT   => error
              ********************************************************************************/
             flow_error want_to_send();
-#endif
 
             /*********************************************************************************
              * Send to net
@@ -174,24 +179,16 @@ namespace transport {
 
             // IOCP read task
             void_ptr read_task_;
-
             // Net read cache
-            int32 net_read_data_pos_;
-            int32 net_read_data_size_;
-            // int32 net_read_cache_raw_size_;
-            // block_ptr net_read_cache_raw_;
-            // std::string net_read_cache_;
-            block net_read_cache_[MAX_FLOW_BUFFER_SIZE];
+            volatile int32 net_read_data_pos_;
+            volatile int32 net_read_data_size_;
+            block net_read_cache_[MAX_FLOW_BUFFER_SIZE * 3 / 2];
 
             // TLS read cache
-            // int32 ssl_read_cache_raw_size_;
-            // block_ptr ssl_read_cache_raw_;
-            // std::string ssl_read_cache_;
             block ssl_read_cache_[MAX_FLOW_BUFFER_SIZE];
 
             // IOCP send task
             void_ptr send_task_;
-
             // Net send buffer
             buffer net_send_buffer_;
         };

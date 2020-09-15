@@ -114,11 +114,6 @@ namespace poll {
             return true;
         }
 
-        /*********************************************************************************
-         * Pause channel tracker for derived class
-         ********************************************************************************/
-        virtual void __pause_channel_tracker(channel_tracker_ptr tracker) {
-        }
 
         /*********************************************************************************
          * Awake channel tracker for derived class

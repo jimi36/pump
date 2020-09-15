@@ -46,11 +46,6 @@ namespace poll {
         virtual bool __remove_channel_tracker(channel_tracker_ptr tracker) override;
 
         /*********************************************************************************
-         * Pause channel tracker for derived class
-         ********************************************************************************/
-        virtual void __pause_channel_tracker(channel_tracker_ptr tracker) override;
-
-        /*********************************************************************************
          * Awake channel tracker for derived class
          ********************************************************************************/
         virtual void __resume_channel_tracker(channel_tracker_ptr tracker) override;

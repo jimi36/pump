@@ -23,10 +23,16 @@ namespace transport {
         flow_base::flow_base() noexcept : fd_(-1), extra_fns_(nullptr) {
         }
 
-        int32 flow_base::unbind_fd() {
+        int32 flow_base::unbind() {
             int32 fd = fd_;
             fd_ = -1;
             return fd;
+        }
+
+        void flow_base::shutdown() {
+            if (fd_ > 0) {
+                net::shutdown(fd_);
+            }
         }
 
         void flow_base::close() {

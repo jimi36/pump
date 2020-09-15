@@ -105,7 +105,8 @@ namespace transport {
          * Close flow
          ********************************************************************************/
         PUMP_INLINE void __close_flow() {
-            flow_.reset();
+            if (flow_)
+               flow_->shutdown();
         }
 
       private:

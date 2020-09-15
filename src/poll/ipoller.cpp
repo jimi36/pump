@@ -30,8 +30,10 @@ namespace poll {
 
     bool iocp_poller::start() {
 #if defined(PUMP_HAVE_IOCP)
-        if (started_.load())
+        if (started_.load()) {
+            PUMP_ERR_LOG("net::iocp_poller::start: already started");
             return false;
+        }
 
         started_.store(true);
 
@@ -45,6 +47,7 @@ namespace poll {
 
         return true;
 #else
+        PUMP_ERR_LOG("net::iocp_poller::start: not support");
         return false;
 #endif
     }
@@ -83,15 +86,18 @@ namespace poll {
                                           &completion_key,
                                           (LPOVERLAPPED *)&task,
                                           INFINITE) == TRUE) {
-                if (!task)
+                if (!task) {
+                    PUMP_WARN_LOG("net::iocp_poller::__work_thread: task invalid");
                     continue;
+                }
 
                 PUMP_LOCK_SPOINTER(vptr, net::get_iocp_task_notifier(task));
                 if (vptr == nullptr) {
+                    PUMP_WARN_LOG(
+                        "net::iocp_poller::__work_thread: task channel notifier invalid");
                     net::unlink_iocp_task(task);
                     continue;
                 }
-                auto ch = (channel_ptr)vptr;
 
                 int32 event = IO_EVENT_NONE;
                 ttp = net::get_iocp_task_type(task);
@@ -100,6 +106,7 @@ namespace poll {
                 else if (ttp == IOCP_TASK_READ || ttp == IOCP_TASK_ACCEPT)
                     event |= IO_EVNET_READ;
 
+                auto ch = (channel_ptr)vptr;
                 if (event != IO_EVENT_NONE) {
                     net::set_iocp_task_processed_size(task, transferred);
                     ch->handle_io_event(event, task);
@@ -113,26 +120,30 @@ namespace poll {
                     }
                 }
             } else {
-                if (!task)
+                if (!task) {
+                    PUMP_DEBUG_LOG("net::iocp_poller::__work_thread: task invalid");
                     continue;
+                }
 
                 PUMP_LOCK_SPOINTER(vptr, net::get_iocp_task_notifier(task));
                 if (vptr == nullptr) {
+                    PUMP_DEBUG_LOG(
+                        "net::iocp_poller::__work_thread: task channel notifier invalid");
                     net::unlink_iocp_task(task);
                     continue;
                 }
-                auto ch = (channel_ptr)vptr;
 
                 int32 event = IO_EVENT_NONE;
                 ttp = net::get_iocp_task_type(task);
                 if (ttp == IOCP_TASK_SEND || ttp == IOCP_TASK_CONNECT)
                     event |= IO_EVENT_SEND;
-                if (ttp == IOCP_TASK_READ || ttp == IOCP_TASK_ACCEPT)
+                else if (ttp == IOCP_TASK_READ || ttp == IOCP_TASK_ACCEPT)
                     event |= IO_EVNET_READ;
 
                 net::set_iocp_task_processed_size(task, 0);
                 net::set_iocp_task_ec(task, net::last_errno());
 
+                auto ch = (channel_ptr)vptr;
                 ch->handle_io_event(event, task);
             }
 

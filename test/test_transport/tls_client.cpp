@@ -3,7 +3,7 @@
 static service *sv;
 
 static int count = 1;
-static int send_loop = 1024 / count;
+static int send_loop = 64;
 static int send_pocket_size = 1024 * 4;
 
 class my_tls_dialer : public std::enable_shared_from_this<my_tls_dialer> {
@@ -26,23 +26,22 @@ class my_tls_dialer : public std::enable_shared_from_this<my_tls_dialer> {
         transport_ = std::static_pointer_cast<tls_transport>(transp);
 
         pump::transport_callbacks cbs;
-        cbs.read_cb = pump_bind(&my_tls_dialer::on_read_callback, this,
-                                transp.get(), _1, _2);
+        cbs.read_cb =
+            pump_bind(&my_tls_dialer::on_read_callback, this, transp.get(), _1, _2);
         cbs.stopped_cb =
             pump_bind(&my_tls_dialer::on_stopped_callback, this, transp.get());
-        cbs.disconnected_cb = pump_bind(
-            &my_tls_dialer::on_disconnected_callback, this, transp.get());
+        cbs.disconnected_cb =
+            pump_bind(&my_tls_dialer::on_disconnected_callback, this, transp.get());
 
-        if (transport_->start(sv, 0, cbs) != 0) return;
+        if (transport_->start(sv, 0, cbs) != 0)
+            return;
 
         transport_->read_for_loop();
 
-
         printf("tls client dialed %d\n", transp->get_fd());
 
-        // for (int i = 0; i < send_loop; i++)
-        {
-            // send_data();
+        for (int i = 0; i < send_loop; i++) {
+            send_data();
         }
 
         printf("tls client dialed %d sent\n", transp->get_fd());
@@ -65,13 +64,14 @@ class my_tls_dialer : public std::enable_shared_from_this<my_tls_dialer> {
     /*********************************************************************************
      * Stopped dial event callback
      ********************************************************************************/
-    void on_stopped_dialing_callback() { printf("tls client dial stopped\n"); }
+    void on_stopped_dialing_callback() {
+        printf("tls client dial stopped\n");
+    }
 
     /*********************************************************************************
      * Tls read event callback
      ********************************************************************************/
-    void on_read_callback(base_transport_ptr transp, c_block_ptr b,
-                          int32 size) {
+    void on_read_callback(base_transport_ptr transp, c_block_ptr b, int32 size) {
         read_size_ += size;
         read_pocket_size_ += size;
 
@@ -101,7 +101,9 @@ class my_tls_dialer : public std::enable_shared_from_this<my_tls_dialer> {
             printf("send data error\n");
     }
 
-    void set_dialer(tls_dialer_sptr dialer) { dialer_ = dialer; }
+    void set_dialer(tls_dialer_sptr dialer) {
+        dialer_ = dialer;
+    }
 
   public:
     int32 read_size_;
@@ -145,12 +147,12 @@ void start_tls_client(const std::string &ip, uint16 port) {
         my_dialers.push_back(my_dialer);
 
         pump::dialer_callbacks cbs;
-        cbs.dialed_cb = pump_bind(&my_tls_dialer::on_dialed_callback,
-                                  my_dialer.get(), _1, _2);
-        cbs.stopped_cb = pump_bind(&my_tls_dialer::on_stopped_dialing_callback,
-                                   my_dialer.get());
-        cbs.timeout_cb = pump_bind(&my_tls_dialer::on_dialed_timeout_callback,
-                                   my_dialer.get());
+        cbs.dialed_cb =
+            pump_bind(&my_tls_dialer::on_dialed_callback, my_dialer.get(), _1, _2);
+        cbs.stopped_cb =
+            pump_bind(&my_tls_dialer::on_stopped_dialing_callback, my_dialer.get());
+        cbs.timeout_cb =
+            pump_bind(&my_tls_dialer::on_dialed_timeout_callback, my_dialer.get());
 
         if (dialer->start(sv, cbs) != 0) {
             printf("tls dialer start error\n");
@@ -162,12 +164,6 @@ void start_tls_client(const std::string &ip, uint16 port) {
     sv->start_timer(t);
 
     std::this_thread::sleep_for(std::chrono::seconds(3));
-
-    // auto b = pump::get_clock_microsecond();
-    for (auto t : my_dialers) {
-        for (int i = 0; i < send_loop; i++) t->send_data();
-    }
-    // printf("send data used %lluus\n", pump::get_clock_microsecond() - b);
 
     sv->wait_stopped();
 }

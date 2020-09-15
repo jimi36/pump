@@ -18,17 +18,18 @@
 #include <signal.h>
 #endif
 
+// Import "memset" on linux
+#include <string.h>
+
+#include "pump/init.h"
+#include "pump/debug.h"
+#include "pump/net/iocp.h"
+
 #if defined(PUMP_HAVE_GNUTLS)
 extern "C" {
 #include <gnutls/gnutls.h>
 }
 #endif
-
-// Import "memset" on linux
-#include <string.h>
-
-#include "pump/init.h"
-#include "pump/net/iocp.h"
 
 namespace pump {
 
@@ -44,6 +45,7 @@ static bool setup_signal(int32 sig, int32 flags, sighandler_t hdl) {
     act.sa_handler = hdl;
 
     if (sigaction(sig, &act, NULL) != 0) {
+        PUMP_WARN_LOG("pump::setup_signal: sigaction failed sig=%d", sig);
         return false;
     }
 
@@ -62,8 +64,10 @@ bool init() {
 #endif
 
 #if defined(PUMP_HAVE_GNUTLS)
-    if (gnutls_global_init() != 0)
+    if (gnutls_global_init() != 0) {
+        PUMP_WARN_LOG("pump::init: gnutls_global_init failed");
         return false;
+    }
     gnutls_global_set_log_level(0);
 #endif
 

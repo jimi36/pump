@@ -16,6 +16,7 @@
 
 #include <atomic>
 
+#include "pump/debug.h"
 #include "pump/memory.h"
 #include "pump/net/iocp.h"
 #include "pump/net/socket.h"
@@ -126,6 +127,7 @@ namespace net {
     }
 
     void set_iocp_task_notifier(void_ptr task, void_wptr ch) {
+        PUMP_ASSERT(ch.lock());
         iocp_task_ptr(task)->ch_notifier = ch;
     }
 
@@ -170,6 +172,7 @@ namespace net {
 
         if (fd == SOCKET_ERROR ||
             CreateIoCompletionPort((HANDLE)fd, iocp, 0, 0) == NULL) {
+            PUMP_WARN_LOG("create_iocp_socket error: ec=%d", last_errno());
             close(fd);
             return -1;
         }
@@ -178,8 +181,10 @@ namespace net {
 
     bool post_iocp_accept(void_ptr ex_fns, void_ptr task) {
         auto accept_ex = (LPFN_ACCEPTEX)get_iocp_accpet_fn(ex_fns);
-        if (!accept_ex)
+        if (!accept_ex) {
+            PUMP_WARN_LOG("net::post_iocp_accept: accept_ex invalid");
             return false;
+        }
 
         iocp_task_ptr itask = (iocp_task_ptr)task;
         itask->add_link();
@@ -199,6 +204,8 @@ namespace net {
         }
         itask->sub_link();
 
+        PUMP_WARN_LOG("net::post_iocp_accept: accept_ex failed with ec=%d", last_errno());
+
         return false;
     }
 
@@ -209,8 +216,10 @@ namespace net {
                                    sockaddr **remote,
                                    int32_ptr rlen) {
         auto get_addrs = (LPFN_GETACCEPTEXSOCKADDRS)get_accept_addrs_fn(ex_fns);
-        if (!get_addrs)
+        if (!get_addrs) {
+            PUMP_WARN_LOG("net::get_iocp_accepted_address: get_addrs invalid");
             return false;
+        }
 
         iocp_task_ptr itask = (iocp_task_ptr)task;
 
@@ -221,10 +230,12 @@ namespace net {
                        SOL_SOCKET,
                        SO_UPDATE_ACCEPT_CONTEXT,
                        (block_ptr)&fd,
-                       sizeof(fd)) != SOCKET_ERROR)
-            return true;
-
-        return false;
+                       sizeof(fd)) == SOCKET_ERROR) {
+            PUMP_WARN_LOG("net::get_iocp_accepted_address: setsockopt failed with ec=%d",
+                         last_errno());
+            return false;
+        }
+        return true;
     }
 
     bool post_iocp_connect(void_ptr ex_fns,
@@ -232,8 +243,10 @@ namespace net {
                            const sockaddr *addr,
                            int32 addrlen) {
         auto connect_ex = (LPFN_CONNECTEX)get_iocp_connect_fn(ex_fns);
-        if (!connect_ex)
+        if (!connect_ex) {
+            PUMP_WARN_LOG("net::post_iocp_connect: connect_ex invalid");
             return false;
+        }
 
         iocp_task_ptr itask = (iocp_task_ptr)task;
 
@@ -244,10 +257,12 @@ namespace net {
                 setsockopt(itask->fd, SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT, NULL, 0) ==
                     0)
                 return true;
-            if (net::last_errno() == WSA_IO_PENDING)
+            if (last_errno() == WSA_IO_PENDING)
                 return true;
         }
         itask->sub_link();
+
+        PUMP_WARN_LOG("net::post_iocp_connect: ec=%d", last_errno());
 
         return false;
     }
@@ -264,6 +279,8 @@ namespace net {
                 return true;
         }
         itask->sub_link();
+
+        PUMP_WARN_LOG("net::post_iocp_read: WSARecv failed with ec=%d", last_errno());
 
         return false;
     }
@@ -289,6 +306,9 @@ namespace net {
         }
         itask->sub_link();
 
+        PUMP_WARN_LOG("net::post_iocp_read_from: WSARecvFrom failed with ec=%d",
+                      last_errno());
+
         return false;
     }
 
@@ -296,13 +316,21 @@ namespace net {
         iocp_task_ptr itask = (iocp_task_ptr)task;
 
         itask->add_link();
-        if (::WSASend(
-                itask->fd, &itask->buf, 1, NULL, 0, (WSAOVERLAPPED *)&itask->ol, NULL) !=
-                SOCKET_ERROR ||
-            net::last_errno() == WSA_IO_PENDING)
-            return true;
-        int ec = net::last_errno();
+        {
+            if (::WSASend(itask->fd,
+                          &itask->buf,
+                          1,
+                          NULL,
+                          0,
+                          (WSAOVERLAPPED *)&itask->ol,
+                          NULL) != SOCKET_ERROR ||
+                net::last_errno() == WSA_IO_PENDING)
+                return true;
+        }
         itask->sub_link();
+
+        PUMP_WARN_LOG("net::post_iocp_read_from: WSARecvFrom failed with ec=%d",
+                     last_errno());
 
         return false;
     }

@@ -20,6 +20,11 @@
 #ifndef pump_types_h
 #define pump_types_h
 
+#if defined(_MSC_VER)
+#include <BaseTsd.h>
+typedef SSIZE_T ssize_t;
+#endif
+
 #define DEFINE_RAW_POINTER_TYPE(class_name) \
     typedef class_name *class_name##_ptr;   \
     typedef const class_name *c_##class_name##_ptr;

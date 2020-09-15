@@ -25,15 +25,29 @@ namespace transport {
     }
 
     transport_error tcp_acceptor::start(service_ptr sv, const acceptor_callbacks &cbs) {
-        if (!__set_status(TRANSPORT_INITED, TRANSPORT_STARTING))
+        if (sv == nullptr) {
+            PUMP_ERR_LOG("transport::tcp_acceptor::start: service invalid");
             return ERROR_INVALID;
+        }
 
-        PUMP_ASSERT(sv != nullptr);
+        if (!cbs.accepted_cb || !cbs.stopped_cb) {
+            PUMP_ERR_LOG("transport::tcp_acceptor::start: callbacks invalid");
+            return ERROR_INVALID;
+        }
+
+        if (!__set_status(TRANSPORT_INITED, TRANSPORT_STARTING)) {
+            PUMP_ERR_LOG(
+                "transport::tcp_acceptor::start: acceptor had be started before");
+            return ERROR_INVALID;
+        }
+
+        // Specifies callbacks
+        cbs_ = cbs;
+
+        // Specifies services
         __set_service(sv);
 
-        PUMP_DEBUG_ASSIGN(cbs.accepted_cb && cbs.stopped_cb, cbs_, cbs);
-
-        toolkit::defer defer([&]() {
+        toolkit::defer cleanup([&]() {
             __close_flow();
 #if !defined(PUMP_HAVE_IOCP)
             __stop_tracker();
@@ -41,20 +55,25 @@ namespace transport {
             __set_status(TRANSPORT_STARTING, TRANSPORT_ERROR);
         });
 
-        if (!__open_flow())
+        if (!__open_flow()) {
+            PUMP_ERR_LOG("transport::tcp_acceptor::start: open flow failed");
             return ERROR_FAULT;
+        }
 
 #if defined(PUMP_HAVE_IOCP)
-        if (flow_->want_to_accept() != flow::FLOW_ERR_NO)
+        if (flow_->want_to_accept() != flow::FLOW_ERR_NO) {
+            PUMP_ERR_LOG("transport::tcp_acceptor::start: flow want_to_accept failed");
             return ERROR_FAULT;
+        }
 #else
-        if (!__start_tracker(shared_from_this()))
+        if (!__start_tracker(shared_from_this())) {
+            PUMP_ERR_LOG("transport::tcp_acceptor::start: start tracker failed");
             return ERROR_FAULT;
+        }
 #endif
+        __set_status(TRANSPORT_STARTING, TRANSPORT_STARTED);
 
-        defer.clear();
-
-        PUMP_DEBUG_CHECK(__set_status(TRANSPORT_STARTING, TRANSPORT_STARTED));
+        cleanup.clear();
 
         return ERROR_OK;
     }
@@ -67,6 +86,8 @@ namespace transport {
             __stop_tracker();
 #endif
             __post_channel_event(shared_from_this(), 0);
+        } else {
+            PUMP_WARN_LOG("transport::tcp_acceptor::stop: not started");
         }
     }
 
@@ -76,8 +97,10 @@ namespace transport {
     void tcp_acceptor::on_read_event() {
 #endif
         auto flow = flow_.get();
-        if (!flow->is_valid())
+        if (!flow->is_valid()) {
+            PUMP_WARN_LOG("transport::tcp_acceptor::on_read_event: flow invalid");
             return;
+        }
 
         address local_address, remote_address;
 #if defined(PUMP_HAVE_IOCP)
@@ -90,20 +113,21 @@ namespace transport {
             tcp_transport->init(fd, local_address, remote_address);
 
             base_transport_sptr transport = tcp_transport;
-            if (cbs_.accepted_cb)
-                cbs_.accepted_cb(transport);
+            cbs_.accepted_cb(transport);
         }
 
-        if (!is_started())
-            return;
-
+        if (is_started()) {
 #if defined(PUMP_HAVE_IOCP)
-        if (flow->want_to_accept() != flow::FLOW_ERR_NO)
-            PUMP_ASSERT(false);
+            if (flow->want_to_accept() != flow::FLOW_ERR_NO) {
+                PUMP_ERR_LOG(
+                    "transport::tcp_acceptor::on_read_event: flow want_to_accept failed");
+            }
 #else
-        if (!tracker_->set_tracked(true))
-            PUMP_ASSERT(false);
+            if (!tracker_->set_tracked(true)) {
+                PUMP_ERR_LOG("transport::tcp_acceptor::on_read_event: track read failed");
+            }
 #endif
+        }
     }
 
     bool tcp_acceptor::__open_flow() {
@@ -112,8 +136,10 @@ namespace transport {
         flow_.reset(object_create<flow::flow_tcp_acceptor>(),
                     object_delete<flow::flow_tcp_acceptor>);
 
-        if (flow_->init(shared_from_this(), listen_address_) != flow::FLOW_ERR_NO)
+        if (flow_->init(shared_from_this(), listen_address_) != flow::FLOW_ERR_NO) {
+            PUMP_ERR_LOG("transport::tcp_acceptor::__open_flow: flow init failed");
             return false;
+        }
 
         // Set channel fd
         poll::channel::__set_fd(flow_->get_fd());

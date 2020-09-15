@@ -17,8 +17,8 @@ struct transport_context {
 
     tcp_transport_sptr transport;
     uint64 all_read_size;
-    int32 read_size;
-    int32 read_pocket_size;
+    uint32 read_size;
+    uint32 read_pocket_size;
     int32 last_report_time;
     int32 idx;
 };

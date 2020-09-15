@@ -26,22 +26,35 @@ namespace transport {
 
 #if !defined(PUMP_HAVE_IOCP)
     bool base_acceptor::__start_tracker(poll::channel_sptr &&ch) {
-        if (tracker_)
+        if (tracker_) {
+            PUMP_WARN_LOG("transport::base_acceptor::__start_tracker: tracker exists");
             return false;
+        }
 
         tracker_.reset(object_create<poll::channel_tracker>(ch, TRACK_READ),
                        object_delete<poll::channel_tracker>);
-        if (!get_service()->add_channel_tracker(tracker_, READ_POLLER))
+        if (!get_service()->add_channel_tracker(tracker_, READ_POLLER)) {
+            PUMP_WARN_LOG(
+                "transport::base_acceptor::__start_tracker: add_channel_tracker failed");
             return false;
+        }
 
         return true;
     }
 
     void base_acceptor::__stop_tracker() {
-        if (tracker_ && tracker_->is_started()) {
-            PUMP_DEBUG_CHECK(
-                get_service()->remove_channel_tracker(tracker_, READ_POLLER));
+        if (!tracker_) {
+            PUMP_WARN_LOG("transport::base_acceptor::__stop_tracker: tracker no exists");
+            return;
         }
+
+        if (!tracker_->is_started()) {
+            PUMP_WARN_LOG(
+                "transport::base_acceptor::__stop_tracker: tracker not started");
+            return;
+        }
+
+        PUMP_DEBUG_CHECK(get_service()->remove_channel_tracker(tracker_, READ_POLLER));
     }
 #endif
 

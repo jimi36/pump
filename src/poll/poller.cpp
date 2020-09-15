@@ -55,24 +55,31 @@ namespace poll {
 
 #if !defined(PUMP_HAVE_IOCP)
     bool poller::add_channel_tracker(channel_tracker_sptr &tracker) {
-        // Mark tracker started
-        if (started_.load() && tracker->set_tracked(true)) {
-            // Mark tracker started
-            tracker->mark_started(true);
-            // Create tracker event
-            auto tev = object_create<channel_tracker_event>(tracker, TRACKER_EVENT_ADD);
-            PUMP_DEBUG_CHECK(tevents_.enqueue(tev));
-            tev_cnt_++;
-
-            return true;
+        if (!started_.load()) {
+            PUMP_WARN_LOG("poll::poller:add_channel_tracker: poller not started");
+            return false;
         }
 
-        return false;
+        if (!tracker->set_tracked(true)) {
+            PUMP_WARN_LOG("poll::poller:add_channel_tracker: tracker already tracked");
+            return false;
+        }
+
+        // Mark tracker started
+        tracker->mark_started(true);
+
+        // Create tracker event
+        auto tev = object_create<channel_tracker_event>(tracker, TRACKER_EVENT_ADD);
+        PUMP_DEBUG_CHECK(tevents_.enqueue(tev));
+        tev_cnt_++;
+
+        return true;
     }
 
     void poller::remove_channel_tracker(channel_tracker_sptr &tracker) {
         // Mark tracker no started
         tracker->mark_started(false);
+
         // Create tracker event
         auto tev = object_create<channel_tracker_event>(tracker, TRACKER_EVENT_DEL);
         PUMP_DEBUG_CHECK(tevents_.enqueue(tev));
@@ -80,9 +87,17 @@ namespace poll {
     }
 
     void poller::resume_channel_tracker(channel_tracker_ptr tracker) {
-        if (tracker->set_tracked(true) && tracker->is_started()) {
-            __resume_channel_tracker(tracker);
+        if (!tracker->is_started()) {
+            PUMP_WARN_LOG("poll::poller:resume_channel_tracker: tracker not started");
+            return;
         }
+
+        if (!tracker->set_tracked(true)) {
+            PUMP_WARN_LOG("poll::poller:add_channel_tracker: tracker already tracked");
+            return;
+        }
+
+        __resume_channel_tracker(tracker);
     }
 #endif
 
@@ -117,6 +132,9 @@ namespace poll {
 
                 PUMP_LOCK_SPOINTER(ch, tracker->get_channel());
                 if (ch == nullptr) {
+                    PUMP_WARN_LOG(
+                        "poll::poller:__handle_channel_tracker_events: tracker channel "
+                        "invalid");
                     trackers_.erase(tracker);
                     break;
                 }
@@ -134,7 +152,7 @@ namespace poll {
                     trackers_.erase(tracker);
                 }
 
-                //ch->handle_tracker_event(ev->event);
+                // ch->handle_tracker_event(ev->event);
 
             } while (false);
 

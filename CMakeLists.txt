@@ -16,11 +16,11 @@ SET(ROOT_DIR ${PROJECT_SOURCE_DIR})
 LIST(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
 # Option build type debug or release (default Debug)
-OPTION(BUILD_DEBUG "Option build type debug or release" ON)
+OPTION(BUILD_DEBUG "Option build type debug or release" OFF)
 INCLUDE(option_build)
 
 # Option build with iocp, but ignored on linux (default OFF)
-OPTION(WITH_IOCP "Option build with iocp, but ignored on linux" ON)
+OPTION(WITH_IOCP "Option build with iocp, but ignored on linux" OFF)
 INCLUDE(option_iocp)
 
 # Option build with jemalloc (default OFF)

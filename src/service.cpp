@@ -54,8 +54,10 @@ service::~service() {
 }
 
 bool service::start() {
-    if (running_)
+    if (running_) {
+        PUMP_ERR_LOG("pump::service::start: had started");
         return false;
+    }
 
     running_ = true;
 
@@ -119,7 +121,7 @@ bool service::remove_channel_tracker(poll::channel_tracker_sptr &tracker, int32_
     return true;
 }
 
-bool service::awake_channel_tracker(poll::channel_tracker_ptr tracker, int32_t pt) {
+bool service::resume_channel_tracker(poll::channel_tracker_ptr tracker, int32_t pt) {
     if (pt == READ_POLLER)
         read_poller_->resume_channel_tracker(tracker);
     else
@@ -141,8 +143,9 @@ bool service::start_timer(time::timer_sptr &tr) {
     PUMP_LOCK_SPOINTER(queue, tqueue_);
     if (PUMP_LIKELY(queue != nullptr))
         return queue->add_timer(tr);
-    else
-        return false;
+
+    PUMP_ERR_LOG("pump::service::start_timer: timer queue invalid");
+    return false;
 }
 
 void service::__start_posted_task_worker() {

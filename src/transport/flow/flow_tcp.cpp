@@ -28,7 +28,6 @@ namespace transport {
         }
 
         flow_tcp::~flow_tcp() {
-            close();
 #if defined(PUMP_HAVE_IOCP)
             if (read_task_)
                 net::unlink_iocp_task(read_task_);
@@ -61,8 +60,11 @@ namespace transport {
 
 #if defined(PUMP_HAVE_IOCP)
         flow_error flow_tcp::want_to_read() {
-            if (!net::post_iocp_read(read_task_))
+            net::reuse_iocp_task(read_task_);
+            if (!net::post_iocp_read(read_task_)) {
+                PUMP_WARN_LOG("flow::flow_tcp::want_to_read: post_iocp_read failed");
                 return FLOW_ERR_ABORT;
+            }
             return FLOW_ERR_NO;
         }
 #endif
@@ -89,7 +91,7 @@ namespace transport {
 #else
             int32 size = net::send(fd_, send_buffer_->data(), send_buffer_->data_size());
             if (PUMP_LIKELY(size > 0)) {
-                PUMP_DEBUG_CHECK(send_buffer_->shift(size));
+                send_buffer_->shift(size);
                 return FLOW_ERR_NO;
             } else if (size < 0) {
                 return FLOW_ERR_AGAIN;
@@ -122,7 +124,7 @@ namespace transport {
 
             int32 size = net::send(fd_, send_buffer_->data(), data_size);
             if (PUMP_LIKELY(size > 0)) {
-                PUMP_DEBUG_CHECK(send_buffer_->shift(size));
+                send_buffer_->shift(size);
                 if (data_size > size)
                     return FLOW_ERR_AGAIN;
                 return FLOW_ERR_NO;

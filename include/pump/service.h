@@ -68,9 +68,9 @@ class LIB_PUMP service : public toolkit::noncopyable {
     bool remove_channel_tracker(poll::channel_tracker_sptr &tracker, int32_t pt);
 
     /*********************************************************************************
-     * Awake channel
+     * Resume channel
      ********************************************************************************/
-    bool awake_channel_tracker(poll::channel_tracker_ptr tracker, int32_t pt);
+    bool resume_channel_tracker(poll::channel_tracker_ptr tracker, int32_t pt);
 #endif
 
     /*********************************************************************************

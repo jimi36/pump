@@ -44,9 +44,13 @@
 #define PUMP_STATIC_ASSERT(x, msg) static_assert((x), msg)
 
 #if defined(PUMP_HAVE_DEBUG_LOG)
-#define LOG printf
+#define PUMP_ERR_LOG(fmt, ...) printf("[Error] "##fmt##"\n", __VA_ARGS__)
+#define PUMP_WARN_LOG(fmt, ...) printf("[Warn] "##fmt##"\n", __VA_ARGS__)
+#define PUMP_DEBUG_LOG(fmt, ...) printf("[Debug] "##fmt##"\n", __VA_ARGS__)
 #else
-#define LOG(...)
+#define PUMP_ERR_LOG(...)
+#define PUMP_WARN_LOG(...)
+#define PUMP_DEBUG_LOG(...)
 #endif
 
 #endif

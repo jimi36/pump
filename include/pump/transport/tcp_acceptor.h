@@ -75,7 +75,7 @@ namespace transport {
          ********************************************************************************/
         PUMP_INLINE void __close_flow() {
             if (flow_)
-                flow_->close();
+                flow_->shutdown();
         }
 
       private:

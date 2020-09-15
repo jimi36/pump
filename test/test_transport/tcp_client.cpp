@@ -1,7 +1,7 @@
 #include "tcp_transport_test.h"
 
 static int count = 1;
-static int send_loop = 1;
+static int send_loop = 128;
 static int send_pocket_size = 1024 * 4;
 
 class my_tcp_dialer;
@@ -13,6 +13,8 @@ static std::string server_ip;
 
 static std::mutex dial_mx;
 static std::map<my_tcp_dialer *, std::shared_ptr<my_tcp_dialer>> my_dialers;
+
+void start_once_dialer();
 
 class my_tcp_dialer : public std::enable_shared_from_this<my_tcp_dialer> {
   public:
@@ -48,9 +50,9 @@ class my_tcp_dialer : public std::enable_shared_from_this<my_tcp_dialer> {
         if (transport_->start(sv, 4096 * 1024, cbs) != 0)
             return;
 
-        transport_->read_for_loop();
+        printf("tcp client dialed fd=%d\n", transp->get_fd());
 
-        printf("tcp client dialed\n");
+        transport_->read_for_loop();
 
         for (int i = 0; i < send_loop; i++) {
             send_data();
@@ -90,7 +92,6 @@ class my_tcp_dialer : public std::enable_shared_from_this<my_tcp_dialer> {
      ********************************************************************************/
     void on_disconnected_callback(base_transport_ptr transp) {
         printf("client tcp transport disconnected read msg %d\n", all_read_size_ / 4096);
-        // transport_.reset();
         dial_mx.lock();
         my_dialers.erase(this);
         dial_mx.unlock();
@@ -101,11 +102,11 @@ class my_tcp_dialer : public std::enable_shared_from_this<my_tcp_dialer> {
      ********************************************************************************/
     void on_stopped_callback(base_transport_ptr transp) {
         printf("client tcp transport stopped read msg %d\n", all_read_size_ / 4096);
-        // transport_.reset();
         dial_mx.lock();
-        if (my_dialers.erase(this)!= 1) {
+        if (my_dialers.erase(this) != 1) {
             printf("erase dialer error\n");
         }
+        //start_once_dialer();
         dial_mx.unlock();
     }
 
@@ -125,7 +126,7 @@ class my_tcp_dialer : public std::enable_shared_from_this<my_tcp_dialer> {
   public:
     volatile int32 read_size_;
     volatile int32 read_pocket_size_;
-    int32 all_read_size_;
+    volatile int32 all_read_size_;
     int64 last_report_time_;
 
     std::string send_data_;
@@ -165,21 +166,22 @@ class time_report {
 
         dial_mx.lock();
         for (auto b = my_dialers.begin(); b != my_dialers.end(); b++) {
-            int size = b->second->read_size_;
-            read_size += size;
+            read_size += b->second->read_size_;
             b->second->read_size_ = 0;
-
+            /*
             if (b->second->all_read_size_ >= 100 * 1024 * 1024 &&
                 b->second->transport_->is_started()) {
                 b->second->transport_->force_stop();
                 start_once_dialer();
             }
+            */
         }
         dial_mx.unlock();
-
+        
         printf("client read speed is %fMB/s at %llu\n",
                (double)read_size / 1024 / 1024 / 1,
                ::time(0));
+               
     }
 };
 

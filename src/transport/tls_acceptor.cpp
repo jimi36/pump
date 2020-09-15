@@ -37,14 +37,22 @@ namespace transport {
 #if defined(PUMP_HAVE_GNUTLS)
         gnutls_certificate_credentials_t xcred;
         int32 ret1 = gnutls_certificate_allocate_credentials(&xcred);
-        if (ret1 != 0)
+        if (ret1 != 0) {
+            PUMP_ERR_LOG(
+                "transport::tls_acceptor::tls_acceptor: "
+                "gnutls_certificate_allocate_credentials failed");
             return;
+        }
 
         if (use_file) {
             int32 ret = gnutls_certificate_set_x509_key_file(
                 xcred, cert.c_str(), key.c_str(), GNUTLS_X509_FMT_PEM);
-            if (ret != 0)
+            if (ret != 0) {
+                PUMP_ERR_LOG(
+                    "transport::tls_acceptor::tls_acceptor: "
+                    "gnutls_certificate_set_x509_key_file failed");
                 return;
+            }
         } else {
             gnutls_datum_t gnutls_cert;
             gnutls_cert.data = (unsigned char *)cert.data();
@@ -56,8 +64,12 @@ namespace transport {
 
             int32 ret2 = gnutls_certificate_set_x509_key_mem(
                 xcred, &gnutls_cert, &gnutls_key, GNUTLS_X509_FMT_PEM);
-            if (ret2 != 0)
+            if (ret2 != 0) {
+                PUMP_ERR_LOG(
+                    "transport::tls_acceptor::tls_acceptor: "
+                    "gnutls_certificate_set_x509_key_mem failed");
                 return;
+            }
         }
 
         xcred_ = xcred;
@@ -72,17 +84,34 @@ namespace transport {
     }
 
     transport_error tls_acceptor::start(service_ptr sv, const acceptor_callbacks &cbs) {
-        if (!__set_status(TRANSPORT_INITED, TRANSPORT_STARTING))
+        if (xcred_ == nullptr) {
+            PUMP_ERR_LOG("transport::tls_acceptor::start: certificate invalid");
             return ERROR_INVALID;
+        }
 
-        PUMP_ASSERT(xcred_ != nullptr);
+        if (sv == nullptr) {
+            PUMP_ERR_LOG("transport::tls_acceptor::start: service invalid");
+            return ERROR_INVALID;
+        }
 
-        PUMP_ASSERT(sv != nullptr);
+        if (!cbs.accepted_cb || !cbs.stopped_cb) {
+            PUMP_ERR_LOG("transport::tls_acceptor::start: callbacks invalid");
+            return ERROR_INVALID;
+        }
+
+        if (!__set_status(TRANSPORT_INITED, TRANSPORT_STARTING)) {
+            PUMP_ERR_LOG(
+                "transport::tls_acceptor::start: transport had be started before");
+            return ERROR_INVALID;
+        }
+
+        // Specifies callbacks
+        cbs_ = cbs;
+
+        // Specifies services
         __set_service(sv);
 
-        PUMP_DEBUG_ASSIGN(cbs.accepted_cb && cbs.stopped_cb, cbs_, cbs);
-
-        toolkit::defer defer([&]() {
+        toolkit::defer cleanup([&]() {
             __close_flow();
 #if !defined(PUMP_HAVE_IOCP)
             __stop_tracker();
@@ -90,20 +119,25 @@ namespace transport {
             __set_status(TRANSPORT_STARTING, TRANSPORT_ERROR);
         });
 
-        if (!__open_flow())
+        if (!__open_flow()) {
+            PUMP_ERR_LOG("transport::tls_acceptor::start: open flow failed");
             return ERROR_FAULT;
+        }
 
 #if defined(PUMP_HAVE_IOCP)
-        if (flow_->want_to_accept() != flow::FLOW_ERR_NO)
+        if (flow_->want_to_accept() != flow::FLOW_ERR_NO) {
+            PUMP_ERR_LOG("transport::tls_acceptor::start: flow want_to_accept failed");
             return ERROR_FAULT;
+        }
 #else
-        if (!__start_tracker(shared_from_this()))
+        if (!__start_tracker(shared_from_this())) {
+            PUMP_ERR_LOG("transport::tls_acceptor::start: start tracker failed");
             return ERROR_FAULT;
+        }
 #endif
+        __set_status(TRANSPORT_STARTING, TRANSPORT_STARTED);
 
-        defer.clear();
-
-        PUMP_DEBUG_CHECK(__set_status(TRANSPORT_STARTING, TRANSPORT_STARTED));
+        cleanup.clear();
 
         return ERROR_OK;
     }
@@ -117,6 +151,8 @@ namespace transport {
 #endif
             __stop_all_handshakers();
             __post_channel_event(shared_from_this(), 0);
+        } else {
+            PUMP_WARN_LOG("transport::tls_acceptor::stop: not started");
         }
     }
 
@@ -126,8 +162,10 @@ namespace transport {
     void tls_acceptor::on_read_event() {
 #endif
         auto flow = flow_.get();
-        if (!flow->is_valid())
+        if (!flow->is_valid()) {
+            PUMP_WARN_LOG("transport::tls_acceptor::on_read_event: flow invalid");
             return;
+        }
 
         address local_address, remote_address;
 #if defined(PUMP_HAVE_IOCP)
@@ -150,23 +188,38 @@ namespace transport {
                 handshaker->init(fd, false, xcred_, local_address, remote_address);
                 if (handshaker->start(
                         get_service(), handshake_timeout_, handshaker_cbs)) {
-                    if (__is_status(TRANSPORT_STOPPING) || __is_status(TRANSPORT_STOPPED))
+                    if (__is_status(TRANSPORT_STOPPING) ||
+                        __is_status(TRANSPORT_STOPPED)) {
+                        PUMP_WARN_LOG(
+                            "transport::tls_acceptor::on_read_event: acceptor has "
+                            "stopped");
                         handshaker->stop();
+                    }
+                } else {
+                    PUMP_WARN_LOG(
+                        "transport::tls_acceptor::on_read_event: handshaker start "
+                        "failed");
+                    __remove_handshaker(handshaker);
                 }
             } else {
+                PUMP_WARN_LOG(
+                    "transport::tls_acceptor::on_read_event: create handshaker failed");
                 net::close(fd);
             }
         }
 
-        if (!is_started())
-            return;
-
+        if (is_started()) {
 #if defined(PUMP_HAVE_IOCP)
-        if (flow->want_to_accept() != flow::FLOW_ERR_NO)
-            PUMP_ASSERT(false);
+            if (flow->want_to_accept() != flow::FLOW_ERR_NO) {
+                PUMP_ERR_LOG(
+                    "transport::tls_acceptor::on_read_event: flow want_to_accept failed");
+            }
 #else
-        tracker_->set_tracked(true);
+            if (!tracker_->set_tracked(true)) {
+                PUMP_ERR_LOG("transport::tls_acceptor::on_read_event: track read failed");
+            }
 #endif
+        }
     }
 
     void tls_acceptor::on_handshaked(tls_acceptor_wptr wptr,
@@ -174,6 +227,7 @@ namespace transport {
                                      bool succ) {
         PUMP_LOCK_WPOINTER(acceptor, wptr);
         if (acceptor == nullptr) {
+            PUMP_WARN_LOG("transport::tls_acceptor::on_handshaked: acceptor invalid");
             handshaker->stop();
             return;
         }
@@ -196,8 +250,12 @@ namespace transport {
     void tls_acceptor::on_handshake_stopped(tls_acceptor_wptr wptr,
                                             tls_handshaker_ptr handshaker) {
         PUMP_LOCK_WPOINTER(acceptor, wptr);
-        if (acceptor == nullptr)
+        if (acceptor == nullptr) {
+            PUMP_WARN_LOG(
+                "transport::tls_acceptor::on_handshake_stopped: acceptor "
+                "invalid");
             return;
+        }
 
         acceptor->__remove_handshaker(handshaker);
     }
@@ -208,8 +266,10 @@ namespace transport {
         flow_.reset(object_create<flow::flow_tls_acceptor>(),
                     object_delete<flow::flow_tls_acceptor>);
 
-        if (flow_->init(shared_from_this(), listen_address_) != flow::FLOW_ERR_NO)
+        if (flow_->init(shared_from_this(), listen_address_) != flow::FLOW_ERR_NO) {
+            PUMP_ERR_LOG("transport::tls_acceptor::__open_flow: flow init failed");
             return false;
+        }
 
         // Set channel fd
         channel::__set_fd(flow_->get_fd());

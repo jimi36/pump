@@ -59,7 +59,7 @@ namespace poll {
         tv_.tv_usec = (timeout % 1000) * 1000;
         int32 count = ::select(maxfd + 1, &read_fds_, &write_fds_, NULL, &tv_);
 #if defined(WIN32)
-        if (maxfd == -1)
+        if (maxfd == -1 && timeout > 0)
             Sleep(1);
 #endif
         if (count > 0)
@@ -82,12 +82,17 @@ namespace poll {
 
 #if !defined(PUMP_HAVE_IOCP) && !defined(PUMP_HAVE_EPOLL)
             int32 fd = tracker->get_fd();
-            if (FD_ISSET(fd, rfds)) {
-                tracker->set_tracked(false);
-                ch->handle_io_event(IO_EVNET_READ);
-            } else if (FD_ISSET(fd, wfds)) {
-                tracker->set_tracked(false);
-                ch->handle_io_event(IO_EVENT_SEND);
+            int32 listen_event = tracker->get_event();
+            if (listen_event & IO_EVNET_READ) {
+                if (FD_ISSET(fd, rfds)) {
+                    tracker->set_tracked(false);
+                    ch->handle_io_event(IO_EVNET_READ);
+                }
+            } else {
+                if (FD_ISSET(fd, wfds)) {
+                    tracker->set_tracked(false);
+                    ch->handle_io_event(IO_EVENT_SEND);
+                }
             }
 #endif
             beg++;

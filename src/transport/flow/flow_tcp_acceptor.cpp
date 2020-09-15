@@ -27,8 +27,6 @@ namespace transport {
         }
 
         flow_tcp_acceptor::~flow_tcp_acceptor() {
-            close();
-
 #if defined(PUMP_HAVE_IOCP)
             if (accept_task_)
                 net::unlink_iocp_task(accept_task_);
@@ -44,12 +42,17 @@ namespace transport {
 
 #if defined(PUMP_HAVE_IOCP)
             fd_ = net::create_iocp_socket(domain, SOCK_STREAM, net::get_iocp_handler());
-            if (fd_ == -1)
+            if (fd_ == -1) {
+                PUMP_ERR_LOG("flow::flow_tcp_acceptor::init: create_iocp_socket failed");
                 return FLOW_ERR_ABORT;
+            }
 
             extra_fns_ = net::new_iocp_extra_function(fd_);
-            if (!extra_fns_)
+            if (!extra_fns_) {
+                PUMP_ERR_LOG(
+                    "flow::flow_tcp_acceptor::init: new_iocp_extra_function failed");
                 return FLOW_ERR_ABORT;
+            }
 
             tmp_cache_.resize(ADDRESS_MAX_LEN * 3);
 
@@ -62,19 +65,31 @@ namespace transport {
             accept_task_ = accept_task;
 #else
             fd_ = net::create_socket(domain, SOCK_STREAM);
-            if (fd_ == -1)
+            if (fd_ == -1) {
+                PUMP_ERR_LOG("flow::flow_tcp_acceptor::init: create_socket failed");
                 return FLOW_ERR_ABORT;
+            }
 #endif
-            if (!net::set_reuse(fd_, 1))
+            if (!net::set_reuse(fd_, 1)) {
+                PUMP_ERR_LOG("flow::flow_tcp_acceptor::init: set_reuse failed");
                 return FLOW_ERR_ABORT;
-            if (!net::set_noblock(fd_, 1))
+            }
+            if (!net::set_noblock(fd_, 1)) {
+                PUMP_ERR_LOG("flow::flow_tcp_acceptor::init: set_noblock failed");
                 return FLOW_ERR_ABORT;
-            if (!net::set_nodelay(fd_, 1))
+            }
+            if (!net::set_nodelay(fd_, 1)) {
+                PUMP_ERR_LOG("flow::flow_tcp_acceptor::init: set_nodelay failed");
                 return FLOW_ERR_ABORT;
-            if (!net::bind(fd_, (sockaddr *)listen_address.get(), listen_address.len()))
+            }
+            if (!net::bind(fd_, (sockaddr *)listen_address.get(), listen_address.len())) {
+                PUMP_ERR_LOG("flow::flow_tcp_acceptor::init: bind failed");
                 return FLOW_ERR_ABORT;
-            if (!net::listen(fd_))
+            }
+            if (!net::listen(fd_)) {
+                PUMP_ERR_LOG("flow::flow_tcp_acceptor::init: listen failed");
                 return FLOW_ERR_ABORT;
+            }
 
             return FLOW_ERR_NO;
         }
@@ -84,11 +99,16 @@ namespace transport {
             int32 domain = is_ipv6_ ? AF_INET6 : AF_INET;
             int32 client =
                 net::create_iocp_socket(domain, SOCK_STREAM, net::get_iocp_handler());
-            if (client == -1)
+            if (client == -1) {
+                PUMP_WARN_LOG(
+                    "flow::flow_tcp_acceptor::want_to_accept: create_iocp_socket failed");
                 return FLOW_ERR_ABORT;
+            }
 
             net::set_iocp_task_client_fd(accept_task_, client);
             if (!net::post_iocp_accept(extra_fns_, accept_task_)) {
+                PUMP_WARN_LOG(
+                    "flow::flow_tcp_acceptor::want_to_accept: post_iocp_accept failed");
                 net::close(client);
                 return FLOW_ERR_ABORT;
             }
@@ -104,6 +124,8 @@ namespace transport {
             int32 ec = net::get_iocp_task_ec(iocp_task);
             int32 client_fd = net::get_iocp_task_client_fd(iocp_task);
             if (ec != 0 || client_fd == -1) {
+                PUMP_WARN_LOG(
+                    "flow::flow_tcp_acceptor::accept: ec=%d fd=%d", ec, client_fd);
                 net::close(client_fd);
                 return -1;
             }
@@ -114,6 +136,8 @@ namespace transport {
             int32 rlen = sizeof(sockaddr_in);
             if (!net::get_iocp_accepted_address(
                     extra_fns_, iocp_task, &local, &llen, &remote, &rlen)) {
+                PUMP_WARN_LOG(
+                    "flow::flow_tcp_acceptor::accept: get_iocp_accepted_address falied");
                 net::close(client_fd);
                 return -1;
             }
@@ -122,6 +146,8 @@ namespace transport {
 
             net::set_iocp_task_client_fd(iocp_task, 0);
             if (!net::set_noblock(client_fd, 1) || !net::set_nodelay(client_fd, 1)) {
+                PUMP_WARN_LOG(
+                    "flow::flow_tcp_acceptor::accept: set_noblock or set_nodelay fialed");
                 net::close(client_fd);
                 return -1;
             }
@@ -134,8 +160,10 @@ namespace transport {
             int32 addrlen = ADDRESS_MAX_LEN;
             int32 client_fd =
                 net::accept(fd_, (struct sockaddr *)tmp_cache_.data(), &addrlen);
-            if (client_fd == -1)
+            if (client_fd == -1) {
+                PUMP_WARN_LOG("flow::flow_tcp_acceptor::accept: accept fialed");
                 return -1;
+            }
             remote_address->set((sockaddr *)tmp_cache_.data(), addrlen);
 
             addrlen = ADDRESS_MAX_LEN;
@@ -143,6 +171,8 @@ namespace transport {
             local_address->set((sockaddr *)tmp_cache_.data(), addrlen);
 
             if (!net::set_noblock(client_fd, 1) || !net::set_nodelay(client_fd, 1)) {
+                PUMP_WARN_LOG(
+                    "flow::flow_tcp_acceptor::accept: set_noblock or set_nodelay fialed");
                 net::close(client_fd);
                 return -1;
             }

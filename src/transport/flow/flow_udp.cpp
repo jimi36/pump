@@ -26,8 +26,6 @@ namespace transport {
         }
 
         flow_udp::~flow_udp() {
-            close();
-
 #if defined(PUMP_HAVE_IOCP)
             if (read_task_)
                 net::unlink_iocp_task(read_task_);
@@ -46,8 +44,10 @@ namespace transport {
 #else
             fd_ = net::create_socket(domain, SOCK_DGRAM);
 #endif
-            if (fd_ == -1)
+            if (fd_ == -1) {
+                PUMP_ERR_LOG("flow::flow_udp::init: create socket failed");
                 return FLOW_ERR_ABORT;
+            }
 
             read_cache_.resize(UDP_BUFFER_SIZE);
 
@@ -60,10 +60,26 @@ namespace transport {
                 read_task, (block_ptr)read_cache_.data(), UDP_BUFFER_SIZE);
             read_task_ = read_task;
 #endif
-            if (!net::set_reuse(fd_, 1) || !net::set_noblock(fd_, 1) ||
-                !net::bind(fd_, (sockaddr *)local_address.get(), local_address.len()) ||
-                !net::set_udp_conn_reset(fd_, false))
+            if (!net::set_reuse(fd_, 1)) {
+                PUMP_ERR_LOG("flow::flow_udp::init: set_reuse failed");
                 return FLOW_ERR_ABORT;
+            }
+            if (!net::set_noblock(fd_, 1)) {
+                PUMP_ERR_LOG("flow::flow_udp::init: set_noblock failed");
+                return FLOW_ERR_ABORT;
+            }
+            if (!net::set_nodelay(fd_, 1)) {
+                PUMP_ERR_LOG("flow::flow_udp::init: set_nodelay failed");
+                return FLOW_ERR_ABORT;
+            }
+            if (!net::bind(fd_, (sockaddr *)local_address.get(), local_address.len())) {
+                PUMP_ERR_LOG("flow::flow_udp::init: bind failed");
+                return FLOW_ERR_ABORT;
+            }
+            if (!net::set_udp_conn_reset(fd_, false)) {
+                PUMP_ERR_LOG("flow::flow_udp::init: set_udp_conn_reset failed");
+                return FLOW_ERR_ABORT;
+            }
 
             return FLOW_ERR_NO;
         }
@@ -71,8 +87,10 @@ namespace transport {
 #if defined(PUMP_HAVE_IOCP)
         flow_error flow_udp::want_to_read() {
             PUMP_ASSERT(read_task_);
-            if (!net::post_iocp_read_from(read_task_))
+            if (!net::post_iocp_read_from(read_task_)) {
+                PUMP_WARN_LOG("flow::flow_udp::want_to_read: post_iocp_read_from failed");
                 return FLOW_ERR_ABORT;
+            }
             return FLOW_ERR_NO;
         }
 #endif
