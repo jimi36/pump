@@ -46,6 +46,8 @@ namespace net {
         int32 ec;
         // Channel notifier
         std::weak_ptr<void> ch_notifier;
+        // IO buffer
+        toolkit::io_buffer_ptr iob;
         // Ref link count
         std::atomic_int link_cnt;
 
@@ -81,6 +83,8 @@ namespace net {
                 if (un.client_fd > 0)
                     close(un.client_fd);
             }
+            if (iob)
+                iob->sub_ref();
         }
     };
     DEFINE_RAW_POINTER_TYPE(iocp_task);
@@ -141,6 +145,32 @@ namespace net {
 
     int32 get_iocp_task_ec(void_ptr task) {
         return iocp_task_ptr(task)->ec;
+    }
+
+    void bind_iocp_task_buffer(void_ptr task, toolkit::io_buffer_ptr iob) {
+        iob->add_ref();
+        iocp_task_ptr(task)->iob = iob;
+        if (iob->data_size() > 0) {
+            iocp_task_ptr(task)->buf.buf = (block_ptr)iob->data();
+            iocp_task_ptr(task)->buf.len = iob->data_size();
+        } else {
+            iocp_task_ptr(task)->buf.buf = (block_ptr)iob->buffer();
+            iocp_task_ptr(task)->buf.len = iob->buffer_size();
+        }
+    }
+
+    void unbind_iocp_task_buffer(void_ptr task) {
+        toolkit::io_buffer_ptr iob = iocp_task_ptr(task)->iob;
+        if (PUMP_LIKELY(iob))
+            iob->sub_ref();
+    }
+
+    void update_iocp_task_buffer(void_ptr task) {
+        toolkit::io_buffer_ptr iob = iocp_task_ptr(task)->iob;
+        if (PUMP_LIKELY(iob)) {
+            iocp_task_ptr(task)->buf.len = iob->data_size();
+            iocp_task_ptr(task)->buf.buf = (block_ptr)iob->data();
+        }
     }
 
     void set_iocp_task_buffer(void_ptr task, block_ptr b, int32 size) {
@@ -232,7 +262,7 @@ namespace net {
                        (block_ptr)&fd,
                        sizeof(fd)) == SOCKET_ERROR) {
             PUMP_WARN_LOG("net::get_iocp_accepted_address: setsockopt failed with ec=%d",
-                         last_errno());
+                          last_errno());
             return false;
         }
         return true;
@@ -330,7 +360,7 @@ namespace net {
         itask->sub_link();
 
         PUMP_WARN_LOG("net::post_iocp_read_from: WSARecvFrom failed with ec=%d",
-                     last_errno());
+                      last_errno());
 
         return false;
     }

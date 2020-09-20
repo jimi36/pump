@@ -24,7 +24,7 @@
 #include "pump/memory.h"
 #include "pump/net/socket.h"
 #include "pump/poll/channel.h"
-#include "concurrentqueue/concurrentqueue.h"
+#include "pump/toolkit/freelock.h"
 
 namespace pump {
 namespace poll {
@@ -148,11 +148,13 @@ namespace poll {
 
         // Channel event
         std::atomic_int32_t cev_cnt_;
-        moodycamel::ConcurrentQueue<channel_event_ptr> cevents_;
+        //moodycamel::ConcurrentQueue<channel_event_ptr> cevents_;
+        toolkit::freelock_list<channel_event_ptr> cevents_;
 
         // Channel tracker event
         std::atomic_int32_t tev_cnt_;
-        moodycamel::ConcurrentQueue<channel_tracker_event_ptr> tevents_;
+        //moodycamel::ConcurrentQueue<channel_tracker_event_ptr> tevents_;
+        toolkit::freelock_list<channel_tracker_event_ptr> tevents_;
 
         // Channel trackers
         std::map<channel_tracker_ptr, channel_tracker_sptr> trackers_;

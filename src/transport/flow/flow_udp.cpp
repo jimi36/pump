@@ -49,15 +49,15 @@ namespace transport {
                 return FLOW_ERR_ABORT;
             }
 
-            read_cache_.resize(UDP_BUFFER_SIZE);
+            read_iob_ = toolkit::io_buffer::create_instance();
+            read_iob_->init_with_size(UDP_BUFFER_SIZE);
 
 #if defined(PUMP_HAVE_IOCP)
             auto read_task = net::new_iocp_task();
             net::set_iocp_task_fd(read_task, fd_);
             net::set_iocp_task_notifier(read_task, ch_);
             net::set_iocp_task_type(read_task, IOCP_TASK_READ);
-            net::set_iocp_task_buffer(
-                read_task, (block_ptr)read_cache_.data(), UDP_BUFFER_SIZE);
+            net::bind_iocp_task_buffer(read_task, read_iob_);
             read_task_ = read_task;
 #endif
             if (!net::set_reuse(fd_, 1)) {
@@ -111,8 +111,8 @@ namespace transport {
         c_block_ptr flow_udp::read_from(int32_ptr size, address_ptr remote_address) {
             block addr[ADDRESS_MAX_LEN];
             int32 addrlen = ADDRESS_MAX_LEN;
-            block_ptr buf = (block_ptr)read_cache_.data();
-            *size = net::read_from(fd_, buf, UDP_BUFFER_SIZE, (sockaddr *)addr, &addrlen);
+            block_ptr buf = (block_ptr)read_iob_->buffer();
+            *size = net::read_from(fd_, buf, read_iob_->buffer_size(), (sockaddr *)addr, &addrlen);
 
             remote_address->set((sockaddr *)addr, addrlen);
 

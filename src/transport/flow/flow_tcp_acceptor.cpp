@@ -20,7 +20,8 @@ namespace pump {
 namespace transport {
     namespace flow {
 
-        flow_tcp_acceptor::flow_tcp_acceptor() noexcept : is_ipv6_(false) {
+        flow_tcp_acceptor::flow_tcp_acceptor() noexcept
+            : is_ipv6_(false), iob_(nullptr) {
 #if defined(PUMP_HAVE_IOCP)
             accept_task_ = nullptr;
 #endif
@@ -31,6 +32,8 @@ namespace transport {
             if (accept_task_)
                 net::unlink_iocp_task(accept_task_);
 #endif
+            if (iob_)
+                iob_->sub_ref();
         }
 
         flow_error flow_tcp_acceptor::init(poll::channel_sptr &&ch,
@@ -39,6 +42,9 @@ namespace transport {
 
             is_ipv6_ = listen_address.is_ipv6();
             int32 domain = is_ipv6_ ? AF_INET6 : AF_INET;
+
+            iob_ = toolkit::io_buffer::create_instance();
+            iob_->init_with_size(ADDRESS_MAX_LEN * 3);
 
 #if defined(PUMP_HAVE_IOCP)
             fd_ = net::create_iocp_socket(domain, SOCK_STREAM, net::get_iocp_handler());
@@ -54,14 +60,11 @@ namespace transport {
                 return FLOW_ERR_ABORT;
             }
 
-            tmp_cache_.resize(ADDRESS_MAX_LEN * 3);
-
             auto accept_task = net::new_iocp_task();
             net::set_iocp_task_fd(accept_task, fd_);
             net::set_iocp_task_notifier(accept_task, ch_);
             net::set_iocp_task_type(accept_task, IOCP_TASK_ACCEPT);
-            net::set_iocp_task_buffer(
-                accept_task, (block_ptr)tmp_cache_.data(), (uint32)tmp_cache_.size());
+            net::bind_iocp_task_buffer(accept_task, iob_);
             accept_task_ = accept_task;
 #else
             fd_ = net::create_socket(domain, SOCK_STREAM);
@@ -159,16 +162,16 @@ namespace transport {
                                         address_ptr remote_address) {
             int32 addrlen = ADDRESS_MAX_LEN;
             int32 client_fd =
-                net::accept(fd_, (struct sockaddr *)tmp_cache_.data(), &addrlen);
+                net::accept(fd_, (struct sockaddr *)iob_->buffer(), &addrlen);
             if (client_fd == -1) {
                 PUMP_WARN_LOG("flow::flow_tcp_acceptor::accept: accept fialed");
                 return -1;
             }
-            remote_address->set((sockaddr *)tmp_cache_.data(), addrlen);
+            remote_address->set((sockaddr *)iob_->buffer(), addrlen);
 
             addrlen = ADDRESS_MAX_LEN;
-            net::local_address(client_fd, (sockaddr *)tmp_cache_.data(), &addrlen);
-            local_address->set((sockaddr *)tmp_cache_.data(), addrlen);
+            net::local_address(client_fd, (sockaddr *)iob_->buffer(), &addrlen);
+            local_address->set((sockaddr *)iob_->buffer(), addrlen);
 
             if (!net::set_noblock(client_fd, 1) || !net::set_nodelay(client_fd, 1)) {
                 PUMP_WARN_LOG(

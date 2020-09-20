@@ -21,9 +21,9 @@ namespace transport {
 
     tcp_transport::tcp_transport() noexcept
         : base_transport(TCP_TRANSPORT, nullptr, -1),
-          last_send_buffer_size_(0),
-          last_send_buffer_(nullptr),
-          sendlist_(1024) {
+          last_send_iob_size_(0),
+          last_send_iob_(nullptr),
+          sendlist_(64) {
         next_send_chance_.clear();
     }
 
@@ -64,10 +64,10 @@ namespace transport {
             return ERROR_INVALID;
         }
 
-        // Specifies callbacks
+        // Callbacks
         cbs_ = cbs;
 
-        // Specifies services
+        // Service
         __set_service(sv);
 
         if (max_pending_send_size > 0)
@@ -234,15 +234,16 @@ namespace transport {
             return ERROR_AGAIN;
         }
 
-        auto buffer = object_create<flow::buffer>();
-        if (PUMP_UNLIKELY(buffer == nullptr || !buffer->append(b, size))) {
+        // auto buffer = object_create<flow::buffer>();
+        auto iob = toolkit::io_buffer::create_instance();
+        if (PUMP_UNLIKELY(iob == nullptr || !iob->append(b, size))) {
             PUMP_WARN_LOG("transport::tcp_transport::send: new buffer failed");
-            if (buffer != nullptr)
-                object_delete(buffer);
+            if (iob != nullptr)
+                iob->sub_ref();
             return ERROR_AGAIN;
         }
 
-        __async_send(buffer);
+        __async_send(iob);
 
         return ERROR_OK;
     }
@@ -300,7 +301,7 @@ namespace transport {
     void tcp_transport::on_send_event() {
 #endif
         auto flow = flow_.get();
-        //if (!flow->is_valid()) {
+        // if (!flow->is_valid()) {
         //    PUMP_WARN_LOG("transport::tcp_transport::on_send_event: flow invalid");
         //    return;
         //}
@@ -326,8 +327,7 @@ namespace transport {
         }
 
         // If there are more buffers to send, we should send next one immediately.
-        if (pending_send_size_.fetch_sub(last_send_buffer_size_) >
-            last_send_buffer_size_) {
+        if (pending_send_size_.fetch_sub(last_send_iob_size_) > last_send_iob_size_) {
             __send_once(flow, false);
             return;
         }
@@ -365,12 +365,12 @@ namespace transport {
         return true;
     }
 
-    bool tcp_transport::__async_send(flow::buffer_ptr b) {
+    bool tcp_transport::__async_send(toolkit::io_buffer_ptr iob) {
         // Insert buffer to sendlist.
-        PUMP_DEBUG_CHECK(sendlist_.enqueue(b));
+        PUMP_DEBUG_CHECK(sendlist_.push(iob));
 
         // If there are no more buffers, we should try to get next send chance.
-        if (pending_send_size_.fetch_add(b->data_size()) > 0 ||
+        if (pending_send_size_.fetch_add(iob->data_size()) > 0 ||
             next_send_chance_.test_and_set())
             return true;
 
@@ -378,22 +378,25 @@ namespace transport {
     }
 
     bool tcp_transport::__send_once(flow::flow_tcp_ptr flow, bool resume) {
-        if (last_send_buffer_ != nullptr) {
+        if (last_send_iob_ != nullptr) {
             // Reset last send buffer data size.
-            last_send_buffer_size_ = 0;
+            last_send_iob_size_ = 0;
             // Free last send buffer.
-            object_delete(last_send_buffer_);
-            last_send_buffer_ = nullptr;
+            last_send_iob_->sub_ref();
+            last_send_iob_ = nullptr;
         }
 
         // Get a buffer from sendlist to send.
-        PUMP_DEBUG_CHECK(sendlist_.try_dequeue(last_send_buffer_));
+        // while (!sendlist_.try_dequeue(last_send_buffer_)) {
+        //}
+        while (!sendlist_.pop(last_send_iob_)) {
+        }
 
         // Save last send buffer data size.
-        last_send_buffer_size_ = last_send_buffer_->data_size();
+        last_send_iob_size_ = last_send_iob_->data_size();
 
         // Try to send the buffer again.
-        if (flow->want_to_send(last_send_buffer_) != flow::FLOW_ERR_ABORT) {
+        if (flow->want_to_send(last_send_iob_) != flow::FLOW_ERR_ABORT) {
 #if defined(PUMP_HAVE_IOCP)
             return true;
 #else
@@ -433,12 +436,12 @@ namespace transport {
     }
 
     void tcp_transport::__clear_sendlist() {
-        if (last_send_buffer_ != nullptr)
-            object_delete(last_send_buffer_);
+        if (last_send_iob_ != nullptr)
+            last_send_iob_->sub_ref();
 
-        flow::buffer_ptr buffer;
-        while (sendlist_.try_dequeue(buffer)) {
-            object_delete(buffer);
+        toolkit::io_buffer_ptr iob;
+        while (sendlist_.pop(iob)) {
+            iob->sub_ref();
         }
     }
 

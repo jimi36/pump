@@ -48,9 +48,9 @@
 #define PUMP_WARN_LOG(fmt, ...) printf("[Warn] "##fmt##"\n", __VA_ARGS__)
 #define PUMP_DEBUG_LOG(fmt, ...) printf("[Debug] "##fmt##"\n", __VA_ARGS__)
 #else
-#define PUMP_ERR_LOG(...)
-#define PUMP_WARN_LOG(...)
-#define PUMP_DEBUG_LOG(...)
+#define PUMP_ERR_LOG(...) void(0)
+#define PUMP_WARN_LOG(...) void(0)
+#define PUMP_DEBUG_LOG(...) void(0)
 #endif
 
 #endif

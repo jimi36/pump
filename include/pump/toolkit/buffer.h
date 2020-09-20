@@ -1,0 +1,230 @@
+/*
+ * Copyright (C) 2015-2018 ZhengHaiTao <ming8ren@163.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef pump_toolkit_buffer_h
+#define pump_toolkit_buffer_h
+
+#include <atomic>
+
+#include "pump/types.h"
+#include "pump/memory.h"
+#include "pump/platform.h"
+
+namespace pump {
+namespace toolkit {
+
+    class base_buffer {
+      public:
+        /*********************************************************************************
+         * Constructor
+         ********************************************************************************/
+        base_buffer() noexcept;
+
+        /*********************************************************************************
+         * Deconstructor
+         ********************************************************************************/
+        virtual ~base_buffer();
+
+        /*********************************************************************************
+         * Get buffer raw ptr
+         ********************************************************************************/
+        PUMP_INLINE c_block_ptr buffer() const {
+            return raw_;
+        }
+
+        /*********************************************************************************
+         * Get buffer raw size
+         ********************************************************************************/
+        PUMP_INLINE uint32 buffer_size() const {
+            return raw_size_;
+        }
+
+      protected:
+        /*********************************************************************************
+         * Init with size
+         * Allocate a memory block with the size.
+         ********************************************************************************/
+        bool __init_with_size(uint32 size);
+
+        /*********************************************************************************
+         * Init with copy
+         * Allocate a memory block and copy input buffer to the buffer memory block.
+         ********************************************************************************/
+        bool __init_with_copy(c_block_ptr b, uint32 size);
+
+        /*********************************************************************************
+         * Init with ownship
+         * The input buffer ownship transfer to the buffer.
+         ********************************************************************************/
+        bool __init_with_ownship(c_block_ptr b, uint32 size);
+
+        /*********************************************************************************
+         * Append
+         * Append input buffer by copying. If there is no enough memory block to use, the
+         * buffer will allocate a new memory block.
+         ********************************************************************************/
+        // bool __append(c_block_ptr b, uint32 size);
+
+      protected:
+        // Raw buffer
+        block_ptr raw_;
+        // Raw buffer size
+        uint32 raw_size_;
+    };
+
+    class io_buffer;
+    DEFINE_RAW_POINTER_TYPE(io_buffer);
+
+    class io_buffer : public base_buffer {
+      public:
+        /*********************************************************************************
+         * Create instance
+         ********************************************************************************/
+        static io_buffer_ptr create_instance() {
+            INLINE_OBJECT_CREATE(obj, io_buffer, ());
+            return obj;
+        }
+
+        /*********************************************************************************
+         * Init with size
+         * Allocate a memory block with the size.
+         ********************************************************************************/
+        bool init_with_size(uint32 size) {
+            return __init_with_size(size);
+        }
+
+        /*********************************************************************************
+         * Init with copy
+         * Allocate a memory block and copy input buffer to the buffer memory block.
+         ********************************************************************************/
+        bool init_with_copy(c_block_ptr b, uint32 size) {
+            if (__init_with_copy(b, size)) {
+                data_size_ = size;
+                return true;
+            }
+            return false;
+        }
+
+        /*********************************************************************************
+         * Init with ownship
+         * The input buffer ownship transfer to the buffer.
+         * The input buffer must be created by pump_malloc or pump_realloc.
+         ********************************************************************************/
+        bool init_with_ownship(c_block_ptr b, uint32 size) {
+            if (__init_with_ownship(b, size)) {
+                data_size_ = size;
+                return true;
+            }
+            return false;
+        }
+
+        /*********************************************************************************
+         * Append
+         * Append input buffer by copying. If there is no enough memory block to use, the
+         * buffer will allocate a new memory block.
+         ********************************************************************************/
+        bool append(c_block_ptr b, uint32 size);
+
+        /*********************************************************************************
+         * Shift
+         ********************************************************************************/
+        bool shift(uint32 size) {
+            if (size > data_size_)
+                return false;
+
+            read_pos_ += size;
+            data_size_ -= size;
+
+            return true;
+        }
+
+        /*********************************************************************************
+         * Get data
+         ********************************************************************************/
+        PUMP_INLINE c_block_ptr data() const {
+            return data_size_ == 0 ? nullptr : (raw_ + read_pos_);
+        }
+
+        /*********************************************************************************
+         * Get data size
+         ********************************************************************************/
+        PUMP_INLINE uint32 data_size() const {
+            return data_size_;
+        }
+
+        /*********************************************************************************
+         * Reset
+         ********************************************************************************/
+        PUMP_INLINE void reset() {
+            read_pos_ = data_size_ = 0;
+        }
+
+        /*********************************************************************************
+         * Add ref
+         ********************************************************************************/
+        PUMP_INLINE void add_ref() {
+            ref_cnt_.fetch_add(1);
+        }
+
+        /*********************************************************************************
+         * Sub ref
+         ********************************************************************************/
+        PUMP_INLINE void sub_ref() {
+            if (ref_cnt_.fetch_sub(1) == 1) {
+                INLINE_OBJECT_DELETE(this, io_buffer);
+            }
+        }
+
+      private:
+        /*********************************************************************************
+         * Constructor
+         ********************************************************************************/
+        io_buffer() noexcept : data_size_(0), read_pos_(0), ref_cnt_(1) {
+        }
+
+        /*********************************************************************************
+         * Copy constructor
+         ********************************************************************************/
+        io_buffer(const io_buffer &b) noexcept {
+        }
+
+        /*********************************************************************************
+         * Deconstructor
+         ********************************************************************************/
+        virtual ~io_buffer() {
+        }
+
+        /*********************************************************************************
+         * Assign operator
+         ********************************************************************************/
+        io_buffer &operator=(const io_buffer &b) {
+            return *this;
+        }
+
+      private:
+        // data size
+        uint32 data_size_;
+        // data read pos
+        uint32 read_pos_;
+
+        // Ref count
+        std::atomic_int ref_cnt_;
+    };
+
+}  // namespace toolkit
+}  // namespace pump
+
+#endif

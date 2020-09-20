@@ -21,12 +21,15 @@
 #include "pump/net/iocp.h"
 #include "pump/net/socket.h"
 #include "pump/poll/channel.h"
+#include "pump/toolkit/buffer.h"
 #include "pump/transport/address.h"
-#include "pump/transport/flow/buffer.h"
+//#include "pump/transport/flow/buffer.h"
 
 namespace pump {
 namespace transport {
     namespace flow {
+
+#define MAX_FLOW_BUFFER_SIZE 4096
 
         enum flow_error {
             FLOW_ERR_NO = 0,

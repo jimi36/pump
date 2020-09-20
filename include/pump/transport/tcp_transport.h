@@ -17,6 +17,7 @@
 #ifndef pump_transport_tcp_transport_h
 #define pump_transport_tcp_transport_h
 
+#include "pump/toolkit/freelock.h"
 #include "pump/transport/flow/flow_tcp.h"
 #include "pump/transport/base_transport.h"
 
@@ -120,7 +121,7 @@ namespace transport {
         /*********************************************************************************
          * Async send
          ********************************************************************************/
-        bool __async_send(flow::buffer_ptr b);
+        bool __async_send(toolkit::io_buffer_ptr b);
 
         /*********************************************************************************
          * Send once
@@ -142,12 +143,12 @@ namespace transport {
         flow::flow_tcp_sptr flow_;
 
         // Last send buffer
-        volatile uint32 last_send_buffer_size_;
-        volatile flow::buffer_ptr last_send_buffer_;
-
+        volatile uint32 last_send_iob_size_;
+        volatile toolkit::io_buffer_ptr last_send_iob_;
+        
         // When sending data, transport will append buffer to sendlist at first. On
         // triggering send event, transport will send buffer in the sendlist.
-        moodycamel::ConcurrentQueue<flow::buffer_ptr> sendlist_;
+        toolkit::freelock_list<toolkit::io_buffer_ptr> sendlist_;
 
         // Who got next send chance, who can send next buffer.
         std::atomic_flag next_send_chance_;

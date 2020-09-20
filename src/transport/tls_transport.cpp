@@ -21,8 +21,8 @@ namespace transport {
 
     tls_transport::tls_transport() noexcept
         : base_transport(TLS_TRANSPORT, nullptr, -1),
-          last_send_buffer_size_(0),
-          last_send_buffer_(nullptr),
+          last_send_iob_size_(0),
+          last_send_iob_(nullptr),
           sendlist_(1024) {
         next_send_chance_.clear();
     }
@@ -197,7 +197,7 @@ namespace transport {
             }
             uint32 old_state = read_state_.load();
             if (old_state == READ_ONCE || old_state == READ_LOOP) {
-                if (read_state_.compare_exchange_strong(old_state, READ_LOOP))
+                if (!read_state_.compare_exchange_strong(old_state, READ_LOOP))
                     continue;
                 break;
             }
@@ -248,15 +248,16 @@ namespace transport {
             return ERROR_AGAIN;
         }
 
-        auto buffer = object_create<flow::buffer>();
-        if (PUMP_UNLIKELY(buffer == nullptr || !buffer->append(b, size))) {
+        // auto buffer = object_create<flow::buffer>();
+        auto iob = toolkit::io_buffer::create_instance();
+        if (PUMP_UNLIKELY(iob == nullptr || !iob->append(b, size))) {
             PUMP_WARN_LOG("tls_transport::send: new buffer failed");
-            if (buffer != nullptr)
-                object_delete(buffer);
+            if (iob != nullptr)
+                iob->sub_ref();
             return ERROR_AGAIN;
         }
 
-        __async_send(buffer);
+        __async_send(iob);
 
         return ERROR_OK;
     }
@@ -293,26 +294,38 @@ namespace transport {
             return;
         }
 
+        // Update read state to READ_PENDING.
+        uint32 pending_state = READ_PENDING;
+        uint32 old_state = read_state_.exchange(pending_state);
+
+        int32 ret = 0;
+        int32 size = 0;
+        block sslb[MAX_FLOW_BUFFER_SIZE];
         do {
-            uint32 pending_state = READ_PENDING;
-            uint32 old_state = read_state_.exchange(pending_state);
-
-            int32 size = 0;
-            c_block_ptr b = flow->read_from_ssl(&size);
-            if (PUMP_LIKELY(size > 0)) {
-                cbs_.read_cb(b, size);
-            } else if (PUMP_UNLIKELY(size == 0)) {
-                PUMP_WARN_LOG(
-                    "tls_transport::on_channel_event: flow read_from_ssl failed");
-                __try_doing_disconnected_process();
-                return;
-            }
-
-            if (old_state == READ_ONCE) {
-                if (read_state_.compare_exchange_strong(pending_state, READ_NONE))
-                    return;
-            }
+            ret = flow->read_from_ssl(sslb + size, MAX_FLOW_BUFFER_SIZE - size);
+            if (size > 0)
+                size += ret;
+            else
+                break;
         } while (flow->has_data_to_read());
+
+        // Has data to callback
+        if (size > 0)
+            cbs_.read_cb(sslb, size);
+
+        // Read from ssl error
+        if (ret == 0) {
+            PUMP_WARN_LOG("tls_transport::on_channel_event: flow read_from_ssl failed");
+            __try_doing_disconnected_process();
+            return;
+        }
+
+        // Update read state to READ_NONE and stop continue read if callbacked read data
+        // and only read once.
+        if (size > 0 && old_state == READ_ONCE) {
+            if (read_state_.compare_exchange_strong(pending_state, READ_NONE))
+                return;
+        }
 
 #if defined(PUMP_HAVE_IOCP)
         if (flow->want_to_read() == flow::FLOW_ERR_ABORT) {
@@ -339,9 +352,9 @@ namespace transport {
         }
 
 #if defined(PUMP_HAVE_IOCP)
-        int32 ret = flow->read_from_net(iocp_task);
+        auto ret = flow->read_from_net(iocp_task);
 #else
-        int32 ret = flow->read_from_net();
+        auto ret = flow->read_from_net();
 #endif
         if (PUMP_UNLIKELY(ret == flow::FLOW_ERR_ABORT)) {
             PUMP_WARN_LOG("tls_transport::on_read_event: flow read_from_net failed");
@@ -349,24 +362,35 @@ namespace transport {
             return;
         }
 
+        // Update read state to READ_PENDING.
         uint32 pending_state = READ_PENDING;
         uint32 old_state = read_state_.exchange(pending_state);
 
-        bool callbacked = false;
+        int32 rret = 0;
+        int32 size = 0;
+        block sslb[MAX_FLOW_BUFFER_SIZE];
         do {
-            c_block_ptr b = flow->read_from_ssl(&ret);
-            if (ret > 0) {
-                // Read callback
-                callbacked = true;
-                cbs_.read_cb(b, ret);
-            } else if (ret == 0) {
-                PUMP_WARN_LOG("tls_transport::on_read_event: flow read_from_ssl failed");
-                __try_doing_disconnected_process();
-                return;
-            }
-        } while (ret > 0);
+            rret = flow->read_from_ssl(sslb + size, MAX_FLOW_BUFFER_SIZE - size);
+            if (size > 0)
+                size += rret;
+            else
+                break;
+        } while (flow->has_data_to_read());
 
-        if (callbacked && old_state == READ_ONCE) {
+        // Has data to callback
+        if (size > 0)
+            cbs_.read_cb(sslb, size);
+
+        // Read from ssl error
+        if (rret == 0) {
+            PUMP_WARN_LOG("tls_transport::on_channel_event: flow read_from_ssl failed");
+            __try_doing_disconnected_process();
+            return;
+        }
+
+        // Update read state to READ_NONE and stop continue read if callbacked read data
+        // and only read once.
+        if (size > 0 && old_state == READ_ONCE) {
             if (read_state_.compare_exchange_strong(pending_state, READ_NONE))
                 return;
         }
@@ -389,10 +413,10 @@ namespace transport {
     void tls_transport::on_send_event() {
 #endif
         auto flow = flow_.get();
-        //if (!flow->is_valid()) {
-        //    PUMP_WARN_LOG("tls_transport::on_send_event: flow invalid");
-        //    return;
-        //}
+        if (!flow->is_valid()) {
+            PUMP_WARN_LOG("tls_transport::on_send_event: flow invalid");
+            return;
+        }
 
 #if defined(PUMP_HAVE_IOCP)
         auto ret = flow->send_to_net(iocp_task);
@@ -413,8 +437,7 @@ namespace transport {
         }
 
         // If there are more buffers to send, we should send next one immediately.
-        if (pending_send_size_.fetch_sub(last_send_buffer_size_) >
-            last_send_buffer_size_) {
+        if (pending_send_size_.fetch_sub(last_send_iob_size_) > last_send_iob_size_) {
             __send_once(flow, false);
             return;
         }
@@ -436,12 +459,13 @@ namespace transport {
         }
     }
 
-    bool tls_transport::__async_send(flow::buffer_ptr b) {
+    bool tls_transport::__async_send(toolkit::io_buffer_ptr iob) {
         // Insert buffer to sendlist.
-        PUMP_DEBUG_CHECK(sendlist_.enqueue(b));
+        // PUMP_DEBUG_CHECK(sendlist_.enqueue(iob));
+        PUMP_DEBUG_CHECK(sendlist_.push(iob));
 
         // If there are no more buffers, we should try to get next send chance.
-        if (pending_send_size_.fetch_add(b->data_size()) > 0 ||
+        if (pending_send_size_.fetch_add(iob->data_size()) > 0 ||
             next_send_chance_.test_and_set())
             return true;
 
@@ -449,22 +473,25 @@ namespace transport {
     }
 
     bool tls_transport::__send_once(flow::flow_tls_ptr flow, bool resume) {
-        if (last_send_buffer_ != nullptr) {
+        if (last_send_iob_ != nullptr) {
             // Reset last send buffer data size.
-            //last_send_buffer_size_ = 0;
+            // last_send_buffer_size_ = 0;
             // Free last send buffer.
-            object_delete(last_send_buffer_);
-            last_send_buffer_ = nullptr;
+            last_send_iob_->sub_ref();
+            last_send_iob_ = nullptr;
         }
 
         // Get a buffer from sendlist to send.
-        PUMP_DEBUG_CHECK(sendlist_.try_dequeue(last_send_buffer_));
+        // while (!sendlist_.try_dequeue(last_send_buffer_)) {
+        //}
+        while (!sendlist_.pop(last_send_iob_)) {
+        }
 
         // Save last send buffer data size.
-        last_send_buffer_size_ = last_send_buffer_->data_size();
+        last_send_iob_size_ = last_send_iob_->data_size();
 
         // Send to GnuTLS
-        if (flow->send_to_ssl(last_send_buffer_) == flow::FLOW_ERR_NO) {
+        if (flow->send_to_ssl(last_send_iob_) == flow::FLOW_ERR_NO) {
             // Send to net
             if (flow->want_to_send() != flow::FLOW_ERR_ABORT) {
 #if !defined(PUMP_HAVE_IOCP)
@@ -497,17 +524,6 @@ namespace transport {
         return false;
     }
 
-    void tls_transport::__read_tls_data(flow::flow_tls_ptr flow) {
-        while (true) {
-            int32 size = 0;
-            c_block_ptr b = flow->read_from_ssl(&size);
-            if (size > 0)
-                cbs_.read_cb(b, size);
-            else
-                break;
-        }
-    }
-
     void tls_transport::__try_doing_disconnected_process() {
         if (__set_status(TRANSPORT_STARTED, TRANSPORT_DISCONNECTING)) {
             __close_flow();
@@ -520,12 +536,12 @@ namespace transport {
     }
 
     void tls_transport::__clear_send_pockets() {
-        if (last_send_buffer_)
-            object_delete(last_send_buffer_);
+        if (last_send_iob_)
+            last_send_iob_->sub_ref();
 
-        flow::buffer_ptr buffer;
-        while (sendlist_.try_dequeue(buffer)) {
-            object_delete(buffer);
+        toolkit::io_buffer_ptr iob;
+        while (sendlist_.pop(iob)) {
+            iob->sub_ref();
         }
     }
 

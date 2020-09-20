@@ -68,7 +68,7 @@ namespace transport {
              * If using IOCP this post an IOCP task for sending, else this try sending
              *data. Return results: FLOW_ERR_NO    => success FLOW_ERR_ABORT => error
              ********************************************************************************/
-            flow_error want_to_send(buffer_ptr sb);
+            flow_error want_to_send(toolkit::io_buffer_ptr iob);
 
             /*********************************************************************************
              * Send
@@ -88,15 +88,15 @@ namespace transport {
              * Check there are data to send or not
              ********************************************************************************/
             PUMP_INLINE bool has_data_to_send() const {
-                return (send_buffer_ != nullptr && send_buffer_->data_size() > 0);
+                return (send_iob_ != nullptr && send_iob_->data_size() > 0);
             }
 
           private:
             // Read cache
-            block read_cache_[MAX_FLOW_BUFFER_SIZE];
+            toolkit::io_buffer_ptr read_iob_;
 
             // Send buffer
-            buffer_ptr send_buffer_;
+            toolkit::io_buffer_ptr send_iob_;
 
 #if defined(PUMP_HAVE_IOCP)
             // IOCP read task

@@ -7,7 +7,7 @@ SET(LIBRARY_NAME "pump")
 
 SET(pump_MAJOR_VERSION 1)
 SET(pump_MINOR_VERSION 1)
-SET(pump_BUILD_VERSION 4)
+SET(pump_BUILD_VERSION 6)
 
 # Specifies root dir
 SET(ROOT_DIR ${PROJECT_SOURCE_DIR})
@@ -20,7 +20,7 @@ OPTION(BUILD_DEBUG "Option build type debug or release" OFF)
 INCLUDE(option_build)
 
 # Option build with iocp, but ignored on linux (default OFF)
-OPTION(WITH_IOCP "Option build with iocp, but ignored on linux" OFF)
+OPTION(WITH_IOCP "Option build with iocp, but ignored on linux" ON)
 INCLUDE(option_iocp)
 
 # Option build with jemalloc (default OFF)

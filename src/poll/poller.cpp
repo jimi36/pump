@@ -70,7 +70,7 @@ namespace poll {
 
         // Create tracker event
         auto tev = object_create<channel_tracker_event>(tracker, TRACKER_EVENT_ADD);
-        PUMP_DEBUG_CHECK(tevents_.enqueue(tev));
+        PUMP_DEBUG_CHECK(tevents_.push(tev));
         tev_cnt_++;
 
         return true;
@@ -82,7 +82,7 @@ namespace poll {
 
         // Create tracker event
         auto tev = object_create<channel_tracker_event>(tracker, TRACKER_EVENT_DEL);
-        PUMP_DEBUG_CHECK(tevents_.enqueue(tev));
+        PUMP_DEBUG_CHECK(tevents_.push(tev));
         tev_cnt_++;
     }
 
@@ -104,7 +104,7 @@ namespace poll {
     void poller::push_channel_event(channel_sptr &c, uint32 event) {
         if (started_.load()) {
             auto cev = object_create<channel_event>(c, event);
-            PUMP_DEBUG_CHECK(cevents_.enqueue(cev));
+            PUMP_DEBUG_CHECK(cevents_.push(cev));
             cev_cnt_++;
         }
     }
@@ -112,7 +112,7 @@ namespace poll {
     void poller::__handle_channel_events() {
         channel_event_ptr ev = nullptr;
         int32 cnt = cev_cnt_.exchange(0);
-        while (cnt > 0 && cevents_.try_dequeue(ev)) {
+        while (cnt > 0 && cevents_.pop(ev)) {
             PUMP_LOCK_WPOINTER(ch, ev->ch);
             if (ch)
                 ch->handle_channel_event(ev->event);
@@ -126,7 +126,7 @@ namespace poll {
     void poller::__handle_channel_tracker_events() {
         auto cnt = tev_cnt_.exchange(0);
         channel_tracker_event_ptr ev = nullptr;
-        while (cnt > 0 && tevents_.try_dequeue(ev)) {
+        while (cnt > 0 && tevents_.pop(ev)) {
             do {
                 auto tracker = ev->tracker.get();
 

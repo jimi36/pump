@@ -21,7 +21,6 @@
 #include "pump/poll/channel.h"
 #include "pump/transport/address.h"
 #include "pump/transport/callbacks.h"
-#include "pump/transport/flow/buffer.h"
 
 namespace pump {
 namespace transport {

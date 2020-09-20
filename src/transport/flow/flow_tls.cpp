@@ -98,6 +98,10 @@ namespace transport {
             PUMP_DEBUG_ASSIGN(ch, ch_, ch);
             PUMP_DEBUG_ASSIGN(fd > 0, fd_, fd);
 
+            net_send_iob_ = toolkit::io_buffer::create_instance();
+            net_read_iob_ = toolkit::io_buffer::create_instance();
+            net_read_iob_->init_with_size(MAX_FLOW_BUFFER_SIZE);
+
             PUMP_ASSERT(!session_);
             session_ = object_create<tls_session>();
             if (client)
@@ -128,13 +132,13 @@ namespace transport {
             net::set_iocp_task_fd(read_task, fd_);
             net::set_iocp_task_notifier(read_task, ch_);
             net::set_iocp_task_type(read_task, IOCP_TASK_READ);
-            net::set_iocp_task_buffer(
-                read_task, (block_ptr)net_read_cache_, sizeof(net_read_cache_));
+            net::bind_iocp_task_buffer(read_task, net_read_iob_);
 
             auto send_task = net::new_iocp_task();
             net::set_iocp_task_fd(send_task, fd_);
             net::set_iocp_task_notifier(send_task, ch_);
             net::set_iocp_task_type(send_task, IOCP_TASK_SEND);
+            net::bind_iocp_task_buffer(send_task, net_send_iob_);
 
             read_task_ = read_task;
             send_task_ = send_task;
@@ -206,7 +210,8 @@ namespace transport {
 #else
         flow_error flow_tls::read_from_net() {
 #if defined(PUMP_HAVE_GNUTLS)
-            int32 size = net::read(fd_, net_read_cache_, sizeof(net_read_cache_));
+            int32 size = net::read(
+                fd_, (block_ptr)net_read_iob_->buffer(), net_read_iob_->buffer_size());
             if (PUMP_LIKELY(size > 0)) {
                 net_read_data_size_ = size;
                 net_read_data_pos_ = 0;
@@ -220,20 +225,18 @@ namespace transport {
         }
 #endif
 
-        c_block_ptr flow_tls::read_from_ssl(int32_ptr size) {
+        int32 flow_tls::read_from_ssl(block_ptr b, int32 size) {
+            int32 ret = 0;
 #if defined(PUMP_HAVE_GNUTLS)
-            *size = (int32)gnutls_read(
-                session_->session, ssl_read_cache_, sizeof(ssl_read_cache_));
-            if (*size > 0) {
-                return ssl_read_cache_;
-            } else if (*size == GNUTLS_E_AGAIN) {
-                return nullptr;
+            ret = (int32)gnutls_read(session_->session, b, size);
+            if (ret > 0) {
+                return ret;
+            } else if (ret == GNUTLS_E_AGAIN) {
+                return -1;
             }
 #endif
-            PUMP_WARN_LOG("flow_tls::read_from_net: read_from_ssl failed %d", *size);
-            *size = 0;
-
-            return nullptr;
+            PUMP_WARN_LOG("flow_tls::read_from_net: read_from_ssl failed %d", ret);
+            return 0;
         }
 
         uint32 flow_tls::__read_from_net_read_cache(block_ptr b, int32 maxlen) {
@@ -242,7 +245,7 @@ namespace transport {
             int32 size = net_read_data_size_ > maxlen ? maxlen : net_read_data_size_;
             if (size > 0) {
                 // Copy read data to buffer.
-                memcpy(b, net_read_cache_ + net_read_data_pos_, size);
+                memcpy(b, net_read_iob_->buffer() + net_read_data_pos_, size);
                 net_read_data_size_ -= size;
                 net_read_data_pos_ += size;
             }
@@ -252,15 +255,15 @@ namespace transport {
 #endif
         }
 
-        flow_error flow_tls::send_to_ssl(buffer_ptr wb) {
+        flow_error flow_tls::send_to_ssl(toolkit::io_buffer_ptr iob) {
 #if defined(PUMP_HAVE_GNUTLS)
-            PUMP_ASSERT(wb && wb->data_size() > 0);
+            PUMP_ASSERT(iob && iob->data_size() > 0);
             do {
                 int32 size =
-                    (int32)gnutls_write(session_->session, wb->data(), wb->data_size());
-                if (size <= 0 || !wb->shift(size))
+                    (int32)gnutls_write(session_->session, iob->data(), iob->data_size());
+                if (size <= 0 || !iob->shift(size))
                     break;
-                if (wb->data_size() == 0)
+                if (iob->data_size() == 0)
                     return FLOW_ERR_NO;
             } while (true);
 #endif
@@ -270,24 +273,22 @@ namespace transport {
         flow_error flow_tls::want_to_send() {
 #if defined(PUMP_HAVE_GNUTLS)
 #if defined(PUMP_HAVE_IOCP)
-            net::set_iocp_task_buffer(send_task_,
-                                      (block_ptr)net_send_buffer_.data(),
-                                      net_send_buffer_.data_size());
+            net::update_iocp_task_buffer(send_task_);
             if (net::post_iocp_send(send_task_))
                 return FLOW_ERR_NO;
 #else
             int32 size =
-                net::send(fd_, net_send_buffer_.data(), net_send_buffer_.data_size());
+                net::send(fd_, net_send_iob_->buffer(), net_send_iob_->data_size());
             if (PUMP_LIKELY(size > 0)) {
                 // Shift send buffer
-                PUMP_DEBUG_CHECK(net_send_buffer_.shift(size));
+                PUMP_DEBUG_CHECK(net_send_iob_->shift(size));
 
                 // There is data to send, then try again
-                if (net_send_buffer_.data_size() > 0)
+                if (net_send_iob_->data_size() > 0)
                     return FLOW_ERR_AGAIN;
 
                 // Send finish, reset send buffer
-                net_send_buffer_.reset();
+                net_send_iob_->reset();
 
                 return FLOW_ERR_NO;
             } else if (PUMP_UNLIKELY(size < 0)) {
@@ -304,20 +305,19 @@ namespace transport {
         flow_error flow_tls::send_to_net(void_ptr iocp_task) {
 #if defined(PUMP_HAVE_GNUTLS)
             // net send buffer must has data when using iocp
-            PUMP_ASSERT(net_send_buffer_.data_size() > 0);
-            //if (net_send_buffer_.data_size() == 0)
+            PUMP_ASSERT(net_send_iob_->data_size() > 0);
+            // if (net_send_buffer_.data_size() == 0)
             //    return FLOW_ERR_NO;
 
             int32 size = net::get_iocp_task_processed_size(iocp_task);
             if (PUMP_LIKELY(size > 0)) {
                 // Shift send buffer
-                PUMP_DEBUG_CHECK(net_send_buffer_.shift(size));
+                PUMP_DEBUG_CHECK(net_send_iob_->shift(size));
 
                 // There is data to send, then send again
-                uint32 data_size = net_send_buffer_.data_size();
+                uint32 data_size = net_send_iob_->data_size();
                 if (data_size > 0) {
-                    net::set_iocp_task_buffer(
-                        send_task_, (block_ptr)net_send_buffer_.data(), data_size);
+                    net::update_iocp_task_buffer(send_task_);
                     if (!net::post_iocp_send(send_task_)) {
                         PUMP_WARN_LOG(
                             "flow_tls::send_to_net: set_iocp_task_buffer failed");
@@ -327,7 +327,7 @@ namespace transport {
                 }
 
                 // Send finish, reset send buffer
-                net_send_buffer_.reset();
+                net_send_iob_->reset();
 
                 return FLOW_ERR_NO;
             }
@@ -338,21 +338,21 @@ namespace transport {
 #else
         flow_error flow_tls::send_to_net() {
 #if defined(PUMP_HAVE_GNUTLS)
-            uint32 data_size = net_send_buffer_.data_size();
+            uint32 data_size = net_send_iob_->data_size();
             if (data_size == 0)
                 return FLOW_ERR_NO;
 
-            int32 size = net::send(fd_, net_send_buffer_.data(), data_size);
+            int32 size = net::send(fd_, net_send_iob_->data(), data_size);
             if (PUMP_LIKELY(size > 0)) {
                 // Shift send buffer
-                PUMP_DEBUG_CHECK(net_send_buffer_.shift(size));
+                PUMP_DEBUG_CHECK(net_send_iob_->shift(size));
 
                 // There is data to send, then send again
-                if (net_send_buffer_.data_size() > 0)
+                if (net_send_iob_->data_size() > 0)
                     return FLOW_ERR_AGAIN;
 
                 // Send finish, reset send buffer
-                net_send_buffer_.reset();
+                net_send_iob_->reset();
 
                 return FLOW_ERR_NO;
             } else if (PUMP_UNLIKELY(size < 0)) {

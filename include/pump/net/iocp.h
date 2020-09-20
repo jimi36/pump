@@ -19,6 +19,7 @@
 
 #include "pump/config.h"
 #include "pump/net/iocp_extra.h"
+#include "pump/toolkit/buffer.h"
 
 namespace pump {
 namespace net {
@@ -101,6 +102,24 @@ namespace net {
     void_sptr get_iocp_task_notifier(void_ptr task);
 
     /*********************************************************************************
+     * Bind iocp task buffer
+     * If iob has data, task will use iob data size binding.
+     * If iob has no data, task vill use iob buffer size binding.
+     ********************************************************************************/
+    void bind_iocp_task_buffer(void_ptr task, toolkit::io_buffer_ptr iob);
+
+    /*********************************************************************************
+     * Unbind iocp task buffer
+     ********************************************************************************/
+    void unbind_iocp_task_buffer(void_ptr task);
+
+    /*********************************************************************************
+    * Update iocp task buffer
+    * Task vill use iob data info update.
+    ********************************************************************************/
+    void update_iocp_task_buffer(void_ptr task);
+
+    /*********************************************************************************
      * Set iocp task error code
      ********************************************************************************/
     void set_iocp_task_ec(void_ptr task, int32 ec);
@@ -109,11 +128,6 @@ namespace net {
      * Get iocp task error code
      ********************************************************************************/
     int32 get_iocp_task_ec(void_ptr task);
-
-    /*********************************************************************************
-     * Set iocp task buffer
-     ********************************************************************************/
-    void set_iocp_task_buffer(void_ptr task, block_ptr b, int32 size);
 
     /*********************************************************************************
      * Set iocp task processed size

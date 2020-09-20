@@ -56,11 +56,11 @@ namespace transport {
         } else {
             gnutls_datum_t gnutls_cert;
             gnutls_cert.data = (unsigned char *)cert.data();
-            gnutls_cert.size = cert.size();
+            gnutls_cert.size = (unsigned int)cert.size();
 
             gnutls_datum_t gnutls_key;
             gnutls_key.data = (unsigned char *)key.data();
-            gnutls_key.size = key.size();
+            gnutls_key.size = (unsigned int)key.size();
 
             int32 ret2 = gnutls_certificate_set_x509_key_mem(
                 xcred, &gnutls_cert, &gnutls_key, GNUTLS_X509_FMT_PEM);

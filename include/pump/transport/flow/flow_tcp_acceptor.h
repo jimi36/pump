@@ -69,8 +69,8 @@ namespace transport {
             // IPV6
             bool is_ipv6_;
 
-            // This buffer is for iocp
-            std::string tmp_cache_;
+            // Accept buffer
+            toolkit::io_buffer_ptr iob_;
 
 #if defined(PUMP_HAVE_IOCP)
             // IOCP accept task

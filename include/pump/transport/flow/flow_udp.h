@@ -75,7 +75,7 @@ namespace transport {
             void_ptr read_task_;
 
             // Read cache
-            std::string read_cache_;
+            toolkit::io_buffer_ptr read_iob_;
         };
         DEFINE_ALL_POINTER_TYPE(flow_udp);
 

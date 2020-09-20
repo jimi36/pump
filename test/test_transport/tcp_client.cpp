@@ -1,7 +1,7 @@
 #include "tcp_transport_test.h"
 
 static int count = 1;
-static int send_loop = 128;
+static int send_loop = 32;
 static int send_pocket_size = 1024 * 4;
 
 class my_tcp_dialer;
@@ -83,7 +83,7 @@ class my_tcp_dialer : public std::enable_shared_from_this<my_tcp_dialer> {
 
         if (read_pocket_size_ >= send_pocket_size) {
             read_pocket_size_ -= send_pocket_size;
-            send_data();
+            //send_data();
         }
     }
 

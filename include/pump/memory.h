@@ -56,14 +56,21 @@ PUMP_INLINE T *object_create(ArgTypes... args) {
         new (obj) TYPE args;
 
 template <typename T>
-PUMP_INLINE void object_delete(T *p) {
-    if (PUMP_UNLIKELY(p == nullptr))
+PUMP_INLINE void object_delete(T *obj) {
+    if (PUMP_UNLIKELY(obj == nullptr))
         return;
     // Deconstruct object
-    p->~T();
+    obj->~T();
     // Free memory
-    pump_free(p);
+    pump_free(obj);
 }
+
+// Inline object create
+#define INLINE_OBJECT_DELETE(obj, TYPE) \
+    if (PUMP_LIKELY(obj != nullptr)) {  \
+        obj->~TYPE();                   \
+        pump_free(obj);                 \
+    }
 
 // Try to lock shared pointer and store to raw pointor
 #define PUMP_LOCK_SPOINTER(p, sp) \
