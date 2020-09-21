@@ -226,16 +226,17 @@ namespace transport {
 #endif
 
         int32 flow_tls::read_from_ssl(block_ptr b, int32 size) {
-            int32 ret = 0;
 #if defined(PUMP_HAVE_GNUTLS)
-            ret = (int32)gnutls_read(session_->session, b, size);
+            int32 ret = (int32)gnutls_read(session_->session, b, size);
             if (ret > 0) {
                 return ret;
             } else if (ret == GNUTLS_E_AGAIN) {
                 return -1;
             }
-#endif
             PUMP_WARN_LOG("flow_tls::read_from_net: read_from_ssl failed %d", ret);
+#else
+            PUMP_WARN_LOG("flow_tls::read_from_net: failed");
+#endif
             return 0;
         }
 

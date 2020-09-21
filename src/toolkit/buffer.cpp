@@ -1,3 +1,6 @@
+// Import "memcpy" on linux
+#include <string.h>
+
 #include "pump/memory.h"
 #include "pump/toolkit/buffer.h"
 
