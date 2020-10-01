@@ -1,4 +1,4 @@
-// Import "memcpy" on linux
+// Import memcpy function
 #include <string.h>
 
 #include "pump/memory.h"

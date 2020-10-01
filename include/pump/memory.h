@@ -23,9 +23,9 @@ extern "C" {
 }
 #endif
 
-// Import "std::forward" on linux
+// Import std::forward function
 #include <memory>
-// Import "malloc" on linux
+// Import malloc function
 #include <stdlib.h>
 
 #include "pump/config.h"

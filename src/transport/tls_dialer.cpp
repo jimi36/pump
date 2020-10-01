@@ -203,7 +203,7 @@ namespace transport {
         if (dialer->__set_status(TRANSPORT_STARTED, TRANSPORT_TIMEOUTING)) {
             PUMP_WARN_LOG("transport::tls_dialer::on_timeout: dialer timeout");
 #if defined(PUMP_HAVE_IOCP)
-            dialer->__close_flow();
+            dialer->__close_dial_flow();
 #else
             dialer->__stop_dial_tracker();
             dialer->__post_channel_event(dialer_locker, 0);

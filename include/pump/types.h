@@ -14,7 +14,8 @@
  * limitations under the License.
  */
 
-// Import "shared_ptr" and "weak_ptr"
+// Import std::weak_ptr class
+// Import std::shared_ptr class
 #include <memory>
 
 #ifndef pump_types_h

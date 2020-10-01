@@ -22,7 +22,7 @@ namespace transport {
 
         const static uint32 UDP_BUFFER_SIZE = 1024 * 64;
 
-        flow_udp::flow_udp() noexcept : read_task_(nullptr) {
+        flow_udp::flow_udp() noexcept : read_task_(nullptr), read_iob_(nullptr) {
         }
 
         flow_udp::~flow_udp() {
@@ -108,7 +108,8 @@ namespace transport {
             block addr[ADDRESS_MAX_LEN];
             int32 addrlen = ADDRESS_MAX_LEN;
             block_ptr buf = (block_ptr)read_iob_->buffer();
-            *size = net::read_from(fd_, buf, read_iob_->buffer_size(), (sockaddr *)addr, &addrlen);
+            *size = net::read_from(
+                fd_, buf, read_iob_->buffer_size(), (sockaddr *)addr, &addrlen);
 
             remote_address->set((sockaddr *)addr, addrlen);
 

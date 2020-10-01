@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-// Import "strncmp" on linux
+// Import strncmp function
 #include <string.h>
 
 #include "pump/config.h"

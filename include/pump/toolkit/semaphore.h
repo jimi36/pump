@@ -18,8 +18,6 @@
 #define pump_toolkit_semaphone_h
 
 #include <atomic>
-#include <cstddef>      // For std::size_t
-#include <type_traits>  // For std::make_signed<T>
 
 #include "pump/debug.h"
 #include "pump/types.h"
