@@ -64,8 +64,9 @@ namespace toolkit {
             sema_ = CreateSemaphoreW(nullptr, ini_count, maxLong, nullptr);
             PUMP_ASSERT(sema_);
 #elif defined(OS_LINUX)
-            int32 rc = sem_init(&sema_, 0, ini_count);
-            PUMP_ASSERT(rc == 0);
+            if (sem_init(&sema_, 0, ini_count) != 0) {
+            	PUMP_ASSERT(false);
+	    }
 #endif
         }
 
@@ -150,10 +151,8 @@ namespace toolkit {
             while (!ReleaseSemaphore(sema_, 1, nullptr))
                 ;
 #elif defined(OS_LINUX)
-            while (count-- > 0) {
-                while (sem_post(&sema_) == -1)
-                    ;
-            }
+            while (sem_post(&sema_) == -1)
+                ;
 #endif
         }
 
@@ -165,8 +164,10 @@ namespace toolkit {
             while (!ReleaseSemaphore(sema_, count, nullptr))
                 ;
 #elif defined(OS_LINUX)
-            while (sem_post(&sema_) == -1)
-                ;
+            while (count-- > 0) {
+	            while (sem_post(&sema_) == -1)
+        	        ;
+	    }
 #endif
         }
 

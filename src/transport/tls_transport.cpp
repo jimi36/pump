@@ -174,8 +174,9 @@ namespace transport {
             return ERROR_UNSTART;
         }
 
-        if (PUMP_UNLIKELY(pending_send_size_.load(std::memory_order_acquire) >=
-                          max_pending_send_size_)) {
+        if (PUMP_UNLIKELY(max_pending_send_size_ > 0 && 
+                          pending_send_size_.load(std::memory_order_acquire) >=
+                              max_pending_send_size_)) {
             PUMP_WARN_LOG("tls_transport::send: pending send buffer full");
             return ERROR_AGAIN;
         }
@@ -304,7 +305,7 @@ namespace transport {
         block sslb[MAX_FLOW_BUFFER_SIZE];
         do {
             rret = flow->read_from_ssl(sslb + size, MAX_FLOW_BUFFER_SIZE - size);
-            if (size > 0)
+            if (rret > 0)
                 size += rret;
             else
                 break;

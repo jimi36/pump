@@ -14,7 +14,11 @@
  * limitations under the License.
  */
 
+// Import random functions
 #include <random>
+
+// Import std::find function
+#include <algorithm>
 
 #include "pump/codec/sha1.h"
 #include "pump/codec/base64.h"

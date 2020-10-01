@@ -143,9 +143,9 @@ namespace transport {
         auto flow = flow_.get();
         address local_address, remote_address;
 #if defined(PUMP_HAVE_IOCP)
-        bool success = (flow->connect(iocp_task, &local_address, &remote_address) != 0);
+        bool success = (flow->connect(iocp_task, &local_address, &remote_address) == 0);
 #else
-        bool success = (flow->connect(&local_address, &remote_address) != 0);
+        bool success = (flow->connect(&local_address, &remote_address) == 0);
 #endif
         auto next_status = success ? TRANSPORT_HANDSHAKING : TRANSPORT_ERROR;
         if (!__set_status(TRANSPORT_STARTING, next_status) &&

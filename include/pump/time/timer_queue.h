@@ -19,6 +19,7 @@
 
 #include <map>
 #include <mutex>
+#include <thread>
 #include <condition_variable>
 
 #include "pump/debug.h"

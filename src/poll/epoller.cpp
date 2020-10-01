@@ -91,10 +91,10 @@ namespace poll {
         ev.events |= (listen_event & IO_EVNET_READ) ? EL_READ_EVENT : 0;
         ev.events |= (listen_event & IO_EVENT_SEND) ? EL_SEND_EVENT : 0;
 
-        if (epoll_ctl(fd_, EPOLL_CTL_MOD, tracker->get_fd(), &ev) != 0 ||
+        if (epoll_ctl(fd_, EPOLL_CTL_MOD, tracker->get_fd(), &ev) != 0 &&
             epoll_ctl(fd_, EPOLL_CTL_ADD, tracker->get_fd(), &ev) != 0) {
             PUMP_WARN_LOG("poll::epoll_poller::__resume_channel_tracker: ec=%d",
-                          net::last_errno());
+                           net::last_errno());
         }
 #else
         PUMP_WARN_LOG("poll::epoll_poller::__resume_channel_tracker: not support");

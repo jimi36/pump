@@ -14,6 +14,9 @@
  * limitations under the License.
  */
 
+// Import std::find function
+#include <algorithm>
+
 #include "pump/protocol/websocket/utils.h"
 #include "pump/protocol/websocket/client.h"
 
