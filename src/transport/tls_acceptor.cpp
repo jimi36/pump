@@ -105,22 +105,22 @@ namespace transport {
             return ERROR_INVALID;
         }
 
-        // Specifies callbacks
+        // Callbacks
         cbs_ = cbs;
 
-        // Specifies services
+        // Service
         __set_service(sv);
 
         toolkit::defer cleanup([&]() {
-            __close_flow();
 #if !defined(PUMP_HAVE_IOCP)
-            __stop_tracker();
+            __stop_accept_tracker();
 #endif
+            __close_accept_flow();
             __set_status(TRANSPORT_STARTING, TRANSPORT_ERROR);
         });
 
-        if (!__open_flow()) {
-            PUMP_ERR_LOG("transport::tls_acceptor::start: open flow failed");
+        if (!__open_accept_flow()) {
+            PUMP_ERR_LOG("transport::tls_acceptor::start: open accept flow failed");
             return ERROR_FAULT;
         }
 
@@ -130,7 +130,7 @@ namespace transport {
             return ERROR_FAULT;
         }
 #else
-        if (!__start_tracker(shared_from_this())) {
+        if (!__start_accept_tracker(shared_from_this())) {
             PUMP_ERR_LOG("transport::tls_acceptor::start: start tracker failed");
             return ERROR_FAULT;
         }
@@ -145,12 +145,7 @@ namespace transport {
     void tls_acceptor::stop() {
         // When stopping done, tracker event will trigger stopped callback.
         if (__set_status(TRANSPORT_STARTED, TRANSPORT_STOPPING)) {
-            __close_flow();
-#if !defined(PUMP_HAVE_IOCP)
-            __stop_tracker();
-#endif
-            __stop_all_handshakers();
-            __post_channel_event(shared_from_this(), 0);
+            __close_accept_flow();
         } else {
             PUMP_WARN_LOG("transport::tls_acceptor::stop: not started");
         }
@@ -162,10 +157,6 @@ namespace transport {
     void tls_acceptor::on_read_event() {
 #endif
         auto flow = flow_.get();
-        if (!flow->is_valid()) {
-            PUMP_WARN_LOG("transport::tls_acceptor::on_read_event: flow invalid");
-            return;
-        }
 
         address local_address, remote_address;
 #if defined(PUMP_HAVE_IOCP)
@@ -188,8 +179,8 @@ namespace transport {
                 handshaker->init(fd, false, xcred_, local_address, remote_address);
                 if (handshaker->start(
                         get_service(), handshake_timeout_, handshaker_cbs)) {
-                    if (__is_status(TRANSPORT_STOPPING) ||
-                        __is_status(TRANSPORT_STOPPED)) {
+                    if (!__is_status(TRANSPORT_STARTING) &&
+                        !__is_status(TRANSPORT_STARTED)) {
                         PUMP_WARN_LOG(
                             "transport::tls_acceptor::on_read_event: acceptor has "
                             "stopped");
@@ -208,18 +199,27 @@ namespace transport {
             }
         }
 
-        if (is_started()) {
+        if (__is_status(TRANSPORT_STARTING) || __is_status(TRANSPORT_STARTED)) {
 #if defined(PUMP_HAVE_IOCP)
-            if (flow->want_to_accept() != flow::FLOW_ERR_NO) {
-                PUMP_ERR_LOG(
-                    "transport::tls_acceptor::on_read_event: flow want_to_accept failed");
+            if (flow->want_to_accept() == flow::FLOW_ERR_NO) {
+                return;
             }
+            PUMP_ERR_LOG(
+                "transport::tls_acceptor::on_read_event: flow want_to_accept failed");
 #else
-            if (!tracker_->set_tracked(true)) {
-                PUMP_ERR_LOG("transport::tls_acceptor::on_read_event: track read failed");
+            if (tracker_->set_tracked(true)) {
+                return;
             }
+            PUMP_ERR_LOG("transport::tls_acceptor::on_read_event: track read failed");
 #endif
         }
+
+        __stop_all_handshakers();
+
+#if !defined(PUMP_HAVE_IOCP)
+        __stop_accept_tracker();
+#endif
+        __trigger_interrupt_callbacks();
     }
 
     void tls_acceptor::on_handshaked(tls_acceptor_wptr wptr,
@@ -252,15 +252,14 @@ namespace transport {
         PUMP_LOCK_WPOINTER(acceptor, wptr);
         if (acceptor == nullptr) {
             PUMP_WARN_LOG(
-                "transport::tls_acceptor::on_handshake_stopped: acceptor "
-                "invalid");
+                "transport::tls_acceptor::on_handshake_stopped: acceptor invalid");
             return;
         }
 
         acceptor->__remove_handshaker(handshaker);
     }
 
-    bool tls_acceptor::__open_flow() {
+    bool tls_acceptor::__open_accept_flow() {
         // Setup flow
         PUMP_ASSERT(!flow_);
         flow_.reset(object_create<flow::flow_tls_acceptor>(),
@@ -275,6 +274,11 @@ namespace transport {
         channel::__set_fd(flow_->get_fd());
 
         return true;
+    }
+    void tls_acceptor::__close_accept_flow() {
+        if (flow_) {
+            flow_->close();
+        }
     }
 
     tls_handshaker_ptr tls_acceptor::__create_handshaker() {

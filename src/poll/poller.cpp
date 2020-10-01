@@ -35,7 +35,8 @@ namespace poll {
 
                               __handle_channel_tracker_events();
 
-                              if (cev_cnt_.load() > 0 || tev_cnt_.load() > 0)
+                              if (cev_cnt_.load(std::memory_order_acquire) > 0 ||
+                                  tev_cnt_.load(std::memory_order_acquire) > 0)
                                   __poll(0);
                               else
                                   __poll(3);
@@ -55,23 +56,26 @@ namespace poll {
 
 #if !defined(PUMP_HAVE_IOCP)
     bool poller::add_channel_tracker(channel_tracker_sptr &tracker) {
-        if (!started_.load()) {
+        if (!started_.load(std::memory_order_relaxed)) {
             PUMP_WARN_LOG("poll::poller:add_channel_tracker: poller not started");
             return false;
         }
 
         if (!tracker->set_tracked(true)) {
             PUMP_WARN_LOG("poll::poller:add_channel_tracker: tracker already tracked");
+            PUMP_ASSERT(false);
             return false;
         }
 
         // Mark tracker started
-        tracker->mark_started(true);
+        PUMP_DEBUG_CHECK(tracker->mark_started(true));
 
         // Create tracker event
         auto tev = object_create<channel_tracker_event>(tracker, TRACKER_EVENT_ADD);
         PUMP_DEBUG_CHECK(tevents_.push(tev));
-        tev_cnt_++;
+
+        // Add pending trakcer event count
+        tev_cnt_.fetch_add(1, std::memory_order_release);
 
         return true;
     }
@@ -83,7 +87,9 @@ namespace poll {
         // Create tracker event
         auto tev = object_create<channel_tracker_event>(tracker, TRACKER_EVENT_DEL);
         PUMP_DEBUG_CHECK(tevents_.push(tev));
-        tev_cnt_++;
+
+        // Add pending trakcer event count
+        tev_cnt_.fetch_add(1, std::memory_order_release);
     }
 
     void poller::resume_channel_tracker(channel_tracker_ptr tracker) {
@@ -102,17 +108,24 @@ namespace poll {
 #endif
 
     void poller::push_channel_event(channel_sptr &c, uint32 event) {
-        if (started_.load()) {
-            auto cev = object_create<channel_event>(c, event);
-            PUMP_DEBUG_CHECK(cevents_.push(cev));
-            cev_cnt_++;
+        if (!started_.load()) {
+            PUMP_WARN_LOG("poll::poller:push_channel_event: poller not started");
+            return;
         }
+
+        // Create channel event
+        auto cev = object_create<channel_event>(c, event);
+        PUMP_DEBUG_CHECK(cevents_.push(cev));
+
+        // Add pending channel event count
+        cev_cnt_.fetch_add(1, std::memory_order_release);
     }
 
     void poller::__handle_channel_events() {
         channel_event_ptr ev = nullptr;
         int32 cnt = cev_cnt_.exchange(0);
-        while (cnt > 0 && cevents_.pop(ev)) {
+        while (cnt > 0) {
+            PUMP_DEBUG_CHECK(cevents_.pop(ev));
             PUMP_LOCK_WPOINTER(ch, ev->ch);
             if (ch)
                 ch->handle_channel_event(ev->event);
@@ -124,17 +137,17 @@ namespace poll {
     }
 
     void poller::__handle_channel_tracker_events() {
-        auto cnt = tev_cnt_.exchange(0);
+        int32 cnt = tev_cnt_.exchange(0);
         channel_tracker_event_ptr ev = nullptr;
-        while (cnt > 0 && tevents_.pop(ev)) {
+        while (cnt > 0) {
+            PUMP_DEBUG_CHECK(tevents_.pop(ev));
             do {
                 auto tracker = ev->tracker.get();
 
                 PUMP_LOCK_SPOINTER(ch, tracker->get_channel());
                 if (ch == nullptr) {
                     PUMP_WARN_LOG(
-                        "poll::poller:__handle_channel_tracker_events: tracker channel "
-                        "invalid");
+                        "poll::poller:__handle_channel_tracker_events: channel invalid");
                     trackers_.erase(tracker);
                     break;
                 }
@@ -151,9 +164,6 @@ namespace poll {
                     // Remove from tracker list
                     trackers_.erase(tracker);
                 }
-
-                // ch->handle_tracker_event(ev->event);
-
             } while (false);
 
             object_delete(ev);

@@ -17,22 +17,28 @@
 #ifndef pump_platform_h
 #define pump_platform_h
 
-#if defined(WIN32)
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
+#define OS_WINDOWS
+#elif defined(__linux__) || defined(__unix__)
+#define OS_LINUX
+#endif
+
+#if defined(OS_WINDOWS)
 #include <windows.h>
 #pragma warning(disable : 4251)
 #endif
 
-#if defined(WIN32) && defined(pump_EXPORTS)
+#if defined(OS_WINDOWS) && defined(pump_EXPORTS)
 #define LIB_PUMP __declspec(dllexport)
-#elif defined(WIN32)
+#elif defined(OS_WINDOWS)
 #define LIB_PUMP __declspec(dllimport)
 #else
 #define LIB_PUMP
 #endif
 
-#if defined(WIN32)
+#if defined(OS_WINDOWS)
 #define PUMP_INLINE __forceinline
-#elif defined(__GNUC__)
+#elif defined(OS_LINUX)
 #define PUMP_INLINE __inline__ __attribute__((always_inline))
 #else
 #define PUMP_INLINE
@@ -59,7 +65,7 @@
 #define PUMP_UNLIKELY(x) (x)
 #endif
 
-#if defined(WIN32)
+#if defined(OS_WINDOWS)
 #define pump_strncpy strcpy_s
 #define pump_snprintf sprintf_s
 #define pump_strncasecmp _strnicmp

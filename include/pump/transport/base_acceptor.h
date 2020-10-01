@@ -34,11 +34,7 @@ namespace transport {
         /*********************************************************************************
          * Deconstructor
          ********************************************************************************/
-        virtual ~base_acceptor() {
-#if !defined(PUMP_HAVE_IOCP)
-            __stop_tracker();
-#endif
-        }
+        virtual ~base_acceptor();
 
         /*********************************************************************************
          * Start
@@ -59,22 +55,32 @@ namespace transport {
 
       protected:
         /*********************************************************************************
-         * Channel event callback
+         * Open accept flow
          ********************************************************************************/
-        virtual void on_channel_event(uint32 ev) override;
+        virtual bool __open_accept_flow() = 0;
 
-#if !defined(PUMP_HAVE_IOCP)
+        /*********************************************************************************
+         * Close accept flow
+         ********************************************************************************/
+        virtual void __close_accept_flow() {
+        }
+
       protected:
+#if !defined(PUMP_HAVE_IOCP)
         /*********************************************************************************
-         * Start tracker
+         * Start accept tracker
          ********************************************************************************/
-        bool __start_tracker(poll::channel_sptr &&ch);
+        bool __start_accept_tracker(poll::channel_sptr &&ch);
 
         /*********************************************************************************
-         * Stop tracker
+         * Stop accept tracker
          ********************************************************************************/
-        void __stop_tracker();
+        void __stop_accept_tracker();
 #endif
+        /*********************************************************************************
+         * Trigger interrupt callbacks
+         ********************************************************************************/
+        void __trigger_interrupt_callbacks();
 
       protected:
         // Listen address

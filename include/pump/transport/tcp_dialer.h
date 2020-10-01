@@ -75,16 +75,16 @@ namespace transport {
          ********************************************************************************/
         static void on_timeout(tcp_dialer_wptr wptr);
 
-      private:
+      protected:
         /*********************************************************************************
-         * Open flow
+         * Open dial flow
          ********************************************************************************/
-        bool __open_flow();
+        virtual bool __open_dial_flow() override;
 
         /*********************************************************************************
-         * Close flow
+         * Close dial flow
          ********************************************************************************/
-        PUMP_INLINE void __close_flow() {
+        virtual void __close_dial_flow() override {
             if (flow_)
                 flow_->close();
         }

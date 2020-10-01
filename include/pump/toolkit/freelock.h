@@ -18,9 +18,13 @@
 #define pump_toolkit_freelock_h
 
 #include <atomic>
+#include <chrono>
 
 #include "pump/types.h"
 #include "pump/debug.h"
+#include "pump/memory.h"
+#include "pump/platform.h"
+#include "pump/toolkit/semaphore.h"
 
 namespace pump {
 namespace toolkit {
@@ -28,52 +32,70 @@ namespace toolkit {
     template <typename T>
     class freelock_array {
       protected:
-        // Array element type
-        typedef T array_element_type;
+        // Element type
+        typedef T element_type;
+        // Element type size
+        const static uint32 element_size = sizeof(element_type);
 
       public:
         /*********************************************************************************
          * Constructor
          ********************************************************************************/
         freelock_array(uint32 size)
-            : size_(size), write_index_(0), read_index_(0), max_read_index_(0) {
-            array_ = new array_element_type[size];
+            : size_(size),
+              mem_block_(nullptr),
+              write_index_(0),
+              max_write_index_(0),
+              read_index_(0),
+              max_read_index_(0) {
+            mem_block_ = (block_ptr)pump_malloc(size * element_size);
         }
 
         /*********************************************************************************
          * Deconstructor
          ********************************************************************************/
         ~freelock_array() {
-            if (array_)
-                delete[] array_;
+            if (mem_block_) {
+                uint32 read_index = read_index_.load();
+                uint32 max_read_index = max_read_index_.load();
+                while (count_to_index(read_index) != count_to_index(max_read_index)) {
+                    ((element_type *)mem_block_ + count_to_index(read_index++))
+                        ->~element_type();
+                }
+                pump_free(mem_block_);
+            }
         }
 
         /*********************************************************************************
          * Push
          * Return false if array is full, thread safe.
          ********************************************************************************/
-        bool push(const array_element_type &data) {
-            uint32 cur_write_index = write_index_.load();
+        bool push(const element_type &data) {
+            uint32 cur_write_index = write_index_.load(std::memory_order_relaxed);
             do {
-                // the queue is full
+                // Array is full
                 if (count_to_index(cur_write_index + 1) ==
-                    count_to_index(read_index_.load()))
+                    count_to_index(max_write_index_.load(std::memory_order_acquire)))
                     return false;
 
                 if (write_index_.compare_exchange_strong(cur_write_index,
-                                                         cur_write_index + 1))
+                                                         cur_write_index + 1,
+                                                         std::memory_order_acquire,
+                                                         std::memory_order_relaxed))
                     break;
+                cur_write_index = write_index_.load(std::memory_order_relaxed);
 
-                cur_write_index = write_index_.load();
-
+                std::atomic_signal_fence(std::memory_order_acquire);
             } while (1);
 
-            array_[count_to_index(cur_write_index)] = data;
+            // New element object
+            new ((element_type *)mem_block_ + count_to_index(cur_write_index))
+                element_type(data);
 
-            uint32 cur_max_read_index = max_read_index_.load();
-            while (!max_read_index_.compare_exchange_strong(cur_max_read_index,
-                                                            cur_write_index + 1)) {
-                cur_max_read_index = max_read_index_.load();
+            while (!max_read_index_.compare_exchange_strong(cur_write_index,
+                                                            cur_write_index + 1,
+                                                            std::memory_order_relaxed,
+                                                            std::memory_order_relaxed)) {
             }
 
             return true;
@@ -83,25 +105,35 @@ namespace toolkit {
          * Pop
          * Return false if array is empty, thread safe.
          ********************************************************************************/
-        template<typename U>
+        template <typename U>
         bool pop(U &data) {
-            uint32 cur_read_index = read_index_.load();
             do {
-                // the queue is empty or
-                // a producer thread has allocate space in the queue but is
-                // waiting to commit the data into it
+                uint32 cur_read_index = read_index_.load(std::memory_order_relaxed);
                 if (count_to_index(cur_read_index) ==
-                    count_to_index(max_read_index_.load()))
+                    count_to_index(max_read_index_.load(std::memory_order_acquire)))
                     return false;
 
-                data = array_[count_to_index(cur_read_index)];
-
                 if (read_index_.compare_exchange_strong(cur_read_index,
-                                                        cur_read_index + 1))
+                                                        cur_read_index + 1,
+                                                        std::memory_order_acquire,
+                                                        std::memory_order_relaxed)) {
+                    // Copy element object
+                    data = *((element_type *)mem_block_ + count_to_index(cur_read_index));
+                    // Deconstructor old element object
+                    ((element_type *)mem_block_ + count_to_index(cur_read_index))
+                        ->~element_type();
+
+                    while (!max_write_index_.compare_exchange_strong(
+                        cur_read_index,
+                        cur_read_index + 1,
+                        std::memory_order_relaxed,
+                        std::memory_order_relaxed)) {
+                    }
+
                     return true;
+                }
 
-                cur_read_index = read_index_.load();
-
+                std::atomic_signal_fence(std::memory_order_acquire);
             } while (1);  // keep looping to try again!
 
             // Something went wrong. it shouldn't be possible to reach here
@@ -115,8 +147,8 @@ namespace toolkit {
          * Get array data size
          ********************************************************************************/
         uint32 size() {
-            uint32 cur_read_index = read_index_.load();
-            uint32 cur_write_index = write_index_.load();
+            uint32 cur_read_index = read_index_.load(std::memory_order_relaxed);
+            uint32 cur_write_index = write_index_.load(std::memory_order_relaxed);
 
             if (cur_write_index >= cur_read_index)
                 return (cur_write_index - cur_read_index);
@@ -135,7 +167,7 @@ namespace toolkit {
         /*********************************************************************************
          * Map count to index
          ********************************************************************************/
-        uint32 count_to_index(uint32 count) {
+        PUMP_INLINE uint32 count_to_index(uint32 count) {
             return (count % size_);
         }
 
@@ -143,11 +175,15 @@ namespace toolkit {
         // Capacity size
         uint32 size_;
 
-        // Element array
-        array_element_type *array_;
+        // Element memory block
+        block_ptr mem_block_;
 
         // Next write index
         std::atomic_uint32_t write_index_;
+
+        // Max write index
+        // It should be equal or littel read index at all
+        std::atomic_uint32_t max_write_index_;
 
         // Next read index
         std::atomic_uint32_t read_index_;
@@ -190,17 +226,17 @@ namespace toolkit {
         bool push(const array_element_type &data) {
             while (true) {
                 // check resize locker locked state and wait it free
-                if (resize_locker_.load()) {
+                if (resize_locker_.load(std::memory_order_acquire)) {
                     continue;
                 }
 
                 // add concurrent count
-                concurrent_cnt_.fetch_add(1);
+                concurrent_cnt_.fetch_add(1, std::memory_order_release);
 
                 // recheck resize locker locked state
-                if (resize_locker_.load()) {
+                if (resize_locker_.load(std::memory_order_relaxed)) {
                     // sub concurrent count if resize locker locked
-                    concurrent_cnt_.fetch_sub(1);
+                    concurrent_cnt_.fetch_sub(1, std::memory_order_release);
                     // try again for next time
                     continue;
                 }
@@ -210,9 +246,13 @@ namespace toolkit {
                 if (!array_->push(data)) {
                     // try to get array resize locker
                     bool unlocked = false;
-                    if (resize_locker_.compare_exchange_strong(unlocked, true)) {
+                    if (resize_locker_.compare_exchange_strong(
+                            unlocked,
+                            true,
+                            std::memory_order_acquire,
+                            std::memory_order_relaxed)) {
                         // wait other concurrent caller handle array finished
-                        while (concurrent_cnt_.load() != 1)
+                        while (concurrent_cnt_.load(std::memory_order_relaxed) != 1)
                             ;
 
                         // new bigger array
@@ -222,13 +262,13 @@ namespace toolkit {
                         PUMP_DEBUG_CHECK(array_->push(data));
 
                         // resize locker unlock
-                        resize_locker_.store(false);
+                        resize_locker_.store(false, std::memory_order_release);
 
                         break;
                     }
 
                     // sub concurrent count if getting array resize locker failed
-                    concurrent_cnt_.fetch_sub(1);
+                    concurrent_cnt_.fetch_sub(1, std::memory_order_release);
 
                     // try to push data again
                     continue;
@@ -238,7 +278,7 @@ namespace toolkit {
             }
 
             // push finished and sub concurrent count
-            concurrent_cnt_.fetch_sub(1);
+            concurrent_cnt_.fetch_sub(1, std::memory_order_release);
 
             return true;
         }
@@ -247,22 +287,22 @@ namespace toolkit {
          * Pop
          * Return false if array is empty, thread safe.
          ********************************************************************************/
-        template<typename U>
+        template <typename U>
         bool pop(U &data) {
             bool ret = false;
             while (true) {
                 // check resize locker locked state and wait it free
-                if (resize_locker_.load()) {
+                if (resize_locker_.load(std::memory_order_acquire)) {
                     continue;
                 }
 
                 // add concurrent count
-                concurrent_cnt_.fetch_add(1);
+                concurrent_cnt_.fetch_add(1, std::memory_order_release);
 
                 // recheck resize locker locked state
-                if (resize_locker_.load()) {
+                if (resize_locker_.load(std::memory_order_relaxed)) {
                     // sub concurrent count if resize locker locked
-                    concurrent_cnt_.fetch_sub(1);
+                    concurrent_cnt_.fetch_sub(1, std::memory_order_release);
                     // try again for next time
                     continue;
                 }
@@ -271,7 +311,7 @@ namespace toolkit {
                 ret = array_->pop(data);
 
                 // push finished and sub concurrent count
-                concurrent_cnt_.fetch_sub(1);
+                concurrent_cnt_.fetch_sub(1, std::memory_order_release);
 
                 break;
             }
@@ -311,6 +351,106 @@ namespace toolkit {
 
         // Concurrent count
         std::atomic_uint32_t concurrent_cnt_;
+    };
+
+    template <typename T>
+    class block_freelock_queue {
+      public:
+        /*********************************************************************************
+         * Constructor
+         ********************************************************************************/
+        block_freelock_queue(uint32 init_size = 1024) : list_(init_size) {
+        }
+
+        /*********************************************************************************
+         * Deconstructor
+         ********************************************************************************/
+        ~block_freelock_queue() {
+        }
+
+        /*********************************************************************************
+         * Enqueue
+         ********************************************************************************/
+        bool enqueue(const T &item) {
+            if (PUMP_LIKELY(list_.push(item))) {
+                semaphone_.signal();
+                return true;
+            }
+            return false;
+        }
+
+        /*********************************************************************************
+         * Enqueue
+         ********************************************************************************/
+        bool enqueue(T &&item) {
+            if (PUMP_LIKELY(list_.push(item))) {
+                semaphone_.signal();
+                return true;
+            }
+            return false;
+        }
+
+        /*********************************************************************************
+         * Dequeue
+         * This will block until dequeue success.
+         ********************************************************************************/
+        template <typename U>
+        bool dequeue(U &item) {
+            if (semaphone_.wait()) {
+                while (!list_.pop(item)) {
+                    continue;
+                }
+                return true;
+            }
+            return false;
+        }
+
+        /*********************************************************************************
+         * Dequeue
+         * This will block until dequeue success or timeout.
+         ********************************************************************************/
+        template <typename U>
+        bool dequeue(U &item, uint64 timeout) {
+            if (semaphone_.wait(timeout)) {
+                while (!list_.pop(item)) {
+                    continue;
+                }
+                return true;
+            }
+            return false;
+        }
+
+        template <typename U, typename Rep, typename Period>
+        bool dequeue(U &item, std::chrono::duration<Rep, Period> const &timeout) {
+            if (semaphone_.wait(
+                    std::chrono::duration_cast<std::chrono::microseconds>(timeout)
+                        .count())) {
+                while (!list_.pop(item)) {
+                    continue;
+                }
+                return true;
+            }
+            return false;
+        }
+
+        /*********************************************************************************
+         * Try dequeue
+         * This will return immediately.
+         ********************************************************************************/
+        template <typename U>
+        bool try_dequeue(U &item) {
+            if (semaphone_.try_wait()) {
+                while (!list_.pop(item)) {
+                    continue;
+                }
+                return true;
+            }
+            return false;
+        }
+
+      private:
+        freelock_list<T> list_;
+        light_semaphore semaphone_;
     };
 
 }  // namespace toolkit

@@ -31,8 +31,9 @@ namespace toolkit {
         noncopyable() = default;
         ~noncopyable() = default;
 
-        noncopyable(noncopyable &) = delete;
-        noncopyable &operator=(noncopyable &) = delete;
+      private:
+        noncopyable(const noncopyable &) = delete;
+        const noncopyable &operator=(const noncopyable &) = delete;
     };
 
     /*********************************************************************************

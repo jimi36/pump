@@ -1,7 +1,7 @@
 #include "tcp_transport_test.h"
 
 static int count = 1;
-static int send_loop = 1;
+static int send_loop = 32;
 static int send_pocket_size = 1024 * 4;
 
 class my_tcp_dialer;
@@ -106,7 +106,7 @@ class my_tcp_dialer : public std::enable_shared_from_this<my_tcp_dialer> {
         if (my_dialers.erase(this) != 1) {
             printf("erase dialer error\n");
         }
-        //start_once_dialer();
+        // start_once_dialer();
         dial_mx.unlock();
     }
 
@@ -138,7 +138,8 @@ class my_tcp_dialer : public std::enable_shared_from_this<my_tcp_dialer> {
 void start_once_dialer() {
     address bind_address("0.0.0.0", 0);
     address peer_address(server_ip, server_port);
-    tcp_dialer_sptr dialer = tcp_dialer::create_instance(bind_address, peer_address);
+    tcp_dialer_sptr dialer =
+        tcp_dialer::create_instance(bind_address, peer_address, 1000);
 
     std::shared_ptr<my_tcp_dialer> my_dialer(new my_tcp_dialer);
     my_dialer->set_dialer(dialer);
@@ -168,20 +169,20 @@ class time_report {
         for (auto b = my_dialers.begin(); b != my_dialers.end(); b++) {
             read_size += b->second->read_size_;
             b->second->read_size_ = 0;
-            /*
+
             if (b->second->all_read_size_ >= 100 * 1024 * 1024 &&
                 b->second->transport_->is_started()) {
                 b->second->transport_->force_stop();
                 start_once_dialer();
             }
-            */
         }
+        if (my_dialers.empty())
+            start_once_dialer();
         dial_mx.unlock();
-        
+
         printf("client read speed is %fMB/s at %llu\n",
                (double)read_size / 1024 / 1024 / 1,
                ::time(0));
-               
     }
 };
 

@@ -14,10 +14,6 @@
  * limitations under the License.
  */
 
-#if defined(WIN32)
-#include <ws2tcpip.h>
-#endif
-
 #include "pump/debug.h"
 #include "pump/net/error.h"
 #include "pump/net/socket.h"
@@ -30,7 +26,7 @@ namespace net {
     }
 
     bool set_noblock(int32 fd, int32 noblock) {
-#if defined(WIN32)
+#if defined(OS_WINDOWS)
         u_long mode = (noblock == 0) ? 0 : 1;  // non-blocking mode
         if (::ioctlsocket(fd, FIONBIO, &mode) != SOCKET_ERROR)
             return true;
@@ -87,7 +83,7 @@ namespace net {
             return false;
         }
 
-#if defined(WIN32)
+#if defined(OS_WINDOWS)
         DWORD bytes = 0;
         struct tcp_keepalive keepalive;
         keepalive.onoff = 1;
@@ -143,7 +139,7 @@ namespace net {
     }
 
     bool update_connect_context(int32 fd) {
-#if defined(WIN32)
+#if defined(OS_WINDOWS)
         if (::setsockopt(fd, SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT, nullptr, 0) == 0)
             return true;
 
@@ -156,7 +152,7 @@ namespace net {
     }
 
     bool set_udp_conn_reset(int32 fd, bool enable) {
-#if defined(WIN32)
+#if defined(OS_WINDOWS)
         DWORD bytes_returned = 0;
         BOOL behavior = enable ? TRUE : FALSE;
         if (WSAIoctl(fd,
@@ -264,7 +260,7 @@ namespace net {
     }
 
     int32 poll(struct pollfd *pfds, int32 count, int32 timeout) {
-#if defined(WIN32)
+#if defined(OS_WINDOWS)
         return ::WSAPoll(pfds, count, timeout);
 #else
         return ::poll(pfds, count, timeout);
@@ -276,7 +272,7 @@ namespace net {
     }
 
     bool close(int32 fd) {
-#if defined(WIN32)
+#if defined(OS_WINDOWS)
         return (::closesocket(fd) == 0);
 #else
         return (::close(fd) == 0);
@@ -285,7 +281,7 @@ namespace net {
 
     int32 get_socket_error(int32 fd) {
         int32 res = 0;
-#if defined(WIN32)
+#if defined(OS_WINDOWS)
         int32 len = sizeof(res);
         ::getsockopt(fd, SOL_SOCKET, SO_ERROR, (char *)&res, &len);
 #else
@@ -296,7 +292,7 @@ namespace net {
     }
 
     int32 last_errno() {
-#if defined(WIN32)
+#if defined(OS_WINDOWS)
         return ::WSAGetLastError();
 #else
         return errno;

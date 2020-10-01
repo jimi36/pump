@@ -19,44 +19,56 @@
 namespace pump {
 namespace transport {
 
-    void base_acceptor::on_channel_event(uint32 ev) {
-        if (__set_status(TRANSPORT_STOPPING, TRANSPORT_STOPPED))
-            cbs_.stopped_cb();
+    base_acceptor::~base_acceptor() {
+#if !defined(PUMP_HAVE_IOCP)
+        __stop_accept_tracker();
+#endif
+        __close_accept_flow();
     }
 
 #if !defined(PUMP_HAVE_IOCP)
-    bool base_acceptor::__start_tracker(poll::channel_sptr &&ch) {
+    bool base_acceptor::__start_accept_tracker(poll::channel_sptr &&ch) {
         if (tracker_) {
-            PUMP_WARN_LOG("transport::base_acceptor::__start_tracker: tracker exists");
+            PUMP_WARN_LOG(
+                "transport::base_acceptor::__start_accept_tracker: tracker exists");
             return false;
         }
 
-        tracker_.reset(object_create<poll::channel_tracker>(ch, TRACK_READ),
+        tracker_.reset(object_create<poll::channel_tracker>(ch, poll::TRACK_READ),
                        object_delete<poll::channel_tracker>);
         if (!get_service()->add_channel_tracker(tracker_, READ_POLLER)) {
             PUMP_WARN_LOG(
-                "transport::base_acceptor::__start_tracker: add_channel_tracker failed");
+                "transport::base_acceptor::__start_accept_tracker: add_channel_tracker "
+                "failed");
             return false;
         }
 
         return true;
     }
 
-    void base_acceptor::__stop_tracker() {
-        if (!tracker_) {
-            PUMP_WARN_LOG("transport::base_acceptor::__stop_tracker: tracker no exists");
+    void base_acceptor::__stop_accept_tracker() {
+        PUMP_LOCK_SPOINTER(tracker, tracker_);
+        if (!tracker) {
+            PUMP_WARN_LOG(
+                "transport::base_acceptor::__stop_accept_tracker: tracker no exists");
             return;
         }
 
-        if (!tracker_->is_started()) {
+        if (!tracker->is_started()) {
             PUMP_WARN_LOG(
-                "transport::base_acceptor::__stop_tracker: tracker not started");
+                "transport::base_acceptor::__stop_accept_tracker: tracker not started");
             return;
         }
 
         PUMP_DEBUG_CHECK(get_service()->remove_channel_tracker(tracker_, READ_POLLER));
     }
 #endif
+
+    void base_acceptor::__trigger_interrupt_callbacks() {
+        if (__set_status(TRANSPORT_STOPPING, TRANSPORT_STOPPED)) {
+            cbs_.stopped_cb();
+        }
+    }
 
 }  // namespace transport
 }  // namespace pump

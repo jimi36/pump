@@ -49,21 +49,24 @@ namespace poll {
                 maxfd = fd;
 
             listen_event = tracker->get_event();
-            if (listen_event & IO_EVNET_READ)
+            if (listen_event & IO_EVNET_READ) {
                 FD_SET(fd, &read_fds_);
-            else if (listen_event & IO_EVENT_SEND)
+            } else if (listen_event & IO_EVENT_SEND) {
                 FD_SET(fd, &write_fds_);
+            }
         }
 
         tv_.tv_sec = timeout / 1000;
         tv_.tv_usec = (timeout % 1000) * 1000;
         int32 count = ::select(maxfd + 1, &read_fds_, &write_fds_, NULL, &tv_);
-#if defined(WIN32)
-        if (maxfd == -1 && timeout > 0)
+#if defined(OS_WINDOWS)
+        if (maxfd == -1 && timeout > 0) {
             Sleep(1);
+        }
 #endif
-        if (count > 0)
+        if (count > 0) {
             __dispatch_pending_event(&read_fds_, &write_fds_);
+        }
     }
 
     void select_poller::__dispatch_pending_event(const fd_set *rfds, const fd_set *wfds) {
@@ -80,17 +83,17 @@ namespace poll {
                 continue;
             }
 
-#if !defined(PUMP_HAVE_IOCP) && !defined(PUMP_HAVE_EPOLL)
+#if defined(PUMP_HAVE_SELECT)
             int32 fd = tracker->get_fd();
             int32 listen_event = tracker->get_event();
             if (listen_event & IO_EVNET_READ) {
                 if (FD_ISSET(fd, rfds)) {
-                    tracker->set_tracked(false);
+                    PUMP_DEBUG_CHECK(tracker->set_tracked(false));
                     ch->handle_io_event(IO_EVNET_READ);
                 }
             } else {
                 if (FD_ISSET(fd, wfds)) {
-                    tracker->set_tracked(false);
+                    PUMP_DEBUG_CHECK(tracker->set_tracked(false));
                     ch->handle_io_event(IO_EVENT_SEND);
                 }
             }

@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-#if !defined(WIN32)
-#include <iconv.h>
-#endif
+#include "pump/utils.h"
 
 #include <regex>
 
-#include "pump/utils.h"
+#if defined(OS_LINUX)
+#include <iconv.h>
+#endif
 
 namespace pump {
 
@@ -44,7 +44,7 @@ uint8 hexchar_to_decnum(uint8 c) {
 
 std::string gbk_to_utf8(const std::string &in) {
     std::string out;
-#if defined(WIN32)
+#if defined(OS_WINDOWS)
     std::wstring wstr(MultiByteToWideChar(CP_ACP, 0, in.c_str(), -1, NULL, 0) - 1,
                       wchar_t(0));
     MultiByteToWideChar(
@@ -86,7 +86,7 @@ std::string gbk_to_utf8(const std::string &in) {
 
 std::string utf8_to_gbk(const std::string &in) {
     std::string out;
-#if defined(WIN32)
+#if defined(OS_WINDOWS)
     std::wstring wstr(MultiByteToWideChar(CP_UTF8, 0, in.c_str(), -1, NULL, 0),
                       wchar_t(0));
     MultiByteToWideChar(CP_UTF8,

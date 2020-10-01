@@ -17,6 +17,8 @@
 #ifndef pump_config_h
 #define pump_config_h
 
+#include "pump/platform.h"
+
 #define PUMP_MAJOR_VERSION @pump_MAJOR_VERSION@
 #define PUMP_MINOR_VERSION @pump_MINOR_VERSION@
 #define PUMP_BUILD_VERSION @pump_BUILD_VERSION@
@@ -27,12 +29,12 @@
 #endif
 
 #define @pump_WITH_IOCP@
-#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
-#if defined(WITH_IOCP)
+#if defined(OS_WINDOWS) && defined(WITH_IOCP)
 #define PUMP_HAVE_IOCP
-#endif
-#elif defined(__linux__)
+#elif defined(OS_LINUX)
 #define PUMP_HAVE_EPOLL
+#else
+#define PUMP_HAVE_SELECT
 #endif
 
 #define @pump_WITH_GNUTLS@

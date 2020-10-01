@@ -114,12 +114,25 @@ namespace transport {
         tls_transport() noexcept;
 
         /*********************************************************************************
-         * Close flow
+         * Shutdown transport flow
          ********************************************************************************/
-        PUMP_INLINE void __close_flow() {
+        PUMP_INLINE void __shutdown_transport_flow() {
             if (flow_)
                 flow_->shutdown();
         }
+
+        /*********************************************************************************
+         * Close transport flow
+         ********************************************************************************/
+        virtual void __close_transport_flow() override {
+            if (flow_)
+                flow_->close();
+        }
+
+        /*********************************************************************************
+         * Async read
+         ********************************************************************************/
+        transport_error __async_read(uint32 state);
 
         /*********************************************************************************
          * Async send
@@ -146,7 +159,7 @@ namespace transport {
         flow::flow_tls_sptr flow_;
 
         // Last send buffer
-        volatile uint32 last_send_iob_size_;
+        volatile int32 last_send_iob_size_;
         volatile toolkit::io_buffer_ptr last_send_iob_;
         // volatile flow::buffer_ptr last_send_buffer_;
 

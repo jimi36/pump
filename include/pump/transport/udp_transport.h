@@ -97,17 +97,32 @@ namespace transport {
         udp_transport(const address &local_address) noexcept;
 
         /*********************************************************************************
-         * Open flow
+         * Open transport flow
          ********************************************************************************/
-        bool __open_flow();
+        bool __open_transport_flow();
 
         /*********************************************************************************
-         * Close flow
+         * Shutdown transport flow
          ********************************************************************************/
-        PUMP_INLINE void __close_flow() {
-            if (flow_)
-               flow_->shutdown();
+        PUMP_INLINE void __shutdown_transport_flow() {
+            if (flow_) {
+                flow_->shutdown();
+            }
         }
+
+        /*********************************************************************************
+         * Close transport flow
+         ********************************************************************************/
+        virtual void __close_transport_flow() override {
+            if (flow_) {
+                flow_->close();
+            }
+        }
+
+        /*********************************************************************************
+         * Async read
+         ********************************************************************************/
+        transport_error __async_read(uint32 state);
 
       private:
         // Udp flow

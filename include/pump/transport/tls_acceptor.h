@@ -109,17 +109,14 @@ namespace transport {
                      int64 handshake_timeout);
 
         /*********************************************************************************
-         * Open flow
+         * Open accept flow
          ********************************************************************************/
-        bool __open_flow();
+        virtual bool __open_accept_flow() override;
 
         /*********************************************************************************
-         * Close flow
+         * Close accept flow
          ********************************************************************************/
-        PUMP_INLINE void __close_flow() {
-            if (flow_)
-                flow_->shutdown();
-        }
+        virtual void __close_accept_flow() override;
 
         /*********************************************************************************
          * Create handshaker

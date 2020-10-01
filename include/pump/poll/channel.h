@@ -25,13 +25,13 @@
 namespace pump {
 namespace poll {
 
-/*********************************************************************************
- * IO event
- ********************************************************************************/
-#define IO_EVENT_NONE 0x00   // none event
-#define IO_EVNET_READ 0x01   // read event
-#define IO_EVENT_SEND 0x02   // send event
-#define IO_EVENT_ERROR 0x04  // error event
+    /*********************************************************************************
+     * IO event
+     ********************************************************************************/
+    const int32 IO_EVENT_NONE = 0x00;   // none event
+    const int32 IO_EVNET_READ = 0x01;   // read event
+    const int32 IO_EVENT_SEND = 0x02;   // send event
+    const int32 IO_EVENT_ERROR = 0x04;  // error event
 
     /*********************************************************************************
      * Channel opt type
@@ -103,13 +103,6 @@ namespace poll {
             on_channel_event(ev);
         }
 
-        /*********************************************************************************
-         * Handle tracker event
-         ********************************************************************************/
-        PUMP_INLINE void handle_tracker_event(int32 ev) {
-            on_tracker_event(ev);
-        }
-
       protected:
         /*********************************************************************************
          * Set channel fd
@@ -142,21 +135,9 @@ namespace poll {
 #endif
 
         /*********************************************************************************
-         * Error event callback
-         ********************************************************************************/
-        virtual void on_error_event() {
-        }
-
-        /*********************************************************************************
          * Channel event callback
          ********************************************************************************/
         virtual void on_channel_event(uint32 ev) {
-        }
-
-        /*********************************************************************************
-         * Tracker event callback
-         ********************************************************************************/
-        virtual void on_tracker_event(int32 ev) {
         }
 
       protected:
@@ -167,13 +148,13 @@ namespace poll {
     };
     DEFINE_ALL_POINTER_TYPE(channel);
 
-#define TRACK_NONE (IO_EVENT_NONE)
-#define TRACK_READ (IO_EVNET_READ)
-#define TRACK_WRITE (IO_EVENT_SEND)
-#define TRACK_BOTH (IO_EVNET_READ | IO_EVENT_SEND)
+    const int32 TRACK_NONE = (IO_EVENT_NONE);
+    const int32 TRACK_READ = (IO_EVNET_READ);
+    const int32 TRACK_SEND = (IO_EVENT_SEND);
+    const int32 TRACK_BOTH = (IO_EVNET_READ | IO_EVENT_SEND);
 
-#define TRACKER_EVENT_DEL 0
-#define TRACKER_EVENT_ADD 1
+    const int32 TRACKER_EVENT_DEL = 0;
+    const int32 TRACKER_EVENT_ADD = 1;
 
     class channel_tracker : public toolkit::noncopyable {
       public:
@@ -190,15 +171,17 @@ namespace poll {
         /*********************************************************************************
          * Mark started
          ********************************************************************************/
-        PUMP_INLINE void mark_started(bool started) {
-            started_.store(started);
+        PUMP_INLINE bool mark_started(bool started) {
+            bool expected = !started;
+            return started_.compare_exchange_strong(
+                expected, started, std::memory_order_acquire, std::memory_order_relaxed);
         }
 
         /*********************************************************************************
          * Get tracked status
          ********************************************************************************/
         PUMP_INLINE bool is_started() const {
-            return started_.load();
+            return started_.load(std::memory_order_acquire);
         }
 
         /*********************************************************************************
@@ -206,14 +189,15 @@ namespace poll {
          ********************************************************************************/
         PUMP_INLINE bool set_tracked(bool tracked) {
             bool expected = !tracked;
-            return tracked_.compare_exchange_strong(expected, tracked);
+            return tracked_.compare_exchange_strong(
+                expected, tracked, std::memory_order_acquire, std::memory_order_relaxed);
         }
 
         /*********************************************************************************
          * Get tracked status
          ********************************************************************************/
         PUMP_INLINE bool is_tracked() const {
-            return tracked_.load();
+            return tracked_.load(std::memory_order_acquire);
         }
 
         /*********************************************************************************
@@ -227,7 +211,7 @@ namespace poll {
         /*********************************************************************************
          * Get channel
          ********************************************************************************/
-        PUMP_INLINE channel_sptr get_channel() {
+        PUMP_INLINE channel_sptr get_channel() const {
             return ch_.lock();
         }
 

@@ -68,10 +68,6 @@ namespace transport {
                 PUMP_ERR_LOG("flow::flow_udp::init: set_noblock failed");
                 return FLOW_ERR_ABORT;
             }
-            if (!net::set_nodelay(fd_, 1)) {
-                PUMP_ERR_LOG("flow::flow_udp::init: set_nodelay failed");
-                return FLOW_ERR_ABORT;
-            }
             if (!net::bind(fd_, (sockaddr *)local_address.get(), local_address.len())) {
                 PUMP_ERR_LOG("flow::flow_udp::init: bind failed");
                 return FLOW_ERR_ABORT;

@@ -25,19 +25,17 @@ namespace pump {
 service::service(bool has_poller)
     : running_(false),
       read_poller_(nullptr),
-      write_poller_(nullptr),
+      send_poller_(nullptr),
       iocp_poller_(nullptr) {
     if (has_poller) {
-#if defined(WIN32) && defined(PUMP_HAVE_IOCP)
+#if defined(PUMP_HAVE_IOCP)
         iocp_poller_ = object_create<poll::iocp_poller>();
-#else
-#if defined(WIN32)
+#elif defined(PUMP_HAVE_SELECT)
         read_poller_ = object_create<poll::select_poller>();
-        write_poller_ = object_create<poll::select_poller>();
-#else
+        send_poller_ = object_create<poll::select_poller>();
+#elif defined(PUMP_HAVE_EPOLL)
         read_poller_ = object_create<poll::epoll_poller>();
-        write_poller_ = object_create<poll::epoll_poller>();
-#endif
+        send_poller_ = object_create<poll::epoll_poller>();
 #endif
     }
 
@@ -47,8 +45,8 @@ service::service(bool has_poller)
 service::~service() {
     if (read_poller_)
         delete read_poller_;
-    if (write_poller_)
-        delete write_poller_;
+    if (send_poller_)
+        delete send_poller_;
     if (iocp_poller_)
         delete iocp_poller_;
 }
@@ -67,8 +65,8 @@ bool service::start() {
         iocp_poller_->start();
     if (read_poller_ != nullptr)
         read_poller_->start();
-    if (write_poller_ != nullptr)
-        write_poller_->start();
+    if (send_poller_ != nullptr)
+        send_poller_->start();
 
     __start_posted_task_worker();
 
@@ -86,8 +84,8 @@ void service::stop() {
         iocp_poller_->stop();
     if (read_poller_)
         read_poller_->stop();
-    if (write_poller_)
-        write_poller_->stop();
+    if (send_poller_)
+        send_poller_->stop();
 }
 
 void service::wait_stopped() {
@@ -95,8 +93,8 @@ void service::wait_stopped() {
         iocp_poller_->wait_stopped();
     if (read_poller_)
         read_poller_->wait_stopped();
-    if (write_poller_)
-        write_poller_->wait_stopped();
+    if (send_poller_)
+        send_poller_->wait_stopped();
     if (tqueue_)
         tqueue_->wait_stopped();
     if (posted_task_worker_)
@@ -110,14 +108,14 @@ bool service::add_channel_tracker(poll::channel_tracker_sptr &tracker, int32_t p
     if (pt == READ_POLLER)
         return read_poller_->add_channel_tracker(tracker);
     else
-        return write_poller_->add_channel_tracker(tracker);
+        return send_poller_->add_channel_tracker(tracker);
 }
 
 bool service::remove_channel_tracker(poll::channel_tracker_sptr &tracker, int32_t pt) {
     if (pt == READ_POLLER)
         read_poller_->remove_channel_tracker(tracker);
     else
-        write_poller_->remove_channel_tracker(tracker);
+        send_poller_->remove_channel_tracker(tracker);
     return true;
 }
 
@@ -125,7 +123,7 @@ bool service::resume_channel_tracker(poll::channel_tracker_ptr tracker, int32_t 
     if (pt == READ_POLLER)
         read_poller_->resume_channel_tracker(tracker);
     else
-        write_poller_->resume_channel_tracker(tracker);
+        send_poller_->resume_channel_tracker(tracker);
     return true;
 }
 #endif
@@ -134,7 +132,7 @@ bool service::post_channel_event(poll::channel_sptr &ch, uint32 event) {
 #if defined(PUMP_HAVE_IOCP)
     iocp_poller_->push_channel_event(ch, event);
 #else
-    write_poller_->push_channel_event(ch, event);
+    send_poller_->push_channel_event(ch, event);
 #endif
     return true;
 }
@@ -152,7 +150,7 @@ void service::__start_posted_task_worker() {
     auto func = [&]() {
         while (running_) {
             post_task_type task;
-            if (posted_tasks_.wait_dequeue_timed(task, std::chrono::seconds(1)))
+            if (posted_tasks_.dequeue(task, std::chrono::seconds(1)))
                 task();
         }
     };
@@ -164,7 +162,7 @@ void service::__start_timeout_timer_worker() {
     auto func = [&]() {
         while (running_) {
             time::timer_wptr wptr;
-            if (timeout_timers_.wait_dequeue_timed(wptr, std::chrono::seconds(1))) {
+            if (timeout_timers_.dequeue(wptr, std::chrono::seconds(1))) {
                 PUMP_LOCK_WPOINTER(timer, wptr);
                 if (timer)
                     timer->handle_timeout();

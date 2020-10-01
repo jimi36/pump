@@ -91,6 +91,20 @@ namespace transport {
         static void on_handshake_stopped(tls_dialer_wptr wptr,
                                          tls_handshaker_ptr handshaker);
 
+      protected:
+        /*********************************************************************************
+         * Open dial flow
+         ********************************************************************************/
+        virtual bool __open_dial_flow() override;
+
+        /*********************************************************************************
+         * Close dial flow
+         ********************************************************************************/
+        virtual void __close_dial_flow() override {
+            if (flow_)
+                flow_->close();
+        }
+
       private:
         /*********************************************************************************
          * Constructor
@@ -99,19 +113,6 @@ namespace transport {
                    const address &remote_address,
                    int64 dial_timeout,
                    int64 handshake_timeout) noexcept;
-
-        /*********************************************************************************
-         * Open flow
-         ********************************************************************************/
-        bool __open_flow();
-
-        /*********************************************************************************
-         * Close flow
-         ********************************************************************************/
-        PUMP_INLINE void __close_flow() {
-            if (flow_)
-                flow_->close();
-        }
 
       private:
         // GNUTLS credentials

@@ -106,17 +106,30 @@ namespace transport {
         tcp_transport() noexcept;
 
         /*********************************************************************************
-         * open flow
+         * Open transport flow
          ********************************************************************************/
-        bool __open_flow(int32 fd);
+        bool __open_transport_flow(int32 fd);
 
         /*********************************************************************************
-         * Close flow
+         * Shutdown transport flow
          ********************************************************************************/
-        PUMP_INLINE void __close_flow() {
+        PUMP_INLINE void __shutdown_transport_flow() {
             if (flow_)
                 flow_->shutdown();
         }
+
+        /*********************************************************************************
+         * Close transport flow
+         ********************************************************************************/
+        virtual void __close_transport_flow() override {
+            if (flow_)
+                flow_->close();
+        }
+
+        /*********************************************************************************
+         * Async read
+         ********************************************************************************/
+        transport_error __async_read(uint32 state);
 
         /*********************************************************************************
          * Async send
@@ -143,9 +156,9 @@ namespace transport {
         flow::flow_tcp_sptr flow_;
 
         // Last send buffer
-        volatile uint32 last_send_iob_size_;
+        volatile int32 last_send_iob_size_;
         volatile toolkit::io_buffer_ptr last_send_iob_;
-        
+
         // When sending data, transport will append buffer to sendlist at first. On
         // triggering send event, transport will send buffer in the sendlist.
         toolkit::freelock_list<toolkit::io_buffer_ptr> sendlist_;

@@ -29,17 +29,51 @@ namespace transport {
     }
 
     void base_transport::on_channel_event(uint32 ev) {
-        if (__set_status(TRANSPORT_DISCONNECTING, TRANSPORT_DISCONNECTED))
+        __interrupt_and_trigger_callbacks();
+    }
+
+    uint32 base_transport::__change_read_state(uint32 state) {
+        uint32 old_state = read_state_.load();
+        if (old_state == READ_ONCE || old_state == READ_LOOP) {
+            if (!read_state_.compare_exchange_strong(old_state, state))
+                return READ_INVALID;
+            return old_state;
+        }
+
+        old_state = READ_NONE;
+        if (read_state_.compare_exchange_strong(old_state, state))
+            return old_state;
+
+        old_state = READ_PENDING;
+        if (read_state_.compare_exchange_strong(old_state, state))
+            return old_state;
+
+        return READ_INVALID;
+    }
+
+    void base_transport::__interrupt_and_trigger_callbacks() {
+        if (__set_status(TRANSPORT_DISCONNECTING, TRANSPORT_DISCONNECTED)) {
+            __close_transport_flow();
+#if !defined(PUMP_HAVE_IOCP)
+            __stop_read_tracker();
+            __stop_send_tracker();
+#endif
             cbs_.disconnected_cb();
-        else if (__set_status(TRANSPORT_STOPPING, TRANSPORT_STOPPED))
+        } else if (__set_status(TRANSPORT_STOPPING, TRANSPORT_STOPPED)) {
+            __close_transport_flow();
+#if !defined(PUMP_HAVE_IOCP)
+            __stop_read_tracker();
+            __stop_send_tracker();
+#endif
             cbs_.stopped_cb();
+        }
     }
 
 #if !defined(PUMP_HAVE_IOCP)
     bool base_transport::__start_read_tracker(poll::channel_sptr &&ch) {
         PUMP_LOCK_SPOINTER(tracker, r_tracker_);
         if (PUMP_UNLIKELY(tracker == nullptr)) {
-            r_tracker_.reset(object_create<poll::channel_tracker>(ch, TRACK_READ),
+            r_tracker_.reset(object_create<poll::channel_tracker>(ch, poll::TRACK_READ),
                              object_delete<poll::channel_tracker>);
             if (!get_service()->add_channel_tracker(r_tracker_, READ_POLLER)) {
                 PUMP_WARN_LOG(
@@ -62,7 +96,7 @@ namespace transport {
     bool base_transport::__start_send_tracker(poll::channel_sptr &&ch) {
         PUMP_LOCK_SPOINTER(tracker, s_tracker_);
         if (PUMP_UNLIKELY(tracker == nullptr)) {
-            s_tracker_.reset(object_create<poll::channel_tracker>(ch, TRACK_WRITE),
+            s_tracker_.reset(object_create<poll::channel_tracker>(ch, poll::TRACK_SEND),
                              object_delete<poll::channel_tracker>);
             if (!get_service()->add_channel_tracker(s_tracker_, WRITE_POLLER)) {
                 PUMP_WARN_LOG(

@@ -26,7 +26,7 @@
 namespace pump {
 namespace toolkit {
 
-    class base_buffer {
+    class LIB_PUMP base_buffer {
       public:
         /*********************************************************************************
          * Constructor

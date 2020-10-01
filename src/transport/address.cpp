@@ -14,10 +14,6 @@
  * limitations under the License.
  */
 
-#if defined(WIN32)
-#include <ws2tcpip.h>
-#endif
-
 #include "pump/transport/address.h"
 
 namespace pump {

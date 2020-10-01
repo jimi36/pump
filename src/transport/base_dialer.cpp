@@ -20,46 +20,48 @@ namespace pump {
 namespace transport {
 
     void base_dialer::on_channel_event(uint32 ev) {
-        if (__set_status(TRANSPORT_TIMEOUTING, TRANSPORT_TIMEOUTED))
-            cbs_.timeout_cb();
-        else if (__set_status(TRANSPORT_STOPPING, TRANSPORT_STOPPED))
-            cbs_.stopped_cb();
+        __trigger_interrupt_callbacks();
     }
 
 #if !defined(PUMP_HAVE_IOCP)
-    bool base_dialer::__start_tracker(poll::channel_sptr &&ch) {
+    bool base_dialer::__start_dial_tracker(poll::channel_sptr &&ch) {
         if (tracker_) {
-            PUMP_WARN_LOG("transport::base_dialer::__start_tracker: tracker exists");
+            PUMP_WARN_LOG("transport::base_dialer::__start_dial_tracker: tracker exists");
             return false;
         }
 
-        tracker_.reset(object_create<poll::channel_tracker>(ch, TRACK_WRITE),
+        tracker_.reset(object_create<poll::channel_tracker>(ch, poll::TRACK_SEND),
                        object_delete<poll::channel_tracker>);
         if (!get_service()->add_channel_tracker(tracker_, WRITE_POLLER)) {
             PUMP_WARN_LOG(
-                "transport::base_dialer::__start_tracker: add_channel_tracker failed");
+                "transport::base_dialer::__start_dial_tracker: add_channel_tracker "
+                "failed");
             return false;
         }
 
         return true;
     }
 
-    void base_dialer::__stop_tracker() {
-        if (!tracker_) {
-            PUMP_WARN_LOG("transport::base_dialer::__stop_tracker: tracker no exists");
+    void base_dialer::__stop_dial_tracker() {
+        PUMP_LOCK_SPOINTER(tracker, tracker_);
+        if (!tracker) {
+            PUMP_WARN_LOG(
+                "transport::base_dialer::__stop_dial_tracker: tracker no exists");
             return;
         }
 
-        if (!tracker_->is_started()) {
-            PUMP_WARN_LOG("transport::base_dialer::__stop_tracker: tracker not started");
+        if (!tracker->is_started()) {
+            PUMP_WARN_LOG(
+                "transport::base_dialer::__stop_dial_tracker: tracker not started");
             return;
         }
 
-        get_service()->remove_channel_tracker(tracker_, WRITE_POLLER);
+        PUMP_DEBUG_CHECK(
+            get_service()->remove_channel_tracker(tracker_locker, WRITE_POLLER));
     }
 #endif
 
-    bool base_dialer::__start_connect_timer(const time::timer_callback &cb) {
+    bool base_dialer::__start_dial_timer(const time::timer_callback &cb) {
         if (connect_timeout_ <= 0)
             return true;
 
@@ -69,9 +71,16 @@ namespace transport {
         return get_service()->start_timer(connect_timer_);
     }
 
-    void base_dialer::__stop_connect_timer() {
+    void base_dialer::__stop_dial_timer() {
         if (connect_timer_)
             connect_timer_->stop();
+    }
+
+    void base_dialer::__trigger_interrupt_callbacks() {
+        if (__set_status(TRANSPORT_TIMEOUTING, TRANSPORT_TIMEOUTED))
+            cbs_.timeout_cb();
+        else if (__set_status(TRANSPORT_STOPPING, TRANSPORT_STOPPED))
+            cbs_.stopped_cb();
     }
 
 }  // namespace transport

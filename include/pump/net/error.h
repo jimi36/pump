@@ -17,7 +17,9 @@
 #ifndef pump_net_error_h
 #define pump_net_error_h
 
-#ifdef WIN32
+#include "pump/config.h"
+
+#ifdef OS_WINDOWS
 #define LANE_EINTR WSAEINTR                      // 10004
 #define LANE_EBADF WSAEBADF                      // 10009
 #define LANE_EACCES WSAEACCES                    // 10013

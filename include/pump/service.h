@@ -20,6 +20,7 @@
 #include "pump/poll/poller.h"
 #include "pump/time/timer_queue.h"
 #include "pump/toolkit/features.h"
+#include "pump/toolkit/freelock.h"
 
 namespace pump {
 
@@ -115,7 +116,7 @@ class LIB_PUMP service : public toolkit::noncopyable {
     // Read poller
     poll::poller_ptr read_poller_;
     // Write poller
-    poll::poller_ptr write_poller_;
+    poll::poller_ptr send_poller_;
     // IOCP poller
     poll::poller_ptr iocp_poller_;
 
@@ -124,11 +125,13 @@ class LIB_PUMP service : public toolkit::noncopyable {
 
     // Posted task worker
     std::shared_ptr<std::thread> posted_task_worker_;
-    moodycamel::BlockingConcurrentQueue<post_task_type> posted_tasks_;
+    //moodycamel::BlockingConcurrentQueue<post_task_type> posted_tasks_;
+    toolkit::block_freelock_queue<post_task_type> posted_tasks_;
 
     // Timout timer worker
     std::shared_ptr<std::thread> timeout_timer_worker_;
-    moodycamel::BlockingConcurrentQueue<time::timer_wptr> timeout_timers_;
+    //moodycamel::BlockingConcurrentQueue<time::timer_wptr> timeout_timers_;
+    toolkit::block_freelock_queue<time::timer_wptr> timeout_timers_;
 };
 DEFINE_ALL_POINTER_TYPE(service);
 

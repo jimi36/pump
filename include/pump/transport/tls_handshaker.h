@@ -32,7 +32,6 @@ namespace transport {
       public:
         struct tls_handshaker_callbacks {
             pump_function<void(tls_handshaker_ptr, bool)> handshaked_cb;
-
             pump_function<void(tls_handshaker_ptr)> stopped_cb;
         };
 
@@ -47,7 +46,7 @@ namespace transport {
          ********************************************************************************/
         virtual ~tls_handshaker() {
 #if !defined(PUMP_HAVE_IOCP)
-            __stop_tracker();
+            __stop_handshake_tracker();
 #endif
         }
 
@@ -111,12 +110,6 @@ namespace transport {
 #endif
 
         /*********************************************************************************
-         * Channel event callback
-         ********************************************************************************/
-        virtual void on_channel_event(uint32 ev) override;
-
-      protected:
-        /*********************************************************************************
          * Timer timeout callback
          ********************************************************************************/
         static void on_timeout(tls_handshaker_wptr wptr);
@@ -131,51 +124,62 @@ namespace transport {
          * Close flow
          ********************************************************************************/
         PUMP_INLINE void __close_flow() {
-            if (flow_)
-                flow_->shutdown();
+            if (flow_) {
+                flow_->close();
+            }
         }
 
         /*********************************************************************************
          * Process handshake
          ********************************************************************************/
-        void __process_handshake(flow::flow_tls_ptr flow,
-                                 poll::channel_tracker_ptr tracker);
+        void __process_handshake(flow::flow_tls_ptr flow);
 
         /*********************************************************************************
-         * Start handshaking timer
+         * Start handshake timer
          ********************************************************************************/
-        bool __start_timer(int64 timeout);
+        bool __start_handshake_timer(int64 timeout);
 
         /*********************************************************************************
-         * Stop handshaking timer
+         * Stop handshake timer
          ********************************************************************************/
-        void __stop_timer();
+        void __stop_handshake_timer();
 
 #if !defined(PUMP_HAVE_IOCP)
         /*********************************************************************************
-         * Stop tracker
+         * Start handshake tracker
          ********************************************************************************/
-        void __stop_tracker();
+        void __start_handshake_tracker();
 
         /*********************************************************************************
-         * Resume tracker
+         * Stop handshake tracker
          ********************************************************************************/
-        void __resume_tracker();
+        void __stop_handshake_tracker();
 #endif
+        /*********************************************************************************
+         * Handshake finished
+         ********************************************************************************/
+        void __handshake_finished();
 
       private:
         // Local address
         address local_address_;
         // Remote address
         address remote_address_;
+
         // Finished flag
         std::atomic_flag flag_;
+
         // Handshake timeout timer
         time::timer_sptr timer_;
+
+#if !defined(PUMP_HAVE_IOCP)
         // Channel tracker
         poll::channel_tracker_sptr tracker_;
+#endif
+
         // TLS flow
         flow::flow_tls_sptr flow_;
+
         // TLS handshaker callbacks
         tls_handshaker_callbacks cbs_;
     };

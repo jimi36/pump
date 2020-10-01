@@ -42,7 +42,7 @@ namespace transport {
          ********************************************************************************/
         virtual ~base_dialer() {
 #if !defined(PUMP_HAVE_IOCP)
-            __stop_tracker();
+            __stop_dial_tracker();
 #endif
         }
 
@@ -76,29 +76,44 @@ namespace transport {
          ********************************************************************************/
         virtual void on_channel_event(uint32 ev) override;
 
+      protected:
+        /*********************************************************************************
+         * Open dial flow
+         ********************************************************************************/
+        virtual bool __open_dial_flow() = 0;
+
+        /*********************************************************************************
+         * Close dial flow
+         ********************************************************************************/
+        virtual void __close_dial_flow() {
+        }
+
+      protected:
 #if !defined(PUMP_HAVE_IOCP)
-      protected:
         /*********************************************************************************
-         * Start tracker
+         * Start dial tracker
          ********************************************************************************/
-        bool __start_tracker(poll::channel_sptr &&ch);
+        bool __start_dial_tracker(poll::channel_sptr &&ch);
 
         /*********************************************************************************
-         * Stop tracker
+         * Stop dial tracker
          ********************************************************************************/
-        void __stop_tracker();
+        void __stop_dial_tracker();
 #endif
-
-      protected:
         /*********************************************************************************
-         * Start connect timer
+         * Start dial timer
          ********************************************************************************/
-        bool __start_connect_timer(const time::timer_callback &cb);
+        bool __start_dial_timer(const time::timer_callback &cb);
 
         /*********************************************************************************
          * Stop connect timer
          ********************************************************************************/
-        void __stop_connect_timer();
+        void __stop_dial_timer();
+
+        /*********************************************************************************
+         * Trigger interrupt callbacks
+         ********************************************************************************/
+        void __trigger_interrupt_callbacks();
 
       protected:
         // Local address

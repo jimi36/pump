@@ -25,13 +25,13 @@ namespace pump {
 namespace net {
 
 #if defined(PUMP_HAVE_IOCP)
+
 #define IOCP_TASK_NONE -1
 #define IOCP_TASK_SEND 0
 #define IOCP_TASK_READ 1
 #define IOCP_TASK_CONNECT 2
 #define IOCP_TASK_ACCEPT 3
 #define IOCP_TASK_CHANNEL 4
-#define IOCP_TASK_TRACKER 5
 
     typedef void_ptr iocp_handler;
 
@@ -114,9 +114,9 @@ namespace net {
     void unbind_iocp_task_buffer(void_ptr task);
 
     /*********************************************************************************
-    * Update iocp task buffer
-    * Task vill use iob data info update.
-    ********************************************************************************/
+     * Update iocp task buffer
+     * Task vill use iob data info update.
+     ********************************************************************************/
     void update_iocp_task_buffer(void_ptr task);
 
     /*********************************************************************************
@@ -191,6 +191,7 @@ namespace net {
      * Post iocp send
      ********************************************************************************/
     bool post_iocp_send(void_ptr task);
+
 #endif
 
 }  // namespace net

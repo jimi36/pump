@@ -17,10 +17,13 @@
 #ifndef pump_net_sockets_h
 #define pump_net_sockets_h
 
-#if defined(WIN32)
+#include "pump/config.h"
+
+#if defined(OS_WINDOWS)
 #include <winsock2.h>
 #include <mstcpip.h>
 #include <mswsock.h>
+#include <ws2tcpip.h>
 #else
 #include <poll.h>
 #include <fcntl.h>

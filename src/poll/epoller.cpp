@@ -26,7 +26,7 @@ namespace poll {
 #if defined(PUMP_HAVE_EPOLL)
 #define EL_TRI_TYPE (0)  // (EPOLLET)
 #define EL_READ_EVENT (EPOLLIN | EPOLLPRI | EPOLLRDHUP)
-#define EL_WRITE_EVENT (EPOLLOUT)
+#define EL_SEND_EVENT (EPOLLOUT)
 #define EL_ERROR_EVENT (EPOLLERR | EPOLLHUP)
 #endif
 
@@ -34,7 +34,7 @@ namespace poll {
 #define EPOLL_EVENT_SIZE 1024
 #endif
 
-    epoll_poller::epoll_poller() noexcept {
+    epoll_poller::epoll_poller() noexcept : fd_(-1), events_(nullptr) {
 #if defined(PUMP_HAVE_EPOLL)
         fd_ = ::epoll_create1(0);
         if (fd_ <= 0)
@@ -64,7 +64,7 @@ namespace poll {
         auto listen_event = tracker->get_event();
         ev.events = EPOLLONESHOT;
         ev.events |= (listen_event & IO_EVNET_READ) ? EL_READ_EVENT : 0;
-        ev.events |= (listen_event & IO_EVENT_SEND) ? EL_WRITE_EVENT : 0;
+        ev.events |= (listen_event & IO_EVENT_SEND) ? EL_SEND_EVENT : 0;
 
         if (epoll_ctl(fd_, EPOLL_CTL_ADD, tracker->get_fd(), &ev) == 0 ||
             epoll_ctl(fd_, EPOLL_CTL_MOD, tracker->get_fd(), &ev) == 0)
@@ -89,7 +89,7 @@ namespace poll {
         auto listen_event = tracker->get_event();
         ev.events = EPOLLONESHOT;
         ev.events |= (listen_event & IO_EVNET_READ) ? EL_READ_EVENT : 0;
-        ev.events |= (listen_event & IO_EVENT_SEND) ? EL_WRITE_EVENT : 0;
+        ev.events |= (listen_event & IO_EVENT_SEND) ? EL_SEND_EVENT : 0;
 
         if (epoll_ctl(fd_, EPOLL_CTL_MOD, tracker->get_fd(), &ev) != 0 ||
             epoll_ctl(fd_, EPOLL_CTL_ADD, tracker->get_fd(), &ev) != 0) {
@@ -145,7 +145,7 @@ namespace poll {
 
             if (ev->events & EL_READ_EVENT)
                 ch->handle_io_event(IO_EVNET_READ);
-            else if (ev->events & EL_WRITE_EVENT)
+            else if (ev->events & EL_SEND_EVENT)
                 ch->handle_io_event(IO_EVENT_SEND);
 
             if (tracker->is_tracked())

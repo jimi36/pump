@@ -17,6 +17,7 @@
 // Import "strncmp" on linux
 #include <string.h>
 
+#include "pump/config.h"
 #include "pump/time/timestamp.h"
 
 namespace pump {
@@ -46,7 +47,7 @@ namespace time {
         uint64 ms = ms_.count();
         time_t seconds = static_cast<time_t>(ms / MS_PER_SECOND);
         uint32 milliseconds = static_cast<uint32>(ms % MS_PER_SECOND);
-#if defined(WIN32)
+#if defined(OS_WINDOWS)
         ::localtime_s(&tm_time, &seconds);
         pump_snprintf(date,
                       sizeof(date) - 1,
@@ -82,7 +83,7 @@ namespace time {
         uint64 ms = ms_.count();
         time_t seconds = static_cast<time_t>(ms / MS_PER_SECOND);
         uint32 millisecond = static_cast<uint32>(ms % MS_PER_SECOND);
-#if defined(WIN32)
+#if defined(OS_WINDOWS)
         localtime_s(&tm_time, &seconds);
         while (idx < format.size()) {
             if (strncmp(format.c_str() + idx, "YY", 2) == 0) {

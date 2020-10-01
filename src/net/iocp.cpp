@@ -62,7 +62,7 @@ namespace net {
         } un;
 
         iocp_task() noexcept
-            : type(IOCP_TASK_NONE), processed_size(0), fd(-1), ec(0), link_cnt(1) {
+            : type(IOCP_TASK_NONE), processed_size(0), fd(-1), ec(0), iob(nullptr), link_cnt(1) {
             memset(&ol, 0, sizeof(ol));
             memset(&un, 0, sizeof(un));
         }

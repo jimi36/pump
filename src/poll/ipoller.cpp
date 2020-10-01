@@ -113,10 +113,6 @@ namespace poll {
                 } else {
                     if (ttp == IOCP_TASK_CHANNEL) {
                         ch->handle_channel_event(uint32(completion_key));
-                    } else if (ttp == IOCP_TASK_TRACKER) {
-                        int32 ev = (int32)completion_key;
-                        tracker_cnt += (ev == TRACKER_EVENT_ADD) ? 1 : -1;
-                        ch->handle_tracker_event(ev);
                     }
                 }
             } else {

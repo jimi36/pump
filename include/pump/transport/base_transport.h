@@ -64,7 +64,13 @@ namespace transport {
     /*********************************************************************************
      * Transport read state
      ********************************************************************************/
-    enum transport_read_state { READ_NONE = 0, READ_ONCE, READ_LOOP, READ_PENDING };
+    enum transport_read_state {
+        READ_NONE = 0,
+        READ_INVALID,
+        READ_ONCE,
+        READ_LOOP,
+        READ_PENDING
+    };
 
     /*********************************************************************************
      * Transport error
@@ -80,10 +86,9 @@ namespace transport {
 
     class LIB_PUMP base_channel : public service_getter, public poll::channel {
       public:
-        /**************************************
-        *******************************************
-        * Constructor
-        ********************************************************************************/
+        /*********************************************************************************
+         * Constructor
+         ********************************************************************************/
         base_channel(transport_type type, service_ptr sv, int32 fd) noexcept
             : service_getter(sv),
               poll::channel(fd),
@@ -107,7 +112,7 @@ namespace transport {
          * Get started status
          ********************************************************************************/
         PUMP_INLINE bool is_started() const {
-            return __is_status(TRANSPORT_STARTED);
+            return __is_status(TRANSPORT_STARTED, std::memory_order_relaxed);
         }
 
       protected:
@@ -121,14 +126,19 @@ namespace transport {
         /*********************************************************************************
          * Check transport is in status
          ********************************************************************************/
-        PUMP_INLINE bool __is_status(uint32 status) const {
-            return transport_state_.load() == status;
+        PUMP_INLINE bool __is_status(
+            uint32 status,
+            const std::memory_order order = std::memory_order_acquire) const {
+            return transport_state_.load(order) == status;
         }
 
         /*********************************************************************************
          * Post channel event
          ********************************************************************************/
         PUMP_INLINE void __post_channel_event(poll::channel_sptr &&ch, uint32 event) {
+            get_service()->post_channel_event(ch, event);
+        }
+        PUMP_INLINE void __post_channel_event(poll::channel_sptr &ch, uint32 event) {
             get_service()->post_channel_event(ch, event);
         }
 
@@ -256,8 +266,23 @@ namespace transport {
          ********************************************************************************/
         virtual void on_channel_event(uint32 ev) override;
 
-#if !defined(PUMP_HAVE_IOCP)
       protected:
+        /*********************************************************************************
+         * Close transport flow
+         ********************************************************************************/
+        virtual void __close_transport_flow() = 0;
+
+        /*********************************************************************************
+         * Chane read state
+         ********************************************************************************/
+        uint32 __change_read_state(uint32 state);
+
+        /*********************************************************************************
+         * Interrupt and trigger callbacks
+         ********************************************************************************/
+        void __interrupt_and_trigger_callbacks();
+
+#if !defined(PUMP_HAVE_IOCP)
         /*********************************************************************************
          * Start all trackers
          ********************************************************************************/
@@ -270,7 +295,6 @@ namespace transport {
         void __stop_read_tracker();
         void __stop_send_tracker();
 #endif
-
       protected:
         // Local address
         address local_address_;
@@ -282,13 +306,12 @@ namespace transport {
         poll::channel_tracker_sptr r_tracker_;
         poll::channel_tracker_sptr s_tracker_;
 #endif
-
         // Transport read state
         std::atomic_uint read_state_;
 
         // Pending send buffer size
-        uint32 max_pending_send_size_;
-        std::atomic_uint32_t pending_send_size_;
+        int32 max_pending_send_size_;
+        std::atomic_int32_t pending_send_size_;
 
         // Transport callbacks
         transport_callbacks cbs_;

@@ -17,7 +17,7 @@
 #ifndef pump_poll_spoller_h
 #define pump_poll_spoller_h
 
-#if !defined(WIN32)
+#if defined(OS_LINUX)
 #include <sys/select.h>
 #endif
 

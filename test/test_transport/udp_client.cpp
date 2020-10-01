@@ -25,8 +25,8 @@ void send(udp_transport_sptr transport, const std::string &ip, uint16 port) {
     char buf[4096];
     address addr(ip, port);
     while (1) {
-        if (transport->send(buf, 4096, addr) <= 0) {
-#ifdef WIN32
+        if (transport->send(buf, 4096, addr) > 0) {
+#if defined(WIN32)
             Sleep(100);
 #else
             usleep(1000);
@@ -52,7 +52,7 @@ void start_udp_client(const std::string &ip, uint16 port) {
     cbs.stopped_cb = pump_bind(&my_udp_client::on_stopped_callback,
                                udp_client.get(), transport.get());
 
-    if (!transport->start(sv, 0, cbs)) {
+    if (transport->start(sv, 0, cbs) != 0) {
         printf("udp client start error\n");
         return;
     }

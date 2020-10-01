@@ -14,16 +14,16 @@
  * limitations under the License.
  */
 
-#if !defined(WIN32)
-#include <signal.h>
-#endif
+#include "pump/init.h"
+#include "pump/debug.h"
+#include "pump/net/iocp.h"
 
 // Import "memset" on linux
 #include <string.h>
 
-#include "pump/init.h"
-#include "pump/debug.h"
-#include "pump/net/iocp.h"
+#if defined(OS_LINUX)
+#include <signal.h>
+#endif
 
 #if defined(PUMP_HAVE_GNUTLS)
 extern "C" {
@@ -33,7 +33,7 @@ extern "C" {
 
 namespace pump {
 
-#if !defined(WIN32)
+#if defined(OS_LINUX)
 typedef void (*sighandler_t)(int32);
 static bool setup_signal(int32 sig, int32 flags, sighandler_t hdl) {
     // Blocking the same signal when signal hander is running
@@ -54,12 +54,12 @@ static bool setup_signal(int32 sig, int32 flags, sighandler_t hdl) {
 #endif
 
 bool init() {
-#if defined(WIN32)
+#if defined(OS_WINDOWS)
     WSADATA wsaData;
     WORD wVersionRequested;
     wVersionRequested = MAKEWORD(2, 2);
     ::WSAStartup(wVersionRequested, &wsaData);
-#else
+#elif defined(OS_LINUX)
     setup_signal(SIGPIPE, 0, SIG_IGN);
 #endif
 
@@ -75,13 +75,13 @@ bool init() {
 }
 
 void uninit() {
-#if defined(WIN32)
+#if defined(OS_WINDOWS)
     ::WSACleanup();
-#else
+#elif defined(OS_LINUX)
     setup_signal(SIGPIPE, 0, SIG_DFL);
 #endif
 
-#if defined(WIN32) && defined(PUMP_HAVE_IOCP)
+#if defined(PUMP_HAVE_IOCP)
     CloseHandle(net::get_iocp_handler());
 #endif
 
