@@ -37,9 +37,10 @@ namespace poll {
     epoll_poller::epoll_poller() noexcept : fd_(-1), events_(nullptr) {
 #if defined(PUMP_HAVE_EPOLL)
         fd_ = ::epoll_create1(0);
-        if (fd_ <= 0)
+        if (fd_ <= 0) {
             PUMP_ERR_LOG("poll::epoll_poller: epoll_create1 failed with ec=%d",
                          net::last_errno());
+        }
 
         events_ = pump_malloc(sizeof(struct epoll_event) * EPOLL_EVENT_SIZE);
 #endif
@@ -47,10 +48,12 @@ namespace poll {
 
     epoll_poller::~epoll_poller() {
 #if defined(PUMP_HAVE_EPOLL)
-        if (fd_ != -1)
+        if (fd_ != -1) {
             close(fd_);
-        if (events_)
+        }
+        if (events_) {
             pump_free(events_);
+        }
 #endif
     }
 
@@ -67,8 +70,9 @@ namespace poll {
         ev.events |= (listen_event & IO_EVENT_SEND) ? EL_SEND_EVENT : 0;
 
         if (epoll_ctl(fd_, EPOLL_CTL_ADD, tracker->get_fd(), &ev) == 0 ||
-            epoll_ctl(fd_, EPOLL_CTL_MOD, tracker->get_fd(), &ev) == 0)
+            epoll_ctl(fd_, EPOLL_CTL_MOD, tracker->get_fd(), &ev) == 0) {
             return true;
+        }
 
         PUMP_WARN_LOG("poll::epoll_poller::__add_channel_tracker: ec=%d",
                       net::last_errno());
@@ -94,7 +98,7 @@ namespace poll {
         if (epoll_ctl(fd_, EPOLL_CTL_MOD, tracker->get_fd(), &ev) != 0 &&
             epoll_ctl(fd_, EPOLL_CTL_ADD, tracker->get_fd(), &ev) != 0) {
             PUMP_WARN_LOG("poll::epoll_poller::__resume_channel_tracker: ec=%d",
-                           net::last_errno());
+                          net::last_errno());
         }
 #else
         PUMP_WARN_LOG("poll::epoll_poller::__resume_channel_tracker: not support");
@@ -104,8 +108,9 @@ namespace poll {
     bool epoll_poller::__remove_channel_tracker(channel_tracker_ptr tracker) {
 #if defined(PUMP_HAVE_EPOLL)
         struct epoll_event ev;
-        if (epoll_ctl(fd_, EPOLL_CTL_DEL, tracker->get_fd(), &ev) == 0)
+        if (epoll_ctl(fd_, EPOLL_CTL_DEL, tracker->get_fd(), &ev) == 0) {
             return true;
+        }
 
         PUMP_WARN_LOG("poll::epoll_poller::__remove_channel_tracker: ec=%d",
                       net::last_errno());
@@ -120,8 +125,9 @@ namespace poll {
 #if defined(PUMP_HAVE_EPOLL)
         auto count =
             ::epoll_wait(fd_, (struct epoll_event *)events_, EPOLL_EVENT_SIZE, timeout);
-        if (count > 0)
+        if (count > 0) {
             __dispatch_pending_event(count);
+        }
 #endif
     }
 
@@ -143,13 +149,15 @@ namespace poll {
 
             tracker->set_tracked(false);
 
-            if (ev->events & EL_READ_EVENT)
+            if (ev->events & EL_READ_EVENT) {
                 ch->handle_io_event(IO_EVNET_READ);
-            else if (ev->events & EL_SEND_EVENT)
+            } else if (ev->events & EL_SEND_EVENT) {
                 ch->handle_io_event(IO_EVENT_SEND);
+            }
 
-            if (tracker->is_tracked())
+            if (tracker->is_tracked()) {
                 __resume_channel_tracker(tracker);
+            }
         }
 #endif
     }

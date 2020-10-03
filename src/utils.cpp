@@ -25,20 +25,22 @@
 namespace pump {
 
 uint8 decnum_to_hexchar(uint8 n) {
-    if (n >= 0 && n <= 9)
+    if (n >= 0 && n <= 9) {
         return uint8('0') + n;
-    else if (n >= 10 && n <= 15)
+    } else if (n >= 10 && n <= 15) {
         return uint8('A') + n - 10;
+    }
     return 0;
 }
 
 uint8 hexchar_to_decnum(uint8 c) {
-    if (c >= '0' && c <= '9')
+    if (c >= '0' && c <= '9') {
         return uint8(c - '0');
-    else if (c >= 'a' && c <= 'f')
+    } else if (c >= 'a' && c <= 'f') {
         return (uint8(c - 'a') + 10);
-    else if (c >= 'A' && c <= 'F')
+    } else if (c >= 'A' && c <= 'F') {
         return (uint8(c - 'A') + 10);
+    }
     return 0;
 }
 
@@ -130,8 +132,9 @@ std::string utf8_to_gbk(const std::string &in) {
 std::string join_strings(const std::vector<std::string> &src, const std::string &sep) {
     std::string out;
 
-    if (src.empty())
+    if (src.empty()) {
         return out;
+    }
 
     auto beg = src.begin();
     out = *(beg++);

@@ -48,7 +48,7 @@ namespace time {
         time_t seconds = static_cast<time_t>(ms / MS_PER_SECOND);
         uint32 milliseconds = static_cast<uint32>(ms % MS_PER_SECOND);
 #if defined(OS_WINDOWS)
-        ::localtime_s(&tm_time, &seconds);
+        localtime_s(&tm_time, &seconds);
         pump_snprintf(date,
                       sizeof(date) - 1,
                       "%4d-%d-%d %d:%d:%d:%d",
@@ -60,7 +60,7 @@ namespace time {
                       tm_time.tm_sec,
                       milliseconds);
 #else
-        ::gmtime_r(&seconds, &tm_time);
+        gmtime_r(&seconds, &tm_time);
         pump_snprintf(date,
                       sizeof(date) - 1,
                       "%4d-%d-%d %d:%d:%d:%d",

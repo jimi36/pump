@@ -36,10 +36,11 @@ namespace poll {
                               __handle_channel_tracker_events();
 
                               if (cev_cnt_.load(std::memory_order_acquire) > 0 ||
-                                  tev_cnt_.load(std::memory_order_acquire) > 0)
+                                  tev_cnt_.load(std::memory_order_acquire) > 0) {
                                   __poll(0);
-                              else
+                              } else {
                                   __poll(3);
+                              }
                           }
                       }),
                       object_delete<std::thread>);
@@ -127,8 +128,9 @@ namespace poll {
         while (cnt > 0) {
             PUMP_DEBUG_CHECK(cevents_.pop(ev));
             PUMP_LOCK_WPOINTER(ch, ev->ch);
-            if (ch)
+            if (ch) {
                 ch->handle_channel_event(ev->event);
+            }
 
             object_delete(ev);
 

@@ -82,17 +82,19 @@ namespace poll {
          ********************************************************************************/
 #if defined(PUMP_HAVE_IOCP)
         PUMP_INLINE void handle_io_event(uint32 ev, void_ptr iocp_task) {
-            if (ev & IO_EVNET_READ)
+            if (ev & IO_EVNET_READ) {
                 on_read_event(iocp_task);
-            else if (ev & IO_EVENT_SEND)
+            } else if (ev & IO_EVENT_SEND) {
                 on_send_event(iocp_task);
+            }
         }
 #else
         PUMP_INLINE void handle_io_event(uint32 ev) {
-            if (ev & IO_EVNET_READ)
+            if (ev & IO_EVNET_READ) {
                 on_read_event();
-            else if (ev & IO_EVENT_SEND)
+            } else if (ev & IO_EVENT_SEND) {
                 on_send_event();
+            }
         }
 #endif
 

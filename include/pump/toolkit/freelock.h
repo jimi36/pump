@@ -75,14 +75,16 @@ namespace toolkit {
             do {
                 // Array is full
                 if (count_to_index(cur_write_index + 1) ==
-                    count_to_index(max_write_index_.load(std::memory_order_acquire)))
+                    count_to_index(max_write_index_.load(std::memory_order_acquire))) {
                     return false;
+                }
 
                 if (write_index_.compare_exchange_strong(cur_write_index,
                                                          cur_write_index + 1,
                                                          std::memory_order_acquire,
-                                                         std::memory_order_relaxed))
+                                                         std::memory_order_relaxed)) {
                     break;
+                }
                 cur_write_index = write_index_.load(std::memory_order_relaxed);
 
                 std::atomic_signal_fence(std::memory_order_acquire);
@@ -110,8 +112,9 @@ namespace toolkit {
             do {
                 uint32 cur_read_index = read_index_.load(std::memory_order_relaxed);
                 if (count_to_index(cur_read_index) ==
-                    count_to_index(max_read_index_.load(std::memory_order_acquire)))
+                    count_to_index(max_read_index_.load(std::memory_order_acquire))) {
                     return false;
+                }
 
                 if (read_index_.compare_exchange_strong(cur_read_index,
                                                         cur_read_index + 1,
@@ -150,10 +153,11 @@ namespace toolkit {
             uint32 cur_read_index = read_index_.load(std::memory_order_relaxed);
             uint32 cur_write_index = write_index_.load(std::memory_order_relaxed);
 
-            if (cur_write_index >= cur_read_index)
+            if (cur_write_index >= cur_read_index) {
                 return (cur_write_index - cur_read_index);
-            else
+            } else {
                 return (size_ + cur_write_index - cur_read_index);
+            }
         }
 
         /*********************************************************************************
@@ -214,8 +218,9 @@ namespace toolkit {
          * Deconstructor
          ********************************************************************************/
         ~freelock_list() {
-            if (array_)
+            if (array_) {
                 delete array_;
+            }
         }
 
         /*********************************************************************************
@@ -326,10 +331,11 @@ namespace toolkit {
          ********************************************************************************/
         void __new_bigger_array() {
             uint32 capacity = array_->capacity();
-            if (capacity < 1024)
+            if (capacity < 1024) {
                 capacity *= 2;
-            else
+            } else {
                 capacity += 1024;
+            }
             freelock_array_type *new_array = new freelock_array_type(capacity);
 
             array_element_type data;

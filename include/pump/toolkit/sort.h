@@ -62,8 +62,9 @@ namespace toolkit {
         for (int32 i = left; i < right; ++i) {
             min_pos = i;
             for (int32 j = i + 1; j < right; ++j) {
-                if (a[j] < a[min_pos])
+                if (a[j] < a[min_pos]) {
                     min_pos = j;
+                }
             }
             if (i != min_pos) {
                 std::swap(a[i], a[min_pos]);
@@ -103,15 +104,19 @@ namespace toolkit {
         int32 j = right - 1;
         T pivot = a[left];
         while (i < j) {
-            while (a[j] >= pivot && j > i)
+            while (a[j] >= pivot && j > i) {
                 --j;
-            if (j > i)
+            }
+            if (j > i) {
                 std::swap(a[i++], a[j]);
+            }
 
-            while (a[i] <= pivot && i < j)
+            while (a[i] <= pivot && i < j) {
                 ++i;
-            if (i < j)
+            }
+            if (i < j) {
                 std::swap(a[i], a[j--]);
+            }
         }
 
         return i;
@@ -149,10 +154,12 @@ namespace toolkit {
         int32 r = i * 2 + 1;
 
         int32 largest = i;
-        if (l < s && a[l] > a[i])
+        if (l < s && a[l] > a[i]) {
             largest = l;
-        if (r < s && a[r] > a[largest])
+        }
+        if (r < s && a[r] > a[largest]) {
             largest = r;
+        }
 
         if (largest != i) {
             std::swap(a[i], a[largest]);

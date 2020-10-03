@@ -29,7 +29,6 @@ extern "C" {
 #include <stdlib.h>
 
 #include "pump/config.h"
-#include "pump/platform.h"
 
 #if defined(PUMP_HAVE_JEMALLOC)
 #define pump_free je_free
@@ -44,21 +43,24 @@ extern "C" {
 template <typename T, typename... ArgTypes>
 PUMP_INLINE T *object_create(ArgTypes... args) {
     T *p = (T *)pump_malloc(sizeof(T));
-    if (PUMP_UNLIKELY(p == nullptr))
+    if (PUMP_UNLIKELY(p == nullptr)) {
         return nullptr;
+    }
     return new (p) T(args...);
 }
 
 // Inline object create
 #define INLINE_OBJECT_CREATE(obj, TYPE, args)      \
     TYPE *obj = (TYPE *)pump_malloc(sizeof(TYPE)); \
-    if (PUMP_UNLIKELY(obj != nullptr))             \
-        new (obj) TYPE args;
+    if (PUMP_UNLIKELY(obj != nullptr)) {           \
+        new (obj) TYPE args;                       \
+    }
 
 template <typename T>
 PUMP_INLINE void object_delete(T *obj) {
-    if (PUMP_UNLIKELY(obj == nullptr))
+    if (PUMP_UNLIKELY(obj == nullptr)) {
         return;
+    }
     // Deconstruct object
     obj->~T();
     // Free memory

@@ -57,16 +57,18 @@ namespace poll {
         started_.store(false);
 
         int32 count = (int32)workrs_.size();
-        for (int32 i = 0; i < count; i++)
+        for (int32 i = 0; i < count; i++) {
             PostQueuedCompletionStatus(iocp_, -1, NULL, NULL);
+        }
 #endif
     }
 
     void iocp_poller::wait_stopped() {
 #if defined(PUMP_HAVE_IOCP)
         int32 count = (int32)workrs_.size();
-        for (int32 i = 0; i < count; i++)
+        for (int32 i = 0; i < count; i++) {
             workrs_[i]->join();
+        }
         workrs_.clear();
 #endif
     }
@@ -101,10 +103,11 @@ namespace poll {
 
                 int32 event = IO_EVENT_NONE;
                 ttp = net::get_iocp_task_type(task);
-                if (ttp == IOCP_TASK_SEND || ttp == IOCP_TASK_CONNECT)
+                if (ttp == IOCP_TASK_SEND || ttp == IOCP_TASK_CONNECT) {
                     event |= IO_EVENT_SEND;
-                else if (ttp == IOCP_TASK_READ || ttp == IOCP_TASK_ACCEPT)
+                } else if (ttp == IOCP_TASK_READ || ttp == IOCP_TASK_ACCEPT) {
                     event |= IO_EVNET_READ;
+                }
 
                 auto ch = (channel_ptr)vptr;
                 if (event != IO_EVENT_NONE) {
@@ -131,10 +134,11 @@ namespace poll {
 
                 int32 event = IO_EVENT_NONE;
                 ttp = net::get_iocp_task_type(task);
-                if (ttp == IOCP_TASK_SEND || ttp == IOCP_TASK_CONNECT)
+                if (ttp == IOCP_TASK_SEND || ttp == IOCP_TASK_CONNECT) {
                     event |= IO_EVENT_SEND;
-                else if (ttp == IOCP_TASK_READ || ttp == IOCP_TASK_ACCEPT)
+                } else if (ttp == IOCP_TASK_READ || ttp == IOCP_TASK_ACCEPT) {
                     event |= IO_EVNET_READ;
+                }
 
                 net::set_iocp_task_processed_size(task, 0);
                 net::set_iocp_task_ec(task, net::last_errno());

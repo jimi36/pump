@@ -161,8 +161,9 @@ namespace net {
 
     void unbind_iocp_task_buffer(void_ptr task) {
         toolkit::io_buffer_ptr iob = iocp_task_ptr(task)->iob;
-        if (PUMP_LIKELY(iob))
+        if (PUMP_LIKELY(iob)) {
             iob->sub_ref();
+        }
     }
 
     void update_iocp_task_buffer(void_ptr task) {

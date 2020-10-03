@@ -28,13 +28,15 @@ namespace net {
     bool set_noblock(int32 fd, int32 noblock) {
 #if defined(OS_WINDOWS)
         u_long mode = (noblock == 0) ? 0 : 1;  // non-blocking mode
-        if (::ioctlsocket(fd, FIONBIO, &mode) != SOCKET_ERROR)
+        if (ioctlsocket(fd, FIONBIO, &mode) != SOCKET_ERROR) {
             return true;
+        }
 #else
         int32 flags = fcntl(fd, F_GETFL, 0);
         flags = (noblock == 0) ? (flags & ~O_NONBLOCK) : (flags | O_NONBLOCK);
-        if (::fcntl(fd, F_SETFL, flags) != -1)
+        if (fcntl(fd, F_SETFL, flags) != -1) {
             return true;
+        }
 #endif
 
         PUMP_WARN_LOG("net::set_noblock: with ec=%d", last_errno());
@@ -46,8 +48,9 @@ namespace net {
         struct linger lgr;
         lgr.l_onoff = on;
         lgr.l_linger = linger;
-        if (::setsockopt(fd, SOL_SOCKET, SO_LINGER, (c_block_ptr)&lgr, sizeof(lgr)) == 0)
+        if (setsockopt(fd, SOL_SOCKET, SO_LINGER, (c_block_ptr)&lgr, sizeof(lgr)) == 0) {
             return true;
+        }
 
         PUMP_WARN_LOG("net::set_linger: with ec=%d", last_errno());
 
@@ -55,9 +58,10 @@ namespace net {
     }
 
     bool set_read_bs(int32 fd, int32 size) {
-        if (::setsockopt(fd, SOL_SOCKET, SO_RCVBUF, (c_block_ptr)&size, sizeof(int32)) ==
-            0)
+        if (setsockopt(fd, SOL_SOCKET, SO_RCVBUF, (c_block_ptr)&size, sizeof(size)) ==
+            0) {
             return true;
+        }
 
         PUMP_WARN_LOG("net::set_read_bs: with ec=%d", last_errno());
 
@@ -65,18 +69,19 @@ namespace net {
     }
 
     bool set_send_bs(int32 fd, int32 size) {
-        if (::setsockopt(fd, SOL_SOCKET, SO_SNDBUF, (c_block_ptr)&size, sizeof(int32)) ==
-            0)
+        if (setsockopt(fd, SOL_SOCKET, SO_SNDBUF, (c_block_ptr)&size, sizeof(size)) ==
+            0) {
             return true;
+        }
 
         PUMP_WARN_LOG("net::set_send_bs: with ec=%d", last_errno());
 
         return false;
     }
 
-    bool set_keeplive(int32 fd, int32 keeplive, int32 keepinterval) {
+    bool set_keeplive(int32 fd, int32 keeplive, int32 interval) {
         int32 on = 1;
-        if (::setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, (const char *)&on, sizeof(on)) ==
+        if (setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, (const char *)&on, sizeof(on)) ==
             -1) {
             PUMP_WARN_LOG("net::set_keeplive: setsockopt SO_KEEPALIVE with ec=%d",
                           last_errno());
@@ -88,27 +93,26 @@ namespace net {
         struct tcp_keepalive keepalive;
         keepalive.onoff = 1;
         keepalive.keepalivetime = keeplive * 1000;
-        keepalive.keepaliveinterval = keepinterval * 1000;
-        if (::WSAIoctl(fd,
-                       SIO_KEEPALIVE_VALS,
-                       &keepalive,
-                       sizeof(keepalive),
-                       nullptr,
-                       0,
-                       &bytes,
-                       nullptr,
-                       nullptr) == -1) {
+        keepalive.keepaliveinterval = interval * 1000;
+        if (WSAIoctl(fd,
+                     SIO_KEEPALIVE_VALS,
+                     &keepalive,
+                     sizeof(keepalive),
+                     nullptr,
+                     0,
+                     &bytes,
+                     nullptr,
+                     nullptr) == -1) {
             PUMP_ERR_LOG("net::set_keeplive: WSAIoctl SIO_KEEPALIVE_VALS with ec=%d",
                          last_errno());
             return false;
         }
 
 #else
-        int32 keepcount = 3;
-        if (::setsockopt(fd, SOL_TCP, TCP_KEEPIDLE, &keeplive, sizeof(keeplive)) == -1 ||
-            ::setsockopt(
-                fd, SOL_TCP, TCP_KEEPINTVL, &keepinterval, sizeof(keepinterval)) == -1 ||
-            ::setsockopt(fd, SOL_TCP, TCP_KEEPCNT, &keepcount, sizeof(keepcount)) == -1) {
+        int32 count = 3;
+        if (setsockopt(fd, SOL_TCP, TCP_KEEPIDLE, &keeplive, sizeof(keeplive)) == -1 ||
+            setsockopt(fd, SOL_TCP, TCP_KEEPINTVL, &interval, sizeof(interval)) == -1 ||
+            setsockopt(fd, SOL_TCP, TCP_KEEPCNT, &count, sizeof(count)) == -1) {
             PUMP_WARN_LOG("net::set_keeplive: setsockopt TCP_KEEPINTVL with ec=%d",
                           last_errno());
             return false;
@@ -118,9 +122,10 @@ namespace net {
     }
 
     bool set_reuse(int32 fd, int32 reuse) {
-        if (::setsockopt(
-                fd, SOL_SOCKET, SO_REUSEADDR, (c_block_ptr)&reuse, sizeof(reuse)) == 0)
+        if (setsockopt(
+                fd, SOL_SOCKET, SO_REUSEADDR, (c_block_ptr)&reuse, sizeof(reuse)) == 0) {
             return true;
+        }
 
         PUMP_WARN_LOG("net::set_reuse: with ec=%d", last_errno());
 
@@ -128,10 +133,11 @@ namespace net {
     }
 
     bool set_nodelay(int32 fd, int32 nodelay) {
-        if (::setsockopt(
+        if (setsockopt(
                 fd, IPPROTO_TCP, TCP_NODELAY, (c_block_ptr)&nodelay, sizeof(nodelay)) ==
-            0)
+            0) {
             return true;
+        }
 
         PUMP_ERR_LOG("net::set_nodelay: with ec=%d", last_errno());
 
@@ -140,8 +146,9 @@ namespace net {
 
     bool update_connect_context(int32 fd) {
 #if defined(OS_WINDOWS)
-        if (::setsockopt(fd, SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT, nullptr, 0) == 0)
+        if (setsockopt(fd, SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT, nullptr, 0) == 0) {
             return true;
+        }
 
         PUMP_WARN_LOG("net::update_connect_context: with ec=%d", last_errno());
 
@@ -173,8 +180,9 @@ namespace net {
     }
 
     bool bind(int32 fd, struct sockaddr *addr, int32 addrlen) {
-        if (::bind(fd, addr, addrlen) == 0)
+        if (::bind(fd, addr, addrlen) == 0) {
             return true;
+        }
 
         PUMP_WARN_LOG("net::bind: with ec=%d", last_errno());
 
@@ -182,8 +190,9 @@ namespace net {
     }
 
     bool listen(int32 fd, int32 backlog) {
-        if (::listen(fd, backlog) == 0)
+        if (::listen(fd, backlog) == 0) {
             return true;
+        }
 
         PUMP_WARN_LOG("net::listen: with ec=%d", last_errno());
 
@@ -192,8 +201,9 @@ namespace net {
 
     int32 accept(int32 fd, struct sockaddr *addr, int32_ptr addrlen) {
         int32 client = (int32)::accept(fd, addr, (socklen_t *)addrlen);
-        if (client < 0)
+        if (client < 0) {
             PUMP_WARN_LOG("net::accept: with ec=%d", last_errno());
+        }
         return client;
     }
 
@@ -212,10 +222,11 @@ namespace net {
         size = ::recv(fd, b, size, 0);
         if (size < 0) {
             int32 ec = net::last_errno();
-            if (ec == LANE_EINPROGRESS || ec == LANE_EWOULDBLOCK)
+            if (ec == LANE_EINPROGRESS || ec == LANE_EWOULDBLOCK) {
                 size = -1;
-            else
+            } else {
                 size = 0;
+            }
         }
         return size;
     }
@@ -225,10 +236,11 @@ namespace net {
         size = ::recvfrom(fd, b, size, 0, (struct sockaddr *)addr, (socklen_t *)addrlen);
         if (size < 0) {
             int32 ec = net::last_errno();
-            if (ec == LANE_EINPROGRESS || ec == LANE_EWOULDBLOCK)
+            if (ec == LANE_EINPROGRESS || ec == LANE_EWOULDBLOCK) {
                 size = -1;
-            else
+            } else {
                 size = 0;
+            }
         }
         return size;
     }
@@ -237,10 +249,11 @@ namespace net {
         size = ::send(fd, b, size, 0);
         if (size < 0) {
             int32 ec = net::last_errno();
-            if (ec == LANE_EINPROGRESS || ec == LANE_EWOULDBLOCK)
+            if (ec == LANE_EINPROGRESS || ec == LANE_EWOULDBLOCK) {
                 size = -1;
-            else
+            } else {
                 size = 0;
+            }
         }
         return size;
     }
@@ -251,17 +264,18 @@ namespace net {
         size = ::sendto(fd, b, size, 0, addr, len);
         if (size < 0) {
             int32 ec = net::last_errno();
-            if (ec == LANE_EINPROGRESS || ec == LANE_EWOULDBLOCK)
+            if (ec == LANE_EINPROGRESS || ec == LANE_EWOULDBLOCK) {
                 size = -1;
-            else
+            } else {
                 size = 0;
+            }
         }
         return size;
     }
 
     int32 poll(struct pollfd *pfds, int32 count, int32 timeout) {
 #if defined(OS_WINDOWS)
-        return ::WSAPoll(pfds, count, timeout);
+        return WSAPoll(pfds, count, timeout);
 #else
         return ::poll(pfds, count, timeout);
 #endif
@@ -283,25 +297,26 @@ namespace net {
         int32 res = 0;
 #if defined(OS_WINDOWS)
         int32 len = sizeof(res);
-        ::getsockopt(fd, SOL_SOCKET, SO_ERROR, (char *)&res, &len);
+        getsockopt(fd, SOL_SOCKET, SO_ERROR, (char *)&res, &len);
 #else
         socklen_t len = sizeof(res);
-        ::getsockopt(fd, SOL_SOCKET, SO_ERROR, &res, &len);
+        getsockopt(fd, SOL_SOCKET, SO_ERROR, &res, &len);
 #endif
         return res;
     }
 
     int32 last_errno() {
 #if defined(OS_WINDOWS)
-        return ::WSAGetLastError();
+        return WSAGetLastError();
 #else
         return errno;
 #endif
     }
 
     bool local_address(int32 fd, struct sockaddr *addr, int32_ptr addrlen) {
-        if (::getsockname(fd, addr, (socklen_t *)addrlen) == 0)
+        if (getsockname(fd, addr, (socklen_t*)addrlen) == 0) {
             return true;
+        }
 
         PUMP_WARN_LOG("net::local_address: with ec=%d", last_errno());
 
@@ -309,8 +324,9 @@ namespace net {
     }
 
     bool remote_address(int32 fd, struct sockaddr *addr, int32_ptr addrlen) {
-        if (::getpeername(fd, addr, (socklen_t *)addrlen) == 0)
+        if (getpeername(fd, addr, (socklen_t*)addrlen) == 0) {
             return true;
+        }
 
         PUMP_WARN_LOG("net::remote_address: with ec=%d", last_errno());
 
@@ -321,7 +337,7 @@ namespace net {
         char host[128] = {0};
         if (addrlen == sizeof(struct sockaddr_in)) {
             struct sockaddr_in *v4 = (struct sockaddr_in *)addr;
-            if (::inet_ntop(AF_INET, &(v4->sin_addr), host, sizeof(host)) != nullptr) {
+            if (inet_ntop(AF_INET, &(v4->sin_addr), host, sizeof(host)) != nullptr) {
                 pump_snprintf(host + strlen(host), 10, ":%d", ntohs(v4->sin_port));
                 return std::string(host);
             }
@@ -372,8 +388,9 @@ namespace net {
             return true;
         }
 
-        if (res)
+        if (res) {
             freeaddrinfo(res);
+        }
 
         PUMP_WARN_LOG("net::string_to_address: address=%s:%d", ip.c_str(), port);
 

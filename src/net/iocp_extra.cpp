@@ -79,23 +79,23 @@ namespace net {
     }
 
     void_ptr get_iocp_accpet_fn(void_ptr fns) {
-        if (fns)
-            return iocp_extra_function_ptr(fns)->accept_ex;
-
+        if (fns) {
+            return (void_ptr)iocp_extra_function_ptr(fns)->accept_ex;
+        }
         return nullptr;
     }
 
     void_ptr get_accept_addrs_fn(void_ptr fns) {
-        if (fns)
-            return iocp_extra_function_ptr(fns)->get_accepted_addrs;
-
+        if (fns) {
+            return (void_ptr)iocp_extra_function_ptr(fns)->get_accepted_addrs;
+        }
         return nullptr;
     }
 
     void_ptr get_iocp_connect_fn(void_ptr fns) {
-        if (fns)
-            return iocp_extra_function_ptr(fns)->connect_ex;
-
+        if (fns) {
+            return (void_ptr)iocp_extra_function_ptr(fns)->connect_ex;
+        }
         return nullptr;
     }
 #endif

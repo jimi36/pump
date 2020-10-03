@@ -58,7 +58,10 @@ bool init() {
     WSADATA wsaData;
     WORD wVersionRequested;
     wVersionRequested = MAKEWORD(2, 2);
-    ::WSAStartup(wVersionRequested, &wsaData);
+    if (::WSAStartup(wVersionRequested, &wsaData) == SOCKET_ERROR) {
+        PUMP_WARN_LOG("pump::init: WSAStartup failed");
+        return false;
+    }
 #elif defined(OS_LINUX)
     setup_signal(SIGPIPE, 0, SIG_IGN);
 #endif

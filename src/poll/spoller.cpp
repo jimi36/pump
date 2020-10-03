@@ -38,15 +38,18 @@ namespace poll {
         channel_tracker_ptr tracker = nullptr;
         for (auto &item : trackers_) {
             tracker = item.second.get();
-            if (!tracker->is_tracked())
+            if (!tracker->is_tracked()) {
                 continue;
+            }
 
             fd = tracker->get_fd();
-            if (!is_selectable(fd))
+            if (!is_selectable(fd)) {
                 continue;
+            }
 
-            if (maxfd < fd)
+            if (maxfd < fd) {
                 maxfd = fd;
+            }
 
             listen_event = tracker->get_event();
             if (listen_event & IO_EVNET_READ) {

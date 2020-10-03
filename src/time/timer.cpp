@@ -35,8 +35,9 @@ namespace time {
     }
 
     bool timer::__start(timer_queue_ptr queue) {
-        if (!__set_status(TIMER_INIT, TIMER_STARTED))
+        if (!__set_status(TIMER_INIT, TIMER_STARTED)) {
             return false;
+        }
 
         overtime_ = get_clock_milliseconds() + timeout_;
 
@@ -46,8 +47,9 @@ namespace time {
     }
 
     bool timer::__restart() {
-        if (!is_started())
+        if (!is_started()) {
             return false;
+        }
 
         overtime_ = get_clock_milliseconds() + timeout_;
 
@@ -56,19 +58,22 @@ namespace time {
 
     void timer::stop() {
         while (true) {
-            if (__set_status(TIMER_INIT, TIMER_INIT))
+            if (__set_status(TIMER_INIT, TIMER_INIT)) {
                 return;
+            }
 
             if (__set_status(TIMER_INIT, TIMER_INIT) ||
                 __set_status(TIMER_STOPPED, TIMER_STOPPED) ||
-                __set_status(TIMER_PENDING, TIMER_STOPPED))
+                __set_status(TIMER_PENDING, TIMER_STOPPED)) {
                 break;
+            }
 
             if (__set_status(TIMER_STARTED, TIMER_STOPPED)) {
-                if (PUMP_LIKELY(queue_ != nullptr))
+                if (PUMP_LIKELY(queue_ != nullptr)) {
                     queue_->delete_timer(this);
-                else
+                } else {
                     break;
+                }
             }
         }
 
@@ -76,11 +81,13 @@ namespace time {
     }
 
     void timer::handle_timeout() {
-        if (!__set_status(TIMER_STARTED, TIMER_PENDING))
+        if (!__set_status(TIMER_STARTED, TIMER_PENDING)) {
             return;
+        }
 
-        if (cb_)
+        if (cb_) {
             cb_();
+        }
 
         if (repeated_ && queue_ && __set_status(TIMER_PENDING, TIMER_STARTED)) {
             auto sptr = shared_from_this();

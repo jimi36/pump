@@ -10,8 +10,9 @@ namespace toolkit {
     }
 
     bool bits_reader::read(uint32 bc, uint8_ptr val) {
-        if (bc > 8 || bc > all_bc_)
+        if (bc > 8 || bc > all_bc_) {
             return false;
+        }
 
         *val = __read_from_byte(bc);
 
@@ -19,8 +20,9 @@ namespace toolkit {
     }
 
     bool bits_reader::read(uint32 bc, uint16_ptr val) {
-        if (bc > 16 || bc > all_bc_)
+        if (bc > 16 || bc > all_bc_) {
             return false;
+        }
 
         uint8 tmp[2] = {0};
         uint32 left = bc % 8;
@@ -50,8 +52,9 @@ namespace toolkit {
     }
 
     bool bits_reader::read(uint32 bc, uint32_ptr val) {
-        if (bc > 32 || bc > all_bc_)
+        if (bc > 32 || bc > all_bc_) {
             return false;
+        }
 
         uint8 tmp[4] = {0};
         uint32 left = bc % 8;
@@ -81,8 +84,9 @@ namespace toolkit {
     }
 
     bool bits_reader::read(uint32 bc, uint64_ptr val) {
-        if (bc > 64 || bc > all_bc_)
+        if (bc > 64 || bc > all_bc_) {
             return false;
+        }
 
         uint8 tmp[8] = {0};
         uint32 left = bc % 8;
@@ -137,8 +141,9 @@ namespace toolkit {
     }
 
     bool bits_writer::write(uint32 bc, uint8 val) {
-        if (bc > 8 || bc > all_bc_)
+        if (bc > 8 || bc > all_bc_) {
             return false;
+        }
 
         __write_to_byte(bc, val);
 
@@ -146,8 +151,9 @@ namespace toolkit {
     }
 
     bool bits_writer::write(uint32 bc, uint16 val) {
-        if (bc > 16 || bc > all_bc_)
+        if (bc > 16 || bc > all_bc_) {
             return false;
+        }
 
         uint32 left = bc % 8;
         uint8_ptr tmp = uint8_ptr(&val);
@@ -175,8 +181,9 @@ namespace toolkit {
     }
 
     bool bits_writer::write(uint32 bc, uint32 val) {
-        if (bc > 32 || bc > all_bc_)
+        if (bc > 32 || bc > all_bc_) {
             return false;
+        }
 
         uint32 left = bc % 8;
         uint8_ptr tmp = uint8_ptr(&val);
@@ -204,8 +211,9 @@ namespace toolkit {
     }
 
     bool bits_writer::write(uint32 bc, uint64 val) {
-        if (bc > 64 || bc > all_bc_)
+        if (bc > 64 || bc > all_bc_) {
             return false;
+        }
 
         uint32 left = bc % 8;
         uint8_ptr tmp = uint8_ptr(&val);

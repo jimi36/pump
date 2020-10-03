@@ -17,7 +17,10 @@
 #ifndef pump_net_sockets_h
 #define pump_net_sockets_h
 
-#include "pump/config.h"
+#include "pump/types.h"
+#include "pump/platform.h"
+
+#include <string>
 
 #if defined(OS_WINDOWS)
 #include <winsock2.h>
@@ -35,11 +38,6 @@
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #endif
-
-#include <string>
-
-#include "pump/types.h"
-#include "pump/platform.h"
 
 namespace pump {
 namespace net {

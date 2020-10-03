@@ -46,8 +46,9 @@ namespace toolkit {
         }
 
         ~defer() {
-            if (cb_)
+            if (cb_) {
                 cb_();
+            }
         }
 
         PUMP_INLINE void clear() {

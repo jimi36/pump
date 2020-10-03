@@ -39,25 +39,27 @@ namespace time {
     }
 
     void timer_queue::wait_stopped() {
-        if (observer_)
+        if (observer_) {
             observer_->join();
+        }
     }
 
     bool timer_queue::add_timer(timer_sptr &ptr, bool repeated) {
-        if (!started_.load())
+        if (!started_.load()) {
             return false;
+        }
 
         switch (repeated) {
             case false:
-                if (PUMP_UNLIKELY(!ptr->__start(this)))
+                if (PUMP_UNLIKELY(!ptr->__start(this))) {
                     return false;
-                else
-                    break;
+                }
+                break;
             case true:
-                if (PUMP_UNLIKELY(!ptr->__restart()))
+                if (PUMP_UNLIKELY(!ptr->__restart())) {
                     return false;
-                else
-                    break;
+                }
+                break;
         }
 
         auto overtime = ptr->time();
@@ -99,8 +101,9 @@ namespace time {
                     observer_cv_.wait_for(
                         locker, std::chrono::milliseconds(next_observe_time_ - now));
                 }
-                if (!started_.load() && timers_.empty())
+                if (!started_.load() && timers_.empty()) {
                     return;
+                }
             }
 
             __observe();

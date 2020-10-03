@@ -63,8 +63,8 @@ namespace toolkit {
             PUMP_ASSERT(sema_);
 #elif defined(OS_LINUX)
             if (sem_init(&sema_, 0, ini_count) != 0) {
-            	PUMP_ASSERT(false);
-	    }
+                PUMP_ASSERT(false);
+            }
 #endif
         }
 
@@ -163,9 +163,9 @@ namespace toolkit {
                 ;
 #elif defined(OS_LINUX)
             while (count-- > 0) {
-	            while (sem_post(&sema_) == -1)
-        	        ;
-	    }
+                while (sem_post(&sema_) == -1)
+                    ;
+            }
 #endif
         }
 
@@ -195,8 +195,9 @@ namespace toolkit {
                 if (count_.compare_exchange_weak(old_count,
                                                  old_count - 1,
                                                  std::memory_order_acquire,
-                                                 std::memory_order_relaxed))
+                                                 std::memory_order_relaxed)) {
                     return true;
+                }
             }
             return false;
         }
@@ -222,8 +223,9 @@ namespace toolkit {
             PUMP_ASSERT(count >= 0);
             int64 old_count = count_.fetch_add(count, std::memory_order_release);
             int64 to_release = -old_count < count ? -old_count : count;
-            if (to_release > 0)
+            if (to_release > 0) {
                 semaphone_.signal((int32)to_release);
+            }
         }
 
         /*********************************************************************************
@@ -250,18 +252,22 @@ namespace toolkit {
                     count_.compare_exchange_strong(old_count,
                                                    old_count - 1,
                                                    std::memory_order_acquire,
-                                                   std::memory_order_relaxed))
+                                                   std::memory_order_relaxed)) {
                     return true;
+                }
                 // Prevent the compiler from collapsing the loop.
                 std::atomic_signal_fence(std::memory_order_acquire);
             }
             old_count = count_.fetch_sub(1, std::memory_order_acquire);
-            if (old_count > 0)
+            if (old_count > 0) {
                 return true;
-            if (timeout_usecs < 0)
+            }
+            if (timeout_usecs < 0) {
                 return semaphone_.wait();
-            if (semaphone_.wait_with_timeout((uint64)timeout_usecs))
+            }
+            if (semaphone_.wait_with_timeout((uint64)timeout_usecs)) {
                 return true;
+            }
             // At this point, we've timed out waiting for the semaphore, but the
             // count is still decremented indicating we may still be waiting on
             // it. So we have to re-adjust the count, but only if the semaphore
@@ -269,14 +275,16 @@ namespace toolkit {
             // need to release the semaphore too.
             while (true) {
                 old_count = count_.load(std::memory_order_acquire);
-                if (old_count >= 0 && semaphone_.try_wait())
+                if (old_count >= 0 && semaphone_.try_wait()) {
                     return true;
+                }
                 if (old_count < 0 &&
                     count_.compare_exchange_strong(old_count,
                                                    old_count + 1,
                                                    std::memory_order_relaxed,
-                                                   std::memory_order_relaxed))
+                                                   std::memory_order_relaxed)) {
                     return false;
+                }
             }
         }
 
