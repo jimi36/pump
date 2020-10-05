@@ -161,12 +161,11 @@ namespace transport {
         // Last send buffer
         volatile int32 last_send_iob_size_;
         volatile toolkit::io_buffer_ptr last_send_iob_;
-        // volatile flow::buffer_ptr last_send_buffer_;
 
         // When sending data, transport will append buffer to sendlist at first. On
         // triggering send event, transport will send buffer in the sendlist.
-        // moodycamel::ConcurrentQueue<flow::buffer_ptr> sendlist_;
-        toolkit::freelock_list<toolkit::io_buffer_ptr> sendlist_;
+        //toolkit::freelock_list_queue<toolkit::io_buffer_ptr> sendlist_;
+        toolkit::freelock_list_queue<toolkit::io_buffer_ptr> sendlist_;
 
         // Who got next send chance, who can send next buffer.
         std::atomic_flag next_send_chance_;

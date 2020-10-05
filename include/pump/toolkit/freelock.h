@@ -30,8 +30,8 @@ namespace pump {
 namespace toolkit {
 
     template <typename T>
-    class freelock_array {
-      protected:
+    class freelock_array_queue {
+      public:
         // Element type
         typedef T element_type;
         // Element type size
@@ -41,7 +41,7 @@ namespace toolkit {
         /*********************************************************************************
          * Constructor
          ********************************************************************************/
-        freelock_array(uint32 size)
+        freelock_array_queue(uint32 size)
             : size_(size),
               mem_block_(nullptr),
               write_index_(0),
@@ -54,7 +54,7 @@ namespace toolkit {
         /*********************************************************************************
          * Deconstructor
          ********************************************************************************/
-        ~freelock_array() {
+        ~freelock_array_queue() {
             if (mem_block_) {
                 uint32 read_index = read_index_.load();
                 uint32 max_read_index = max_read_index_.load();
@@ -88,7 +88,7 @@ namespace toolkit {
                 cur_write_index = write_index_.load(std::memory_order_relaxed);
 
                 std::atomic_signal_fence(std::memory_order_acquire);
-            } while (1);
+            } while (true);
 
             // New element object
             new ((element_type *)mem_block_ + count_to_index(cur_write_index))
@@ -137,7 +137,7 @@ namespace toolkit {
                 }
 
                 std::atomic_signal_fence(std::memory_order_acquire);
-            } while (1);  // keep looping to try again!
+            } while (true);  // keep looping to try again!
 
             // Something went wrong. it shouldn't be possible to reach here
             PUMP_ASSERT(0);
@@ -198,18 +198,18 @@ namespace toolkit {
     };
 
     template <typename T>
-    class freelock_list {
-      protected:
+    class freelock_vector_queue {
+      public:
+        // Freelock array queue type
+        typedef freelock_array_queue<T> freelock_array_type;
         // Array element type
-        typedef T array_element_type;
-        // Freelock array type
-        typedef freelock_array<array_element_type> freelock_array_type;
+        typedef typename freelock_array_type::element_type element_type;
 
       public:
         /*********************************************************************************
          * Constructor
          ********************************************************************************/
-        freelock_list(uint32 size)
+        freelock_vector_queue(uint32 size)
             : array_(nullptr), resize_locker_(false), concurrent_cnt_(0) {
             array_ = new freelock_array_type(size);
         }
@@ -217,7 +217,7 @@ namespace toolkit {
         /*********************************************************************************
          * Deconstructor
          ********************************************************************************/
-        ~freelock_list() {
+        ~freelock_vector_queue() {
             if (array_) {
                 delete array_;
             }
@@ -228,7 +228,7 @@ namespace toolkit {
          * It will new a bigger array if current array is full. So this function always
          * return true, thread safe.
          ********************************************************************************/
-        bool push(const array_element_type &data) {
+        bool push(const element_type &data) {
             while (true) {
                 // check resize locker locked state and wait it free
                 if (resize_locker_.load(std::memory_order_acquire)) {
@@ -338,7 +338,7 @@ namespace toolkit {
             }
             freelock_array_type *new_array = new freelock_array_type(capacity);
 
-            array_element_type data;
+            element_type data;
             while (array_->pop(data)) {
                 new_array->push(data);
             }
@@ -360,12 +360,255 @@ namespace toolkit {
     };
 
     template <typename T>
-    class block_freelock_queue {
+    class freelock_list_queue {
+      public:
+        // Element type
+        typedef T element_type;
+        // Element type size
+        const static int32 element_size = sizeof(element_type);
+        // Element list node
+        struct element_node {
+            element_node() : occupied(false), next(nullptr) {
+            }
+            std::atomic_bool occupied;
+            block data[element_size];
+            element_node *next;
+        };
+
       public:
         /*********************************************************************************
          * Constructor
          ********************************************************************************/
-        block_freelock_queue(uint32 init_size = 1024) : list_(init_size) {
+        freelock_list_queue(int32 size)
+            : head_(nullptr), tail_(nullptr), last_readable_node_(nullptr) {
+            __init_list(size);
+        }
+
+        /*********************************************************************************
+         * Deconstructor
+         ********************************************************************************/
+        ~freelock_list_queue() {
+            bool no_element = false;
+            element_node *end = tail_.load();
+            element_node *beg = end->next;
+            while (beg != end) {
+                if (!no_element) {
+                    no_element = (beg == last_readable_node_.load());
+                }
+                if (!no_element) {
+                    ((element_type *)beg->data)->~element_type();
+                }
+                element_node *tmp = beg->next;
+                delete beg;
+                beg = tmp;
+            }
+        }
+
+        /*********************************************************************************
+         * Push
+         ********************************************************************************/
+        bool push(const element_type &data) {
+            element_node *current_head = nullptr;
+            while (true) {
+                current_head = head_.load(std::memory_order_relaxed);
+
+                // If current head is nullptr, list is being extended, try again.
+                // If current head is occupied, the node had be used, try again.
+                if (current_head == nullptr ||
+                    current_head->occupied.load(std::memory_order_relaxed)) {
+                    continue;
+                }
+
+                // If next node of current head is tail node, list should be extended.
+                if (current_head->next == tail_.load(std::memory_order_relaxed)) {
+                    if (!__extend_list(current_head)) {
+                        continue;
+                    }
+                }
+
+                // Update head node to next node.
+                if (!head_.compare_exchange_strong(current_head, current_head->next)) {
+                    continue;
+                }
+
+                // Mark current head node occupied.
+                bool expected = false;
+                PUMP_DEBUG_CHECK(current_head->occupied.compare_exchange_strong(
+                    expected,
+                    true,
+                    std::memory_order_acquire,
+                    std::memory_order_relaxed));
+
+                new ((element_type *)current_head->data) element_type(data);
+
+                // Update last readable node.
+                while (!last_readable_node_.compare_exchange_strong(
+                    current_head,
+                    current_head->next,
+                    std::memory_order_acquire,
+                    std::memory_order_relaxed)) {
+                }
+
+                break;
+            }
+
+            return true;
+        }
+
+        /*********************************************************************************
+         * Pop
+         ********************************************************************************/
+        template <typename U>
+        bool pop(U &data) {
+            element_node *current_tail = nullptr;
+            element_node *current_tail_next = nullptr;
+            while (true) {
+                current_tail = tail_.load(std::memory_order_relaxed);
+                current_tail_next = current_tail->next;
+
+                // If current tail next node equal to last readable node, means there is
+                // no more data for read, just return false.
+                if (current_tail->next ==
+                    last_readable_node_.load(std::memory_order_relaxed)) {
+                    return false;
+                }
+
+                // If next node of current tail is not occupied right now, try again.
+                if (!current_tail_next->occupied.load(std::memory_order_relaxed)) {
+                    continue;
+                }
+
+                // Update tail node to next node.
+                if (!tail_.compare_exchange_strong(current_tail,
+                                                   current_tail_next,
+                                                   std::memory_order_acquire,
+                                                   std::memory_order_relaxed)) {
+                    continue;
+                }
+
+                element_type *elem = (element_type *)current_tail_next->data;
+                data = *elem;
+                elem->~element_type();
+
+                // Mark  next node of current tail unoccupied.
+                bool expected = true;
+                PUMP_DEBUG_CHECK(current_tail_next->occupied.compare_exchange_strong(
+                    expected,
+                    false,
+                    std::memory_order_acquire,
+                    std::memory_order_relaxed));
+
+                return true;
+            }
+
+            return false;
+        }
+
+        int32 length() {
+            return length_.load();
+        }
+
+        bool check_length() {
+            int32 list_length = 0;
+            element_node *head = head_.load(std::memory_order_relaxed);
+            element_node *tail = head->next;
+            while (tail != head) {
+                list_length++;
+                tail = tail->next;
+            }
+
+            if (list_length != length_.load()) {
+                PUMP_ASSERT(false);
+                return false;
+            }
+
+            return true;
+        }
+
+      private:
+        /*********************************************************************************
+         * Init list
+         ********************************************************************************/
+        void __init_list(int32 size) {
+            // List init size must be greater than 3.
+            if (size > 3) {
+                size = 3;
+            }
+
+            // Create nodes to init list.
+            head_ = tail_ = new element_node;
+            for (int32 i = 0; i < size; i++) {
+                element_node *node = new element_node;
+                tail_.load()->next = node;
+                tail_.store(node, std::memory_order_release);
+            }
+            tail_.load()->next = head_.load();
+
+            // Update last readable node to head node.
+            last_readable_node_.store(head_.load());
+
+            length_.fetch_add(3);
+        }
+
+        /*********************************************************************************
+         * Extend list
+         ********************************************************************************/
+        bool __extend_list(element_node *current_head) {
+            // Update head node to nullptr for locking head node.
+            element_node *null_node = nullptr;
+            if (!head_.compare_exchange_strong(current_head,
+                                               null_node,
+                                               std::memory_order_acquire,
+                                               std::memory_order_relaxed)) {
+                return false;
+            }
+
+            // Extend list by insert more nodes after current head node.
+            element_node *new_node = nullptr;
+            element_node *prev_node = current_head;
+            element_node *tail_node = prev_node->next;
+            for (int32 i = 0; i < 32; i++) {
+                new_node = new element_node;
+                prev_node->next = new_node;
+                prev_node = new_node;
+            }
+            prev_node->next = tail_node;
+
+            length_.fetch_add(32);
+
+            // Update head node to current head for unlocking head node.
+            PUMP_DEBUG_CHECK(head_.compare_exchange_strong(null_node,
+                                                           current_head,
+                                                           std::memory_order_acquire,
+                                                           std::memory_order_relaxed));
+
+            return true;
+        }
+
+      private:
+        // List head node
+        std::atomic<element_node *> head_;
+        // List tail node
+        std::atomic<element_node *> tail_;
+        // Last readable node
+        std::atomic<element_node *> last_readable_node_;
+        // List length
+        std::atomic_int32_t length_;
+    };
+
+    template <typename Q>
+    class block_freelock_queue {
+      public:
+        // Inner queue type
+        typedef Q inner_queue_type;
+        // Queue element type
+        typedef typename inner_queue_type::element_type element_type;
+
+      public:
+        /*********************************************************************************
+         * Constructor
+         ********************************************************************************/
+        block_freelock_queue(uint32 init_size = 1024) : queue_(init_size) {
         }
 
         /*********************************************************************************
@@ -377,19 +620,15 @@ namespace toolkit {
         /*********************************************************************************
          * Enqueue
          ********************************************************************************/
-        bool enqueue(const T &item) {
-            if (PUMP_LIKELY(list_.push(item))) {
+        bool enqueue(const element_type &item) {
+            if (PUMP_LIKELY(queue_.push(item))) {
                 semaphone_.signal();
                 return true;
             }
             return false;
         }
-
-        /*********************************************************************************
-         * Enqueue
-         ********************************************************************************/
-        bool enqueue(T &&item) {
-            if (PUMP_LIKELY(list_.push(item))) {
+        bool enqueue(element_type &&item) {
+            if (PUMP_LIKELY(queue_.push(item))) {
                 semaphone_.signal();
                 return true;
             }
@@ -403,7 +642,7 @@ namespace toolkit {
         template <typename U>
         bool dequeue(U &item) {
             if (semaphone_.wait()) {
-                while (!list_.pop(item)) {
+                while (!queue_.pop(item)) {
                     continue;
                 }
                 return true;
@@ -418,7 +657,7 @@ namespace toolkit {
         template <typename U>
         bool dequeue(U &item, uint64 timeout) {
             if (semaphone_.wait(timeout)) {
-                while (!list_.pop(item)) {
+                while (!queue_.pop(item)) {
                     continue;
                 }
                 return true;
@@ -431,7 +670,7 @@ namespace toolkit {
             if (semaphone_.wait(
                     std::chrono::duration_cast<std::chrono::microseconds>(timeout)
                         .count())) {
-                while (!list_.pop(item)) {
+                while (!queue_.pop(item)) {
                     continue;
                 }
                 return true;
@@ -446,7 +685,7 @@ namespace toolkit {
         template <typename U>
         bool try_dequeue(U &item) {
             if (semaphone_.try_wait()) {
-                while (!list_.pop(item)) {
+                while (!queue_.pop(item)) {
                     continue;
                 }
                 return true;
@@ -455,7 +694,7 @@ namespace toolkit {
         }
 
       private:
-        freelock_list<T> list_;
+        inner_queue_type queue_;
         light_semaphore semaphone_;
     };
 

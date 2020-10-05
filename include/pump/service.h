@@ -125,13 +125,13 @@ class LIB_PUMP service : public toolkit::noncopyable {
 
     // Posted task worker
     std::shared_ptr<std::thread> posted_task_worker_;
-    //moodycamel::BlockingConcurrentQueue<post_task_type> posted_tasks_;
-    toolkit::block_freelock_queue<post_task_type> posted_tasks_;
+    typedef pump::toolkit::freelock_list_queue<post_task_type> post_task_impl_queue;
+    toolkit::block_freelock_queue<post_task_impl_queue> posted_tasks_;
 
     // Timout timer worker
     std::shared_ptr<std::thread> timeout_timer_worker_;
-    //moodycamel::BlockingConcurrentQueue<time::timer_wptr> timeout_timers_;
-    toolkit::block_freelock_queue<time::timer_wptr> timeout_timers_;
+    typedef pump::toolkit::freelock_list_queue<time::timer_wptr> timer_impl_queue;
+    toolkit::block_freelock_queue<timer_impl_queue> timeout_timers_;
 };
 DEFINE_ALL_POINTER_TYPE(service);
 
