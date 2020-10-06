@@ -36,18 +36,21 @@ namespace protocol {
                 auto uri = req->get_uri();
                 bool https = uri->get_type() == URI_HTTPS;
                 auto peer_address = host_to_address(https, uri->get_host());
-                if (!__create_connection(https, peer_address))
+                if (!__create_connection(https, peer_address)) {
                     return response_sptr();
+                }
             }
 
-            if (!conn_->send(req.get()))
+            if (!conn_->send(req.get())) {
                 return response_sptr();
+            }
 
             conn_->read_next_pocket();
 
             if (resp_cond_.wait_for(lock, std::chrono::seconds(5)) ==
-                std::cv_status::timeout)
+                std::cv_status::timeout) {
                 return response_sptr();
+            }
 
             return std::move(resp_);
         }
@@ -70,8 +73,9 @@ namespace protocol {
                 transp = dialer->dial(sv_, bind_address, peer_address, dial_timeout_);
             }
 
-            if (!transp)
+            if (!transp) {
                 return false;
+            }
 
             http_callbacks cbs;
             client_wptr cli = shared_from_this();
@@ -96,8 +100,9 @@ namespace protocol {
 
         void client::on_response(client_wptr wptr, pocket_sptr &&pk) {
             PUMP_LOCK_WPOINTER(cli, wptr);
-            if (cli == nullptr)
+            if (!cli) {
                 return;
+            }
 
             auto resp = std::static_pointer_cast<response>(pk);
             cli->__notify_response(resp);
@@ -105,8 +110,9 @@ namespace protocol {
 
         void client::on_error(client_wptr wptr, const std::string &msg) {
             PUMP_LOCK_WPOINTER(cli, wptr);
-            if (cli == nullptr)
+            if (!cli) {
                 return;
+            }
 
             response_sptr resp;
             cli->__notify_response(resp);

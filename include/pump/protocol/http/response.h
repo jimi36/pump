@@ -51,8 +51,8 @@ namespace protocol {
 
             /*********************************************************************************
              * Parse
-             * This parse http pocket, and return parsed size. If this return -1, it
-             *means parsed error.
+             * This parse http pocket, and return parsed size. If this return -1, it means
+             * parsed error.
              ********************************************************************************/
             virtual int32 parse(c_block_ptr b, int32 size) override;
 

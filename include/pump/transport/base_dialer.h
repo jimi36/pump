@@ -49,7 +49,7 @@ namespace transport {
         /*********************************************************************************
          * Start
          ********************************************************************************/
-        virtual transport_error start(service_ptr sv, const dialer_callbacks &cbs) = 0;
+        virtual transport_error start(service_ptr sv, const dialer_callbacks& cbs) = 0;
 
         /*********************************************************************************
          * Stop
@@ -80,7 +80,7 @@ namespace transport {
         /*********************************************************************************
          * Open dial flow
          ********************************************************************************/
-        virtual bool __open_dial_flow() = 0;
+          virtual bool __open_dial_flow() = 0;
 
         /*********************************************************************************
          * Close dial flow
@@ -133,6 +133,7 @@ namespace transport {
         // Dialer callbacks
         dialer_callbacks cbs_;
     };
+    DEFINE_ALL_POINTER_TYPE(base_dialer);
 
 }  // namespace transport
 }  // namespace pump

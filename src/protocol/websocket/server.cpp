@@ -30,12 +30,13 @@ namespace protocol {
         bool server::start(service_ptr sv,
                            const transport::address &listen_address,
                            const std::map<std::string, std::string> &local_headers) {
-            if (acceptor_)
+            if (acceptor_) {
                 return false;
+            }
 
-            if (sv == nullptr)
+            if (!sv) {
                 return false;
-
+            }
             sv_ = sv;
 
             local_headers_ = local_headers;
@@ -59,12 +60,13 @@ namespace protocol {
                            const std::string &keyfile,
                            const transport::address &listen_address,
                            const std::map<std::string, std::string> &local_headers) {
-            if (acceptor_)
+            if (acceptor_) {
                 return false;
+            }
 
-            if (sv == nullptr)
+            if (!sv) {
                 return false;
-
+            }
             sv_ = sv;
 
             local_headers_ = local_headers;
@@ -85,90 +87,88 @@ namespace protocol {
         }
 
         void server::stop() {
-            if (acceptor_ && acceptor_->is_started())
+            if (acceptor_ && acceptor_->is_started()) {
                 acceptor_->stop();
+            }
         }
 
         void server::on_accepted(server_wptr wptr,
                                  transport::base_transport_sptr &transp) {
             PUMP_LOCK_WPOINTER(svr, wptr);
-            if (svr == nullptr)
-                return;
+            if (svr) {
+                service_ptr sv = svr->sv_;
+                if (svr->select_service_cb_) {
+                    sv = svr->select_service_cb_();
+                }
 
-            service_ptr sv = nullptr;
-            if (svr->select_service_cb_)
-                sv = svr->select_service_cb_();
-            if (sv == nullptr)
-                sv = svr->sv_;
+                connection_sptr conn(new connection(sv, transp, false));
+                {
+                    std::unique_lock<std::mutex> w_lock(svr->conn_mx_);
+                    svr->conns_[conn.get()] = conn;
+                }
 
-            http::connection_sptr conn(new http::connection(true, transp));
-            {
-                std::unique_lock<std::mutex> w_lock(svr->http_conn_mx_);
-                svr->http_conns_[conn.get()] = conn;
-            }
-
-            http::http_callbacks cbs;
-            cbs.pocket_cb = pump_bind(&server::on_upgrade_request, wptr, conn, _1);
-            cbs.error_cb = pump_bind(&server::on_upgrade_error, wptr, conn, _1);
-            if (!conn->start(sv, cbs)) {
-                std::unique_lock<std::mutex> w_lock(svr->http_conn_mx_);
-                svr->http_conns_.erase(conn.get());
+                upgrade_callbacks ucbs;
+                ucbs.pocket_cb =
+                    pump_bind(&server::on_upgrade_request, wptr, conn.get(), _1);
+                ucbs.error_cb = pump_bind(&server::on_error, wptr, conn.get(), _1);
+                if (!conn->start_upgrade(false, ucbs)) {
+                    std::unique_lock<std::mutex> w_lock(svr->conn_mx_);
+                    svr->conns_.erase(conn.get());
+                }
             }
         }
 
         void server::on_stopped(server_wptr wptr) {
             PUMP_LOCK_WPOINTER(svr, wptr);
-            if (svr == nullptr)
-                return;
-
-            svr->__stop_all_upgrading_conns();
+            if (svr) {
+                svr->__stop_all_upgrading_conns();
+            }
         }
 
         void server::on_upgrade_request(server_wptr wptr,
-                                        http::connection_wptr wptr_http_conn,
-                                        http::pocket_sptr &&pk) {
-            PUMP_LOCK_WPOINTER(http_conn, wptr_http_conn);
-            if (http_conn == nullptr)
-                return;
-
+                                        connection_ptr conn,
+                                        http::pocket_sptr pk) {
             PUMP_LOCK_WPOINTER(svr, wptr);
-            if (svr == nullptr) {
-                http_conn->stop();
-                return;
-            }
+            if (svr) {
+                connection_sptr conn_locker;
+                {
+                    std::unique_lock<std::mutex> w_lock(svr->conn_mx_);
+                    // Try locking connection instance
+                    auto it = svr->conns_.find(conn);
+                    if (it == svr->conns_.end()) {
+                        return;
+                    }
+                    conn_locker = it->second;
+                    // Remove connection from connection list
+                    svr->conns_.erase(it);
+                }
 
-            auto req = (http::c_request_ptr)pk.get();
-            if (!svr->__handle_upgrade_request(http_conn, req)) {
-                http_conn->stop();
-                return;
-            }
+                auto req = std::static_pointer_cast<http::request>(pk);
+                if (!svr->__handle_upgrade_request(conn, req.get())) {
+                    conn->stop();
+                    return;
+                }
 
-            connection_sptr conn(new connection(false));
-            if (!conn->upgrade(http_conn_locker)) {
-                http_conn->stop();
-                return;
+                svr->router_.route(req->get_uri()->get_path(), conn_locker);
             }
-
-            svr->router_.route(req->get_uri()->get_path(), conn);
         }
 
-        void server::on_upgrade_error(server_wptr wptr,
-                                      http::connection_wptr wptr_http_conn,
-                                      const std::string &msg) {
-            PUMP_LOCK_WPOINTER(http_conn, wptr_http_conn);
-            if (http_conn == nullptr)
-                return;
-
+        void server::on_error(server_wptr wptr,
+                              connection_ptr conn,
+                              const std::string &msg) {
             PUMP_LOCK_WPOINTER(svr, wptr);
-            if (svr == nullptr)
-                return;
-
-            std::unique_lock<std::mutex> w_lock(svr->http_conn_mx_);
-            svr->http_conns_.erase(http_conn);
+            if (svr) {
+                std::unique_lock<std::mutex> w_lock(svr->conn_mx_);
+                auto it = svr->conns_.find(conn);
+                if (it != svr->conns_.end()) {
+                    conn->stop();
+                    svr->conns_.erase(it);
+                }
+            }
         }
 
-        bool server::__handle_upgrade_request(http::connection_ptr conn,
-                                              http::c_request_ptr req) {
+        bool server::__handle_upgrade_request(connection_ptr conn,
+                                              http::request_ptr req) {
             if (req->get_method() != http::METHOD_GET) {
                 send_http_error_response(conn, 404, "");
                 return false;
@@ -249,25 +249,29 @@ namespace protocol {
             resp_header->set("Upgrade", "websocket");
             resp_header->set("Connection", "Upgrade");
             resp_header->set("Sec-WebSocket-Accept", compute_sec_accept_key(sec_key));
-            if (!protocol.empty())
+            if (!protocol.empty()) {
                 resp_header->set("Sec-WebSocket-Protocol", protocol);
+            }
 
-            return conn->send(&resp);
+            std::string data;
+            resp.serialize(data);
+            return conn->send_buffer(data.c_str(), (uint32)data.size());
         }
 
         void server::__stop_all_upgrading_conns() {
-            std::lock_guard<std::mutex> lock(http_conn_mx_);
-            for (auto p : http_conns_) {
+            std::lock_guard<std::mutex> lock(conn_mx_);
+            for (auto &p : conns_) {
                 p.second->stop();
             }
-            http_conns_.clear();
+            conns_.clear();
         }
 
         const std::string &server::__get_local_header(const std::string &name) const {
             const static std::string EMPTY("");
             auto it = local_headers_.find(name);
-            if (it != local_headers_.end())
+            if (it != local_headers_.end()) {
                 return it->second;
+            }
             return EMPTY;
         }
 

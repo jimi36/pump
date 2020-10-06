@@ -46,6 +46,7 @@ namespace protocol {
              * This construct a http request to serialize.
              ********************************************************************************/
             request(void_ptr ctx = nullptr) noexcept;
+            request(const std::string &url, void_ptr ctx = nullptr) noexcept;
 
             /*********************************************************************************
              * Deconstructor
@@ -70,7 +71,7 @@ namespace protocol {
              * Set request url
              ********************************************************************************/
             PUMP_INLINE void set_url(const std::string &url) {
-                uri_.parse_url(url);
+                uri_.parse(url);
             }
 
             /*********************************************************************************

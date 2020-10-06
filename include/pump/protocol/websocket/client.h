@@ -17,6 +17,7 @@
 #define pump_protocol_websocket_client_h
 
 #include "pump/protocol/http/client.h"
+#include "pump/transport/base_dialer.h"
 #include "pump/protocol/websocket/connection.h"
 
 namespace pump {
@@ -27,8 +28,11 @@ namespace protocol {
         DEFINE_ALL_POINTER_TYPE(client);
 
         struct client_callbacks {
+            // Started callback
+            pump_function<void()> started_cb;
+            // Data callback
             pump_function<void(c_block_ptr, uint32, bool)> data_cb;
-
+            // Error callback
             pump_function<void(const std::string &)> error_cb;
         };
 
@@ -67,12 +71,35 @@ namespace protocol {
 
           protected:
             /*********************************************************************************
-             * Websocket data callback
+             * Dialed callback
              ********************************************************************************/
-            static void on_data(client_wptr wptr, c_block_ptr b, uint32 size, bool end);
+            static void on_dialed(client_wptr wptr,
+                                  transport::base_transport_sptr &transp,
+                                  bool succ);
 
             /*********************************************************************************
-             * Handle connection closed
+             * Dialed timeout callback
+             ********************************************************************************/
+            static void on_dial_timeouted(client_wptr wptr);
+
+            /*********************************************************************************
+             * Stopped dialing callback
+             ********************************************************************************/
+            static void on_dial_stopped(client_wptr wptr);
+
+          protected:
+            /*********************************************************************************
+             * Upgrade response callback
+             ********************************************************************************/
+            static void on_upgrade_response(client_wptr wptr, http::pocket_sptr pk);
+
+            /*********************************************************************************
+             * Frame callback
+             ********************************************************************************/
+            static void on_frame(client_wptr wptr, c_block_ptr b, uint32 size, bool end);
+
+            /*********************************************************************************
+             * Connection error closed
              ********************************************************************************/
             static void on_error(client_wptr wptr, const std::string &msg);
 
@@ -83,29 +110,30 @@ namespace protocol {
             client() noexcept;
 
             /*********************************************************************************
-             * Do http upgrade request
+             * Start dial and upgrade
              ********************************************************************************/
-            http::response_sptr __do_upgrade_request(
-                http::client_sptr &http_cli,
-                const std::string &url,
-                const std::map<std::string, std::string> &headers);
+            bool __start(const std::string &url,
+                         const std::map<std::string, std::string> &headers);
 
             /*********************************************************************************
              * Check http upgrade response
              ********************************************************************************/
             bool __check_upgrade_response(http::response_sptr &resp);
 
-            /*********************************************************************************
-             * Upgrade http connection
-             ********************************************************************************/
-            bool __upgrade_http_connection(http::client_sptr &http_cli);
-
           private:
+            // Started state
+            std::atomic_bool started_;
+
             // Service
             service_ptr sv_;
-
+            // Transport Dialer
+            transport::base_dialer_sptr dialer_;
             // Websocket connection
             connection_sptr conn_;
+
+            // Upgrade info
+            bool upgraded_;
+            http::request_sptr upgrade_req_;
 
             // Client callbacks
             client_callbacks cbs_;

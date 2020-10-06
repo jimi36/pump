@@ -142,7 +142,7 @@ namespace transport {
         static void on_timeouted(tcp_sync_dialer_wptr wptr);
 
         /*********************************************************************************
-         * Stopped dial event callback
+         * Stopped dialing callback
          ********************************************************************************/
         static void on_stopped();
 

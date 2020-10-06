@@ -27,26 +27,13 @@ namespace protocol {
 
         enum uri_type { UIR_NONE = 0, URI_HTTP, URI_HTTPS, URI_WS, URI_WSS, URI_END };
 
-        /*********************************************************************************
-         * Get uri type string
-         ********************************************************************************/
-        LIB_PUMP std::string get_ut_string(uri_type ut);
-
-        /*********************************************************************************
-         * Parse url
-         ********************************************************************************/
-        LIB_PUMP bool parse_from_url(const std::string &url,
-                                     uri_type &ut,
-                                     std::string &host,
-                                     std::string &path,
-                                     std::map<std::string, std::string> params);
-
         class LIB_PUMP uri {
           public:
             /*********************************************************************************
              * Constructor
              ********************************************************************************/
             uri() noexcept;
+            uri(const std::string& url) noexcept;
 
             /*********************************************************************************
              * Deconstructor
@@ -61,7 +48,7 @@ namespace protocol {
             /*********************************************************************************
              * Parse url
              ********************************************************************************/
-            bool parse_url(const std::string &url);
+            bool parse(const std::string &url);
 
             /*********************************************************************************
              * Set uri type
@@ -133,6 +120,20 @@ namespace protocol {
             std::map<std::string, std::string> params_;
         };
         DEFINE_ALL_POINTER_TYPE(uri);
+
+        /*********************************************************************************
+         * Get uri type string
+         ********************************************************************************/
+        LIB_PUMP std::string get_ut_string(uri_type ut);
+
+        /*********************************************************************************
+         * Parse url
+         ********************************************************************************/
+        LIB_PUMP bool parse_url(const std::string &url,
+                                uri_type &ut,
+                                std::string &host,
+                                std::string &path,
+                                std::map<std::string, std::string> params);
 
     }  // namespace http
 }  // namespace protocol

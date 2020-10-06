@@ -16,15 +16,15 @@
 
 #include "pump/debug.h"
 #include "pump/protocol/http/utils.h"
-#include "pump/protocol/http/defines.h"
 
 namespace pump {
 namespace protocol {
     namespace http {
 
         c_block_ptr find_http_line_end(c_block_ptr src, int32 len) {
-            if (len < HTTP_CR_LEN)
+            if (len < HTTP_CR_LEN) {
                 return nullptr;
+            }
 
             while (len >= HTTP_CR_LEN) {
                 if (memcmp(src, HTTP_CR, HTTP_CR_LEN) == 0) {
@@ -75,12 +75,14 @@ namespace protocol {
 
         transport::address host_to_address(bool https, const std::string &host) {
             auto results = split_string(host, "[:]");
-            if (results.empty())
+            if (results.empty()) {
                 PUMP_ASSERT(false);
+            }
 
             uint16 port = https ? 443 : 80;
-            if (results.size() > 1)
+            if (results.size() > 1) {
                 port = atoi(results[1].c_str());
+            }
 
             return transport::address(results[0], port);
         }

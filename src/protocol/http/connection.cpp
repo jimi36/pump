@@ -36,16 +36,19 @@ namespace protocol {
         }
 
         connection::~connection() {
-            if (transp_)
+            if (transp_) {
                 transp_->force_stop();
+            }
         }
 
         bool connection::start(service_ptr sv, const http_callbacks &cbs) {
-            if (!transp_)
+            if (!transp_) {
                 return false;
+            }
 
-            if (!cbs.pocket_cb || !cbs.error_cb)
+            if (!cbs.pocket_cb || !cbs.error_cb) {
                 return false;
+            }
             http_cbs_ = cbs;
 
             transport::transport_callbacks tcbs;
@@ -53,8 +56,9 @@ namespace protocol {
             tcbs.read_cb = pump_bind(&connection::on_read, wptr, _1, _2);
             tcbs.stopped_cb = pump_bind(&connection::on_stopped, wptr);
             tcbs.disconnected_cb = pump_bind(&connection::on_disconnected, wptr);
-            if (transp_->start(sv, 0, tcbs) != transport::ERROR_OK)
+            if (transp_->start(sv, 0, tcbs) != transport::ERROR_OK) {
                 return false;
+            }
 
             return true;
         }
@@ -65,11 +69,13 @@ namespace protocol {
 
         bool connection::read_next_pocket() {
             PUMP_LOCK_SPOINTER(transp, transp_);
-            if (transp == nullptr)
+            if (!transp) {
                 return false;
+            }
 
-            if (transp->read_for_once() != transport::ERROR_OK)
+            if (transp->read_for_once() != transport::ERROR_OK) {
                 return false;
+            }
 
             return true;
         }
@@ -90,24 +96,27 @@ namespace protocol {
 
         void connection::on_read(connection_wptr wptr, c_block_ptr b, int32 size) {
             PUMP_LOCK_WPOINTER(conn, wptr);
-            if (conn == nullptr)
+            if (!conn) {
                 return;
+            }
 
             conn->__handle_http_data(b, size);
         }
 
         void connection::on_disconnected(connection_wptr wptr) {
             PUMP_LOCK_WPOINTER(conn, wptr);
-            if (conn == nullptr)
+            if (!conn) {
                 return;
+            }
 
             conn->http_cbs_.error_cb("http connection disconnected");
         }
 
         void connection::on_stopped(connection_wptr wptr) {
             PUMP_LOCK_WPOINTER(conn, wptr);
-            if (conn == nullptr)
+            if (conn == nullptr) {
                 return;
+            }
 
             conn->http_cbs_.error_cb("http connection stopped");
         }
@@ -122,8 +131,9 @@ namespace protocol {
             int32 parse_size = -1;
             if (read_cache_.empty()) {
                 parse_size = pk->parse(b, size);
-                if (parse_size < size)
+                if (parse_size >= 0 && parse_size < size) {
                     read_cache_.append(b + parse_size, size - parse_size);
+                }
             } else {
                 read_cache_.append(b, size);
                 parse_size = pk->parse(read_cache_.data(), (int32)read_cache_.size());
@@ -136,10 +146,11 @@ namespace protocol {
                 return;
             }
 
-            if (pk->is_parse_finished())
+            if (pk->is_parse_finished()) {
                 http_cbs_.pocket_cb(std::move(coming_pocket_));
-            else
+            } else {
                 transp_->read_for_once();
+            }
         }
 
     }  // namespace http

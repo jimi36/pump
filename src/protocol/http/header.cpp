@@ -15,7 +15,6 @@
  */
 
 #include "pump/protocol/http/header.h"
-#include "pump/protocol/http/defines.h"
 
 namespace pump {
 namespace protocol {
@@ -38,36 +37,41 @@ namespace protocol {
             std::string value;
             c_block_ptr line_end = nullptr;
             while ((line_end = find_http_line_end(beg, uint32(size - (end - b))))) {
-                // parse header finished
+                // Check header parsed complete
                 if (beg + HTTP_CR_LEN == line_end) {
                     beg += HTTP_CR_LEN;
                     parse_finished_ = true;
                     break;
                 }
 
-                // parse header name
-                while (end < line_end && *end != ':')
+                // Parse header name
+                while (end < line_end && *end != ':') {
                     ++end;
+                }
                 len = (uint32)(end - beg);
-                if (end >= line_end || len <= 0)
+                if (end >= line_end || len <= 0) {
                     return -1;
+                }
                 name.assign(beg, len);
-                ++end;
 
-                // seek ':' and ' '
-                while (end < line_end && (*end == ' '))
+                // Skip to header vaule position
+                while (end < line_end && (*end == ' ' || *end == ':')) {
                     ++end;
-                if (end >= line_end - HTTP_CR_LEN)
+                }
+                if (end >= line_end - HTTP_CR_LEN) {
                     return -1;
+                }
 
-                // parse header value
+                // Parse header value
                 beg = end;
-                end = line_end - 2;
+                end = line_end - HTTP_CR_LEN;
                 len = (uint32)(end - beg);
-                if (len == 0)
+                if (len == 0) {
                     return -1;
+                }
                 value.assign(beg, len);
 
+                // Save header
                 set(name, value);
 
                 beg = end = line_end;
@@ -82,15 +86,18 @@ namespace protocol {
             block tmp[HTTP_LINE_MAX_LEN] = {0};
             for (auto beg = headers_.begin(); beg != headers_.end(); beg++) {
                 auto cnt = beg->second.size();
-                if (cnt == 0)
+                if (cnt == 0) {
                     continue;
-                else if (cnt == 1)
+                } else if (cnt == 1) {
                     value = beg->second[0];
-                else
+                } else {
                     value = join_strings(beg->second, HEAD_VALUE_SEP);
-
-                size += pump_snprintf(
-                    tmp, sizeof(tmp), "%s: %s\r\n", beg->first.c_str(), value.c_str());
+                }
+                size += pump_snprintf(tmp,
+                                      sizeof(tmp) - 1,
+                                      "%s: %s\r\n",
+                                      beg->first.c_str(),
+                                      value.c_str());
                 buffer.append(tmp);
             }
 
@@ -103,20 +110,17 @@ namespace protocol {
         void header::set(const std::string &name, int32 value) {
             block tmp[32] = {0};
             pump_snprintf(tmp, sizeof(tmp) - 1, "%d", value);
-            auto it = headers_.find(name);
-            if (it == headers_.end())
-                headers_[name].push_back(tmp);
-            else
-                it->second.push_back(tmp);
+            headers_[name].push_back(tmp);
         }
 
         void header::set(const std::string &name, const std::string &value) {
             auto vals = split_string(value, "[,;] *");
             auto it = headers_.find(name);
-            if (it == headers_.end())
+            if (it == headers_.end()) {
                 headers_[name] = vals;
-            else
+            } else {
                 it->second.insert(it->second.end(), vals.begin(), vals.end());
+            }
         }
 
         void header::set_unique(const std::string &name, int32 value) {
@@ -131,11 +135,9 @@ namespace protocol {
 
         bool header::get(const std::string &name, int32 &value) const {
             auto it = headers_.find(name);
-            if (it == headers_.end())
+            if (it == headers_.end() || it->second.empty()) {
                 return false;
-
-            if (it->second.empty())
-                return false;
+            }
 
             value = atol(it->second[0].c_str());
 
@@ -144,11 +146,9 @@ namespace protocol {
 
         bool header::get(const std::string &name, std::string &value) const {
             auto it = headers_.find(name);
-            if (it == headers_.end())
+            if (it == headers_.end() || it->second.empty()) {
                 return false;
-
-            if (it->second.empty())
-                return false;
+            }
 
             value = join_strings(it->second, HEAD_VALUE_SEP);
 
@@ -158,10 +158,7 @@ namespace protocol {
         bool header::get(const std::string &name,
                          std::vector<std::string> &values) const {
             auto it = headers_.find(name);
-            if (it == headers_.end())
-                return false;
-
-            if (it->second.empty())
+            if (it == headers_.end() || it->second.empty())
                 return false;
 
             values = it->second;

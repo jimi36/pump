@@ -19,6 +19,7 @@
 
 #include "pump/protocol/http/request.h"
 #include "pump/protocol/http/response.h"
+#include "pump/protocol/websocket/connection.h"
 
 namespace pump {
 namespace protocol {
@@ -43,7 +44,7 @@ namespace protocol {
         /*********************************************************************************
          * Send http error response
          ********************************************************************************/
-        void send_http_error_response(http::connection_ptr conn,
+        void send_http_error_response(connection_ptr conn,
                                       int32 status_code,
                                       const std::string &reason);
 

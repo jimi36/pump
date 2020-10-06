@@ -29,8 +29,9 @@ namespace protocol {
         DEFINE_ALL_POINTER_TYPE(connection);
 
         struct http_callbacks {
+            // Http pocket callback
             pump_function<void(pocket_sptr &&pk)> pocket_cb;
-
+            // Http connection error callback
             pump_function<void(const std::string &)> error_cb;
         };
 
@@ -118,8 +119,9 @@ namespace protocol {
              * Stop transport
              ********************************************************************************/
             PUMP_INLINE void __stop_transport() {
-                if (transp_)
+                if (transp_) {
                     transp_->stop();
+                }
             }
 
           private:

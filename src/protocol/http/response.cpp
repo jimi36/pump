@@ -72,8 +72,9 @@ namespace protocol {
 
         static const std::string &get_http_code_desc(int32 code) {
             auto it = http_code_desc_map.find(code);
-            if (it != http_code_desc_map.end())
+            if (it != http_code_desc_map.end()) {
                 return it->second;
+            }
             return http_code_desc_map[0];
         }
 
@@ -82,18 +83,21 @@ namespace protocol {
         }
 
         int32 response::parse(c_block_ptr b, int32 size) {
-            if (parse_status_ == PARSE_FINISHED)
+            if (parse_status_ == PARSE_FINISHED) {
                 return 0;
+            }
 
-            if (parse_status_ == PARSE_NONE)
+            if (parse_status_ == PARSE_NONE) {
                 parse_status_ = PARSE_LINE;
+            }
 
             c_block_ptr pos = b;
             int32 parse_size = 0;
             if (parse_status_ == PARSE_LINE) {
                 parse_size = __parse_start_line(pos, size);
-                if (parse_size <= 0)
+                if (parse_size <= 0) {
                     return parse_size;
+                }
 
                 pos += parse_size;
                 size -= parse_size;
@@ -103,16 +107,18 @@ namespace protocol {
 
             if (parse_status_ == PARSE_HEADER) {
                 parse_size = header_.parse(pos, size);
-                if (parse_size < 0)
+                if (parse_size < 0) {
                     return parse_size;
-                else if (parse_size == 0)
+                } else if (parse_size == 0) {
                     return int32(pos - b);
+                }
 
                 pos += parse_size;
                 size -= parse_size;
 
-                if (header_.is_parse_finished())
+                if (header_.is_parse_finished()) {
                     parse_status_ = PARSE_CONTENT;
+                }
             }
 
             if (parse_status_ == PARSE_CONTENT) {
@@ -138,16 +144,18 @@ namespace protocol {
 
                 if (ct) {
                     parse_size = ct->parse(pos, size);
-                    if (parse_size < 0)
+                    if (parse_size < 0) {
                         return parse_size;
-                    else if (parse_size == 0)
+                    } else if (parse_size == 0) {
                         return int32(pos - b);
+                    }
 
                     pos += parse_size;
                     size -= parse_size;
 
-                    if (ct->is_parse_finished())
+                    if (ct->is_parse_finished()) {
                         parse_status_ = PARSE_FINISHED;
+                    }
                 }
             }
 
@@ -155,23 +163,25 @@ namespace protocol {
         }
 
         int32 response::serialize(std::string &buffer) const {
-            int32 size = -1;
             int32 serialize_size = 0;
 
-            size = __serialize_response_line(buffer);
-            if (size < 0)
+            int32 size = __serialize_response_line(buffer);
+            if (size < 0) {
                 return -1;
+            }
             serialize_size += size;
 
             size = header_.serialize(buffer);
-            if (size < 0)
+            if (size < 0) {
                 return -1;
+            }
             serialize_size += size;
 
             if (ct_) {
                 size = ct_->serialize(buffer);
-                if (size < 0)
+                if (size < 0) {
                     return -1;
+                }
                 serialize_size += size;
             }
 
@@ -182,27 +192,32 @@ namespace protocol {
             c_block_ptr pos = b;
 
             c_block_ptr line_end = find_http_line_end(pos, size);
-            if (line_end == nullptr)
+            if (line_end == nullptr) {
                 return 0;
+            }
 
-            // parse http version
-            if (strncmp(pos, "HTTP/1.0", 8) == 0)
+            // Parse response version
+            if (strncmp(pos, "HTTP/1.0", 8) == 0) {
                 version_ = VERSION_10;
-            else if (strncmp(pos, "HTTP/1.1", 8) == 0)
+            } else if (strncmp(pos, "HTTP/1.1", 8) == 0) {
                 version_ = VERSION_11;
-            else if (strncmp(pos, "HTTP/2.0", 8) == 0)
+            } else if (strncmp(pos, "HTTP/2.0", 8) == 0) {
                 version_ = VERSION_20;
-            else
+            } else {
                 return -1;
+            }
             pos += 8;
 
-            // parse response code
-            while (pos < line_end && *pos == ' ')
+            // Parse response code
+            while (pos < line_end && *pos == ' ') {
                 ++pos;
-            while (pos < line_end && *pos != ' ')
+            }
+            while (pos < line_end && *pos != ' ') {
                 status_code_ = status_code_ * 10 + int32(*(pos++) - '0');
-            if (pos == line_end)
+            }
+            if (pos == line_end) {
                 return -1;
+            }
 
             return int32(line_end - b);
         }
@@ -210,7 +225,7 @@ namespace protocol {
         int32 response::__serialize_response_line(std::string &buffer) const {
             block tmp[128] = {0};
             int32 size = pump_snprintf(tmp,
-                                       sizeof(tmp),
+                                       sizeof(tmp) - 1,
                                        "%s %d %s\r\n",
                                        get_http_version_string().c_str(),
                                        status_code_,

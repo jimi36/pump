@@ -37,8 +37,9 @@ namespace protocol {
             hdr->optcode = optcode;
 
             hdr->mask = mask;
-            if (mask == 1)
+            if (mask == 1) {
                 memcpy(hdr->mask_key, mask_key, 4);
+            }
 
             if (payload_len < 126) {
                 hdr->payload_len = payload_len;
@@ -54,113 +55,92 @@ namespace protocol {
         uint32 get_frame_header_size(c_frame_header_ptr hdr) {
             uint32 size = 2;
 
-            if (hdr->mask == 1)
+            if (hdr->mask == 1) {
                 size += 4;
+            }
 
-            if (hdr->payload_len == 126)
+            if (hdr->payload_len == 126) {
                 size += 2;
-            else if (hdr->payload_len == 127)
+            } else if (hdr->payload_len == 127) {
                 size += 4;
+            }
 
             return size;
         }
 
         int32 decode_frame_header(c_block_ptr b, uint32 size, frame_header_ptr hdr) {
-            uint32 tmp32 = 0;
-            uint64 tmp64 = 0;
-
+            // Init frame header
             memset(hdr, 0, sizeof(frame_header));
 
+            // Init bits reader
             toolkit::bits_reader r((c_uint8_ptr)b, size);
 
-            if (!r.read(1, &tmp32))
-                return 0;
-            hdr->fin = tmp32;
+#define READ_BITS(bits, tmp, val) \
+    if (!r.read(bits, &tmp)) {    \
+        return 0;                 \
+    }                             \
+    val = tmp
 
-            if (!r.read(1, &tmp32))
-                return 0;
-            hdr->rsv1 = tmp32;
-            if (!r.read(1, &tmp32))
-                return 0;
-            hdr->rsv2 = tmp32;
-            if (!r.read(1, &tmp32))
-                return 0;
-            hdr->rsv3 = tmp32;
-
-            if (!r.read(4, &tmp32))
-                return 0;
-            hdr->optcode = tmp32;
-
-            if (!r.read(1, &tmp32))
-                return 0;
-            hdr->mask = tmp32;
-
-            if (!r.read(7, &tmp32))
-                return 0;
-            hdr->payload_len = tmp32;
+            uint32 tmp32 = 0;
+            uint64 tmp64 = 0;
+            READ_BITS(1, tmp32, hdr->fin);
+            READ_BITS(1, tmp32, hdr->rsv1);
+            READ_BITS(1, tmp32, hdr->rsv2);
+            READ_BITS(1, tmp32, hdr->rsv3);
+            READ_BITS(4, tmp32, hdr->optcode);
+            READ_BITS(1, tmp32, hdr->mask);
+            READ_BITS(7, tmp32, hdr->payload_len);
             if (hdr->payload_len == 126) {
-                if (!r.read(16, &tmp32))
-                    return 0;
-                hdr->ex_payload_len = tmp32;
+                READ_BITS(16, tmp32, hdr->ex_payload_len);
             } else if (hdr->payload_len == 127) {
-                if (!r.read(64, &tmp64))
-                    return 0;
-                hdr->ex_payload_len = tmp64;
+                READ_BITS(64, tmp64, hdr->ex_payload_len);
             }
 
+#undef READ_BITS
+
             if (hdr->mask == 1) {
-                if (!r.read(8, &hdr->mask_key[0]))
+                if (!r.read(8, &hdr->mask_key[0]) ||
+                    !r.read(8, &hdr->mask_key[1]) ||
+                    !r.read(8, &hdr->mask_key[2]) ||
+                    !r.read(8, &hdr->mask_key[3])) {
                     return 0;
-                if (!r.read(8, &hdr->mask_key[1]))
-                    return 0;
-                if (!r.read(8, &hdr->mask_key[2]))
-                    return 0;
-                if (!r.read(8, &hdr->mask_key[3]))
-                    return 0;
+                }
             }
 
             return r.used_bc() / 8;
         }
 
         int32 encode_frame_header(c_frame_header_ptr hdr, block_ptr b, uint32 size) {
+            // Init bits writer
             toolkit::bits_writer w((uint8_ptr)b, size);
 
-            if (!w.write(1, hdr->fin))
+            if (!w.write(1, hdr->fin) ||
+                !w.write(1, hdr->rsv1) || 
+                !w.write(1, hdr->rsv2) ||
+                !w.write(1, hdr->rsv3) ||
+                !w.write(4, hdr->optcode) ||
+                !w.write(1, hdr->mask) ||
+                !w.write(7, hdr->payload_len)) {
                 return 0;
-
-            if (!w.write(1, hdr->rsv1))
-                return 0;
-            if (!w.write(1, hdr->rsv2))
-                return 0;
-            if (!w.write(1, hdr->rsv3))
-                return 0;
-
-            if (!w.write(4, hdr->optcode))
-                return 0;
-
-            if (!w.write(1, hdr->mask))
-                return 0;
-
-            if (!w.write(7, hdr->payload_len))
-                return 0;
+            }
 
             if (hdr->payload_len == 126) {
-                if (!w.write(16, hdr->ex_payload_len))
+                if (!w.write(16, hdr->ex_payload_len)) {
                     return 0;
+                }
             } else if (hdr->payload_len == 127) {
-                if (!w.write(64, hdr->ex_payload_len))
+                if (!w.write(64, hdr->ex_payload_len)) {
                     return 0;
+                }
             }
 
             if (hdr->mask == 1) {
-                if (!w.write(8, hdr->mask_key[0]))
+                if (!w.write(8, hdr->mask_key[0]) || 
+                    !w.write(8, hdr->mask_key[1]) ||
+                    !w.write(8, hdr->mask_key[2]) || 
+                    !w.write(8, hdr->mask_key[3])) {
                     return 0;
-                if (!w.write(8, hdr->mask_key[1]))
-                    return 0;
-                if (!w.write(8, hdr->mask_key[2]))
-                    return 0;
-                if (!w.write(8, hdr->mask_key[3]))
-                    return 0;
+                }
             }
 
             return w.used_bc() / 8;

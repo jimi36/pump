@@ -140,15 +140,15 @@ namespace protocol {
              * Upgrade request callback
              ********************************************************************************/
             static void on_upgrade_request(server_wptr wptr,
-                                           http::connection_wptr wptr_http_conn,
-                                           http::pocket_sptr &&pk);
+                                           connection_ptr conn,
+                                           http::pocket_sptr pk);
 
             /*********************************************************************************
-             * Upgrade error callback
+             * Connection error callback
              ********************************************************************************/
-            static void on_upgrade_error(server_wptr wptr,
-                                         http::connection_wptr wconn,
-                                         const std::string &msg);
+            static void on_error(server_wptr wptr,
+                                 connection_ptr conn,
+                                 const std::string &msg);
 
           private:
             /*********************************************************************************
@@ -159,8 +159,7 @@ namespace protocol {
             /*********************************************************************************
              * Handle http upgrade request
              ********************************************************************************/
-            bool __handle_upgrade_request(http::connection_ptr conn,
-                                          http::c_request_ptr req);
+            bool __handle_upgrade_request(connection_ptr conn, http::request_ptr req);
 
             /*********************************************************************************
              * Stop all upgrading connections
@@ -181,9 +180,9 @@ namespace protocol {
             // Select service callback
             select_service_callback select_service_cb_;
 
-            // Upgrading http connections
-            std::mutex http_conn_mx_;
-            std::map<void_ptr, http::connection_sptr> http_conns_;
+            // Connections
+            std::mutex conn_mx_;
+            std::map<void_ptr, connection_sptr> conns_;
 
             // Websocket upgrade request headers filter
             std::map<std::string, std::string> local_headers_;

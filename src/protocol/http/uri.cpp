@@ -27,18 +27,19 @@ namespace protocol {
             return ut_strings[int32(ut)];
         }
 
-        bool parse_from_url(const std::string &url,
-                            uri_type &ut,
-                            std::string &host,
-                            std::string &path,
-                            std::map<std::string, std::string> params) {
+        bool parse_url(const std::string &url,
+                       uri_type &ut,
+                       std::string &host,
+                       std::string &path,
+                       std::map<std::string, std::string> params) {
             std::string sut;
             {
                 auto result = split_string(url, "[:]");
-                if (result.size() >= 2)
+                if (result.size() >= 2) {
                     sut = result[0];
-                else
+                } else {
                     sut = "https";
+                }
             }
 
             ut = UIR_NONE;
@@ -51,11 +52,13 @@ namespace protocol {
                     break;
                 }
             }
-            if (ut == UIR_NONE)
+            if (ut == UIR_NONE) {
                 return false;
+            }
 
-            if (memcmp(p, "://", 3) != 0)
+            if (memcmp(p, "://", 3) != 0) {
                 return false;
+            }
             p += 3;
 
             c_block_ptr end = strstr(p, "/");
@@ -77,20 +80,27 @@ namespace protocol {
 
             std::string new_params;
             std::string raw_params(p);
-            if (!url_decode(raw_params, new_params))
+            if (!url_decode(raw_params, new_params)) {
                 return false;
+            }
 
             auto kvs = split_string(new_params, "[=&]");
             uint32 cnt = (uint32)kvs.size();
-            if (cnt % 2 != 0)
+            if (cnt % 2 != 0) {
                 return false;
-            for (uint32 i = 0; i < cnt; i += 2)
+            }
+            for (uint32 i = 0; i < cnt; i += 2) {
                 params[kvs[i]] = kvs[i + 1];
+            }
 
             return true;
         }
 
         uri::uri() noexcept : ut_(UIR_NONE) {
+        }
+
+        uri::uri(const std::string& url) noexcept {
+            parse(url);
         }
 
         void uri::reset() {
@@ -102,34 +112,39 @@ namespace protocol {
             params_.clear();
         }
 
-        bool uri::parse_url(const std::string &url) {
-            return parse_from_url(url, ut_, host_, path_, params_);
+        bool uri::parse(const std::string &url) {
+            return parse_url(url, ut_, host_, path_, params_);
         }
 
         bool uri::get_param(const std::string &key, std::string &value) const {
             auto it = params_.find(key);
-            if (it == params_.end())
+            if (it == params_.end()) {
                 return false;
+            }
             value = it->second;
             return true;
         }
 
         std::string uri::to_url() const {
-            if (ut_ == UIR_NONE || ut_ == URI_END)
+            if (ut_ == UIR_NONE || ut_ == URI_END) {
                 return std::string();
+            }
 
             std::string url;
             url = get_ut_string(ut_) + "://" + host_ + path_;
 
             std::vector<std::string> tmps;
-            for (auto p : params_)
+            for (auto p : params_) {
                 tmps.push_back(p.first + "=" + p.second);
-            if (!tmps.empty())
+            }
+            if (!tmps.empty()) {
                 url += "?" + join_strings(tmps, "&");
+            }
 
             std::string en_url;
-            if (!url_encode(url, en_url))
+            if (!url_encode(url, en_url)) {
                 return std::string();
+            }
 
             return en_url;
         }

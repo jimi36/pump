@@ -64,8 +64,8 @@ namespace protocol {
 
             /*********************************************************************************
              * Parse
-             * This parse http pocket, and return parsed size. If this return -1, it
-             *means parsed error.
+             * This parse http pocket, and return parsed size. If this return -1, it means
+             * parsed error.
              ********************************************************************************/
             virtual int32 parse(c_block_ptr b, int32 size) = 0;
 
@@ -117,14 +117,14 @@ namespace protocol {
              * Get http version string
              ********************************************************************************/
             PUMP_INLINE std::string get_http_version_string() const {
-                if (version_ == VERSION_10)
+                if (version_ == VERSION_10) {
                     return "HTTP/1.0";
-                else if (version_ == VERSION_11)
+                } else if (version_ == VERSION_11) {
                     return "HTTP/1.1";
-                else if (version_ == VERSION_20)
+                } else if (version_ == VERSION_20) {
                     return "HTTP/2.0";
-                else
-                    return "";
+                }
+                return "";
             }
 
             /*********************************************************************************

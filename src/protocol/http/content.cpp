@@ -15,7 +15,6 @@
  */
 
 #include "pump/protocol/http/content.h"
-#include "pump/protocol/http/defines.h"
 
 namespace pump {
 namespace protocol {
@@ -47,29 +46,34 @@ namespace protocol {
 
                 return size;
             } else {
-                if (data_.empty())
+                if (data_.empty()) {
                     return 0;
+                }
 
                 buf.append(data_);
+
                 return (int32)data_.size();
             }
         }
 
         int32 content::parse(c_block_ptr b, int32 size) {
-            if (is_chunked_)
+            if (is_chunked_) {
                 return __parse_by_chunk(b, size);
-            else
+            } else {
                 return __parse_by_length(b, size);
+            }
         }
 
         int32 content::__parse_by_length(c_block_ptr b, int32 size) {
             int32 want_parse_size = length_ - (int32)data_.size();
-            if (want_parse_size > size)
+            if (want_parse_size > size) {
                 want_parse_size = size;
+            }
             data_.append(b, want_parse_size);
 
-            if ((int32)data_.size() == length_)
+            if ((int32)data_.size() == length_) {
                 parse_finished_ = true;
+            }
 
             return want_parse_size;
         }
@@ -81,8 +85,9 @@ namespace protocol {
                 c_block_ptr chunk_pos = pos;
                 c_block_ptr line_end =
                     find_http_line_end(chunk_pos, uint32(size - (chunk_pos - b)));
-                if (line_end == nullptr)
+                if (line_end == nullptr) {
                     break;
+                }
 
                 line_end -= HTTP_CR_LEN;
                 int32 next_chunk_size = 0;
@@ -93,19 +98,22 @@ namespace protocol {
                 chunk_pos += HTTP_CR_LEN;
 
                 if (next_chunk_size == 0) {
-                    if (chunk_pos + HTTP_CR_LEN > b + size)
+                    if (chunk_pos + HTTP_CR_LEN > b + size) {
                         break;
+                    }
 
-                    if (memcmp(chunk_pos, HTTP_CR, HTTP_CR_LEN) != 0)
+                    if (memcmp(chunk_pos, HTTP_CR, HTTP_CR_LEN) != 0) {
                         return -1;
+                    }
 
                     pos = chunk_pos + HTTP_CR_LEN;
                     parse_finished_ = true;
                     break;
                 }
 
-                if (chunk_pos + next_chunk_size + HTTP_CR_LEN > b + size)
+                if (chunk_pos + next_chunk_size + HTTP_CR_LEN > b + size) {
                     break;
+                }
                 data_.append(chunk_pos, next_chunk_size);
 
                 pos = chunk_pos + next_chunk_size + HTTP_CR_LEN;

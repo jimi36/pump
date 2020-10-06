@@ -77,6 +77,7 @@ namespace protocol {
          * Mask transform
          ********************************************************************************/
         void mask_transform(uint8_ptr b, uint32 size, uint8 mask_key[4]);
+
     }  // namespace websocket
 }  // namespace protocol
 }  // namespace pump

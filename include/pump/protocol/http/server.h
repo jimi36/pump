@@ -30,8 +30,9 @@ namespace protocol {
         DEFINE_ALL_POINTER_TYPE(server);
 
         struct server_callbacks {
+            // Http request callback
             pump_function<void(connection_wptr &, request_sptr &&)> request_cb;
-
+            // Http server stopped callback
             pump_function<void()> stopped_cb;
         };
 

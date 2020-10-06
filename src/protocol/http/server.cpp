@@ -30,17 +30,20 @@ namespace protocol {
                            const transport::address &listen_address,
                            const server_callbacks &cbs) {
             // Check acceptor
-            if (acceptor_)
+            if (acceptor_) {
                 return false;
+            }
 
-            // Check service valid
-            if (sv == nullptr)
+            // Check service
+            if (!sv) {
                 return false;
+            }
             sv_ = sv;
 
-            // Check callbacks valid
-            if (!cbs.request_cb || !cbs.stopped_cb)
+            // Check callbacks
+            if (!cbs.request_cb || !cbs.stopped_cb) {
                 return false;
+            }
             cbs_ = cbs;
 
             transport::acceptor_callbacks acbs;
@@ -49,9 +52,9 @@ namespace protocol {
             acbs.accepted_cb = pump_bind(&server::on_accepted, wptr, _1);
 
             auto accepter = transport::tcp_acceptor::create_instance(listen_address);
-            if (accepter->start(sv, acbs) != transport::ERROR_OK)
+            if (accepter->start(sv, acbs) != transport::ERROR_OK) {
                 return false;
-
+            }
             acceptor_ = accepter;
 
             return true;
@@ -63,17 +66,20 @@ namespace protocol {
                            const transport::address &listen_address,
                            const server_callbacks &cbs) {
             // Check acceptor
-            if (acceptor_)
+            if (acceptor_) {
                 return false;
+            }
 
-            // Check service valid
-            if (sv == nullptr)
+            // Check service
+            if (!sv) {
                 return false;
+            }
             sv_ = sv;
 
-            // Check callbacks valid
-            if (!cbs.request_cb || !cbs.stopped_cb)
+            // Check callbacks
+            if (!cbs.request_cb || !cbs.stopped_cb) {
                 return false;
+            }
             cbs_ = cbs;
 
             transport::acceptor_callbacks acbs;
@@ -83,24 +89,26 @@ namespace protocol {
 
             auto acceptor = transport::tls_acceptor::create_instance_with_file(
                 crtfile, keyfile, listen_address, 1000);
-            if (acceptor->start(sv, acbs) != transport::ERROR_OK)
+            if (acceptor->start(sv, acbs) != transport::ERROR_OK) {
                 return false;
-
+            }
             acceptor_ = acceptor;
 
             return true;
         }
 
         void server::stop() {
-            if (acceptor_)
+            if (acceptor_) {
                 acceptor_->stop();
+            }
         }
 
         void server::on_accepted(server_wptr wptr,
                                  transport::base_transport_sptr &transp) {
             PUMP_LOCK_WPOINTER(svr, wptr);
-            if (svr == nullptr)
+            if (!svr) {
                 return;
+            }
 
             connection_sptr conn(new connection(true, transp));
             {
@@ -120,15 +128,17 @@ namespace protocol {
 
         void server::on_stopped(server_wptr wptr) {
             PUMP_LOCK_WPOINTER(svr, wptr);
-            if (svr == nullptr)
+            if (!svr) {
                 return;
+            }
 
             std::unique_lock<std::mutex> lock(svr->conn_mx_);
             while (!svr->conns_.empty()) {
                 auto beg = svr->conns_.begin();
                 while (beg != svr->conns_.end()) {
-                    if (beg->second->is_valid())
+                    if (beg->second->is_valid()) {
                         (beg++)->second->stop();
+                    }
                 }
 
                 svr->conn_cond_.wait_for(lock, std::chrono::seconds(1));
@@ -141,12 +151,14 @@ namespace protocol {
                                      connection_wptr wconn,
                                      pocket_sptr &&pk) {
             PUMP_LOCK_WPOINTER(svr, wptr);
-            if (svr == nullptr)
+            if (!svr) {
                 return;
+            }
 
             PUMP_LOCK_WPOINTER(conn, wconn);
-            if (conn == nullptr)
+            if (!conn) {
                 return;
+            }
 
             svr->cbs_.request_cb(wconn, std::static_pointer_cast<request>(pk));
 
@@ -157,7 +169,7 @@ namespace protocol {
                                    connection_wptr wconn,
                                    const std::string &msg) {
             PUMP_LOCK_WPOINTER(conn, wconn);
-            PUMP_ASSERT(conn != nullptr);
+            PUMP_ASSERT(conn);
 
             PUMP_LOCK_WPOINTER(svr, wptr);
             if (svr == nullptr) {
@@ -168,8 +180,9 @@ namespace protocol {
             std::unique_lock<std::mutex> w_lock(svr->conn_mx_);
             svr->conns_.erase(conn);
 
-            if (!svr->acceptor_->is_started())
+            if (!svr->acceptor_->is_started()) {
                 svr->conn_cond_.notify_one();
+            }
         }
 
     }  // namespace http

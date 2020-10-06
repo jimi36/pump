@@ -1,17 +1,17 @@
 #include "ws.h"
 
-void on_started(websocket::client_ptr cli, bool succ) {
-    printf("ws client started %s\n", succ ? "true" : "false");
-    if (succ) {
-        if (!cli->send("123", 3)) PUMP_ASSERT(false);
-    }
+void on_started(websocket::client_ptr cli) {
+    if (!cli->send("123", 3))
+        PUMP_ASSERT(false);
 }
 
 void on_error(websocket::client_ptr cli, const std::string &msg) {
     printf("ws client erorr %s\n", msg.c_str());
 }
 
-void on_data(websocket::client_ptr cli, pump::c_block_ptr b, pump::uint32 size,
+void on_data(websocket::client_ptr cli,
+             pump::c_block_ptr b,
+             pump::uint32 size,
              bool msg_end) {
     std::string data(b, size);
     std::string msg = pump::utf8_to_gbk(data);
@@ -22,6 +22,7 @@ void start_ws_client(pump::service_ptr sv, const std::string &url) {
     websocket::client_sptr cli = websocket::client::create_instance();
 
     websocket::client_callbacks cbs;
+    cbs.started_cb = pump_bind(&on_started, cli.get());
     cbs.error_cb = pump_bind(&on_error, cli.get(), _1);
     cbs.data_cb = pump_bind(&on_data, cli.get(), _1, _2, _3);
 

@@ -2,8 +2,10 @@
 
 websocket::connection_sptr ws_conn;
 
-void on_receive(websocket::connection_ptr conn, const char *b,
-                unsigned int size, bool msg_end) {
+void on_receive(websocket::connection_ptr conn,
+                const char *b,
+                unsigned int size,
+                bool msg_end) {
     std::string data(b, size);
     std::string gbk = pump::utf8_to_gbk(data);
     printf("received: %s\n", gbk.c_str());
@@ -20,7 +22,7 @@ void on_new_connection(websocket::connection_sptr conn) {
     printf("new ws connection\n");
 
     websocket::connection_callbacks cbs;
-    cbs.data_cb = pump_bind(&on_receive, conn.get(), _1, _2, _3);
+    cbs.frame_cb = pump_bind(&on_receive, conn.get(), _1, _2, _3);
     cbs.error_cb = pump_bind(&on_error, conn.get(), _1);
     conn->start(cbs);
 

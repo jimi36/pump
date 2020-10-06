@@ -39,8 +39,8 @@ namespace protocol {
 
             /*********************************************************************************
              * Parse
-             * This parse http header and return parsed size. If this return -1, it
-             *means parsed error.
+             * This parse http header and return parsed size. If this return -1, it means
+             * parsed error.
              ********************************************************************************/
             int32 parse(c_block_ptr b, int32 size);
 
@@ -53,8 +53,8 @@ namespace protocol {
 
             /*********************************************************************************
              * Set http header
-             * If the header field with the name has existed, the value will append to
-             *the existed value.
+             * If the header field with the name has existed, the value will append to the
+             * existed value.
              ********************************************************************************/
             void set(const std::string &name, int32 value);
             void set(const std::string &name, const std::string &value);
@@ -86,7 +86,7 @@ namespace protocol {
             }
 
           private:
-            // Parse finished mark
+            // Parse state
             bool parse_finished_;
             // Http header map
             std::map<std::string, std::vector<std::string> > headers_;

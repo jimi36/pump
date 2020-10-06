@@ -54,12 +54,13 @@ namespace protocol {
         std::string match_protocol(const std::vector<std::string> &srcs,
                                    const std::string &des) {
             std::string protocol;
-            if (std::find(srcs.begin(), srcs.end(), des) != srcs.end())
+            if (std::find(srcs.begin(), srcs.end(), des) != srcs.end()) {
                 protocol = des;
+            }
             return protocol;
         }
 
-        void send_http_error_response(http::connection_ptr conn,
+        void send_http_error_response(connection_ptr conn,
                                       int32 status_code,
                                       const std::string &reason) {
             http::response resp;
@@ -75,7 +76,9 @@ namespace protocol {
                 resp.set_content(ct);
             }
 
-            conn->send(&resp);
+            std::string data;
+            resp.serialize(data);
+            conn->send_buffer(data.c_str(), (uint32)data.size());
         }
 
     }  // namespace websocket
