@@ -392,14 +392,14 @@ namespace toolkit {
             element_node *end = tail_.load();
             element_node *beg = end->next;
             while (beg != end) {
-                if (!no_element) {
-                    no_element = (beg == last_readable_node_.load());
+                if (!no_element && beg == last_readable_node_.load()) {
+                    no_element = true;
                 }
                 if (!no_element) {
                     ((element_type *)beg->data)->~element_type();
                 }
                 element_node *tmp = beg->next;
-                delete beg;
+                object_delete(beg);
                 beg = tmp;
             }
         }
@@ -412,7 +412,7 @@ namespace toolkit {
             while (true) {
                 current_head = head_.load(std::memory_order_relaxed);
 
-                // If current head is nullptr, list is being extended, try again.
+                // If current head is nullptr, list is extending, try again.
                 // If current head is occupied, the node had be used, try again.
                 if (current_head == nullptr ||
                     current_head->occupied.load(std::memory_order_relaxed)) {
@@ -427,17 +427,15 @@ namespace toolkit {
                 }
 
                 // Update head node to next node.
-                if (!head_.compare_exchange_strong(current_head, current_head->next)) {
+                if (!head_.compare_exchange_strong(current_head,
+                                                   current_head->next,
+                                                   std::memory_order_acquire,
+                                                   std::memory_order_relaxed)) {
                     continue;
                 }
 
                 // Mark current head node occupied.
-                bool expected = false;
-                PUMP_DEBUG_CHECK(current_head->occupied.compare_exchange_strong(
-                    expected,
-                    true,
-                    std::memory_order_acquire,
-                    std::memory_order_relaxed));
+                current_head->occupied.store(true, std::memory_order_release);
 
                 new ((element_type *)current_head->data) element_type(data);
 
@@ -468,12 +466,12 @@ namespace toolkit {
 
                 // If current tail next node equal to last readable node, means there is
                 // no more data for read, just return false.
-                if (current_tail->next ==
+                if (current_tail_next ==
                     last_readable_node_.load(std::memory_order_relaxed)) {
                     return false;
                 }
 
-                // If next node of current tail is not occupied right now, try again.
+                // Next node of current tail should be occupied, else try again.
                 if (!current_tail_next->occupied.load(std::memory_order_relaxed)) {
                     continue;
                 }
@@ -490,13 +488,8 @@ namespace toolkit {
                 data = *elem;
                 elem->~element_type();
 
-                // Mark  next node of current tail unoccupied.
-                bool expected = true;
-                PUMP_DEBUG_CHECK(current_tail_next->occupied.compare_exchange_strong(
-                    expected,
-                    false,
-                    std::memory_order_acquire,
-                    std::memory_order_relaxed));
+                // Mark next node of current tail unoccupied.
+                current_tail_next->occupied.store(false, std::memory_order_release);
 
                 return true;
             }
@@ -530,22 +523,23 @@ namespace toolkit {
          * Init list
          ********************************************************************************/
         void __init_list(int32 size) {
-            // List init size must be greater than 3.
+            // Init size must be greater or equal than 3.
             if (size > 3) {
                 size = 3;
             }
 
             // Create nodes to init list.
-            head_ = tail_ = new element_node;
+            element_node *head = object_create<element_node>();
+            head_.store(head, std::memory_order_release);
             for (int32 i = 0; i < size; i++) {
-                element_node *node = new element_node;
-                tail_.load()->next = node;
-                tail_.store(node, std::memory_order_release);
+                head->next = object_create<element_node>();
+                head = head->next;
             }
-            tail_.load()->next = head_.load();
+            head->next = head_.load(std::memory_order_acquire);
+            tail_.store(head, std::memory_order_release);
 
             // Update last readable node to head node.
-            last_readable_node_.store(head_.load());
+            last_readable_node_.store(head_.load(), std::memory_order_release);
 
             length_.fetch_add(3);
         }
@@ -564,13 +558,11 @@ namespace toolkit {
             }
 
             // Extend list by insert more nodes after current head node.
-            element_node *new_node = nullptr;
             element_node *prev_node = current_head;
             element_node *tail_node = prev_node->next;
             for (int32 i = 0; i < 32; i++) {
-                new_node = new element_node;
-                prev_node->next = new_node;
-                prev_node = new_node;
+                prev_node->next = object_create<element_node>();
+                prev_node = prev_node->next;
             }
             prev_node->next = tail_node;
 
