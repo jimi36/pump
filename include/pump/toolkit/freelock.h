@@ -24,13 +24,14 @@
 #include "pump/debug.h"
 #include "pump/memory.h"
 #include "pump/platform.h"
+#include "pump/toolkit/features.h"
 #include "pump/toolkit/semaphore.h"
 
 namespace pump {
 namespace toolkit {
 
     template <typename T>
-    class freelock_array_queue {
+    class LIB_PUMP freelock_array_queue : public noncopyable {
       public:
         // Element type
         typedef T element_type;
@@ -56,8 +57,8 @@ namespace toolkit {
          ********************************************************************************/
         ~freelock_array_queue() {
             if (mem_block_) {
-                uint32 read_index = read_index_.load();
-                uint32 max_read_index = max_read_index_.load();
+                int32 read_index = read_index_.load();
+                int32 max_read_index = max_read_index_.load();
                 while (count_to_index(read_index) != count_to_index(max_read_index)) {
                     ((element_type *)mem_block_ + count_to_index(read_index++))
                         ->~element_type();
@@ -71,7 +72,7 @@ namespace toolkit {
          * Return false if array is full, thread safe.
          ********************************************************************************/
         bool push(const element_type &data) {
-            uint32 cur_write_index = write_index_.load(std::memory_order_relaxed);
+            int32 cur_write_index = write_index_.load(std::memory_order_relaxed);
             do {
                 // Array is full
                 if (count_to_index(cur_write_index + 1) ==
@@ -110,7 +111,7 @@ namespace toolkit {
         template <typename U>
         bool pop(U &data) {
             do {
-                uint32 cur_read_index = read_index_.load(std::memory_order_relaxed);
+                int32 cur_read_index = read_index_.load(std::memory_order_relaxed);
                 if (count_to_index(cur_read_index) ==
                     count_to_index(max_read_index_.load(std::memory_order_acquire))) {
                     return false;
@@ -147,11 +148,11 @@ namespace toolkit {
         }
 
         /*********************************************************************************
-         * Get array data size
+         * Get size
          ********************************************************************************/
-        uint32 size() {
-            uint32 cur_read_index = read_index_.load(std::memory_order_relaxed);
-            uint32 cur_write_index = write_index_.load(std::memory_order_relaxed);
+        int32 size() {
+            int32 cur_read_index = read_index_.load(std::memory_order_relaxed);
+            int32 cur_write_index = write_index_.load(std::memory_order_relaxed);
 
             if (cur_write_index >= cur_read_index) {
                 return (cur_write_index - cur_read_index);
@@ -161,9 +162,9 @@ namespace toolkit {
         }
 
         /*********************************************************************************
-         * Get array capacity
+         * Get capacity
          ********************************************************************************/
-        uint32 capacity() {
+        int32 capacity() {
             return size_;
         }
 
@@ -171,34 +172,32 @@ namespace toolkit {
         /*********************************************************************************
          * Map count to index
          ********************************************************************************/
-        PUMP_INLINE uint32 count_to_index(uint32 count) {
+        PUMP_INLINE int32 count_to_index(int32 count) {
             return (count % size_);
         }
 
       private:
         // Capacity size
-        uint32 size_;
+        int32 size_;
 
         // Element memory block
         block_ptr mem_block_;
 
         // Next write index
-        std::atomic_uint32_t write_index_;
-
+        std::atomic_int32_t write_index_;
         // Max write index
         // It should be equal or littel read index at all
-        std::atomic_uint32_t max_write_index_;
+        std::atomic_int32_t max_write_index_;
 
         // Next read index
-        std::atomic_uint32_t read_index_;
-
+        std::atomic_int32_t read_index_;
         // Max read index
         // It should be equal write index at all
-        std::atomic_uint32_t max_read_index_;
+        std::atomic_int32_t max_read_index_;
     };
 
     template <typename T>
-    class freelock_vector_queue {
+    class LIB_PUMP freelock_vector_queue : public noncopyable {
       public:
         // Freelock array queue type
         typedef freelock_array_queue<T> freelock_array_type;
@@ -209,9 +208,9 @@ namespace toolkit {
         /*********************************************************************************
          * Constructor
          ********************************************************************************/
-        freelock_vector_queue(uint32 size)
+        freelock_vector_queue(uint32 capacity)
             : array_(nullptr), resize_locker_(false), concurrent_cnt_(0) {
-            array_ = new freelock_array_type(size);
+            array_ = object_create<freelock_array_type>(capacity);
         }
 
         /*********************************************************************************
@@ -219,7 +218,7 @@ namespace toolkit {
          ********************************************************************************/
         ~freelock_vector_queue() {
             if (array_) {
-                delete array_;
+                object_delete(array_);
             }
         }
 
@@ -324,6 +323,70 @@ namespace toolkit {
             return ret;
         }
 
+        /*********************************************************************************
+         * Get size
+         ********************************************************************************/
+        int32 size() {
+            while (true) {
+                // check resize locker locked state and wait it free
+                if (resize_locker_.load(std::memory_order_acquire)) {
+                    continue;
+                }
+
+                // add concurrent count
+                concurrent_cnt_.fetch_add(1, std::memory_order_release);
+
+                // recheck resize locker locked state
+                if (resize_locker_.load(std::memory_order_relaxed)) {
+                    // sub concurrent count if resize locker locked
+                    concurrent_cnt_.fetch_sub(1, std::memory_order_release);
+                    // try again for next time
+                    continue;
+                }
+
+                int32 size = array_->size();
+
+                // sub concurrent count if resize locker locked
+                concurrent_cnt_.fetch_sub(1, std::memory_order_release);
+
+                return size;
+            }
+
+            return 0;
+        }
+
+        /*********************************************************************************
+         * Get capacity
+         ********************************************************************************/
+        int32 capacity() {
+            while (true) {
+                // check resize locker locked state and wait it free
+                if (resize_locker_.load(std::memory_order_acquire)) {
+                    continue;
+                }
+
+                // add concurrent count
+                concurrent_cnt_.fetch_add(1, std::memory_order_release);
+
+                // recheck resize locker locked state
+                if (resize_locker_.load(std::memory_order_relaxed)) {
+                    // sub concurrent count if resize locker locked
+                    concurrent_cnt_.fetch_sub(1, std::memory_order_release);
+                    // try again for next time
+                    continue;
+                }
+
+                int32 capacity = array_->capacity();
+
+                // sub concurrent count if resize locker locked
+                concurrent_cnt_.fetch_sub(1, std::memory_order_release);
+
+                return capacity;
+            }
+
+            return 0;
+        }
+
       private:
         /*********************************************************************************
          * New bigger array
@@ -336,14 +399,14 @@ namespace toolkit {
             } else {
                 capacity += 1024;
             }
-            freelock_array_type *new_array = new freelock_array_type(capacity);
+            freelock_array_type *new_array = object_create<freelock_array_type>(capacity);
 
             element_type data;
             while (array_->pop(data)) {
                 new_array->push(data);
             }
 
-            delete array_;
+            object_delete(array_);
 
             array_ = new_array;
         }
@@ -351,16 +414,14 @@ namespace toolkit {
       private:
         // Freelock array
         freelock_array_type *array_;
-
         // Array resize locker
         std::atomic_bool resize_locker_;
-
         // Concurrent count
         std::atomic_uint32_t concurrent_cnt_;
     };
 
     template <typename T>
-    class freelock_list_queue {
+    class LIB_PUMP freelock_list_queue : public noncopyable {
       public:
         // Element type
         typedef T element_type;
@@ -439,6 +500,9 @@ namespace toolkit {
 
                 new ((element_type *)current_head->data) element_type(data);
 
+                // Inc list size.
+                size_.fetch_add(1);
+
                 // Update last readable node.
                 while (!last_readable_node_.compare_exchange_strong(
                     current_head,
@@ -488,6 +552,9 @@ namespace toolkit {
                 data = *elem;
                 elem->~element_type();
 
+                // Sub list size.
+                size_.fetch_sub(1);
+
                 // Mark next node of current tail unoccupied.
                 current_tail_next->occupied.store(false, std::memory_order_release);
 
@@ -497,25 +564,18 @@ namespace toolkit {
             return false;
         }
 
-        int32 length() {
-            return length_.load();
+        /*********************************************************************************
+         * Get size
+         ********************************************************************************/
+        int32 size() {
+            return size_.load(std::memory_order_relaxed);
         }
 
-        bool check_length() {
-            int32 list_length = 0;
-            element_node *head = head_.load(std::memory_order_relaxed);
-            element_node *tail = head->next;
-            while (tail != head) {
-                list_length++;
-                tail = tail->next;
-            }
-
-            if (list_length != length_.load()) {
-                PUMP_ASSERT(false);
-                return false;
-            }
-
-            return true;
+        /*********************************************************************************
+         * Get capacity
+         ********************************************************************************/
+        int32 capacity() {
+            return capacity_.load(std::memory_order_relaxed);
         }
 
       private:
@@ -541,7 +601,8 @@ namespace toolkit {
             // Update last readable node to head node.
             last_readable_node_.store(head_.load(), std::memory_order_release);
 
-            length_.fetch_add(3);
+            // Update list capacity.
+            capacity_.fetch_add(3);
         }
 
         /*********************************************************************************
@@ -566,7 +627,8 @@ namespace toolkit {
             }
             prev_node->next = tail_node;
 
-            length_.fetch_add(32);
+            // Update list capacity.
+            capacity_.fetch_add(32);
 
             // Update head node to current head for unlocking head node.
             PUMP_DEBUG_CHECK(head_.compare_exchange_strong(null_node,
@@ -584,12 +646,14 @@ namespace toolkit {
         std::atomic<element_node *> tail_;
         // Last readable node
         std::atomic<element_node *> last_readable_node_;
-        // List length
-        std::atomic_int32_t length_;
+        // List capacity
+        std::atomic_int32_t capacity_;
+        // List size
+        std::atomic_int32_t size_;
     };
 
     template <typename Q>
-    class block_freelock_queue {
+    class LIB_PUMP block_freelock_queue : public noncopyable {
       public:
         // Inner queue type
         typedef Q inner_queue_type;
@@ -683,6 +747,13 @@ namespace toolkit {
                 return true;
             }
             return false;
+        }
+
+        /*********************************************************************************
+         * Get size
+         ********************************************************************************/
+        int32 size() {
+            return queue_.size();
         }
 
       private:
