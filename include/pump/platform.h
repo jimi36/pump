@@ -30,8 +30,6 @@
 
 #if defined(OS_WINDOWS) && defined(pump_EXPORTS)
 #define LIB_PUMP __declspec(dllexport)
-#elif defined(OS_WINDOWS)
-#define LIB_PUMP __declspec(dllimport)
 #else
 #define LIB_PUMP
 #endif

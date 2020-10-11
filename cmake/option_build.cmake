@@ -2,11 +2,9 @@
 # Config build environment
 #
 
-# Specifies compiler on linux
-IF(UNIX)
-	SET(CMAKE_C_COMPILER gcc)
-	SET(CMAKE_CXX_COMPILER g++)
-ENDIF()
+# Specifies library name
+SET(SHARED_LIBRARY_NAME "pump")
+SET(STATIC_LIBRARY_NAME "pump_static")
 
 # Specifies build type
 IF(BUILD_DEBUG)
@@ -20,11 +18,9 @@ ELSE()
 ENDIF()
 SET(CMAKE_CONFIGURATION_TYPES ${CMAKE_BUILD_TYPE} CACHE STRING "" FORCE)
 
-# Modify suffix of linked libraries
+# Specifies suffix of libraries for finding and linking
 IF(WIN32)
 	SET(CMAKE_FIND_LIBRARY_SUFFIXES "${CMAKE_FIND_LIBRARY_SUFFIXES};.a")
-	SET(CMAKE_STATIC_LIBRARY_SUFFIX "${CMAKE_STATIC_LIBRARY_SUFFIX};.a")
-	SET(CMAKE_SHARED_LIBRARY_PREFIX "${CMAKE_SHARED_LIBRARY_PREFIX};.a")
 ENDIF()
 
 # Specifies project prefix path
