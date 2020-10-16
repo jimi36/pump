@@ -34,10 +34,12 @@ namespace transport {
     void tcp_transport::init(int32 fd,
                              const address &local_address,
                              const address &remote_address) {
-        PUMP_DEBUG_CHECK(__open_transport_flow(fd));
-
+       
         local_address_ = local_address;
         remote_address_ = remote_address;
+
+        // Set channel fd
+        poll::channel::__set_fd(fd);
     }
 
     transport_error tcp_transport::start(service_ptr sv,
@@ -69,6 +71,12 @@ namespace transport {
 
         // Service
         __set_service(sv);
+
+        if (__open_transport_flow()) {
+            PUMP_ERR_LOG(
+                "transport::tcp_transport::start: open transport flow failed");
+            return ERROR_FAULT;
+        }
 
         if (max_pending_send_size > 0)
             max_pending_send_size_ = max_pending_send_size;
@@ -285,17 +293,14 @@ namespace transport {
         }
     }
 
-    bool tcp_transport::__open_transport_flow(int32 fd) {
+    bool tcp_transport::__open_transport_flow() {
         // Setup tcp transport flow
         PUMP_ASSERT(!flow_);
         flow_.reset(object_create<flow::flow_tcp>(), object_delete<flow::flow_tcp>);
-        if (flow_->init(shared_from_this(), fd) != flow::FLOW_ERR_NO) {
+        if (flow_->init(shared_from_this(), get_fd()) != flow::FLOW_ERR_NO) {
             PUMP_ERR_LOG("transport::tcp_transport::__open_flow: flow init failed");
             return false;
         }
-
-        // Set channel fd
-        poll::channel::__set_fd(fd);
 
         return true;
     }
