@@ -14,14 +14,9 @@
  * limitations under the License.
  */
 
+#include "pump/ssl/ssl_helper.h"
 #include "pump/transport/tls_dialer.h"
 #include "pump/transport/tls_transport.h"
-
-#if defined(PUMP_HAVE_GNUTLS)
-extern "C" {
-#include <gnutls/gnutls.h>
-}
-#endif
 
 namespace pump {
 namespace transport {
@@ -33,17 +28,7 @@ namespace transport {
         : base_dialer(TLS_DIALER, local_address, remote_address, dial_timeout),
           xcred_(nullptr),
           handshake_timeout_(handshake_timeout) {
-#if defined(PUMP_HAVE_GNUTLS)
-        gnutls_certificate_credentials_t xcred;
-        if (gnutls_certificate_allocate_credentials(&xcred) != 0) {
-            PUMP_ERR_LOG(
-                "transport::tls_dialer::tls_dialer: "
-                "gnutls_certificate_allocate_credentials failed\n");
-            return;
-        }
-
-        xcred_ = xcred;
-#endif
+        xcred_ = ssl::create_tls_client_certificate();
     }
 
     transport_error tls_dialer::start(service_ptr sv, const dialer_callbacks &cbs) {

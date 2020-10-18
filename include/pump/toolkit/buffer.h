@@ -166,6 +166,29 @@ namespace toolkit {
         }
 
         /*********************************************************************************
+         * Reset data size
+         ********************************************************************************/
+        PUMP_INLINE bool reset_data_size(uint32 size) {
+            if (PUMP_LIKELY(size <= raw_size_)) {
+                data_size_ = size;
+                read_pos_ = 0;
+                return true;
+            }
+            return false;
+        }
+
+        /*********************************************************************************
+         * Add data size
+         ********************************************************************************/
+        PUMP_INLINE bool add_data_size(uint32 size) {
+            if (PUMP_LIKELY(read_pos_ + data_size_ + size <= raw_size_)) {
+                data_size_ += size;
+                return true;
+            }
+            return false;
+        }
+
+        /*********************************************************************************
          * Reset
          ********************************************************************************/
         PUMP_INLINE void reset() {

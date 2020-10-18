@@ -17,6 +17,7 @@
 #ifndef pump_transport_flow_tls_h
 #define pump_transport_flow_tls_h
 
+#include "pump/ssl/tls_helper.h"
 #include "pump/transport/flow/flow.h"
 
 namespace pump {
@@ -101,7 +102,7 @@ namespace transport {
              * Check there are data to read or not
              ********************************************************************************/
             PUMP_INLINE bool has_data_to_read() const {
-                return net_read_data_size_ > 0;
+                return session_ && session_->net_read_data_size > 0;
             }
 
             /*********************************************************************************
@@ -140,7 +141,7 @@ namespace transport {
              * Check there are data to send or not
              ********************************************************************************/
             PUMP_INLINE bool has_data_to_send() const {
-                return net_send_iob_ && net_send_iob_->data_size() > 0;
+                return session_ && session_->net_send_iob->data_size() > 0;
             }
 
             /*********************************************************************************
@@ -151,43 +152,16 @@ namespace transport {
             }
 
           private:
-            /*********************************************************************************
-             * Read from net read cache
-             ********************************************************************************/
-            uint32 __read_from_net_read_cache(block_ptr b, int32 maxlen);
-
-            /*********************************************************************************
-             * Send to net send cache
-             ********************************************************************************/
-            PUMP_INLINE void __send_to_net_send_cache(c_block_ptr b, int32 size) {
-                net_send_iob_->append(b, size);
-            }
-
-            /*********************************************************************************
-             * Get ssl session
-             ********************************************************************************/
-            PUMP_INLINE tls_session_ptr __get_tls_session() {
-                return session_;
-            }
-
-          private:
             // Handshaked status
             bool is_handshaked_;
 
-            // GNUTLS session
-            tls_session_ptr session_;
+            // TLS session
+            ssl::tls_session_ptr session_;
 
             // IOCP read task
             void_ptr read_task_;
-            // Net read cache
-            volatile int32 net_read_data_pos_;
-            volatile int32 net_read_data_size_;
-            toolkit::io_buffer_ptr net_read_iob_;
-
             // IOCP send task
             void_ptr send_task_;
-            // Net send buffer
-            toolkit::io_buffer_ptr net_send_iob_;
         };
         DEFINE_ALL_POINTER_TYPE(flow_tls);
 

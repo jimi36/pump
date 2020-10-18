@@ -169,6 +169,9 @@ namespace transport {
         // Finished flag
         std::atomic_flag flag_;
 
+        // Handshake step: 1 2 3 4
+        int32 handshake_step_;
+
         // Handshake timeout timer
         time::timer_sptr timer_;
 
@@ -176,7 +179,6 @@ namespace transport {
         // Channel tracker
         poll::channel_tracker_sptr tracker_;
 #endif
-
         // TLS flow
         flow::flow_tls_sptr flow_;
 

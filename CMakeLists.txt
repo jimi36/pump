@@ -30,9 +30,9 @@ INCLUDE(option_iocp)
 OPTION(WITH_JEMALLOC "Option build with jemalloc" OFF)
 INCLUDE(option_jemalloc)
 
-# Option build with gnutls (default OFF)
-OPTION(WITH_GNUTLS "Option build with gnutls" OFF)
-INCLUDE(option_gnutls)
+# Option build with TLS (default OFF)
+OPTION(WITH_TLS "Option build with TLS" OFF)
+INCLUDE(option_tls)
 
 # Load set_compile_flags
 INCLUDE(set_compile_flags)

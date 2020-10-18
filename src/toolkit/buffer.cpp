@@ -64,8 +64,9 @@ namespace toolkit {
             return init_with_copy(b, size);
         }
 
-        if (read_pos_ == raw_size_)
+        if (read_pos_ == raw_size_) {
             reset();
+        }
 
         uint32 left = raw_size_ - read_pos_ - data_size_;
         if (size < left) {

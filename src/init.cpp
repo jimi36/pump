@@ -25,6 +25,13 @@
 #include <signal.h>
 #endif
 
+#if defined(PUMP_HAVE_OPENSSL)
+extern "C" {
+#include <openssl/ssl.h>
+#include <openssl/err.h>
+}
+#endif
+
 #if defined(PUMP_HAVE_GNUTLS)
 extern "C" {
 #include <gnutls/gnutls.h>
@@ -66,12 +73,17 @@ bool init() {
     setup_signal(SIGPIPE, 0, SIG_IGN);
 #endif
 
+
 #if defined(PUMP_HAVE_GNUTLS)
     if (gnutls_global_init() != 0) {
         PUMP_WARN_LOG("pump::init: gnutls_global_init failed");
         return false;
     }
     gnutls_global_set_log_level(0);
+#elif defined(PUMP_HAVE_OPENSSL)
+    SSL_library_init();
+    OpenSSL_add_all_algorithms();
+    SSL_load_error_strings();
 #endif
 
     return true;

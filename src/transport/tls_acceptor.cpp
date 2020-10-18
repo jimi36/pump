@@ -14,19 +14,14 @@
  * limitations under the License.
  */
 
+#include "pump/ssl/ssl_helper.h"
 #include "pump/transport/tls_acceptor.h"
 #include "pump/transport/tls_transport.h"
-
-#if defined(PUMP_HAVE_GNUTLS)
-extern "C" {
-#include <gnutls/gnutls.h>
-}
-#endif
 
 namespace pump {
 namespace transport {
 
-    tls_acceptor::tls_acceptor(bool use_file,
+    tls_acceptor::tls_acceptor(bool is_file,
                                const std::string &cert,
                                const std::string &key,
                                const address &listen_address,
@@ -34,53 +29,15 @@ namespace transport {
         : base_acceptor(TLS_ACCEPTOR, listen_address),
           xcred_(nullptr),
           handshake_timeout_(0) {
-#if defined(PUMP_HAVE_GNUTLS)
-        gnutls_certificate_credentials_t xcred;
-        int32 ret1 = gnutls_certificate_allocate_credentials(&xcred);
-        if (ret1 != 0) {
-            PUMP_ERR_LOG(
-                "transport::tls_acceptor::tls_acceptor: "
-                "gnutls_certificate_allocate_credentials failed");
-            return;
-        }
-
-        if (use_file) {
-            int32 ret = gnutls_certificate_set_x509_key_file(
-                xcred, cert.c_str(), key.c_str(), GNUTLS_X509_FMT_PEM);
-            if (ret != 0) {
-                PUMP_ERR_LOG(
-                    "transport::tls_acceptor::tls_acceptor: "
-                    "gnutls_certificate_set_x509_key_file failed");
-                return;
-            }
+        if (is_file) {
+            xcred_ = ssl::create_tls_certificate_by_file(false, cert, key);
         } else {
-            gnutls_datum_t gnutls_cert;
-            gnutls_cert.data = (unsigned char *)cert.data();
-            gnutls_cert.size = (unsigned int)cert.size();
-
-            gnutls_datum_t gnutls_key;
-            gnutls_key.data = (unsigned char *)key.data();
-            gnutls_key.size = (unsigned int)key.size();
-
-            int32 ret2 = gnutls_certificate_set_x509_key_mem(
-                xcred, &gnutls_cert, &gnutls_key, GNUTLS_X509_FMT_PEM);
-            if (ret2 != 0) {
-                PUMP_ERR_LOG(
-                    "transport::tls_acceptor::tls_acceptor: "
-                    "gnutls_certificate_set_x509_key_mem failed");
-                return;
-            }
+            xcred_ = ssl::create_tls_certificate_by_buffer(false, cert, key);
         }
-
-        xcred_ = xcred;
-#endif
     }
 
     tls_acceptor::~tls_acceptor() {
-#if defined(PUMP_HAVE_GNUTLS)
-        if (xcred_ != nullptr)
-            gnutls_certificate_free_credentials((gnutls_certificate_credentials_t)xcred_);
-#endif
+        ssl::destory_tls_certificate(xcred_);
     }
 
     transport_error tls_acceptor::start(service_ptr sv, const acceptor_callbacks &cbs) {

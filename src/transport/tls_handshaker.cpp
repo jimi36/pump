@@ -24,7 +24,7 @@ namespace transport {
     const int32 TLS_HANDSHAKE_ERROR = 2;
 
     tls_handshaker::tls_handshaker() noexcept
-        : base_channel(TLS_HANDSHAKER, nullptr, -1) {
+        : base_channel(TLS_HANDSHAKER, nullptr, -1), handshake_step_(0) {
     }
 
     void tls_handshaker::init(int32 fd,
@@ -231,6 +231,8 @@ namespace transport {
             return;
         }
 
+        // handshake_step_++;
+
 #if !defined(PUMP_HAVE_IOCP)
         auto tracker = tracker_.get();
 #endif
@@ -241,7 +243,6 @@ namespace transport {
                 __post_channel_event(shared_from_this(), 0);
             }
 #else
-
             tracker->set_event(poll::TRACK_SEND);
 
             PUMP_ASSERT(tracker->is_started());
@@ -250,18 +251,13 @@ namespace transport {
             return;
         }
 
+        // if (handshake_step_ < 4 || !flow->is_handshaked()) {
         if (!flow->is_handshaked()) {
 #if defined(PUMP_HAVE_IOCP)
             if (flow->want_to_read() != flow::FLOW_ERR_NO &&
                 __set_status(TRANSPORT_STARTED, TRANSPORT_ERROR))
                 __post_channel_event(shared_from_this(), 0);
 #else
-            if (flow->send_to_net() != flow::FLOW_ERR_NO &&
-                __set_status(TRANSPORT_STARTED, TRANSPORT_ERROR)) {
-                __post_channel_event(shared_from_this(), 0);
-                return;
-            }
-
             tracker->set_event(poll::TRACK_READ);
 
             PUMP_ASSERT(tracker->is_started());
@@ -270,6 +266,8 @@ namespace transport {
             return;
         }
 
+        // if (handshake_step_ == 4 && __set_status(TRANSPORT_STARTED,
+        // TRANSPORT_FINISHED)) {
         if (__set_status(TRANSPORT_STARTED, TRANSPORT_FINISHED)) {
             __handshake_finished();
         }
