@@ -17,6 +17,9 @@
 #ifndef pump_ssl_tls_helper_h
 #define pump_ssl_tls_helper_h
 
+// Import "memcpy" function
+#include <string.h>
+
 #include "pump/types.h"
 #include "pump/toolkit/buffer.h"
 
