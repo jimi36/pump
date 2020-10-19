@@ -93,9 +93,6 @@ namespace ssl {
             return nullptr;
         }
 
-        //SSL_CTX_set_options(xcred, SSL_EXT_TLS1_3_ONLY);
-        //SSL_CTX_set_ecdh_auto(xcred, 1);
-
         /* Set the key and cert */
         if (SSL_CTX_use_certificate_file(xcred, cert.c_str(), SSL_FILETYPE_PEM) <= 0 ||
             SSL_CTX_use_PrivateKey_file(xcred, key.c_str(), SSL_FILETYPE_PEM) <= 0) {
@@ -152,9 +149,6 @@ namespace ssl {
             return nullptr;
         }
 
-        SSL_CTX_set_options(xcred, SSL_EXT_TLS1_3_ONLY);
-        SSL_CTX_set_ecdh_auto(xcred, 1);
-
         BIO *cert_bio = BIO_new_mem_buf((void *)cert.c_str(), -1);
         X509 *x509_cert = PEM_read_bio_X509(cert_bio, NULL, NULL, NULL);
         BIO_free(cert_bio);
@@ -166,8 +160,6 @@ namespace ssl {
         BIO *key_bio = BIO_new_mem_buf((void *)key.c_str(), -1);
         EVP_PKEY *evp_key = PEM_read_bio_PrivateKey(key_bio, NULL, 0, NULL);
         BIO_free(key_bio);
-        // const unsigned char *pkey = (const unsigned char *)key.c_str();
-        //EVP_PKEY *evp_key = d2i_AutoPrivateKey(NULL, &pkey, (long)key.size());
         if (!evp_key) {
             SSL_CTX_free(xcred);
             X509_free(x509_cert);

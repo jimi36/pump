@@ -170,11 +170,13 @@ namespace ssl {
         int32 ret = SSL_do_handshake((SSL *)session->ssl_ctx);
         int32 ec = SSL_get_error((SSL *)session->ssl_ctx, ret);
         if (ec != SSL_ERROR_SSL) {
-            block tmp[4094];
-            int32 bio_size = BIO_read((BIO *)session->send_bio, tmp, sizeof(tmp));
-            if (bio_size > 0) {
-                PUMP_DEBUG_CHECK(session->net_send_iob->append(tmp, bio_size));
-            } else if (ec == SSL_ERROR_NONE) {
+            BUF_MEM *bptr = nullptr;
+            PUMP_DEBUG_CHECK(BIO_get_mem_ptr((BIO *)session->send_bio, &bptr));
+            if (bptr->length > 0) {
+                PUMP_DEBUG_CHECK(session->net_send_iob->append(bptr->data, (uint32)bptr->length));
+            }
+            BIO_read((BIO *)session->send_bio, bptr->data, (int32)bptr->length);
+            if (ec == SSL_ERROR_NONE) {
                 // Handshake compelte.
                 return 0;
             }
@@ -199,20 +201,19 @@ namespace ssl {
             return -1;
         }
 
-        int32 bio_size =
-            BIO_write((BIO *)session->read_bio,
-                      session->net_read_iob->buffer() + session->net_read_data_pos,
-                      session->net_read_data_size);
+        int32 bio_size = BIO_write((BIO *)session->read_bio,
+                                   session->net_read_iob->buffer(),
+                                   session->net_read_data_size);
         PUMP_ASSERT(bio_size == session->net_read_data_size);
-        session->net_read_data_size -= bio_size;
-        session->net_read_data_pos += bio_size;
+        session->net_read_data_size = 0;
+        session->net_read_data_pos = 0;
 
         int32 ret = SSL_read((SSL *)session->ssl_ctx, b, size);
-        if (ret > 0) {
+        if (PUMP_LIKELY(ret > 0)) {
             return ret;
         }
 
-        if (SSL_get_error((SSL *)session->ssl_ctx, ret) != SSL_ERROR_SSL) {
+        if (PUMP_LIKELY(SSL_get_error((SSL *)session->ssl_ctx, ret) != SSL_ERROR_SSL)) {
             return -1;
         }
 #endif
@@ -224,19 +225,15 @@ namespace ssl {
         return (int32)gnutls_write((gnutls_session_t)session->ssl_ctx, b, size);
 #elif defined(PUMP_HAVE_OPENSSL)
         int32 ret = SSL_write((SSL *)session->ssl_ctx, b, size);
-        if (ret > 0) {
-            block tmp[4094];
-            int32 bio_size = 0;
-            do {
-                bio_size = BIO_read((BIO *)session->send_bio, tmp, sizeof(tmp));
-                if (bio_size > 0) {
-                    PUMP_DEBUG_CHECK(session->net_send_iob->append(tmp, bio_size));
-                }
-            } while (bio_size > 0);
+        if (PUMP_LIKELY(ret > 0)) {
+            BUF_MEM *bptr = nullptr;
+            PUMP_DEBUG_CHECK(BIO_get_mem_ptr((BIO *)session->send_bio, &bptr));
+            PUMP_DEBUG_CHECK(session->net_send_iob->append(bptr->data, (uint32)bptr->length));
+            BIO_read((BIO *)session->send_bio, bptr->data, (int32)bptr->length);
             return ret;
         }
 
-        if (SSL_get_error((SSL *)session->ssl_ctx, ret) != SSL_ERROR_SSL) {
+        if (PUMP_LIKELY(SSL_get_error((SSL *)session->ssl_ctx, ret) != SSL_ERROR_SSL)) {
             return -1;
         }
 #endif
