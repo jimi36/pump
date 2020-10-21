@@ -45,8 +45,8 @@ namespace transport {
     transport_error tcp_transport::start(service_ptr sv,
                                          int32 max_pending_send_size,
                                          const transport_callbacks &cbs) {
-        if (!flow_) {
-            PUMP_ERR_LOG("transport::tcp_transport::start: flow invalid");
+        if (flow_) {
+            PUMP_ERR_LOG("transport::tcp_transport::start: flow exists");
             return ERROR_INVALID;
         }
 
@@ -72,7 +72,7 @@ namespace transport {
         // Service
         __set_service(sv);
 
-        if (__open_transport_flow()) {
+        if (!__open_transport_flow()) {
             PUMP_ERR_LOG(
                 "transport::tcp_transport::start: open transport flow failed");
             return ERROR_FAULT;
