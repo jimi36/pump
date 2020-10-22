@@ -17,8 +17,8 @@
 #ifndef pump_types_h
 #define pump_types_h
 
-// Import “std::weak_ptr”
-// Import ”std::shared_ptr“
+// Import "std::weak_ptr"
+// Import "std::shared_ptr"
 #include <memory>
 
 #include "pump/config.h"

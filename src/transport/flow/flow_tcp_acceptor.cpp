@@ -127,8 +127,7 @@ namespace transport {
             int32 ec = net::get_iocp_task_ec(iocp_task);
             int32 client_fd = net::get_iocp_task_client_fd(iocp_task);
             if (ec != 0 || client_fd == -1) {
-                PUMP_WARN_LOG(
-                    "flow_tcp_acceptor::accept: accept failed", ec, client_fd);
+                PUMP_WARN_LOG("flow_tcp_acceptor::accept: accept failed");
                 net::close(client_fd);
                 return -1;
             }
