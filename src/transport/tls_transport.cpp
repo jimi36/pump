@@ -90,15 +90,11 @@ namespace transport {
             // tracker event callback will be triggered, we can trigger stopped
             // callabck at there.
             if (__set_status(TRANSPORT_STARTED, TRANSPORT_STOPPING)) {
-                while (true) {
-                    transport_error err = __async_read(READ_ONCE);
-                    if (err == ERROR_FAULT) {
-                        __post_channel_event(shared_from_this(), 0);
-                        return;
-                    } else if (err == ERROR_OK) {
-                        __shutdown_transport_flow();
-                        return;
-                    }
+                if (pending_send_size_.load(std::memory_order_acquire) == 0) {
+                    __close_transport_flow();
+                    __post_channel_event(shared_from_this(), 0);
+                } else {
+                    __shutdown_transport_flow();
                 }
                 return;
             }
@@ -108,8 +104,9 @@ namespace transport {
         // disconnected but hasn't triggered tracker event callback yet. So we just
         // set stopping status to transport, and when tracker event callback
         // triggered, we will trigger stopped callabck at there.
-        if (__set_status(TRANSPORT_DISCONNECTING, TRANSPORT_STOPPING))
+        if (__set_status(TRANSPORT_DISCONNECTING, TRANSPORT_STOPPING)) {
             return;
+        }
     }
 
     void tls_transport::force_stop() {
@@ -118,17 +115,8 @@ namespace transport {
             // tracker event callback will be triggered, we can trigger stopped
             // callabck at there.
             if (__set_status(TRANSPORT_STARTED, TRANSPORT_STOPPING)) {
-                pending_send_size_.store(0xffffffff, std::memory_order_release);
-                while (true) {
-                    transport_error err = __async_read(READ_ONCE);
-                    if (err == ERROR_FAULT) {
-                        __post_channel_event(shared_from_this(), 0);
-                        return;
-                    } else if (err == ERROR_OK) {
-                        __shutdown_transport_flow();
-                        return;
-                    }
-                }
+                __close_transport_flow();
+                __post_channel_event(shared_from_this(), 0);
                 return;
             }
         }
@@ -350,14 +338,6 @@ namespace transport {
             return;
         }
 
-        // If transport is not in started state and no buffer waiting send, then
-        // interrupt this transport.
-        //if (!__is_status(TRANSPORT_STARTED) &&
-        //    pending_send_size_.load(std::memory_order_acquire) == 0) {
-        //    __interrupt_and_trigger_callbacks();
-        //    return;
-        //}
-
         // If old read state is READ_ONCE, then change it to READ_NONE.
         if (size > 0 && old_state == READ_ONCE &&
             read_state_.compare_exchange_strong(pending_state, READ_NONE)) {
@@ -406,7 +386,7 @@ namespace transport {
             return;
         }
 
-       if (__is_status(TRANSPORT_STOPPING)) {
+        if (__is_status(TRANSPORT_STOPPING)) {
             PUMP_DEBUG_LOG("tls_transport::on_send_event: interrupt and callback");
             __interrupt_and_trigger_callbacks();
         }
@@ -446,7 +426,8 @@ namespace transport {
         PUMP_DEBUG_CHECK(sendlist_.push(iob));
 
         // If there are no more buffers, we should try to get next send chance.
-        if (pending_send_size_.fetch_add(iob->data_size(), std::memory_order_release) > 0) {
+        if (pending_send_size_.fetch_add(iob->data_size(), std::memory_order_release) >
+            0) {
             return true;
         }
 
@@ -466,7 +447,7 @@ namespace transport {
         }
 
         // Get a buffer from sendlist to send.
-        PUMP_DEBUG_CHECK (sendlist_.pop(last_send_iob_));
+        PUMP_DEBUG_CHECK(sendlist_.pop(last_send_iob_));
 
         // Save last send buffer data size.
         last_send_iob_size_ = last_send_iob_->data_size();
@@ -491,7 +472,8 @@ namespace transport {
         if (PUMP_LIKELY(ret == flow::FLOW_ERR_NO)) {
             last_send_iob_->sub_ref();
             last_send_iob_ = nullptr;
-            if (pending_send_size_.fetch_sub(last_send_iob_size_) == last_send_iob_size_) {
+            if (pending_send_size_.fetch_sub(last_send_iob_size_) ==
+                last_send_iob_size_) {
                 return true;
             }
         }

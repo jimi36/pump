@@ -37,9 +37,10 @@ namespace poll {
 
         started_.store(true);
 
-        SYSTEM_INFO sys_info;
-        GetSystemInfo(&sys_info);
-        for (DWORD i = 0; i < (sys_info.dwNumberOfProcessors * 2); ++i) {
+        //SYSTEM_INFO sys_info;
+        //GetSystemInfo(&sys_info);
+        //for (DWORD i = 0; i < (sys_info.dwNumberOfProcessors * 2); ++i) {
+        for (int32 i = 0; i < 2; ++i) {
             std::thread *worker =
                 object_create<std::thread>(pump_bind(&iocp_poller::__work_thread, this));
             workrs_.push_back(worker);

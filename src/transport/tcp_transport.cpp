@@ -89,15 +89,11 @@ namespace transport {
             // tracker event callback will be triggered, we can trigger stopped
             // callabck at there.
             if (__set_status(TRANSPORT_STARTED, TRANSPORT_STOPPING)) {
-                while (true) {
-                    transport_error err = __async_read(READ_ONCE);
-                    if (err == ERROR_FAULT) {
-                        __post_channel_event(shared_from_this(), 0);
-                        return;
-                    } else if (err == ERROR_OK) {
-                        __shutdown_transport_flow();
-                        return;
-                    }
+                if (pending_send_size_.load(std::memory_order_acquire) == 0) {
+                    __close_transport_flow();
+                    __post_channel_event(shared_from_this(), 0);
+                } else {
+                    __shutdown_transport_flow();
                 }
                 return;
             }
@@ -118,17 +114,8 @@ namespace transport {
             // tracker event callback will be triggered, we can trigger stopped
             // callabck at there.
             if (__set_status(TRANSPORT_STARTED, TRANSPORT_STOPPING)) {
-                pending_send_size_.store(0xffffffff, std::memory_order_release);
-                while (true) {
-                    transport_error err = __async_read(READ_ONCE);
-                    if (err == ERROR_FAULT) {
-                        __post_channel_event(shared_from_this(), 0);
-                        return;
-                    } else if (err == ERROR_OK) {
-                        __shutdown_transport_flow();
-                        return;
-                    }
-                }
+                __close_transport_flow();
+                __post_channel_event(shared_from_this(), 0);
                 return;
             }
         }
@@ -240,11 +227,11 @@ namespace transport {
 
             // If transport is not in started state and no buffer waiting send, then
             // interrupt this transport.
-            //if (!__is_status(TRANSPORT_STARTED) &&
-            //    pending_send_size_.load(std::memory_order_acquire) == 0) {
-            //    __interrupt_and_trigger_callbacks();
-            //    return;
-            //}
+            if (!__is_status(TRANSPORT_STARTED) &&
+                pending_send_size_.load(std::memory_order_acquire) == 0) {
+                __interrupt_and_trigger_callbacks();
+                return;
+            }
 
             // If old read state is READ_ONCE, then change it to READ_NONE.
             if (old_state == READ_ONCE &&
@@ -326,8 +313,7 @@ namespace transport {
 
 #if defined(PUMP_HAVE_IOCP)
         if (flow_->want_to_read() == flow::FLOW_ERR_ABORT) {
-            PUMP_ERR_LOG(
-                "tcp_transport::__async_read: want to read fialed");
+            PUMP_ERR_LOG("tcp_transport::__async_read: want to read fialed");
             return ERROR_FAULT;
         }
 #else
@@ -344,7 +330,8 @@ namespace transport {
         PUMP_DEBUG_CHECK(sendlist_.push(iob));
 
         // If there are no more buffers, we should try to get next send chance.
-        if (pending_send_size_.fetch_add(iob->data_size(), std::memory_order_release) > 0) {
+        if (pending_send_size_.fetch_add(iob->data_size(), std::memory_order_release) >
+            0) {
             return true;
         }
 
@@ -386,7 +373,8 @@ namespace transport {
         if (PUMP_LIKELY(ret == flow::FLOW_ERR_NO)) {
             last_send_iob_->sub_ref();
             last_send_iob_ = nullptr;
-            if (pending_send_size_.fetch_sub(last_send_iob_size_) == last_send_iob_size_) {
+            if (pending_send_size_.fetch_sub(last_send_iob_size_) ==
+                last_send_iob_size_) {
                 return true;
             }
         }
