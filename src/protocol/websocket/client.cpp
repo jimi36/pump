@@ -33,17 +33,17 @@ namespace protocol {
                            const client_callbacks &cbs,
                            const std::string &url,
                            const std::map<std::string, std::string> &headers) {
-            // Check service
+            // Check service.
             if (!sv) {
                 return false;
             }
 
-            // Check callbacks
+            // Check callbacks.
             if (!cbs.started_cb ||!cbs.data_cb || !cbs.error_cb) {
                 return false;
             }
 
-            // Set and check started state
+            // Set and check started state.
             if (started_.exchange(true)) {
                 return false;
             }
@@ -60,26 +60,26 @@ namespace protocol {
         }
 
         void client::stop() {
-            // Set and check started state
+            // Set and check started state.
             if (!started_.exchange(false)) {
                 return;
             }
-            // Stop dialer
+            // Stop dialer.
             if (dialer_ && dialer_->is_started()) {
                 dialer_->stop();
             }
-            // Stop connection
+            // Stop connection.
             if (conn_ && conn_->is_valid()) {
                 conn_->stop();
             }
         }
 
         bool client::send(c_block_ptr b, uint32 size) {
-            // Check started state
+            // Check started state.
             if (!started_.load()) {
                 return false;
             }
-            // Check connection
+            // Check connection.
             if (!conn_ || !conn_->is_valid()) {
                 return false;
             }

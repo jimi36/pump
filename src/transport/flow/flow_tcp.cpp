@@ -29,20 +29,23 @@ namespace transport {
 
         flow_tcp::~flow_tcp() {
 #if defined(PUMP_HAVE_IOCP)
-            if (read_task_)
+            if (read_task_) {
                 net::unlink_iocp_task(read_task_);
-            if (send_task_)
+            }
+            if (send_task_) {
                 net::unlink_iocp_task(send_task_);
+            }
 #endif
-            if (read_iob_)
+            if (read_iob_) {
                 read_iob_->sub_ref();
+            }
         }
 
         flow_error flow_tcp::init(poll::channel_sptr &&ch, int32 fd) {
             PUMP_DEBUG_ASSIGN(ch, ch_, ch);
             PUMP_DEBUG_ASSIGN(fd > 0, fd_, fd);
 
-            read_iob_ = toolkit::io_buffer::create_instance();
+            read_iob_ = toolkit::io_buffer::create();
             read_iob_->init_with_size(MAX_FLOW_BUFFER_SIZE);
 
 #if defined(PUMP_HAVE_IOCP)
@@ -67,7 +70,7 @@ namespace transport {
         flow_error flow_tcp::want_to_read() {
             net::reuse_iocp_task(read_task_);
             if (!net::post_iocp_read(read_task_)) {
-                PUMP_WARN_LOG("flow::flow_tcp::want_to_read: post_iocp_read failed");
+                PUMP_WARN_LOG("flow_tcp::want_to_read: post iocp read failed");
                 return FLOW_ERR_ABORT;
             }
             return FLOW_ERR_NO;
@@ -91,13 +94,18 @@ namespace transport {
             PUMP_DEBUG_ASSIGN(iob, send_iob_, iob);
 #if defined(PUMP_HAVE_IOCP)
             net::bind_iocp_task_buffer(send_task_, iob);
-            if (net::post_iocp_send(send_task_))
-                return FLOW_ERR_NO;
+            if (net::post_iocp_send(send_task_)) {
+                return FLOW_ERR_AGAIN;
+            }
 #else
             int32 size = net::send(fd_, send_iob_->data(), send_iob_->data_size());
             if (PUMP_LIKELY(size > 0)) {
                 send_iob_->shift(size);
-                return FLOW_ERR_NO;
+                if (PUMP_LIKELY(send_iob_->data_size() == 0)) {
+                    send_iob_ = nullptr;
+                    return FLOW_ERR_NO;
+                }
+                return FLOW_ERR_AGAIN;
             } else if (size < 0) {
                 return FLOW_ERR_AGAIN;
             }
@@ -109,30 +117,38 @@ namespace transport {
         flow_error flow_tcp::send(void_ptr iocp_task) {
             int32 size = net::get_iocp_task_processed_size(iocp_task);
             if (size > 0) {
-                PUMP_DEBUG_CHECK(send_iob_->shift(size));
-                auto data_size = send_iob_->data_size();
+                PUMP_ASSERT(send_iob_);
+                send_iob_->shift(size);
+                uint32 data_size = send_iob_->data_size();
                 if (data_size == 0) {
                     net::unbind_iocp_task_buffer(send_task_);
                     return FLOW_ERR_NO_DATA;
                 }
 
                 net::update_iocp_task_buffer(send_task_);
-                if (net::post_iocp_send(send_task_))
+                if (net::post_iocp_send(send_task_)) {
                     return FLOW_ERR_AGAIN;
+                }
             }
             return FLOW_ERR_ABORT;
         }
 #else
         flow_error flow_tcp::send() {
-            int32 data_size = (int32)send_iob_->data_size();
-            if (data_size == 0)
+            if (!send_iob_) {
                 return FLOW_ERR_NO_DATA;
+            }
+
+            int32 data_size = (int32)send_iob_->data_size();
+            if (data_size == 0) {
+                return FLOW_ERR_NO_DATA;
+            }
 
             int32 size = net::send(fd_, send_iob_->data(), data_size);
             if (PUMP_LIKELY(size > 0)) {
                 send_iob_->shift(size);
-                if (data_size > size)
+                if (data_size > size) {
                     return FLOW_ERR_AGAIN;
+                }
                 return FLOW_ERR_NO;
             } else if (size < 0) {
                 return FLOW_ERR_AGAIN;

@@ -38,7 +38,6 @@ namespace net {
             return true;
         }
 #endif
-
         PUMP_WARN_LOG("net::set_noblock: with ec=%d", last_errno());
 
         return false;
@@ -58,8 +57,7 @@ namespace net {
     }
 
     bool set_read_bs(int32 fd, int32 size) {
-        if (setsockopt(fd, SOL_SOCKET, SO_RCVBUF, (c_block_ptr)&size, sizeof(size)) ==
-            0) {
+        if (setsockopt(fd, SOL_SOCKET, SO_RCVBUF, (c_block_ptr)&size, sizeof(size)) == 0) {
             return true;
         }
 
@@ -69,8 +67,7 @@ namespace net {
     }
 
     bool set_send_bs(int32 fd, int32 size) {
-        if (setsockopt(fd, SOL_SOCKET, SO_SNDBUF, (c_block_ptr)&size, sizeof(size)) ==
-            0) {
+        if (setsockopt(fd, SOL_SOCKET, SO_SNDBUF, (c_block_ptr)&size, sizeof(size)) == 0) {
             return true;
         }
 
@@ -81,8 +78,7 @@ namespace net {
 
     bool set_keeplive(int32 fd, int32 keeplive, int32 interval) {
         int32 on = 1;
-        if (setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, (const char *)&on, sizeof(on)) ==
-            -1) {
+        if (setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, (const char *)&on, sizeof(on)) == -1) {
             PUMP_WARN_LOG("net::set_keeplive: setsockopt SO_KEEPALIVE with ec=%d",
                           last_errno());
             return false;
@@ -133,9 +129,7 @@ namespace net {
     }
 
     bool set_nodelay(int32 fd, int32 nodelay) {
-        if (setsockopt(
-                fd, IPPROTO_TCP, TCP_NODELAY, (c_block_ptr)&nodelay, sizeof(nodelay)) ==
-            0) {
+        if (setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, (c_block_ptr)&nodelay, sizeof(nodelay)) == 0) {
             return true;
         }
 
@@ -220,8 +214,10 @@ namespace net {
 
     int32 read(int32 fd, block_ptr b, int32 size) {
         size = ::recv(fd, b, size, 0);
-        if (size < 0) {
-            int32 ec = net::last_errno();
+        if (PUMP_LIKELY(size > 0)) {
+            return size;
+        } else if (size < 0) {
+           int32 ec = net::last_errno();
             if (ec == LANE_EINPROGRESS || ec == LANE_EWOULDBLOCK) {
                 size = -1;
             } else {
@@ -247,7 +243,9 @@ namespace net {
 
     int32 send(int32 fd, c_block_ptr b, int32 size) {
         size = ::send(fd, b, size, 0);
-        if (size < 0) {
+        if (PUMP_LIKELY(size > 0)) {
+            return size;
+        } else if (size < 0) {
             int32 ec = net::last_errno();
             if (ec == LANE_EINPROGRESS || ec == LANE_EWOULDBLOCK) {
                 size = -1;

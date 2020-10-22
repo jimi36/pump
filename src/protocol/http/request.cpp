@@ -26,11 +26,15 @@ namespace protocol {
             "UNKNOWN", "GET", "POST", "HEAD", "PUT", "DELETE"};
 
         request::request(void_ptr ctx) noexcept
-            : pocket(PK_REQUEST), ctx_(ctx), method_(METHOD_UNKNOWN) {
+            : pocket(PK_REQUEST), 
+              ctx_(ctx), 
+              method_(METHOD_UNKNOWN) {
         }
 
         request::request(const std::string &url, void_ptr ctx) noexcept
-            : pocket(PK_REQUEST), ctx_(ctx), method_(METHOD_UNKNOWN) {
+            : pocket(PK_REQUEST), 
+              ctx_(ctx), 
+              method_(METHOD_UNKNOWN) {
             uri_.parse(url);
         }
 
@@ -80,7 +84,7 @@ namespace protocol {
 
             if (parse_status_ == PARSE_CONTENT) {
                 content_ptr ct = ct_.get();
-                if (ct == nullptr) {
+                if (!ct) {
                     int32 ct_length = 0;
                     if (header_.get("Content-Length", ct_length) && ct_length > 0) {
                         ct = new content();
@@ -150,7 +154,7 @@ namespace protocol {
 
             // Find request line end
             c_block_ptr line_end = find_http_line_end(pos, size);
-            if (line_end == nullptr) {
+            if (!line_end) {
                 return 0;
             }
 

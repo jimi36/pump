@@ -42,7 +42,7 @@ namespace poll {
                          net::last_errno());
         }
 
-        events_ = pump_malloc(sizeof(struct epoll_event) * EPOLL_EVENT_SIZE);
+        events_ = pump_malloc(sizeof(epoll_event) * EPOLL_EVENT_SIZE);
 #endif
     }
 
@@ -59,8 +59,7 @@ namespace poll {
 
     bool epoll_poller::__add_channel_tracker(channel_tracker_ptr tracker) {
 #if defined(PUMP_HAVE_EPOLL)
-        struct epoll_event ev;
-        bzero(&ev, sizeof(ev));
+        epoll_event ev;
 
         ev.data.ptr = tracker;
 
@@ -85,8 +84,7 @@ namespace poll {
 
     void epoll_poller::__resume_channel_tracker(channel_tracker_ptr tracker) {
 #if defined(PUMP_HAVE_EPOLL)
-        struct epoll_event ev;
-        bzero(&ev, sizeof(ev));
+        epoll_event ev;
 
         ev.data.ptr = tracker;
 
@@ -107,7 +105,7 @@ namespace poll {
 
     bool epoll_poller::__remove_channel_tracker(channel_tracker_ptr tracker) {
 #if defined(PUMP_HAVE_EPOLL)
-        struct epoll_event ev;
+        epoll_event ev;
         if (epoll_ctl(fd_, EPOLL_CTL_DEL, tracker->get_fd(), &ev) == 0) {
             return true;
         }
@@ -124,7 +122,7 @@ namespace poll {
     void epoll_poller::__poll(int32 timeout) {
 #if defined(PUMP_HAVE_EPOLL)
         auto count =
-            ::epoll_wait(fd_, (struct epoll_event *)events_, EPOLL_EVENT_SIZE, timeout);
+            ::epoll_wait(fd_, (epoll_event *)events_, EPOLL_EVENT_SIZE, timeout);
         if (count > 0) {
             __dispatch_pending_event(count);
         }
@@ -133,7 +131,7 @@ namespace poll {
 
     void epoll_poller::__dispatch_pending_event(int32 count) {
 #if defined(PUMP_HAVE_EPOLL)
-        auto events = (struct epoll_event *)events_;
+        auto events = (epoll_event *)events_;
 
         for (int32 i = 0; i < count; ++i) {
             auto ev = events + i;
@@ -142,18 +140,21 @@ namespace poll {
 
             // If channel already not existed, channel tracker should be removed.
             PUMP_LOCK_SPOINTER(ch, tracker->get_channel());
-            if (PUMP_UNLIKELY(ch == nullptr)) {
+            if (PUMP_UNLIKELY(!ch)) {
+                PUMP_WARN_LOG(
+                    "poll::epoll_poller:__dispatch_pending_event: channel invalid");
                 trackers_.erase(tracker);
                 continue;
             }
 
             tracker->set_tracked(false);
 
-            if (ev->events & EL_READ_EVENT) {
-                ch->handle_io_event(IO_EVNET_READ);
-            } else if (ev->events & EL_SEND_EVENT) {
-                ch->handle_io_event(IO_EVENT_SEND);
-            }
+            //if (ev->events & EL_READ_EVENT) {
+            //    ch->handle_io_event(IO_EVNET_READ);
+            //} else if (ev->events & EL_SEND_EVENT) {
+            //    ch->handle_io_event(IO_EVENT_SEND);
+            //}
+            ch->handle_io_event(tracker->get_event());
 
             if (tracker->is_tracked()) {
                 __resume_channel_tracker(tracker);

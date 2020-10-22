@@ -26,8 +26,9 @@ namespace protocol {
         }
 
         int32 header::parse(c_block_ptr b, int32 size) {
-            if (parse_finished_)
+            if (parse_finished_) {
                 return 0;
+            }
 
             c_block_ptr beg = b;
             c_block_ptr end = b;
@@ -158,8 +159,9 @@ namespace protocol {
         bool header::get(const std::string &name,
                          std::vector<std::string> &values) const {
             auto it = headers_.find(name);
-            if (it == headers_.end() || it->second.empty())
+            if (it == headers_.end() || it->second.empty()) {
                 return false;
+            }
 
             values = it->second;
 
@@ -167,8 +169,9 @@ namespace protocol {
         }
 
         bool header::has(const std::string &name) const {
-            if (headers_.find(name) == headers_.end())
+            if (headers_.find(name) == headers_.end()) {
                 return false;
+            }
             return true;
         }
 

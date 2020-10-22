@@ -19,15 +19,6 @@
 namespace pump {
 namespace transport {
 
-    bool base_transport::reset_callbacks(const transport_callbacks &cbs) {
-        PUMP_ASSERT(cbs.read_cb || cbs.read_from_cb);
-        PUMP_ASSERT(cbs.disconnected_cb && cbs.stopped_cb);
-
-        cbs_ = cbs;
-
-        return true;
-    }
-
     void base_transport::on_channel_event(uint32 ev) {
         __interrupt_and_trigger_callbacks();
     }
@@ -35,18 +26,21 @@ namespace transport {
     uint32 base_transport::__change_read_state(uint32 state) {
         uint32 old_state = read_state_.load();
         if (old_state == READ_ONCE || old_state == READ_LOOP) {
-            if (!read_state_.compare_exchange_strong(old_state, state))
+            if (!read_state_.compare_exchange_strong(old_state, state)) {
                 return READ_INVALID;
+            }
             return old_state;
         }
 
         old_state = READ_NONE;
-        if (read_state_.compare_exchange_strong(old_state, state))
+        if (read_state_.compare_exchange_strong(old_state, state)) {
             return old_state;
+        }
 
         old_state = READ_PENDING;
-        if (read_state_.compare_exchange_strong(old_state, state))
+        if (read_state_.compare_exchange_strong(old_state, state)) {
             return old_state;
+        }
 
         return READ_INVALID;
     }
@@ -72,20 +66,16 @@ namespace transport {
 #if !defined(PUMP_HAVE_IOCP)
     bool base_transport::__start_read_tracker(poll::channel_sptr &&ch) {
         PUMP_LOCK_SPOINTER(tracker, r_tracker_);
-        if (PUMP_UNLIKELY(tracker == nullptr)) {
+        if (PUMP_UNLIKELY(!tracker)) {
             r_tracker_.reset(object_create<poll::channel_tracker>(ch, poll::TRACK_READ),
                              object_delete<poll::channel_tracker>);
             if (!get_service()->add_channel_tracker(r_tracker_, READ_POLLER)) {
-                PUMP_WARN_LOG(
-                    "transport::base_transport::__start_read_tracker: "
-                    "add_channel_tracker failed");
+                PUMP_WARN_LOG("base_transport::__start_read_tracker: add tracker failed");
                 return false;
             }
         } else {
             if (!get_service()->resume_channel_tracker(tracker, READ_POLLER)) {
-                PUMP_WARN_LOG(
-                    "transport::base_transport::__start_read_tracker: "
-                    "resume_channel_tracker failed");
+                PUMP_WARN_LOG("base_transport::__start_read_tracker: resume tracker failed");
                 return false;
             }
         }
@@ -95,20 +85,16 @@ namespace transport {
 
     bool base_transport::__start_send_tracker(poll::channel_sptr &&ch) {
         PUMP_LOCK_SPOINTER(tracker, s_tracker_);
-        if (PUMP_UNLIKELY(tracker == nullptr)) {
+        if (PUMP_UNLIKELY(!tracker)) {
             s_tracker_.reset(object_create<poll::channel_tracker>(ch, poll::TRACK_SEND),
                              object_delete<poll::channel_tracker>);
             if (!get_service()->add_channel_tracker(s_tracker_, WRITE_POLLER)) {
-                PUMP_WARN_LOG(
-                    "transport::base_transport::__start_send_tracker: "
-                    "add_channel_tracker failed");
+                PUMP_WARN_LOG("base_transport::__start_send_tracker: add tracker failed");
                 return false;
             }
         } else {
             if (!get_service()->resume_channel_tracker(tracker, WRITE_POLLER)) {
-                PUMP_WARN_LOG(
-                    "transport::base_transport::__start_send_tracker: "
-                    "resume_channel_tracker failed");
+                PUMP_WARN_LOG("base_transport::__start_send_tracker: resume tracker failed");
                 return false;
             }
         }
@@ -119,13 +105,14 @@ namespace transport {
     void base_transport::__stop_read_tracker() {
         PUMP_LOCK_SPOINTER(tracker, r_tracker_);
         if (!tracker) {
-            PUMP_WARN_LOG(
-                "transport::base_transport::__stop_read_tracker: tracker no exists");
+            PUMP_WARN_LOG("base_transport::__stop_read_tracker: tracker no exists");
             return;
         }
 
-        if (!tracker->is_started())
+        if (!tracker->is_started()) {
+            PUMP_WARN_LOG("base_transport::__stop_read_tracker: tracker not started");
             return;
+        }
 
         PUMP_DEBUG_CHECK(
             get_service()->remove_channel_tracker(tracker_locker, READ_POLLER));
@@ -134,13 +121,14 @@ namespace transport {
     void base_transport::__stop_send_tracker() {
         PUMP_LOCK_SPOINTER(tracker, s_tracker_);
         if (!tracker) {
-            PUMP_WARN_LOG(
-                "transport::base_transport::__stop_send_tracker: tracker no exists");
+            PUMP_WARN_LOG("base_transport::__stop_send_tracker: tracker no exists");
             return;
         }
 
-        if (!tracker->is_started())
+        if (!tracker->is_started()) {
+            PUMP_WARN_LOG("base_transport::__stop_send_tracker: tracker not started");
             return;
+        }
 
         PUMP_DEBUG_CHECK(
             get_service()->remove_channel_tracker(tracker_locker, WRITE_POLLER));

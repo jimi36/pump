@@ -68,7 +68,6 @@ namespace transport {
 #else
         virtual void on_send_event() override;
 #endif
-
       protected:
         /*********************************************************************************
          * Timeout event callback
@@ -95,7 +94,7 @@ namespace transport {
          ********************************************************************************/
         tcp_dialer(const address &local_address,
                    const address &remote_address,
-                   int64 connect_timeout) noexcept;
+                   int64 timeout) noexcept;
 
       private:
         // Dialer flow
@@ -126,7 +125,7 @@ namespace transport {
         base_transport_sptr dial(service_ptr sv,
                                  const address &local_address,
                                  const address &remote_address,
-                                 int64 connect_timeout = 0);
+                                 int64 timeout = 0);
 
       protected:
         /*********************************************************************************

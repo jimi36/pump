@@ -87,7 +87,7 @@ namespace protocol {
             /*********************************************************************************
              * Create http connection
              ********************************************************************************/
-            bool __create_connection(bool https, const transport::address &peer_address);
+            bool __create_connection(bool https, const transport::address &address);
 
             /*********************************************************************************
              * Destroy http connection
@@ -113,6 +113,7 @@ namespace protocol {
           private:
             // Service
             service_ptr sv_;
+            
             // TLS credentials
             void_ptr cert_;
 

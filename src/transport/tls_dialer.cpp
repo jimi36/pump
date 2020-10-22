@@ -32,12 +32,12 @@ namespace transport {
     }
 
     transport_error tls_dialer::start(service_ptr sv, const dialer_callbacks &cbs) {
-        if (xcred_ == nullptr) {
+        if (!xcred_) {
             PUMP_ERR_LOG("transport::tls_dialer::start: certificate invalid");
             return ERROR_INVALID;
         }
 
-        if (sv == nullptr) {
+        if (!sv) {
             PUMP_ERR_LOG("transport::tls_dialer::start: service invalid");
             return ERROR_INVALID;
         }
@@ -110,8 +110,9 @@ namespace transport {
         // If in timeouting status at the moment, it means that dialer is timeout
         // but hasn't triggered tracker event callback yet. So we just set it to
         // stopping status, then tracker event will trigger stopped callabck.
-        if (__set_status(TRANSPORT_TIMEOUTING, TRANSPORT_STOPPING))
+        if (__set_status(TRANSPORT_TIMEOUTING, TRANSPORT_STOPPING)) {
             return;
+        }
     }
 
 #if defined(PUMP_HAVE_IOCP)
@@ -180,7 +181,7 @@ namespace transport {
 
     void tls_dialer::on_timeout(tls_dialer_wptr wptr) {
         PUMP_LOCK_WPOINTER(dialer, wptr);
-        if (dialer == nullptr) {
+        if (!dialer) {
             PUMP_DEBUG_LOG("transport::tls_dialer::on_timeout: dialer invalid");
             return;
         }
@@ -200,7 +201,7 @@ namespace transport {
                                    tls_handshaker_ptr handshaker,
                                    bool succ) {
         PUMP_LOCK_WPOINTER(dialer, wptr);
-        if (dialer == nullptr) {
+        if (!dialer) {
             PUMP_WARN_LOG("transport::tls_dialer::on_handshaked: dialer invalid");
             handshaker->stop();
             return;
@@ -229,7 +230,7 @@ namespace transport {
     void tls_dialer::on_handshake_stopped(tls_dialer_wptr wptr,
                                           tls_handshaker_ptr handshaker) {
         PUMP_LOCK_WPOINTER(dialer, wptr);
-        if (dialer == nullptr) {
+        if (!dialer) {
             PUMP_WARN_LOG("transport::tls_dialer::on_handshake_stopped: dialer invalid");
             return;
         }
@@ -261,8 +262,9 @@ namespace transport {
                                               const address &remote_address,
                                               int64 connect_timeout,
                                               int64 handshake_timeout) {
-        if (dialer_)
+        if (dialer_) {
             return base_transport_sptr();
+        }
 
         dialer_callbacks cbs;
         cbs.dialed_cb =
@@ -272,8 +274,9 @@ namespace transport {
 
         dialer_ = tls_dialer::create_instance(
             local_address, remote_address, connect_timeout, handshake_timeout);
-        if (dialer_->start(sv, cbs) != ERROR_OK)
+        if (dialer_->start(sv, cbs) != ERROR_OK) {
             return base_transport_sptr();
+        }
 
         return dial_promise_.get_future().get();
     }
@@ -282,16 +285,18 @@ namespace transport {
                                     base_transport_sptr &transp,
                                     bool succ) {
         PUMP_LOCK_WPOINTER(dialer, wptr);
-        if (dialer == nullptr)
+        if (!dialer) {
             return;
+        }
 
         dialer->dial_promise_.set_value(transp);
     }
 
     void tls_sync_dialer::on_timeouted(tls_sync_dialer_wptr wptr) {
         PUMP_LOCK_WPOINTER(dialer, wptr);
-        if (dialer == nullptr)
+        if (!dialer) {
             return;
+        }
 
         dialer->dial_promise_.set_value(base_transport_sptr());
     }

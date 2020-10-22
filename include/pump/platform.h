@@ -24,6 +24,7 @@
 #endif
 
 #if defined(OS_WINDOWS)
+#include <winsock2.h>
 #include <windows.h>
 #pragma warning(disable : 4251)
 #endif

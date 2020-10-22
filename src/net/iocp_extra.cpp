@@ -62,8 +62,9 @@ namespace net {
         LPFN_CONNECTEX connect_ex =
             (LPFN_CONNECTEX)get_extension_function(fd, &guid_connect_ex);
         if (accept_ex == nullptr || get_accepted_addrs == nullptr ||
-            connect_ex == nullptr)
+            connect_ex == nullptr) {
             return nullptr;
+        }
 
         auto handler = object_create<iocp_extra_function>();
         handler->accept_ex = accept_ex;

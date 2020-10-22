@@ -30,9 +30,9 @@ namespace time {
 
             PUMP_DEBUG_ASSIGN(cb, pending_cb_, cb);
 
-            observer_.reset(object_create<std::thread>(
-                                pump_bind(&timer_queue::__observe_thread, this)),
-                            object_delete<std::thread>);
+            observer_.reset(
+                object_create<std::thread>(pump_bind(&timer_queue::__observe_thread, this)),
+                object_delete<std::thread>);
         }
 
         return started_.load();

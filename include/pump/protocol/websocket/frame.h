@@ -23,12 +23,12 @@ namespace pump {
 namespace protocol {
     namespace websocket {
 
-#define FRAME_OPTCODE_SEQUEL 0x0
-#define FRAME_OPTCODE_TEXT 0x1
-#define FRAME_OPTCODE_BINARY 0x2
-#define FRAME_OPTCODE_CLOSE 0x8
-#define FRAME_OPTCODE_PING 0x9
-#define FRAME_OPTCODE_PONG 0xA
+        const uint32 FRAME_OPTCODE_SEQUEL = 0x0;
+        const uint32 FRAME_OPTCODE_TEXT = 0x1;
+        const uint32 FRAME_OPTCODE_BINARY = 0x2;
+        const uint32 FRAME_OPTCODE_CLOSE = 0x8;
+        const uint32 FRAME_OPTCODE_PING = 0x9;
+        const uint32 FRAME_OPTCODE_PONG = 0xA;
 
         struct frame_header {
             uint32 fin : 1;

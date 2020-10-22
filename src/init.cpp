@@ -18,7 +18,7 @@
 #include "pump/debug.h"
 #include "pump/net/iocp.h"
 
-// Import memset function
+// Import "memset"
 #include <string.h>
 
 #if defined(OS_LINUX)

@@ -39,7 +39,7 @@ namespace poll {
                                   tev_cnt_.load(std::memory_order_acquire) > 0) {
                                   __poll(0);
                               } else {
-                                  __poll(3);
+                                  __poll(5);
                               }
                           }
                       }),
@@ -147,7 +147,7 @@ namespace poll {
                 auto tracker = ev->tracker.get();
 
                 PUMP_LOCK_SPOINTER(ch, tracker->get_channel());
-                if (ch == nullptr) {
+                if (!ch) {
                     PUMP_WARN_LOG(
                         "poll::poller:__handle_channel_tracker_events: channel invalid");
                     trackers_.erase(tracker);

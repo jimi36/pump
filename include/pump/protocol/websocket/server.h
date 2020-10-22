@@ -169,7 +169,7 @@ namespace protocol {
             /*********************************************************************************
              * Get local header
              ********************************************************************************/
-            const std::string &__get_local_header(const std::string &name) const;
+            const std::string& __get_local_header(const std::string &name) const;
 
           private:
             // Service

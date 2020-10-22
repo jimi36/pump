@@ -24,16 +24,28 @@
 namespace pump {
 namespace ssl {
 
+    /*********************************************************************************
+     * Create tls client certificate.
+     ********************************************************************************/
     void_ptr create_tls_client_certificate();
 
+    /*********************************************************************************
+     * Create tls certificate by file.
+     ********************************************************************************/
     void_ptr create_tls_certificate_by_file(bool client,
                                             const std::string &cert,
                                             const std::string &key);
 
+    /*********************************************************************************
+     * Create tls certificate by buffer.
+     ********************************************************************************/
     void_ptr create_tls_certificate_by_buffer(bool client,
                                               const std::string &cert,
                                               const std::string &key);
 
+    /*********************************************************************************
+     * Destory tls certificate.
+     ********************************************************************************/
     void destory_tls_certificate(void_ptr xcred);
 
 }  // namespace ssl

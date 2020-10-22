@@ -123,7 +123,7 @@ namespace protocol {
 
             if (parse_status_ == PARSE_CONTENT) {
                 content_ptr ct = ct_.get();
-                if (ct == nullptr) {
+                if (!ct) {
                     int32 ct_len = 0;
                     if (header_.get("Content-Length", ct_len) && ct_len > 0) {
                         ct = new content();
@@ -192,7 +192,7 @@ namespace protocol {
             c_block_ptr pos = b;
 
             c_block_ptr line_end = find_http_line_end(pos, size);
-            if (line_end == nullptr) {
+            if (!line_end) {
                 return 0;
             }
 

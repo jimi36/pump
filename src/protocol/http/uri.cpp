@@ -62,7 +62,7 @@ namespace protocol {
             p += 3;
 
             c_block_ptr end = strstr(p, "/");
-            if (end == nullptr) {
+            if (!end) {
                 host.assign(p);
                 path.assign("/");
                 return true;
@@ -71,7 +71,7 @@ namespace protocol {
             p = end;
 
             end = strstr(p, "?");
-            if (end == nullptr) {
+            if (!end) {
                 path.assign(p);
                 return true;
             }

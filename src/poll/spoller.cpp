@@ -81,7 +81,9 @@ namespace poll {
 
             // If channel already not existed, channel tracker should be removed.
             PUMP_LOCK_SPOINTER(ch, tracker->get_channel());
-            if (PUMP_UNLIKELY(ch == nullptr)) {
+            if (PUMP_UNLIKELY(!ch)) {
+                PUMP_WARN_LOG(
+                    "poll::select_poller:__dispatch_pending_event: channel invalid");
                 trackers_.erase(beg++);
                 continue;
             }

@@ -47,7 +47,8 @@ namespace ssl {
 #elif defined(PUMP_HAVE_OPENSSL)
         SSL_CTX *xcred = SSL_CTX_new(TLS_client_method());
         if (!xcred) {
-            PUMP_ERR_LOG("ssl::create_tls_client_certificate: SSL_CTX_new failed\n");
+            PUMP_ERR_LOG(
+                "ssl_helper::create_tls_client_certificate: SSL_CTX_new failed");
             return nullptr;
         }
         SSL_CTX_set_options(xcred, SSL_EXT_TLS1_3_ONLY);
@@ -65,7 +66,7 @@ namespace ssl {
         int32 ret = gnutls_certificate_allocate_credentials(&xcred);
         if (ret != 0) {
             PUMP_ERR_LOG(
-                "ssl::generate_tls_certificate_by_file: "
+                "ssl_helper::generate_tls_certificate_by_file: "
                 "gnutls_certificate_allocate_credentials failed");
             return nullptr;
         }
@@ -74,7 +75,7 @@ namespace ssl {
             xcred, cert.c_str(), key.c_str(), GNUTLS_X509_FMT_PEM);
         if (ret != 0) {
             PUMP_ERR_LOG(
-                "ssl::generate_tls_certificate_by_file: "
+                "ssl_helper::generate_tls_certificate_by_file: "
                 "gnutls_certificate_set_x509_key_file failed");
             gnutls_certificate_free_credentials(xcred);
             return nullptr;
@@ -89,7 +90,8 @@ namespace ssl {
             xcred = SSL_CTX_new(TLS_server_method());
         }
         if (!xcred) {
-            PUMP_ERR_LOG("ssl::create_tls_certificate_by_file: SSL_CTX_new failed\n");
+            PUMP_ERR_LOG(
+                "ssl_helper::create_tls_certificate_by_file: SSL_CTX_new failed");
             return nullptr;
         }
 
@@ -97,6 +99,8 @@ namespace ssl {
         if (SSL_CTX_use_certificate_file(xcred, cert.c_str(), SSL_FILETYPE_PEM) <= 0 ||
             SSL_CTX_use_PrivateKey_file(xcred, key.c_str(), SSL_FILETYPE_PEM) <= 0) {
             SSL_CTX_free(xcred);
+            PUMP_ERR_LOG(
+                "ssl_helper::create_tls_certificate_by_file: cart or key failed");
             return nullptr;
         }
         return xcred;
@@ -113,7 +117,7 @@ namespace ssl {
         int32 ret = gnutls_certificate_allocate_credentials(&xcred);
         if (ret != 0) {
             PUMP_ERR_LOG(
-                "ssl::generate_tls_certificate_by_buffer: "
+                "ssl_helper::generate_tls_certificate_by_buffer: "
                 "gnutls_certificate_allocate_credentials failed");
             return nullptr;
         }
@@ -130,7 +134,7 @@ namespace ssl {
             xcred, &gnutls_cert, &gnutls_key, GNUTLS_X509_FMT_PEM);
         if (ret2 != 0) {
             PUMP_ERR_LOG(
-                "ssl::generate_tls_certificate_by_buffer: "
+                "ssl_helper::generate_tls_certificate_by_buffer: "
                 "gnutls_certificate_set_x509_key_mem failed");
             gnutls_certificate_free_credentials(xcred);
             return nullptr;
@@ -145,7 +149,8 @@ namespace ssl {
             xcred = SSL_CTX_new(TLS_server_method());
         }
         if (!xcred) {
-            PUMP_ERR_LOG("ssl::create_tls_certificate_by_buffer: SSL_CTX_new failed\n");
+            PUMP_ERR_LOG(
+                "ssl_helper::create_tls_certificate_by_buffer: SSL_CTX_new failed");
             return nullptr;
         }
 
@@ -153,6 +158,8 @@ namespace ssl {
         X509 *x509_cert = PEM_read_bio_X509(cert_bio, NULL, NULL, NULL);
         BIO_free(cert_bio);
         if (!x509_cert) {
+            PUMP_ERR_LOG(
+                "ssl_helper::create_tls_certificate_by_buffer: load cert failed");
             SSL_CTX_free(xcred);
             return nullptr;
         }
@@ -161,6 +168,8 @@ namespace ssl {
         EVP_PKEY *evp_key = PEM_read_bio_PrivateKey(key_bio, NULL, 0, NULL);
         BIO_free(key_bio);
         if (!evp_key) {
+            PUMP_ERR_LOG(
+                "ssl_helper::create_tls_certificate_by_buffer: load key failed");
             SSL_CTX_free(xcred);
             X509_free(x509_cert);
             return nullptr;
@@ -169,6 +178,8 @@ namespace ssl {
         /* Set the key and cert */
         if (SSL_CTX_use_certificate(xcred, x509_cert) <= 0 ||
             SSL_CTX_use_PrivateKey(xcred, evp_key) <= 0) {
+            PUMP_ERR_LOG(
+                "ssl_helper::create_tls_certificate_by_buffer: cert or key failed");
             SSL_CTX_free(xcred);
             X509_free(x509_cert);
             EVP_PKEY_free(evp_key);

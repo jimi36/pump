@@ -80,6 +80,12 @@ namespace transport {
          ********************************************************************************/
         virtual transport_error send(c_block_ptr b, uint32 size) override;
 
+        /*********************************************************************************
+         * Send io buffer
+         * The ownership of io buffer will be transferred.
+         ********************************************************************************/
+        virtual transport_error send(toolkit::io_buffer_ptr iob) override;
+
       protected:
         /*********************************************************************************
          * Read event callback
@@ -114,16 +120,18 @@ namespace transport {
          * Shutdown transport flow
          ********************************************************************************/
         PUMP_INLINE void __shutdown_transport_flow() {
-            if (flow_)
+            if (flow_) {
                 flow_->shutdown();
+            }
         }
 
         /*********************************************************************************
          * Close transport flow
          ********************************************************************************/
         virtual void __close_transport_flow() override {
-            if (flow_)
+            if (flow_) {
                 flow_->close();
+            }
         }
 
         /*********************************************************************************
@@ -161,11 +169,8 @@ namespace transport {
 
         // When sending data, transport will append buffer to sendlist at first. On
         // triggering send event, transport will send buffer in the sendlist.
-        //toolkit::freelock_list_queue<toolkit::io_buffer_ptr> sendlist_;
-        toolkit::freelock_vector_queue<toolkit::io_buffer_ptr> sendlist_;
-
-        // Who got next send chance, who can send next buffer.
-        std::atomic_flag next_send_chance_;
+        toolkit::freelock_list_queue<toolkit::io_buffer_ptr> sendlist_;
+        //toolkit::freelock_vector_queue<toolkit::io_buffer_ptr> sendlist_;
     };
 
 }  // namespace transport

@@ -19,6 +19,7 @@
 
 #include "pump/service.h"
 #include "pump/poll/channel.h"
+#include "pump/toolkit/buffer.h"
 #include "pump/transport/address.h"
 #include "pump/transport/callbacks.h"
 
@@ -189,13 +190,6 @@ namespace transport {
         virtual void force_stop() = 0;
 
         /*********************************************************************************
-         * Rest transport callbacks
-         * Note that this is not thread-safe.
-         * User should do this in read callback function.
-         ********************************************************************************/
-        bool reset_callbacks(const transport_callbacks &cbs);
-
-        /*********************************************************************************
          * Read for once
          ********************************************************************************/
         virtual transport_error read_for_once() {
@@ -217,11 +211,19 @@ namespace transport {
         }
 
         /*********************************************************************************
+         * Send io buffer
+         * The ownership of io buffer will be transferred.
+         ********************************************************************************/
+        virtual transport_error send(toolkit::io_buffer_ptr iob) {
+            return ERROR_DISABLE;
+        }
+
+        /*********************************************************************************
          * Send
          ********************************************************************************/
         virtual transport_error send(c_block_ptr b,
                                      uint32 size,
-                                     const address &remote_address) {
+                                     const address &address) {
             return ERROR_DISABLE;
         }
 

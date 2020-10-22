@@ -69,7 +69,7 @@ namespace time {
             }
 
             if (__set_status(TIMER_STARTED, TIMER_STOPPED)) {
-                if (PUMP_LIKELY(queue_ != nullptr)) {
+                if (PUMP_LIKELY(!!queue_)) {
                     queue_->delete_timer(this);
                 } else {
                     break;

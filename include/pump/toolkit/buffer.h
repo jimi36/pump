@@ -19,6 +19,7 @@
 
 #include <atomic>
 
+#include "pump/debug.h"
 #include "pump/types.h"
 #include "pump/memory.h"
 #include "pump/platform.h"
@@ -66,10 +67,10 @@ namespace toolkit {
         bool __init_with_copy(c_block_ptr b, uint32 size);
 
         /*********************************************************************************
-         * Init with ownship
-         * The input buffer ownship transfer to the buffer.
+         * Init with ownership
+         * The input buffer ownership transfer to the buffer.
          ********************************************************************************/
-        bool __init_with_ownship(c_block_ptr b, uint32 size);
+        bool __init_with_ownership(c_block_ptr b, uint32 size);
 
         /*********************************************************************************
          * Append
@@ -91,9 +92,9 @@ namespace toolkit {
     class io_buffer : public base_buffer {
       public:
         /*********************************************************************************
-         * Create instance
+         * Create
          ********************************************************************************/
-        static io_buffer_ptr create_instance() {
+        static io_buffer_ptr create() {
             INLINE_OBJECT_CREATE(obj, io_buffer, ());
             return obj;
         }
@@ -119,12 +120,12 @@ namespace toolkit {
         }
 
         /*********************************************************************************
-         * Init with ownship
-         * The input buffer ownship transfer to the buffer.
+         * Init with ownership
+         * The input buffer ownership transfer to the buffer.
          * The input buffer must be created by pump_malloc or pump_realloc.
          ********************************************************************************/
-        bool init_with_ownship(c_block_ptr b, uint32 size) {
-            if (__init_with_ownship(b, size)) {
+        bool init_with_ownership(c_block_ptr b, uint32 size) {
+            if (__init_with_ownership(b, size)) {
                 data_size_ = size;
                 return true;
             }
@@ -141,14 +142,10 @@ namespace toolkit {
         /*********************************************************************************
          * Shift
          ********************************************************************************/
-        bool shift(uint32 size) {
-            if (size > data_size_)
-                return false;
-
+        void shift(uint32 size) {
+            PUMP_ASSERT(data_size_ >= size);
             read_pos_ += size;
             data_size_ -= size;
-
-            return true;
         }
 
         /*********************************************************************************

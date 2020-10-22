@@ -146,11 +146,9 @@ namespace toolkit {
          ********************************************************************************/
         void signal() {
 #if defined(OS_WINDOWS)
-            while (!ReleaseSemaphore(sema_, 1, nullptr))
-                ;
+            while (!ReleaseSemaphore(sema_, 1, nullptr));
 #elif defined(OS_LINUX)
-            while (sem_post(&sema_) == -1)
-                ;
+            while (sem_post(&sema_) == -1);
 #endif
         }
 
@@ -159,12 +157,10 @@ namespace toolkit {
          ********************************************************************************/
         void signal(int32 count = 1) {
 #if defined(OS_WINDOWS)
-            while (!ReleaseSemaphore(sema_, count, nullptr))
-                ;
+            while (!ReleaseSemaphore(sema_, count, nullptr));
 #elif defined(OS_LINUX)
             while (count-- > 0) {
-                while (sem_post(&sema_) == -1)
-                    ;
+                while (sem_post(&sema_) == -1);
             }
 #endif
         }

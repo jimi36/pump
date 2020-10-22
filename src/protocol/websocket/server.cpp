@@ -266,7 +266,7 @@ namespace protocol {
             conns_.clear();
         }
 
-        const std::string &server::__get_local_header(const std::string &name) const {
+        const std::string& server::__get_local_header(const std::string &name) const {
             const static std::string EMPTY("");
             auto it = local_headers_.find(name);
             if (it != local_headers_.end()) {

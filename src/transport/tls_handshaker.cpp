@@ -24,18 +24,18 @@ namespace transport {
     const int32 TLS_HANDSHAKE_ERROR = 2;
 
     tls_handshaker::tls_handshaker() noexcept
-        : base_channel(TLS_HANDSHAKER, nullptr, -1), handshake_step_(0) {
+        : base_channel(TLS_HANDSHAKER, nullptr, -1) {
     }
 
     void tls_handshaker::init(int32 fd,
-                              bool is_client,
+                              bool client,
                               void_ptr xcred,
                               const address &local_address,
                               const address &remote_address) {
         local_address_ = local_address;
         remote_address_ = remote_address;
 
-        PUMP_DEBUG_CHECK(__open_flow(fd, xcred, is_client));
+        PUMP_DEBUG_CHECK(__open_flow(fd, xcred, client));
     }
 
     bool tls_handshaker::start(service_ptr sv,
@@ -46,7 +46,7 @@ namespace transport {
             return false;
         }
 
-        if (sv == nullptr) {
+        if (!sv) {
             PUMP_ERR_LOG("transport::tls_handshaker::start: service invalid");
             return false;
         }
@@ -97,31 +97,27 @@ namespace transport {
         // If this is client side, there is handshake data to send at first time.
         if (flow_->has_data_to_send()) {
             if (flow_->want_to_send() != flow::FLOW_ERR_NO) {
-                PUMP_WARN_LOG(
-                    "transport::tls_handshaker::start: flow want_to_send failed");
+                PUMP_WARN_LOG("transport::tls_handshaker::start: flow want_to_send failed");
                 return false;
             }
 
 #if !defined(PUMP_HAVE_IOCP)
             tracker_->set_event(poll::TRACK_SEND);
             if (!get_service()->add_channel_tracker(tracker_, WRITE_POLLER)) {
-                PUMP_WARN_LOG(
-                    "transport::tls_handshaker::start: add_send_tracker failed");
+                PUMP_WARN_LOG("transport::tls_handshaker::start: add_send_tracker failed");
                 return false;
             }
 #endif
         } else {
 #if defined(PUMP_HAVE_IOCP)
             if (flow_->want_to_read() != flow::FLOW_ERR_NO) {
-                PUMP_WARN_LOG(
-                    "transport::tls_handshaker::start: flow want_to_send failed");
+                PUMP_WARN_LOG("transport::tls_handshaker::start: flow want_to_send failed");
                 return false;
             }
 #else
             tracker_->set_event(poll::TRACK_READ);
             if (!get_service()->add_channel_tracker(tracker_, WRITE_POLLER)) {
-                PUMP_WARN_LOG(
-                    "transport::tls_handshaker::start: add_read_tracker failed");
+                PUMP_WARN_LOG("transport::tls_handshaker::start: add_read_tracker failed");
                 return false;
             }
 #endif
@@ -194,7 +190,7 @@ namespace transport {
 
     void tls_handshaker::on_timeout(tls_handshaker_wptr wptr) {
         PUMP_LOCK_WPOINTER(handshaker, wptr);
-        if (handshaker == nullptr) {
+        if (!handshaker) {
             PUMP_ERR_LOG("transport::tls_handshaker::on_timeout: handshaker invalid");
             return;
         }
@@ -231,8 +227,6 @@ namespace transport {
             return;
         }
 
-        // handshake_step_++;
-
 #if !defined(PUMP_HAVE_IOCP)
         auto tracker = tracker_.get();
 #endif
@@ -251,7 +245,6 @@ namespace transport {
             return;
         }
 
-        // if (handshake_step_ < 4 || !flow->is_handshaked()) {
         if (!flow->is_handshaked()) {
 #if defined(PUMP_HAVE_IOCP)
             if (flow->want_to_read() != flow::FLOW_ERR_NO &&
@@ -266,8 +259,6 @@ namespace transport {
             return;
         }
 
-        // if (handshake_step_ == 4 && __set_status(TRANSPORT_STARTED,
-        // TRANSPORT_FINISHED)) {
         if (__set_status(TRANSPORT_STARTED, TRANSPORT_FINISHED)) {
             __handshake_finished();
         }
@@ -327,17 +318,18 @@ namespace transport {
 #if !defined(PUMP_HAVE_IOCP)
         __stop_handshake_tracker();
 #endif
-        if (__is_status(TRANSPORT_FINISHED))
+        if (__is_status(TRANSPORT_FINISHED)) {
             cbs_.handshaked_cb(this, true);
-        else if (__is_status(TRANSPORT_ERROR))
+        } else if (__is_status(TRANSPORT_ERROR)) {
             cbs_.handshaked_cb(this, false);
-        else if (__set_status(TRANSPORT_TIMEOUTING, TRANSPORT_TIMEOUTED))
+        } else if (__set_status(TRANSPORT_TIMEOUTING, TRANSPORT_TIMEOUTED)) {
             cbs_.handshaked_cb(this, false);
-        else if (__set_status(TRANSPORT_DISCONNECTING, TRANSPORT_DISCONNECTED))
+        } else if (__set_status(TRANSPORT_DISCONNECTING, TRANSPORT_DISCONNECTED)) {
             cbs_.handshaked_cb(this, false);
-        else if (__set_status(TRANSPORT_STOPPING, TRANSPORT_STOPPED))
+        } else if (__set_status(TRANSPORT_STOPPING, TRANSPORT_STOPPED)) {
             cbs_.stopped_cb(this);
-
+        }
+        
         __close_flow();
     }
 

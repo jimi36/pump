@@ -79,7 +79,6 @@ namespace transport {
              ********************************************************************************/
             flow_error want_to_read();
 #endif
-
             /*********************************************************************************
              * Read from net
              * Return results:
@@ -92,7 +91,6 @@ namespace transport {
 #else
             flow_error read_from_net();
 #endif
-
             /*********************************************************************************
              * Read from ssl
              ********************************************************************************/
@@ -136,7 +134,6 @@ namespace transport {
 #else
             flow_error send_to_net();
 #endif
-
             /*********************************************************************************
              * Check there are data to send or not
              ********************************************************************************/
@@ -158,10 +155,12 @@ namespace transport {
             // TLS session
             ssl::tls_session_ptr session_;
 
+#if defined(PUMP_HAVE_IOCP)
             // IOCP read task
             void_ptr read_task_;
             // IOCP send task
             void_ptr send_task_;
+#endif
         };
         DEFINE_ALL_POINTER_TYPE(flow_tls);
 

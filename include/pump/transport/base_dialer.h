@@ -129,7 +129,6 @@ namespace transport {
         // Channel tracker
         poll::channel_tracker_sptr tracker_;
 #endif
-
         // Dialer callbacks
         dialer_callbacks cbs_;
     };

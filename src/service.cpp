@@ -62,16 +62,16 @@ bool service::start() {
 
     running_ = true;
 
-    if (tqueue_ != nullptr) {
+    if (tqueue_) {
         tqueue_->start(pump_bind(&service::__post_timeout_timer, this, _1));
     }
-    if (iocp_poller_ != nullptr) {
+    if (iocp_poller_) {
         iocp_poller_->start();
     }
-    if (read_poller_ != nullptr) {
+    if (read_poller_) {
         read_poller_->start();
     }
-    if (send_poller_ != nullptr) {
+    if (send_poller_) {
         send_poller_->start();
     }
 
@@ -159,7 +159,7 @@ bool service::post_channel_event(poll::channel_sptr &ch, uint32 event) {
 
 bool service::start_timer(time::timer_sptr &tr) {
     PUMP_LOCK_SPOINTER(queue, tqueue_);
-    if (PUMP_LIKELY(queue != nullptr)) {
+    if (PUMP_LIKELY(!!queue)) {
         return queue->add_timer(tr);
     }
 

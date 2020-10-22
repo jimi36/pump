@@ -33,7 +33,7 @@ namespace protocol {
             std::unique_lock<std::mutex> lock(resp_mx_);
 
             if (!conn_ || !conn_->is_valid()) {
-                auto uri = req->get_uri();
+                uri_ptr uri = req->get_uri();
                 bool https = uri->get_type() == URI_HTTPS;
                 auto peer_address = host_to_address(https, uri->get_host());
                 if (!__create_connection(https, peer_address)) {

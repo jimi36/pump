@@ -14,14 +14,16 @@
  * limitations under the License.
  */
 
-// Import std::weak_ptr class
-// Import std::shared_ptr class
-#include <memory>
-
 #ifndef pump_types_h
 #define pump_types_h
 
-#if defined(_MSC_VER)
+// Import “std::weak_ptr”
+// Import ”std::shared_ptr“
+#include <memory>
+
+#include "pump/config.h"
+
+#if defined(OS_WINDOWS) && defined(PUMP_HAVE_GNUTLS)
 #include <BaseTsd.h>
 typedef SSIZE_T ssize_t;
 #endif

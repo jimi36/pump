@@ -24,15 +24,17 @@ namespace protocol {
 
         connection::connection(bool server,
                                transport::base_transport_sptr &transp) noexcept
-            : coming_pocket_(nullptr), transp_(transp) {
-            if (server)
+            : coming_pocket_(nullptr), 
+              transp_(transp) {
+            if (server) {
                 create_coming_pocket_ = []() {
                     return new request;
                 };
-            else
+            } else {
                 create_coming_pocket_ = []() {
                     return new response;
                 };
+            }
         }
 
         connection::~connection() {
@@ -114,7 +116,7 @@ namespace protocol {
 
         void connection::on_stopped(connection_wptr wptr) {
             PUMP_LOCK_WPOINTER(conn, wptr);
-            if (conn == nullptr) {
+            if (!conn) {
                 return;
             }
 

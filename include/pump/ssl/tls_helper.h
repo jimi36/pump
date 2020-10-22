@@ -98,13 +98,21 @@ namespace ssl {
     /*********************************************************************************
      * TLS handshake.
      * If handshading complete return 0.
-     * If handshading incomplete return 1¡£
+     * If handshading incomplete return 1.
      * If handshaking error return -1.
      ********************************************************************************/
     int32 tls_handshake(tls_session_ptr session);
 
+    /*********************************************************************************
+     * TLS read
+     * If success return read size, else return 0.
+     ********************************************************************************/
     int32 tls_read(tls_session_ptr session, block_ptr b, int32 size);
 
+    /*********************************************************************************
+     * TLS send
+     * If success return send size, else return 0.
+     ********************************************************************************/
     int32 tls_send(tls_session_ptr session, c_block_ptr b, int32 size);
 
 }  // namespace ssl

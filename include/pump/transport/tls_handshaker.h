@@ -54,7 +54,7 @@ namespace transport {
          * Init
          ********************************************************************************/
         void init(int32 fd,
-                  bool is_client,
+                  bool client,
                   void_ptr xcred,
                   const address &local_address,
                   const address &remote_address);
@@ -118,7 +118,7 @@ namespace transport {
         /*********************************************************************************
          * Open flow
          ********************************************************************************/
-        bool __open_flow(int32 fd, void_ptr xcred, bool is_client);
+        bool __open_flow(int32 fd, void_ptr xcred, bool client);
 
         /*********************************************************************************
          * Close flow
@@ -168,9 +168,6 @@ namespace transport {
 
         // Finished flag
         std::atomic_flag flag_;
-
-        // Handshake step: 1 2 3 4
-        int32 handshake_step_;
 
         // Handshake timeout timer
         time::timer_sptr timer_;

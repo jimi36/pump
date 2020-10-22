@@ -39,8 +39,8 @@ namespace ssl {
         PUMP_INLINE static ssize_t data_pull(gnutls_transport_ptr_t ptr,
                                              void_ptr data,
                                              size_t maxlen) {
-            int32 size = tls_session_ptr(ptr)->read_from_net_read_buffer((block_ptr)data,
-                                                                         (int32)maxlen);
+            tls_session_ptr s = (tls_session_ptr)ptr;
+            int32 size = s->read_from_net_read_buffer((block_ptr)data, (int32)maxlen);
             if (size == 0) {
                 return -1;
             }
@@ -86,8 +86,8 @@ namespace ssl {
         gnutls_transport_set_errno_function(ssl_ctx, tls_net_layer::get_error);
 
         session->ssl_ctx = ssl_ctx;
-        session->net_send_iob = toolkit::io_buffer::create_instance();
-        session->net_read_iob = toolkit::io_buffer::create_instance();
+        session->net_send_iob = toolkit::io_buffer::create();
+        session->net_read_iob = toolkit::io_buffer::create();
         session->net_read_iob->init_with_size(buffer_size);
 
         return session;
@@ -105,8 +105,8 @@ namespace ssl {
         }
 
         session->ssl_ctx = ssl_ctx;
-        session->net_send_iob = toolkit::io_buffer::create_instance();
-        session->net_read_iob = toolkit::io_buffer::create_instance();
+        session->net_send_iob = toolkit::io_buffer::create();
+        session->net_read_iob = toolkit::io_buffer::create();
         session->net_read_iob->init_with_size(buffer_size);
         session->read_bio = rbio;
         session->send_bio = sbio;
@@ -205,7 +205,7 @@ namespace ssl {
                                    session->net_read_iob->buffer(),
                                    session->net_read_data_size);
         PUMP_ASSERT(bio_size == session->net_read_data_size);
-        session->net_read_data_size = 0;
+        session->net_read_data_size -= bio_size;
         session->net_read_data_pos = 0;
 
         int32 ret = SSL_read((SSL *)session->ssl_ctx, b, size);

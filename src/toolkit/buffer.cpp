@@ -7,19 +7,22 @@
 namespace pump {
 namespace toolkit {
 
-    base_buffer::base_buffer() noexcept : raw_(nullptr), raw_size_(0) {
+    base_buffer::base_buffer() noexcept 
+        : raw_(nullptr), 
+          raw_size_(0) {
     }
 
     base_buffer::~base_buffer() {
-        if (raw_ != nullptr)
+        if (raw_) {
             pump_free(raw_);
+        }
     }
 
     bool base_buffer::__init_with_size(uint32 size) {
         try {
-            if (raw_ == nullptr) {
+            if (!raw_) {
                 raw_ = (block_ptr)pump_malloc(size);
-                if (raw_ != nullptr) {
+                if (raw_) {
                     raw_size_ = size;
                     return true;
                 }
@@ -32,11 +35,11 @@ namespace toolkit {
 
     bool base_buffer::__init_with_copy(c_block_ptr b, uint32 size) {
         try {
-            if (raw_ == nullptr && b != nullptr && size > 0) {
+            if (!raw_ && b && size > 0) {
                 raw_ = (block_ptr)pump_malloc(size);
-                if (raw_ != nullptr) {
+                if (raw_) {
+                    memcpy(raw_, b, size);
                     raw_size_ = size;
-                    memcpy(raw_, b, raw_size_);
                     return true;
                 }
             }
@@ -46,8 +49,8 @@ namespace toolkit {
         return false;
     }
 
-    bool base_buffer::__init_with_ownship(c_block_ptr b, uint32 size) {
-        if (raw_ == nullptr && b != nullptr && size > 0) {
+    bool base_buffer::__init_with_ownership(c_block_ptr b, uint32 size) {
+        if (!raw_ && b && size > 0) {
             raw_ = (block_ptr)b;
             raw_size_ = size;
             return true;
@@ -60,7 +63,7 @@ namespace toolkit {
             return false;
         }
 
-        if (raw_ == nullptr) {
+        if (!raw_) {
             return init_with_copy(b, size);
         }
 
@@ -80,7 +83,7 @@ namespace toolkit {
         } else {
             uint32 new_size_ = raw_size_ + size * 2;
             raw_ = (block_ptr)pump_realloc(raw_, new_size_);
-            if (raw_ == nullptr) {
+            if (!raw_) {
                 return false;
             }
 

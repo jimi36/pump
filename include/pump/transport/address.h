@@ -96,7 +96,7 @@ namespace transport {
         bool operator==(const address &other) const noexcept;
 
         /*********************************************************************************
-         * Operator ==
+         * Operator <
          ********************************************************************************/
         bool operator<(const address &other) const noexcept;
 

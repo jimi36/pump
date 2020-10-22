@@ -26,16 +26,14 @@ namespace transport {
 #if !defined(PUMP_HAVE_IOCP)
     bool base_dialer::__start_dial_tracker(poll::channel_sptr &&ch) {
         if (tracker_) {
-            PUMP_WARN_LOG("transport::base_dialer::__start_dial_tracker: tracker exists");
+            PUMP_WARN_LOG("base_dialer::__start_dial_tracker: tracker exists");
             return false;
         }
 
         tracker_.reset(object_create<poll::channel_tracker>(ch, poll::TRACK_SEND),
                        object_delete<poll::channel_tracker>);
         if (!get_service()->add_channel_tracker(tracker_, WRITE_POLLER)) {
-            PUMP_WARN_LOG(
-                "transport::base_dialer::__start_dial_tracker: add_channel_tracker "
-                "failed");
+            PUMP_WARN_LOG("base_dialer::__start_dial_tracker: add tracker failed");
             return false;
         }
 
@@ -45,14 +43,12 @@ namespace transport {
     void base_dialer::__stop_dial_tracker() {
         PUMP_LOCK_SPOINTER(tracker, tracker_);
         if (!tracker) {
-            PUMP_WARN_LOG(
-                "transport::base_dialer::__stop_dial_tracker: tracker no exists");
+            PUMP_WARN_LOG("base_dialer::__stop_dial_tracker: tracker no exists");
             return;
         }
 
         if (!tracker->is_started()) {
-            PUMP_WARN_LOG(
-                "transport::base_dialer::__stop_dial_tracker: tracker not started");
+            PUMP_WARN_LOG("base_dialer::__stop_dial_tracker: tracker not started");
             return;
         }
 
@@ -62,8 +58,9 @@ namespace transport {
 #endif
 
     bool base_dialer::__start_dial_timer(const time::timer_callback &cb) {
-        if (connect_timeout_ <= 0)
+        if (connect_timeout_ <= 0) {
             return true;
+        }
 
         PUMP_ASSERT(!connect_timer_);
         connect_timer_ = time::timer::create_instance(connect_timeout_, cb);
@@ -72,15 +69,17 @@ namespace transport {
     }
 
     void base_dialer::__stop_dial_timer() {
-        if (connect_timer_)
+        if (connect_timer_) {
             connect_timer_->stop();
+        }
     }
 
     void base_dialer::__trigger_interrupt_callbacks() {
-        if (__set_status(TRANSPORT_TIMEOUTING, TRANSPORT_TIMEOUTED))
+        if (__set_status(TRANSPORT_TIMEOUTING, TRANSPORT_TIMEOUTED)) {
             cbs_.timeout_cb();
-        else if (__set_status(TRANSPORT_STOPPING, TRANSPORT_STOPPED))
+        } else if (__set_status(TRANSPORT_STOPPING, TRANSPORT_STOPPED)) {
             cbs_.stopped_cb();
+        }
     }
 
 }  // namespace transport

@@ -41,7 +41,7 @@ namespace transport {
              *     FLOW_ERR_NO    => success
              *     FLOW_ERR_ABORT => error
              ********************************************************************************/
-            flow_error init(poll::channel_sptr &&ch, const address &local_address);
+            flow_error init(poll::channel_sptr &&ch, const address &bind_address);
 
 #if defined(PUMP_HAVE_IOCP)
             /*********************************************************************************
@@ -53,29 +53,28 @@ namespace transport {
              ********************************************************************************/
             flow_error want_to_read();
 #endif
-
             /*********************************************************************************
              * Read from
              ********************************************************************************/
 #if defined(PUMP_HAVE_IOCP)
             c_block_ptr read_from(void_ptr iocp_task,
                                   int32_ptr size,
-                                  address_ptr remote_address);
+                                  address_ptr from_address);
 #else
-            c_block_ptr read_from(int32_ptr size, address_ptr remote_address);
+            c_block_ptr read_from(int32_ptr size, address_ptr from_address);
 #endif
-
             /*********************************************************************************
              * Send to
              ********************************************************************************/
-            int32 send(c_block_ptr b, uint32 size, const address &remote_address);
+            int32 send(c_block_ptr b, uint32 size, const address &to_address);
 
           private:
-            // Read task for IOCP
-            void_ptr read_task_;
-
             // Read cache
             toolkit::io_buffer_ptr read_iob_;
+#if defined(PUMP_HAVE_IOCP)
+            // Read task for IOCP
+            void_ptr read_task_;
+#endif
         };
         DEFINE_ALL_POINTER_TYPE(flow_udp);
 

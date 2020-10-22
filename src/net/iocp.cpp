@@ -83,8 +83,9 @@ namespace net {
                 if (un.client_fd > 0)
                     close(un.client_fd);
             }
-            if (iob)
+            if (iob) {
                 iob->sub_ref();
+            }
         }
     };
     DEFINE_RAW_POINTER_TYPE(iocp_task);
@@ -230,8 +231,9 @@ namespace net {
                           addrlen,
                           &bytes,
                           &(itask->ol)) == TRUE ||
-                net::last_errno() == ERROR_IO_PENDING)
+                net::last_errno() == ERROR_IO_PENDING) {
                 return true;
+            }
         }
         itask->sub_link();
 
@@ -283,13 +285,13 @@ namespace net {
 
         itask->add_link();
         {
-            if (connect_ex(itask->fd, addr, addrlen, NULL, 0, NULL, &(itask->ol)) ==
-                    TRUE &&
-                setsockopt(itask->fd, SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT, NULL, 0) ==
-                    0)
+            if (connect_ex(itask->fd, addr, addrlen, NULL, 0, NULL, &(itask->ol)) == TRUE &&
+                setsockopt(itask->fd, SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT, NULL, 0) == 0) {
                 return true;
-            if (last_errno() == WSA_IO_PENDING)
+            }
+            if (last_errno() == WSA_IO_PENDING) {
                 return true;
+            }
         }
         itask->sub_link();
 
@@ -304,10 +306,10 @@ namespace net {
         itask->add_link();
         {
             DWORD flags = 0;
-            if (::WSARecv(itask->fd, &itask->buf, 1, NULL, &flags, &(itask->ol), NULL) !=
-                    SOCKET_ERROR ||
-                net::last_errno() == WSA_IO_PENDING)
+            if (::WSARecv(itask->fd, &itask->buf, 1, NULL, &flags, &(itask->ol), NULL) != SOCKET_ERROR ||
+                net::last_errno() == WSA_IO_PENDING) {
                 return true;
+            }
         }
         itask->sub_link();
 
@@ -332,8 +334,9 @@ namespace net {
                               &itask->un.ip.addr_len,
                               &itask->ol,
                               NULL) != SOCKET_ERROR ||
-                net::last_errno() == WSA_IO_PENDING)
+                net::last_errno() == WSA_IO_PENDING) {
                 return true;
+            }
         }
         itask->sub_link();
 
@@ -355,8 +358,9 @@ namespace net {
                           0,
                           (WSAOVERLAPPED *)&itask->ol,
                           NULL) != SOCKET_ERROR ||
-                net::last_errno() == WSA_IO_PENDING)
+                net::last_errno() == WSA_IO_PENDING) {
                 return true;
+            }
         }
         itask->sub_link();
 

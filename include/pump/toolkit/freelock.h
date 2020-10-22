@@ -477,12 +477,14 @@ namespace toolkit {
                 // If current head is occupied, the node had be used, try again.
                 if (current_head == nullptr ||
                     current_head->occupied.load(std::memory_order_relaxed)) {
+                    pump_sched_yield();
                     continue;
                 }
 
                 // If next node of current head is tail node, list should be extended.
                 if (current_head->next == tail_.load(std::memory_order_relaxed)) {
                     if (!__extend_list(current_head)) {
+                        pump_sched_yield();
                         continue;
                     }
                 }
@@ -492,6 +494,7 @@ namespace toolkit {
                                                    current_head->next,
                                                    std::memory_order_acquire,
                                                    std::memory_order_relaxed)) {
+                    pump_sched_yield();
                     continue;
                 }
 
@@ -509,6 +512,7 @@ namespace toolkit {
                     current_head->next,
                     std::memory_order_acquire,
                     std::memory_order_relaxed)) {
+                    pump_sched_yield();
                 }
 
                 break;
@@ -537,6 +541,7 @@ namespace toolkit {
 
                 // Next node of current tail should be occupied, else try again.
                 if (!current_tail_next->occupied.load(std::memory_order_relaxed)) {
+                    pump_sched_yield();
                     continue;
                 }
 
@@ -545,6 +550,7 @@ namespace toolkit {
                                                    current_tail_next,
                                                    std::memory_order_acquire,
                                                    std::memory_order_relaxed)) {
+                    pump_sched_yield();
                     continue;
                 }
 

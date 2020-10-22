@@ -94,7 +94,7 @@ namespace poll {
                 }
 
                 PUMP_LOCK_SPOINTER(vptr, net::get_iocp_task_notifier(task));
-                if (vptr == nullptr) {
+                if (!vptr) {
                     PUMP_WARN_LOG(
                         "net::iocp_poller::__work_thread: task channel notifier invalid");
                     net::unlink_iocp_task(task);
@@ -125,7 +125,7 @@ namespace poll {
                 }
 
                 PUMP_LOCK_SPOINTER(vptr, net::get_iocp_task_notifier(task));
-                if (vptr == nullptr) {
+                if (!vptr) {
                     PUMP_DEBUG_LOG(
                         "net::iocp_poller::__work_thread: task channel notifier invalid");
                     net::unlink_iocp_task(task);

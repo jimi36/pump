@@ -25,19 +25,18 @@ namespace transport {
     }
 
     transport_error tcp_acceptor::start(service_ptr sv, const acceptor_callbacks &cbs) {
-        if (sv == nullptr) {
-            PUMP_ERR_LOG("transport::tcp_acceptor::start: service invalid");
+        if (!sv) {
+            PUMP_ERR_LOG("tcp_acceptor::start: service invalid");
             return ERROR_INVALID;
         }
 
         if (!cbs.accepted_cb || !cbs.stopped_cb) {
-            PUMP_ERR_LOG("transport::tcp_acceptor::start: callbacks invalid");
+            PUMP_ERR_LOG("tcp_acceptor::start: callbacks invalid");
             return ERROR_INVALID;
         }
 
         if (!__set_status(TRANSPORT_INITED, TRANSPORT_STARTING)) {
-            PUMP_ERR_LOG(
-                "transport::tcp_acceptor::start: acceptor had be started before");
+            PUMP_ERR_LOG("tcp_acceptor::start: acceptor has started");
             return ERROR_INVALID;
         }
 
@@ -56,18 +55,18 @@ namespace transport {
         });
 
         if (!__open_accept_flow()) {
-            PUMP_ERR_LOG("transport::tcp_acceptor::start: open accept flow failed");
+            PUMP_ERR_LOG("tcp_acceptor::start: open accept flow failed");
             return ERROR_FAULT;
         }
 
 #if defined(PUMP_HAVE_IOCP)
         if (flow_->want_to_accept() != flow::FLOW_ERR_NO) {
-            PUMP_ERR_LOG("transport::tcp_acceptor::start: flow want_to_accept failed");
+            PUMP_ERR_LOG("tcp_acceptor::start: want to accept failed");
             return ERROR_FAULT;
         }
 #else
         if (!__start_accept_tracker(shared_from_this())) {
-            PUMP_ERR_LOG("transport::tcp_acceptor::start: start tracker failed");
+            PUMP_ERR_LOG("tcp_acceptor::start: start tracker failed");
             return ERROR_FAULT;
         }
 #endif
@@ -83,7 +82,7 @@ namespace transport {
         if (__set_status(TRANSPORT_STARTED, TRANSPORT_STOPPING)) {
             __close_accept_flow();
         } else {
-            PUMP_DEBUG_LOG("transport::tcp_acceptor::stop: not started");
+            PUMP_DEBUG_LOG("tcp_acceptor::stop: acceptor not started");
         }
     }
 
@@ -110,17 +109,13 @@ namespace transport {
 
         if (__is_status(TRANSPORT_STARTING) || __is_status(TRANSPORT_STARTED)) {
 #if defined(PUMP_HAVE_IOCP)
-            if (flow->want_to_accept() == flow::FLOW_ERR_NO) {
-                return;
+            if (flow->want_to_accept() != flow::FLOW_ERR_NO) {
+                PUMP_ERR_LOG("tcp_acceptor::on_read_event: want to accept failed");
             }
-            PUMP_ERR_LOG(
-                "transport::tcp_acceptor::on_read_event: flow want_to_accept failed");
 #else
-            if (tracker_->set_tracked(true)) {
-                return;
-            }
-            PUMP_ERR_LOG("transport::tcp_acceptor::on_read_event: track read failed");
+            PUMP_DEBUG_CHECK(tracker_->set_tracked(true));
 #endif
+            return;
         }
 
 #if !defined(PUMP_HAVE_IOCP)
@@ -130,13 +125,12 @@ namespace transport {
     }
 
     bool tcp_acceptor::__open_accept_flow() {
-        // Setup flow
+        // Init tcp acceptor flow.
         PUMP_ASSERT(!flow_);
         flow_.reset(object_create<flow::flow_tcp_acceptor>(),
                     object_delete<flow::flow_tcp_acceptor>);
-
         if (flow_->init(shared_from_this(), listen_address_) != flow::FLOW_ERR_NO) {
-            PUMP_ERR_LOG("transport::tcp_acceptor::__open_flow: flow init failed");
+            PUMP_ERR_LOG("tcp_acceptor::__open_flow: flow init failed");
             return false;
         }
 

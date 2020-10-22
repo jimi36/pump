@@ -28,8 +28,9 @@ namespace toolkit {
         bool exp = false;
 
         while (1) {
-            if (!locked_.compare_exchange_strong(exp, true))
+            if (!locked_.compare_exchange_strong(exp, true)) {
                 break;
+            }
 
             if (loop++ > per_loop_) {
                 loop = 0;

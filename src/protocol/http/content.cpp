@@ -85,7 +85,7 @@ namespace protocol {
                 c_block_ptr chunk_pos = pos;
                 c_block_ptr line_end =
                     find_http_line_end(chunk_pos, uint32(size - (chunk_pos - b)));
-                if (line_end == nullptr) {
+                if (!line_end) {
                     break;
                 }
 

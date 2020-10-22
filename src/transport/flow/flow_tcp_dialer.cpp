@@ -28,8 +28,9 @@ namespace transport {
 
         flow_tcp_dialer::~flow_tcp_dialer() {
 #if defined(PUMP_HAVE_IOCP)
-            if (dial_task_)
+            if (dial_task_) {
                 net::unlink_iocp_task(dial_task_);
+            }
 #endif
         }
 
@@ -43,14 +44,14 @@ namespace transport {
 #if defined(PUMP_HAVE_IOCP)
             fd_ = net::create_iocp_socket(domain, SOCK_STREAM, net::get_iocp_handler());
             if (fd_ == -1) {
-                PUMP_ERR_LOG("flow::flow_tcp_dialer::init: create_iocp_socket fialed");
+                PUMP_ERR_LOG("flow_tcp_dialer::init: create iocp socket fialed");
                 return FLOW_ERR_ABORT;
             }
 
             extra_fns_ = net::new_iocp_extra_function(fd_);
             if (!extra_fns_) {
                 PUMP_ERR_LOG(
-                    "flow::flow_tcp_dialer::init: new_iocp_extra_function fialed");
+                    "flow_tcp_dialer::init: new iocp function fialed");
                 return FLOW_ERR_ABORT;
             }
 
@@ -61,24 +62,24 @@ namespace transport {
             dial_task_ = dial_task;
 #else
             if ((fd_ = net::create_socket(domain, SOCK_STREAM)) == -1) {
-                PUMP_ERR_LOG("flow::flow_tcp_dialer::init: create_socket fialed");
+                PUMP_ERR_LOG("flow_tcp_dialer::init: create socket fialed");
                 return FLOW_ERR_ABORT;
             }
 #endif
             if (!net::set_reuse(fd_, 1)) {
-                PUMP_ERR_LOG("flow::flow_tcp_dialer::init: set_reuse failed");
+                PUMP_ERR_LOG("flow_tcp_dialer::init: set reuse failed");
                 return FLOW_ERR_ABORT;
             }
             if (!net::set_noblock(fd_, 1)) {
-                PUMP_ERR_LOG("flow::flow_tcp_dialer::init: set_noblock failed");
+                PUMP_ERR_LOG("flow_tcp_dialer::init: set noblock failed");
                 return FLOW_ERR_ABORT;
             }
             if (!net::set_nodelay(fd_, 1)) {
-                PUMP_ERR_LOG("flow::flow_tcp_dialer::init: set_nodelay failed");
+                PUMP_ERR_LOG("flow_tcp_dialer::init: set nodelay failed");
                 return FLOW_ERR_ABORT;
             }
             if (!net::bind(fd_, (sockaddr *)bind_address.get(), bind_address.len())) {
-                PUMP_ERR_LOG("flow::flow_tcp_dialer::init: bind failed");
+                PUMP_ERR_LOG("flow_tcp_dialer::init: bind failed");
                 return FLOW_ERR_ABORT;
             }
 
@@ -88,15 +89,19 @@ namespace transport {
         flow_error flow_tcp_dialer::want_to_connect(const address &remote_address) {
 #if defined(PUMP_HAVE_IOCP)
             if (!net::post_iocp_connect(
-                    extra_fns_, dial_task_, remote_address.get(), remote_address.len())) {
-                PUMP_WARN_LOG(
-                    "flow::flow_tcp_dialer::want_to_connect: post_iocp_connect failed");
+                    extra_fns_, 
+                    dial_task_, 
+                    remote_address.get(), 
+                    remote_address.len())) {
+                PUMP_WARN_LOG("flow_tcp_dialer::want_to_connect: post iocp connect failed");
                 return FLOW_ERR_ABORT;
             }
 #else
             if (!net::connect(
-                    fd_, (sockaddr *)remote_address.get(), remote_address.len())) {
-                PUMP_WARN_LOG("flow::flow_tcp_dialer::want_to_connect: connect failed");
+                    fd_, 
+                    (sockaddr *)remote_address.get(), 
+                    remote_address.len())) {
+                PUMP_WARN_LOG("flow_tcp_dialer::want_to_connect: connect failed");
                 return FLOW_ERR_ABORT;
             }
 #endif
@@ -109,12 +114,12 @@ namespace transport {
                                        address_ptr remote_address) {
             PUMP_ASSERT(iocp_task);
             int32 ec = net::get_iocp_task_ec(iocp_task);
-            if (ec != 0)
+            if (ec != 0) {
                 return ec;
+            }
 
             if (!net::update_connect_context(fd_)) {
-                PUMP_WARN_LOG(
-                    "flow::flow_tcp_dialer::connect: update_connect_context failed");
+                PUMP_WARN_LOG("flow_tcp_dialer::connect: update connect context failed");
                 return net::get_socket_error(fd_);
             }
 
@@ -135,12 +140,12 @@ namespace transport {
         int32 flow_tcp_dialer::connect(address_ptr local_address,
                                        address_ptr remote_address) {
             int32 ec = net::get_socket_error(fd_);
-            if (ec != 0)
+            if (ec != 0) {
                 return ec;
+            }
 
             if (!net::update_connect_context(fd_)) {
-                PUMP_WARN_LOG(
-                    "flow::flow_tcp_dialer::connect: update_connect_context failed");
+                PUMP_WARN_LOG("flow_tcp_dialer::connect: update connect context failed");
                 return net::get_socket_error(fd_);
             }
 

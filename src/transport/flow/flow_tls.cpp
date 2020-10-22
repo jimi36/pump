@@ -22,9 +22,11 @@ namespace transport {
 
         flow_tls::flow_tls() noexcept
             : is_handshaked_(false),
-              session_(nullptr),
-              read_task_(nullptr),
-              send_task_(nullptr) {
+              session_(nullptr) {
+#if defined(PUMP_HAVE_IOCP)
+            read_task_ = nullptr;
+            send_task_ = nullptr;
+#endif
         }
 
         flow_tls::~flow_tls() {
@@ -151,10 +153,13 @@ namespace transport {
             PUMP_ASSERT(iob && iob->data_size() > 0);
             do {
                 int32 size = ssl::tls_send(session_, iob->data(), iob->data_size());
-                if (size <= 0 || !iob->shift(size))
+                if (size <= 0) {
                     break;
-                if (iob->data_size() == 0)
+                }
+                iob->shift(size);
+                if (iob->data_size() == 0) {
                     return FLOW_ERR_NO;
+                }
             } while (true);
 
             return FLOW_ERR_ABORT;
@@ -164,14 +169,14 @@ namespace transport {
 #if defined(PUMP_HAVE_IOCP)
             net::update_iocp_task_buffer(send_task_);
             if (net::post_iocp_send(send_task_)) {
-                return FLOW_ERR_NO;
+                return FLOW_ERR_AGAIN;
             }
 #else
             toolkit::io_buffer *send_iob = session_->net_send_iob;
             int32 size = net::send(fd_, send_iob->buffer(), send_iob->data_size());
             if (PUMP_LIKELY(size > 0)) {
                 // Shift send buffer
-                PUMP_DEBUG_CHECK(send_iob->shift(size));
+                send_iob->shift(size);
 
                 // There is data to send, then try again
                 if (send_iob->data_size() > 0) {
@@ -200,21 +205,19 @@ namespace transport {
             int32 size = net::get_iocp_task_processed_size(iocp_task);
             if (PUMP_LIKELY(size > 0)) {
                 // Shift send buffer
-                PUMP_DEBUG_CHECK(send_iob->shift(size));
-
+                send_iob->shift(size);
                 // There is data to send, then send again
                 uint32 data_size = send_iob->data_size();
                 if (data_size > 0) {
                     net::update_iocp_task_buffer(send_task_);
                     if (!net::post_iocp_send(send_task_)) {
-                        PUMP_WARN_LOG(
-                            "flow_tls::send_to_net: set_iocp_task_buffer failed");
+                        PUMP_WARN_LOG("flow_tls::send_to_net: post iocp send failed");
                         return FLOW_ERR_ABORT;
                     }
                     return FLOW_ERR_AGAIN;
                 }
 
-                // Send finish, reset send buffer
+                // Io buffer sent finished.
                 send_iob->reset();
 
                 return FLOW_ERR_NO;
@@ -234,19 +237,18 @@ namespace transport {
             int32 size = net::send(fd_, send_iob->data(), data_size);
             if (PUMP_LIKELY(size > 0)) {
                 // Shift send buffer
-                PUMP_DEBUG_CHECK(send_iob->shift(size));
-
+                send_iob->shift(size);
                 // There is data to send, then send again
                 if (send_iob->data_size() > 0) {
                     return FLOW_ERR_AGAIN;
                 }
 
-                // Send finish, reset send buffer
+                // Io buffer sent finished.
                 send_iob->reset();
 
                 return FLOW_ERR_NO;
             } else if (PUMP_UNLIKELY(size < 0)) {
-                // Send again
+                // Try to send again.
                 return FLOW_ERR_AGAIN;
             }
 
