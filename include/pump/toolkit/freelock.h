@@ -474,10 +474,12 @@ namespace toolkit {
                 current_head = head_.load(std::memory_order_relaxed);
 
                 // If current head is nullptr, list is extending, try again.
-                // If current head is occupied, the node had be used, try again.
-                if (current_head == nullptr ||
-                    current_head->occupied.load(std::memory_order_relaxed)) {
+                if (current_head == nullptr ) {
                     pump_sched_yield();
+                    continue;
+                }
+                // If current head is occupied, the node had be used, try again.
+                if (current_head->occupied.load(std::memory_order_relaxed)) {
                     continue;
                 }
 
@@ -494,7 +496,6 @@ namespace toolkit {
                                                    current_head->next,
                                                    std::memory_order_acquire,
                                                    std::memory_order_relaxed)) {
-                    pump_sched_yield();
                     continue;
                 }
 
@@ -512,7 +513,6 @@ namespace toolkit {
                     current_head->next,
                     std::memory_order_acquire,
                     std::memory_order_relaxed)) {
-                    pump_sched_yield();
                 }
 
                 break;
@@ -541,7 +541,6 @@ namespace toolkit {
 
                 // Next node of current tail should be occupied, else try again.
                 if (!current_tail_next->occupied.load(std::memory_order_relaxed)) {
-                    pump_sched_yield();
                     continue;
                 }
 
@@ -550,7 +549,6 @@ namespace toolkit {
                                                    current_tail_next,
                                                    std::memory_order_acquire,
                                                    std::memory_order_relaxed)) {
-                    pump_sched_yield();
                     continue;
                 }
 
