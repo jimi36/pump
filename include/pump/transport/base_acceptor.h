@@ -54,6 +54,12 @@ namespace transport {
             return listen_address_;
         }
 
+    protected:
+        /*********************************************************************************
+         * Channel event callback
+         ********************************************************************************/
+        virtual void on_channel_event(uint32 ev) override;
+
       protected:
         /*********************************************************************************
          * Open accept flow

@@ -26,6 +26,10 @@ namespace transport {
         __close_accept_flow();
     }
 
+    void base_acceptor::on_channel_event(uint32 ev) {
+        __trigger_interrupt_callbacks();
+    }
+
 #if !defined(PUMP_HAVE_IOCP)
     bool base_acceptor::__start_accept_tracker(poll::channel_sptr &&ch) {
         if (tracker_) {

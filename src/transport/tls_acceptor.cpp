@@ -102,6 +102,7 @@ namespace transport {
         // When stopping done, tracker event will trigger stopped callback.
         if (__set_status(TRANSPORT_STARTED, TRANSPORT_STOPPING)) {
             __close_accept_flow();
+            __post_channel_event(shared_from_this(), 0);
         } else {
             PUMP_WARN_LOG("tls_acceptor::stop: not started");
         }
