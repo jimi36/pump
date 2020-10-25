@@ -20,6 +20,7 @@
 #include <atomic>
 
 #include "pump/types.h"
+#include "pump/net/iocp.h"
 #include "pump/toolkit/features.h"
 
 namespace pump {
@@ -29,7 +30,7 @@ namespace poll {
      * IO event
      ********************************************************************************/
     const int32 IO_EVENT_NONE = 0x00;   // none event
-    const int32 IO_EVNET_READ = 0x01;   // read event
+    const int32 IO_EVENT_READ = 0x01;   // read event
     const int32 IO_EVENT_SEND = 0x02;   // send event
     const int32 IO_EVENT_ERROR = 0x04;  // error event
 
@@ -81,8 +82,8 @@ namespace poll {
          * Handle io event
          ********************************************************************************/
 #if defined(PUMP_HAVE_IOCP)
-        PUMP_INLINE void handle_io_event(uint32 ev, void_ptr iocp_task) {
-            if (ev & IO_EVNET_READ) {
+        PUMP_INLINE void handle_io_event(uint32 ev, net::iocp_task_ptr iocp_task) {
+            if (ev & IO_EVENT_READ) {
                 on_read_event(iocp_task);
             } else if (ev & IO_EVENT_SEND) {
                 on_send_event(iocp_task);
@@ -90,7 +91,7 @@ namespace poll {
         }
 #else
         PUMP_INLINE void handle_io_event(uint32 ev) {
-            if (ev & IO_EVNET_READ) {
+            if (ev & IO_EVENT_READ) {
                 on_read_event();
             } else if (ev & IO_EVENT_SEND) {
                 on_send_event();
@@ -118,24 +119,22 @@ namespace poll {
          * Read event callback
          ********************************************************************************/
 #if defined(PUMP_HAVE_IOCP)
-        virtual void on_read_event(void_ptr iocp_task) {
+        virtual void on_read_event(net::iocp_task_ptr iocp_task) {
         }
 #else
         virtual void on_read_event() {
         }
 #endif
-
         /*********************************************************************************
          * Send event callback
          ********************************************************************************/
 #if defined(PUMP_HAVE_IOCP)
-        virtual void on_send_event(void_ptr iocp_task) {
+        virtual void on_send_event(net::iocp_task_ptr iocp_task) {
         }
 #else
         virtual void on_send_event() {
         }
 #endif
-
         /*********************************************************************************
          * Channel event callback
          ********************************************************************************/
@@ -151,9 +150,9 @@ namespace poll {
     DEFINE_ALL_POINTER_TYPE(channel);
 
     const int32 TRACK_NONE = (IO_EVENT_NONE);
-    const int32 TRACK_READ = (IO_EVNET_READ);
+    const int32 TRACK_READ = (IO_EVENT_READ);
     const int32 TRACK_SEND = (IO_EVENT_SEND);
-    const int32 TRACK_BOTH = (IO_EVNET_READ | IO_EVENT_SEND);
+    const int32 TRACK_BOTH = (IO_EVENT_READ | IO_EVENT_SEND);
 
     const int32 TRACKER_EVENT_DEL = 0;
     const int32 TRACKER_EVENT_ADD = 1;
@@ -164,10 +163,18 @@ namespace poll {
          * Constructor
          ********************************************************************************/
         channel_tracker(channel_sptr &ch, int32 ev) noexcept
-            : started_(false), tracked_(false), event_(ev), fd_(ch->get_fd()), ch_(ch) {
+            : started_(false), 
+              tracked_(false), 
+              event_(ev), 
+              fd_(ch->get_fd()), 
+              ch_(ch) {
         }
         channel_tracker(channel_sptr &&ch, int32 ev) noexcept
-            : started_(false), tracked_(false), event_(ev), fd_(ch->get_fd()), ch_(ch) {
+            : started_(false), 
+              tracked_(false), 
+              event_(ev), 
+              fd_(ch->get_fd()), 
+              ch_(ch) {
         }
 
         /*********************************************************************************

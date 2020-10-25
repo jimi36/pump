@@ -26,26 +26,29 @@ namespace transport {
     DEFINE_ALL_POINTER_TYPE(base_transport);
 
     struct acceptor_callbacks {
+        // Accepted callback
         pump_function<void(base_transport_sptr &)> accepted_cb;
-
+        // Acceptor Stopped calloback
         pump_function<void()> stopped_cb;
     };
 
     struct dialer_callbacks {
+        // Dialed callback
         pump_function<void(base_transport_sptr &, bool)> dialed_cb;
-
+        // Dialer timouted callback
         pump_function<void()> timeout_cb;
-
+        // Dialer stopped callback
         pump_function<void()> stopped_cb;
     };
 
     struct transport_callbacks {
+        // Read callback for tcp and tls
         pump_function<void(c_block_ptr, int32)> read_cb;
-
+        // Read from callback for udp
         pump_function<void(c_block_ptr, int32, const address &)> read_from_cb;
-
+        // Transport disconnected callback
         pump_function<void()> disconnected_cb;
-
+        // Transport stopped callback
         pump_function<void()> stopped_cb;
     };
 

@@ -123,7 +123,7 @@ namespace transport {
     }
 
 #if defined(PUMP_HAVE_IOCP)
-    void udp_transport::on_read_event(void_ptr iocp_task) {
+    void udp_transport::on_read_event(net::iocp_task_ptr iocp_task) {
 #else
     void udp_transport::on_read_event() {
 #endif

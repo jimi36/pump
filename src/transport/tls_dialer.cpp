@@ -77,8 +77,8 @@ namespace transport {
             return ERROR_FAULT;
         }
 
-        if (flow_->want_to_connect(remote_address_) != flow::FLOW_ERR_NO) {
-            PUMP_ERR_LOG("transport::tls_dialer::start: flow want_to_connect failed");
+        if (flow_->post_connect(remote_address_) != flow::FLOW_ERR_NO) {
+            PUMP_ERR_LOG("transport::tls_dialer::start: flow post_connect failed");
             return ERROR_FAULT;
         }
 
@@ -116,7 +116,7 @@ namespace transport {
     }
 
 #if defined(PUMP_HAVE_IOCP)
-    void tls_dialer::on_send_event(void_ptr iocp_task) {
+    void tls_dialer::on_send_event(net::iocp_task_ptr iocp_task) {
 #else
     void tls_dialer::on_send_event() {
 #endif

@@ -67,7 +67,7 @@ namespace transport {
          * Send event callback
          ********************************************************************************/
 #if defined(PUMP_HAVE_IOCP)
-        virtual void on_send_event(void_ptr iocp_task) override;
+        virtual void on_send_event(net::iocp_task_ptr iocp_task) override;
 #else
         virtual void on_send_event() override;
 #endif

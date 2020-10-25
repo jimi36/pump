@@ -87,7 +87,7 @@ namespace transport {
              *     FLOW_ERR_ABORT => error
              ********************************************************************************/
 #if defined(PUMP_HAVE_IOCP)
-            flow_error read_from_net(void_ptr iocp_task);
+            flow_error read_from_net(net::iocp_task_ptr iocp_task);
 #else
             flow_error read_from_net();
 #endif
@@ -100,7 +100,7 @@ namespace transport {
              * Check there are data to read or not
              ********************************************************************************/
             PUMP_INLINE bool has_data_to_read() const {
-                return session_ && session_->net_read_data_size > 0;
+                return (session_ && session_->net_read_data_size > 0);
             }
 
             /*********************************************************************************
@@ -111,6 +111,15 @@ namespace transport {
              ********************************************************************************/
             flow_error send_to_ssl(toolkit::io_buffer_ptr iob);
 
+#if defined(PUMP_HAVE_IOCP)
+            /*********************************************************************************
+             * Post send
+             * Return results:
+             *     FLOW_ERR_NO      => success
+             *     FLOW_ERR_ABORT   => error
+             ********************************************************************************/
+            flow_error post_send();
+#else
             /*********************************************************************************
              * Want to send
              * If using iocp this post an iocp task for sending, else this try sending
@@ -120,7 +129,7 @@ namespace transport {
              *     FLOW_ERR_ABORT   => error
              ********************************************************************************/
             flow_error want_to_send();
-
+#endif
             /*********************************************************************************
              * Send to net
              * Return results:
@@ -130,7 +139,7 @@ namespace transport {
              *     FLOW_ERR_ABORT   => error
              ********************************************************************************/
 #if defined(PUMP_HAVE_IOCP)
-            flow_error send_to_net(void_ptr iocp_task);
+            flow_error send_to_net(net::iocp_task_ptr iocp_task);
 #else
             flow_error send_to_net();
 #endif
@@ -138,7 +147,7 @@ namespace transport {
              * Check there are data to send or not
              ********************************************************************************/
             PUMP_INLINE bool has_data_to_send() const {
-                return session_ && session_->net_send_iob->data_size() > 0;
+                return (session_ && session_->net_send_iob->data_size() > 0);
             }
 
             /*********************************************************************************
@@ -157,9 +166,9 @@ namespace transport {
 
 #if defined(PUMP_HAVE_IOCP)
             // IOCP read task
-            void_ptr read_task_;
+            net::iocp_task_ptr read_task_;
             // IOCP send task
-            void_ptr send_task_;
+            net::iocp_task_ptr send_task_;
 #endif
         };
         DEFINE_ALL_POINTER_TYPE(flow_tls);

@@ -39,7 +39,6 @@ namespace net {
         }
 #endif
         PUMP_WARN_LOG("net::set_noblock: with ec=%d", last_errno());
-
         return false;
     }
 
@@ -52,7 +51,6 @@ namespace net {
         }
 
         PUMP_WARN_LOG("net::set_linger: with ec=%d", last_errno());
-
         return false;
     }
 
@@ -62,7 +60,6 @@ namespace net {
         }
 
         PUMP_WARN_LOG("net::set_read_bs: with ec=%d", last_errno());
-
         return false;
     }
 
@@ -72,15 +69,14 @@ namespace net {
         }
 
         PUMP_WARN_LOG("net::set_send_bs: with ec=%d", last_errno());
-
         return false;
     }
 
     bool set_keeplive(int32 fd, int32 keeplive, int32 interval) {
         int32 on = 1;
         if (setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, (const char *)&on, sizeof(on)) == -1) {
-            PUMP_WARN_LOG("net::set_keeplive: setsockopt SO_KEEPALIVE with ec=%d",
-                          last_errno());
+            PUMP_WARN_LOG(
+                "net::set_keeplive: setsockopt SO_KEEPALIVE with ec=%d", last_errno());
             return false;
         }
 
@@ -99,8 +95,8 @@ namespace net {
                      &bytes,
                      nullptr,
                      nullptr) == -1) {
-            PUMP_ERR_LOG("net::set_keeplive: WSAIoctl SIO_KEEPALIVE_VALS with ec=%d",
-                         last_errno());
+            PUMP_ERR_LOG(
+                "net::set_keeplive: WSAIoctl SIO_KEEPALIVE_VALS with ec=%d", last_errno());
             return false;
         }
 
@@ -109,8 +105,8 @@ namespace net {
         if (setsockopt(fd, SOL_TCP, TCP_KEEPIDLE, &keeplive, sizeof(keeplive)) == -1 ||
             setsockopt(fd, SOL_TCP, TCP_KEEPINTVL, &interval, sizeof(interval)) == -1 ||
             setsockopt(fd, SOL_TCP, TCP_KEEPCNT, &count, sizeof(count)) == -1) {
-            PUMP_WARN_LOG("net::set_keeplive: setsockopt TCP_KEEPINTVL with ec=%d",
-                          last_errno());
+            PUMP_WARN_LOG(
+                "net::set_keeplive: setsockopt TCP_KEEPINTVL with ec=%d", last_errno());
             return false;
         }
 #endif
@@ -118,13 +114,11 @@ namespace net {
     }
 
     bool set_reuse(int32 fd, int32 reuse) {
-        if (setsockopt(
-                fd, SOL_SOCKET, SO_REUSEADDR, (c_block_ptr)&reuse, sizeof(reuse)) == 0) {
+        if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (c_block_ptr)&reuse, sizeof(reuse)) == 0) {
             return true;
         }
 
         PUMP_WARN_LOG("net::set_reuse: with ec=%d", last_errno());
-
         return false;
     }
 
@@ -134,7 +128,6 @@ namespace net {
         }
 
         PUMP_ERR_LOG("net::set_nodelay: with ec=%d", last_errno());
-
         return false;
     }
 
@@ -145,7 +138,6 @@ namespace net {
         }
 
         PUMP_WARN_LOG("net::update_connect_context: with ec=%d", last_errno());
-
         return false;
 #else
         return true;
@@ -179,7 +171,6 @@ namespace net {
         }
 
         PUMP_WARN_LOG("net::bind: with ec=%d", last_errno());
-
         return false;
     }
 
@@ -189,7 +180,6 @@ namespace net {
         }
 
         PUMP_WARN_LOG("net::listen: with ec=%d", last_errno());
-
         return false;
     }
 
@@ -204,7 +194,9 @@ namespace net {
     bool connect(int32 fd, struct sockaddr *addr, int32 addrlen) {
         if (::connect(fd, addr, addrlen) != 0) {
             int32 ec = net::last_errno();
-            if (ec != LANE_EALREADY && ec != LANE_EWOULDBLOCK && ec != LANE_EINPROGRESS) {
+            if (ec != LANE_EALREADY && 
+                ec != LANE_EWOULDBLOCK && 
+                ec != LANE_EINPROGRESS) {
                 PUMP_WARN_LOG("net::connect: with ec=%d", ec);
                 return false;
             }
@@ -218,7 +210,8 @@ namespace net {
             return size;
         } else if (size < 0) {
            int32 ec = net::last_errno();
-            if (ec == LANE_EINPROGRESS || ec == LANE_EWOULDBLOCK) {
+            if (ec == LANE_EINPROGRESS || 
+                ec == LANE_EWOULDBLOCK) {
                 size = -1;
             } else {
                 size = 0;
@@ -232,7 +225,8 @@ namespace net {
         size = ::recvfrom(fd, b, size, 0, (struct sockaddr *)addr, (socklen_t *)addrlen);
         if (size < 0) {
             int32 ec = net::last_errno();
-            if (ec == LANE_EINPROGRESS || ec == LANE_EWOULDBLOCK) {
+            if (ec == LANE_EINPROGRESS || 
+                ec == LANE_EWOULDBLOCK) {
                 size = -1;
             } else {
                 size = 0;
@@ -247,7 +241,8 @@ namespace net {
             return size;
         } else if (size < 0) {
             int32 ec = net::last_errno();
-            if (ec == LANE_EINPROGRESS || ec == LANE_EWOULDBLOCK) {
+            if (ec == LANE_EINPROGRESS || 
+                ec == LANE_EWOULDBLOCK) {
                 size = -1;
             } else {
                 size = 0;
@@ -262,7 +257,8 @@ namespace net {
         size = ::sendto(fd, b, size, 0, addr, len);
         if (size < 0) {
             int32 ec = net::last_errno();
-            if (ec == LANE_EINPROGRESS || ec == LANE_EWOULDBLOCK) {
+            if (ec == LANE_EINPROGRESS || 
+                ec == LANE_EWOULDBLOCK) {
                 size = -1;
             } else {
                 size = 0;
@@ -317,7 +313,6 @@ namespace net {
         }
 
         PUMP_WARN_LOG("net::local_address: with ec=%d", last_errno());
-
         return false;
     }
 
@@ -327,7 +322,6 @@ namespace net {
         }
 
         PUMP_WARN_LOG("net::remote_address: with ec=%d", last_errno());
-
         return false;
     }
 
@@ -348,7 +342,6 @@ namespace net {
         }
 
         PUMP_WARN_LOG("net::address_to_string");
-
         return "";
     }
 
@@ -391,7 +384,6 @@ namespace net {
         }
 
         PUMP_WARN_LOG("net::string_to_address: address=%s:%d", ip.c_str(), port);
-
         return false;
     }
 

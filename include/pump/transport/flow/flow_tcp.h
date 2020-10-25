@@ -45,30 +45,41 @@ namespace transport {
 
 #if defined(PUMP_HAVE_IOCP)
             /*********************************************************************************
-             * Want to read
+             * Post read
              * If using IOCP this post an IOCP task for reading, else do nothing.
              * Return results:
              *     FLOW_ERR_NO    => success
              *     FLOW_ERR_ABORT => error
              ********************************************************************************/
-            flow_error want_to_read();
+            flow_error post_read();
 #endif
             /*********************************************************************************
              * Read
              ********************************************************************************/
 #if defined(PUMP_HAVE_IOCP)
-            c_block_ptr read(void_ptr iocp_task, int32_ptr size);
+            c_block_ptr read(net::iocp_task_ptr iocp_task, int32_ptr size);
 #else
             c_block_ptr read(int32_ptr size);
 #endif
 
+#if defined(PUMP_HAVE_IOCP)
             /*********************************************************************************
-             * Want to send
-             * If using IOCP this post an IOCP task for sending, else this try sending
-             *data. Return results: FLOW_ERR_NO    => success FLOW_ERR_ABORT => error
+             * Post send
+             * Return results:
+             *     FLOW_ERR_NO    => success
+             *     FLOW_ERR_ABORT => error
              ********************************************************************************/
+            flow_error post_send(toolkit::io_buffer_ptr iob);
+#else
+             /*********************************************************************************
+              * Want to send
+              * If using IOCP this post an IOCP task for sending, else this try sending
+              *data. Return results:
+              *      FLOW_ERR_NO    => success
+              *      FLOW_ERR_ABORT => error
+              ********************************************************************************/
             flow_error want_to_send(toolkit::io_buffer_ptr iob);
-
+#endif
             /*********************************************************************************
              * Send
              * Return results:
@@ -78,7 +89,7 @@ namespace transport {
              *     FLOW_ERR_ABORT   => error
              ********************************************************************************/
 #if defined(PUMP_HAVE_IOCP)
-            flow_error send(void_ptr iocp_task);
+            flow_error send(net::iocp_task_ptr iocp_task);
 #else
             flow_error send();
 #endif
@@ -86,21 +97,20 @@ namespace transport {
              * Check there are data to send or not
              ********************************************************************************/
             PUMP_INLINE bool has_data_to_send() const {
-                return (send_iob_ != nullptr && send_iob_->data_size() > 0);
+                return (send_iob_ && send_iob_->data_size() > 0);
             }
 
           private:
-            // Read cache
+            // Read buffer
             toolkit::io_buffer_ptr read_iob_;
-
             // Send buffer
             toolkit::io_buffer_ptr send_iob_;
 
 #if defined(PUMP_HAVE_IOCP)
             // IOCP read task
-            void_ptr read_task_;
+            net::iocp_task_ptr read_task_;
             // IOCP send task
-            void_ptr send_task_;
+            net::iocp_task_ptr send_task_;
 #endif
         };
         DEFINE_ALL_POINTER_TYPE(flow_tcp);

@@ -29,7 +29,7 @@ namespace transport {
         flow_tcp_dialer::~flow_tcp_dialer() {
 #if defined(PUMP_HAVE_IOCP)
             if (dial_task_) {
-                net::unlink_iocp_task(dial_task_);
+                dial_task_->sub_link();
             }
 #endif
         }
@@ -55,11 +55,10 @@ namespace transport {
                 return FLOW_ERR_ABORT;
             }
 
-            auto dial_task = net::new_iocp_task();
-            net::set_iocp_task_fd(dial_task, fd_);
-            net::set_iocp_task_notifier(dial_task, ch_);
-            net::set_iocp_task_type(dial_task, IOCP_TASK_CONNECT);
-            dial_task_ = dial_task;
+            dial_task_ = net::new_iocp_task();
+            dial_task_->set_fd(fd_);
+            dial_task_->set_notifier(ch_);
+            dial_task_->set_type(net::IOCP_TASK_CONNECT);
 #else
             if ((fd_ = net::create_socket(domain, SOCK_STREAM)) == -1) {
                 PUMP_ERR_LOG("flow_tcp_dialer::init: create socket fialed");
@@ -86,14 +85,14 @@ namespace transport {
             return FLOW_ERR_NO;
         }
 
-        flow_error flow_tcp_dialer::want_to_connect(const address &remote_address) {
+        flow_error flow_tcp_dialer::post_connect(const address &remote_address) {
 #if defined(PUMP_HAVE_IOCP)
             if (!net::post_iocp_connect(
                     extra_fns_, 
                     dial_task_, 
                     remote_address.get(), 
                     remote_address.len())) {
-                PUMP_WARN_LOG("flow_tcp_dialer::want_to_connect: post iocp connect failed");
+                PUMP_WARN_LOG("flow_tcp_dialer::post_connect: post iocp connect failed");
                 return FLOW_ERR_ABORT;
             }
 #else
@@ -101,7 +100,7 @@ namespace transport {
                     fd_, 
                     (sockaddr *)remote_address.get(), 
                     remote_address.len())) {
-                PUMP_WARN_LOG("flow_tcp_dialer::want_to_connect: connect failed");
+                PUMP_WARN_LOG("flow_tcp_dialer::post_connect: connect failed");
                 return FLOW_ERR_ABORT;
             }
 #endif
@@ -109,11 +108,11 @@ namespace transport {
         }
 
 #if defined(PUMP_HAVE_IOCP)
-        int32 flow_tcp_dialer::connect(void_ptr iocp_task,
+        int32 flow_tcp_dialer::connect(net::iocp_task_ptr iocp_task,
                                        address_ptr local_address,
                                        address_ptr remote_address) {
             PUMP_ASSERT(iocp_task);
-            int32 ec = net::get_iocp_task_ec(iocp_task);
+            int32 ec = iocp_task->get_errcode();
             if (ec != 0) {
                 return ec;
             }

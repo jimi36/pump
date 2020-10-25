@@ -57,7 +57,7 @@ namespace transport {
              * Read from
              ********************************************************************************/
 #if defined(PUMP_HAVE_IOCP)
-            c_block_ptr read_from(void_ptr iocp_task,
+            c_block_ptr read_from(net::iocp_task_ptr iocp_task,
                                   int32_ptr size,
                                   address_ptr from_address);
 #else
@@ -71,9 +71,10 @@ namespace transport {
           private:
             // Read cache
             toolkit::io_buffer_ptr read_iob_;
+
 #if defined(PUMP_HAVE_IOCP)
             // Read task for IOCP
-            void_ptr read_task_;
+            net::iocp_task_ptr read_task_;
 #endif
         };
         DEFINE_ALL_POINTER_TYPE(flow_udp);

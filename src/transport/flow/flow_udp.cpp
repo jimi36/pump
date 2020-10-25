@@ -31,7 +31,7 @@ namespace transport {
         flow_udp::~flow_udp() {
 #if defined(PUMP_HAVE_IOCP)
             if (read_task_) {
-                net::unlink_iocp_task(read_task_);
+                read_task_->sub_link();
             }
 #endif
         }
@@ -58,12 +58,11 @@ namespace transport {
             read_iob_->init_with_size(UDP_BUFFER_SIZE);
 
 #if defined(PUMP_HAVE_IOCP)
-            auto read_task = net::new_iocp_task();
-            net::set_iocp_task_fd(read_task, fd_);
-            net::set_iocp_task_notifier(read_task, ch_);
-            net::set_iocp_task_type(read_task, IOCP_TASK_READ);
-            net::bind_iocp_task_buffer(read_task, read_iob_);
-            read_task_ = read_task;
+            read_task_ = net::new_iocp_task();
+            read_task_->set_fd(fd_);
+            read_task_->set_notifier(ch_);
+            read_task_->set_type(net::IOCP_TASK_READ);
+            read_task_->bind_io_buffer(read_iob_);
 #endif
             if (!net::set_reuse(fd_, 1)) {
                 PUMP_ERR_LOG("flow_udp::init: set reuse failed");
@@ -97,13 +96,13 @@ namespace transport {
 #endif
 
 #if defined(PUMP_HAVE_IOCP)
-        c_block_ptr flow_udp::read_from(void_ptr iocp_task,
+        c_block_ptr flow_udp::read_from(net::iocp_task_ptr iocp_task,
                                         int32_ptr size,
                                         address_ptr from_address) {
-            c_block_ptr buf = net::get_iocp_task_processed_data(iocp_task, size);
+            c_block_ptr buf = iocp_task->get_processed_data(size);
             if (PUMP_LIKELY(*size > 0)) {
                 int32 addrlen = 0;
-                sockaddr *addr = net::get_iocp_task_remote_address(iocp_task, &addrlen);
+                sockaddr *addr = iocp_task->get_remote_address(&addrlen);
                 from_address->set(addr, addrlen);
             }
             return buf;

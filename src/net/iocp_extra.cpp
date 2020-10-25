@@ -61,7 +61,8 @@ namespace net {
         GUID guid_connect_ex = WSAID_CONNECTEX;
         LPFN_CONNECTEX connect_ex =
             (LPFN_CONNECTEX)get_extension_function(fd, &guid_connect_ex);
-        if (accept_ex == nullptr || get_accepted_addrs == nullptr ||
+        if (accept_ex == nullptr || 
+            get_accepted_addrs == nullptr ||
             connect_ex == nullptr) {
             return nullptr;
         }
@@ -75,8 +76,9 @@ namespace net {
     }
 
     void delete_iocp_extra_function(void_ptr fns) {
-        if (fns)
+        if (fns) {
             object_delete(iocp_extra_function_ptr(fns));
+        }
     }
 
     void_ptr get_iocp_accpet_fn(void_ptr fns) {

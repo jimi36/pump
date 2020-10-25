@@ -31,7 +31,7 @@ namespace transport {
         flow_tcp_acceptor::~flow_tcp_acceptor() {
 #if defined(PUMP_HAVE_IOCP)
             if (accept_task_) {
-                net::unlink_iocp_task(accept_task_);
+                accept_task_->sub_link();
             }
 #endif
             if (iob_) {
@@ -62,12 +62,11 @@ namespace transport {
                 return FLOW_ERR_ABORT;
             }
 
-            auto accept_task = net::new_iocp_task();
-            net::set_iocp_task_fd(accept_task, fd_);
-            net::set_iocp_task_notifier(accept_task, ch_);
-            net::set_iocp_task_type(accept_task, IOCP_TASK_ACCEPT);
-            net::bind_iocp_task_buffer(accept_task, iob_);
-            accept_task_ = accept_task;
+            accept_task_ = net::new_iocp_task();
+            accept_task_->set_fd(fd_);
+            accept_task_->set_notifier(ch_);
+            accept_task_->set_type(net::IOCP_TASK_ACCEPT);
+            accept_task_->bind_io_buffer(iob_);
 #else
             fd_ = net::create_socket(domain, SOCK_STREAM);
             if (fd_ == -1) {
@@ -100,33 +99,30 @@ namespace transport {
         }
 
 #if defined(PUMP_HAVE_IOCP)
-        flow_error flow_tcp_acceptor::want_to_accept() {
+        flow_error flow_tcp_acceptor::post_accept() {
             int32 domain = is_ipv6_ ? AF_INET6 : AF_INET;
             int32 client =
                 net::create_iocp_socket(domain, SOCK_STREAM, net::get_iocp_handler());
             if (client == -1) {
-                PUMP_WARN_LOG("flow_tcp_acceptor::want_to_accept: create iocp socket failed");
+                PUMP_WARN_LOG("flow_tcp_acceptor::post_accept: create iocp socket failed");
                 return FLOW_ERR_ABORT;
             }
 
-            net::set_iocp_task_client_fd(accept_task_, client);
+            accept_task_->set_client_fd(client);
             if (!net::post_iocp_accept(extra_fns_, accept_task_)) {
-                PUMP_WARN_LOG("flow_tcp_acceptor::want_to_accept: post iocp accept failed");
+                PUMP_WARN_LOG("flow_tcp_acceptor::post_accept: post iocp accept failed");
                 net::close(client);
                 return FLOW_ERR_ABORT;
             }
 
             return FLOW_ERR_NO;
         }
-#endif
 
-#if defined(PUMP_HAVE_IOCP)
-        int32 flow_tcp_acceptor::accept(void_ptr iocp_task,
+        int32 flow_tcp_acceptor::accept(net::iocp_task_ptr iocp_task,
                                         address_ptr local_address,
                                         address_ptr remote_address) {
-            int32 ec = net::get_iocp_task_ec(iocp_task);
-            int32 client_fd = net::get_iocp_task_client_fd(iocp_task);
-            if (ec != 0 || client_fd == -1) {
+            int32 client_fd = iocp_task->get_client_fd();
+            if (iocp_task->get_errcode() != 0 || client_fd == -1) {
                 PUMP_WARN_LOG("flow_tcp_acceptor::accept: accept failed");
                 net::close(client_fd);
                 return -1;
@@ -136,7 +132,7 @@ namespace transport {
             sockaddr *remote = nullptr;
             int32 llen = sizeof(sockaddr_in);
             int32 rlen = sizeof(sockaddr_in);
-            if (!net::get_iocp_accepted_address(
+            if (!net::get_iocp_client_address(
                     extra_fns_, iocp_task, &local, &llen, &remote, &rlen)) {
                 PUMP_WARN_LOG(
                     "flow_tcp_acceptor::accept: get iocp accepted address falied");
@@ -146,7 +142,7 @@ namespace transport {
             local_address->set(local, llen);
             remote_address->set(remote, rlen);
 
-            net::set_iocp_task_client_fd(iocp_task, 0);
+            iocp_task->set_client_fd(0);
             if (!net::set_noblock(client_fd, 1) || 
                 !net::set_nodelay(client_fd, 1)) {
                 PUMP_WARN_LOG("flow_tcp_acceptor::accept: set noblock or nodelay fialed");

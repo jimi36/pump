@@ -39,8 +39,8 @@ namespace ssl {
         gnutls_certificate_credentials_t xcred;
         if (gnutls_certificate_allocate_credentials(&xcred) != 0) {
             PUMP_ERR_LOG(
-                "ssl::create_tls_client_certificate: "
-                "gnutls_certificate_allocate_credentials failed\n");
+                "ssl_helper::create_tls_client_certificate: "
+                "gnutls_certificate_allocate_credentials failed");
             return nullptr;
         }
         return xcred;

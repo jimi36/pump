@@ -24,6 +24,8 @@ namespace poll {
     }
 
     select_poller::select_poller() noexcept {
+        FD_ZERO(&read_fds_);
+        FD_ZERO(&write_fds_);
         tv_.tv_sec = 0;
         tv_.tv_usec = 0;
     }
@@ -52,7 +54,7 @@ namespace poll {
             }
 
             listen_event = tracker->get_event();
-            if (listen_event & IO_EVNET_READ) {
+            if (listen_event & IO_EVENT_READ) {
                 FD_SET(fd, &read_fds_);
             } else if (listen_event & IO_EVENT_SEND) {
                 FD_SET(fd, &write_fds_);
@@ -83,7 +85,7 @@ namespace poll {
             PUMP_LOCK_SPOINTER(ch, tracker->get_channel());
             if (PUMP_UNLIKELY(!ch)) {
                 PUMP_WARN_LOG(
-                    "poll::select_poller:__dispatch_pending_event: channel invalid");
+                    "select_poller:__dispatch_pending_event: channel invalid");
                 trackers_.erase(beg++);
                 continue;
             }
@@ -91,10 +93,10 @@ namespace poll {
 #if defined(PUMP_HAVE_SELECT)
             int32 fd = tracker->get_fd();
             int32 listen_event = tracker->get_event();
-            if (listen_event & IO_EVNET_READ) {
+            if (listen_event & IO_EVENT_READ) {
                 if (FD_ISSET(fd, rfds)) {
                     PUMP_DEBUG_CHECK(tracker->set_tracked(false));
-                    ch->handle_io_event(IO_EVNET_READ);
+                    ch->handle_io_event(IO_EVENT_READ);
                 }
             } else {
                 if (FD_ISSET(fd, wfds)) {

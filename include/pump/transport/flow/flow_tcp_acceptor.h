@@ -45,26 +45,24 @@ namespace transport {
 
 #if defined(PUMP_HAVE_IOCP)
             /*********************************************************************************
-             * Want to accept
+             * Post accept
              * If using iocp this post an iock task for accepting.
              * Return results:
              *     FLOW_ERR_NO    => success
              *     FLOW_ERR_ABORT => error
              ********************************************************************************/
-            flow_error want_to_accept();
+            flow_error post_accept();
 #endif
-
             /*********************************************************************************
              * Accept
              ********************************************************************************/
 #if defined(PUMP_HAVE_IOCP)
-            int32 accept(void_ptr iocp_task,
+            int32 accept(net::iocp_task_ptr iocp_task,
                          address_ptr local_address,
                          address_ptr remote_address);
 #else
             int32 accept(address_ptr local_address, address_ptr remote_address);
 #endif
-
           private:
             // IPV6
             bool is_ipv6_;
@@ -74,7 +72,7 @@ namespace transport {
 
 #if defined(PUMP_HAVE_IOCP)
             // IOCP accept task
-            void_ptr accept_task_;
+            net::iocp_task_ptr accept_task_;
 #endif
         };
         DEFINE_ALL_POINTER_TYPE(flow_tcp_acceptor);

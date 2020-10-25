@@ -103,7 +103,7 @@ namespace toolkit {
          * Init with size
          * Allocate a memory block with the size.
          ********************************************************************************/
-        bool init_with_size(uint32 size) {
+        PUMP_INLINE bool init_with_size(uint32 size) {
             return __init_with_size(size);
         }
 
@@ -111,7 +111,7 @@ namespace toolkit {
          * Init with copy
          * Allocate a memory block and copy input buffer to the buffer memory block.
          ********************************************************************************/
-        bool init_with_copy(c_block_ptr b, uint32 size) {
+        PUMP_INLINE bool init_with_copy(c_block_ptr b, uint32 size) {
             if (__init_with_copy(b, size)) {
                 data_size_ = size;
                 return true;
@@ -124,7 +124,7 @@ namespace toolkit {
          * The input buffer ownership transfer to the buffer.
          * The input buffer must be created by pump_malloc or pump_realloc.
          ********************************************************************************/
-        bool init_with_ownership(c_block_ptr b, uint32 size) {
+        PUMP_INLINE bool init_with_ownership(c_block_ptr b, uint32 size) {
             if (__init_with_ownership(b, size)) {
                 data_size_ = size;
                 return true;
@@ -141,11 +141,13 @@ namespace toolkit {
 
         /*********************************************************************************
          * Shift
+         * Return data size.
          ********************************************************************************/
-        void shift(uint32 size) {
+        PUMP_INLINE uint32 shift(uint32 size) {
             PUMP_ASSERT(data_size_ >= size);
             read_pos_ += size;
             data_size_ -= size;
+            return data_size_;
         }
 
         /*********************************************************************************
@@ -218,8 +220,7 @@ namespace toolkit {
         /*********************************************************************************
          * Copy constructor
          ********************************************************************************/
-        io_buffer(const io_buffer &b) noexcept {
-        }
+        io_buffer(const io_buffer&) = delete;
 
         /*********************************************************************************
          * Deconstructor
@@ -230,9 +231,7 @@ namespace toolkit {
         /*********************************************************************************
          * Assign operator
          ********************************************************************************/
-        io_buffer &operator=(const io_buffer &b) {
-            return *this;
-        }
+        io_buffer& operator=(const io_buffer&) = delete;
 
       private:
         // data size

@@ -73,7 +73,6 @@ bool init() {
     setup_signal(SIGPIPE, 0, SIG_IGN);
 #endif
 
-
 #if defined(PUMP_HAVE_GNUTLS)
     if (gnutls_global_init() != 0) {
         PUMP_WARN_LOG("pump::init: gnutls_global_init failed");
@@ -83,7 +82,7 @@ bool init() {
 #elif defined(PUMP_HAVE_OPENSSL)
     SSL_library_init();
     OpenSSL_add_all_algorithms();
-    SSL_load_error_strings();
+    //SSL_load_error_strings();
 #endif
 
     return true;
@@ -102,6 +101,7 @@ void uninit() {
 
 #if defined(PUMP_HAVE_GNUTLS)
     gnutls_global_deinit();
+#elif defined(PUMP_HAVE_OPENSSL)
 #endif
 }
 

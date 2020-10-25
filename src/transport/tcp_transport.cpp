@@ -161,8 +161,7 @@ namespace transport {
         }
 
         if (PUMP_UNLIKELY(max_pending_send_size_ > 0 &&
-                          pending_send_size_.load(std::memory_order_acquire) >=
-                              max_pending_send_size_)) {
+                          pending_send_size_.load(std::memory_order_acquire) >= max_pending_send_size_)) {
             PUMP_WARN_LOG("tcp_transport::send: send buffer list full");
             return ERROR_AGAIN;
         }
@@ -176,7 +175,10 @@ namespace transport {
             return ERROR_AGAIN;
         }
 
-        __async_send(iob);
+        if (!__async_send(iob)) {
+            PUMP_WARN_LOG("tcp_transport::send: async send failed");
+            return ERROR_FAULT;
+        }
 
         return ERROR_OK;
     }
@@ -193,19 +195,23 @@ namespace transport {
         }
 
         if (PUMP_UNLIKELY(max_pending_send_size_ > 0 &&
-                          pending_send_size_.load(std::memory_order_acquire) >=
-                              max_pending_send_size_)) {
+                          pending_send_size_.load(std::memory_order_acquire) >= max_pending_send_size_)) {
             PUMP_WARN_LOG("tcp_transport::send: send buffer list full");
             return ERROR_AGAIN;
         }
 
-        __async_send(iob);
+        if (!__async_send(iob)) {
+            PUMP_WARN_LOG("tcp_transport::send: async send failed");
+            // User and transport will sub the io buffer refences, so add refences for that.
+            iob->add_ref();
+            return ERROR_FAULT;
+        }
 
         return ERROR_OK;
     }
 
 #if defined(PUMP_HAVE_IOCP)
-    void tcp_transport::on_read_event(void_ptr iocp_task) {
+    void tcp_transport::on_read_event(net::iocp_task_ptr iocp_task) {
 #else
     void tcp_transport::on_read_event() {
 #endif
@@ -240,7 +246,7 @@ namespace transport {
             }
 
 #if defined(PUMP_HAVE_IOCP)
-            if (flow->want_to_read() == flow::FLOW_ERR_ABORT) {
+            if (flow->post_read() == flow::FLOW_ERR_ABORT) {
                 PUMP_WARN_LOG("tcp_transport::on_read_event: want to read failed");
                 __try_doing_disconnected_process();
             }
@@ -254,7 +260,7 @@ namespace transport {
     }
 
 #if defined(PUMP_HAVE_IOCP)
-    void tcp_transport::on_send_event(void_ptr iocp_task) {
+    void tcp_transport::on_send_event(net::iocp_task_ptr iocp_task) {
 #else
     void tcp_transport::on_send_event() {
 #endif
@@ -312,7 +318,7 @@ namespace transport {
         }
 
 #if defined(PUMP_HAVE_IOCP)
-        if (flow_->want_to_read() == flow::FLOW_ERR_ABORT) {
+        if (flow_->post_read() == flow::FLOW_ERR_ABORT) {
             PUMP_ERR_LOG("tcp_transport::__async_read: want to read fialed");
             return ERROR_FAULT;
         }
@@ -330,13 +336,15 @@ namespace transport {
         PUMP_DEBUG_CHECK(sendlist_.push(iob));
 
         // If there are no more buffers, we should try to get next send chance.
-        if (pending_send_size_.fetch_add(iob->data_size(), std::memory_order_release) >
-            0) {
+        if (pending_send_size_.fetch_add(iob->data_size()) > 0) {
             return true;
         }
 
         if (!__send_once(flow_.get(), true)) {
-            stop();
+            if (__set_status(TRANSPORT_STARTED, TRANSPORT_STOPPING)) {
+                __close_transport_flow();
+                __post_channel_event(shared_from_this(), 0);
+            }
             return false;
         }
 
@@ -357,6 +365,12 @@ namespace transport {
         // Save last send buffer data size.
         last_send_iob_size_ = last_send_iob_->data_size();
 
+#if defined(PUMP_HAVE_IOCP)
+        if (flow->post_send(last_send_iob_) == flow::FLOW_ERR_ABORT) {
+            PUMP_ERR_LOG("tcp_transport::__send_once: post send task failed");
+            return false;
+        }
+#else
         // Try to send the buffer.
         auto ret = flow->want_to_send(last_send_iob_);
         if (PUMP_UNLIKELY(ret == flow::FLOW_ERR_ABORT)) {
@@ -364,7 +378,6 @@ namespace transport {
             return false;
         }
 
-#if !defined(PUMP_HAVE_IOCP)
         if (!resume) {
             PUMP_DEBUG_CHECK(s_tracker_->set_tracked(true));
             return true;
@@ -373,15 +386,14 @@ namespace transport {
         if (PUMP_LIKELY(ret == flow::FLOW_ERR_NO)) {
             last_send_iob_->sub_ref();
             last_send_iob_ = nullptr;
-            if (pending_send_size_.fetch_sub(last_send_iob_size_) ==
-                last_send_iob_size_) {
+            if (pending_send_size_.fetch_sub(last_send_iob_size_) == last_send_iob_size_) {
                 return true;
             }
         }
 
         if (!__start_send_tracker(shared_from_this())) {
             PUMP_ERR_LOG("tcp_transport::__send_once: start tracker failed");
-            return true;
+            return false;
         }
 #endif
         return true;

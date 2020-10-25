@@ -38,8 +38,8 @@ namespace poll {
 #if defined(PUMP_HAVE_EPOLL)
         fd_ = ::epoll_create1(0);
         if (fd_ <= 0) {
-            PUMP_ERR_LOG("poll::epoll_poller: epoll_create1 failed with ec=%d",
-                         net::last_errno());
+            PUMP_ERR_LOG(
+                "epoll_poller: epoll_create1 failed with ec=%d", net::last_errno());
         }
 
         events_ = pump_malloc(sizeof(epoll_event) * EPOLL_EVENT_SIZE);
@@ -65,7 +65,7 @@ namespace poll {
 
         auto listen_event = tracker->get_event();
         ev.events = EPOLLONESHOT;
-        ev.events |= (listen_event & IO_EVNET_READ) ? EL_READ_EVENT : 0;
+        ev.events |= (listen_event & IO_EVENT_READ) ? EL_READ_EVENT : 0;
         ev.events |= (listen_event & IO_EVENT_SEND) ? EL_SEND_EVENT : 0;
 
         if (epoll_ctl(fd_, EPOLL_CTL_ADD, tracker->get_fd(), &ev) == 0 ||
@@ -73,12 +73,10 @@ namespace poll {
             return true;
         }
 
-        PUMP_WARN_LOG("poll::epoll_poller::__add_channel_tracker: ec=%d",
-                      net::last_errno());
+        PUMP_WARN_LOG("epoll_poller::__add_channel_tracker: ec=%d", net::last_errno());
 #else
-        PUMP_WARN_LOG("poll::epoll_poller::__add_channel_tracker: not support");
+        PUMP_WARN_LOG("epoll_poller::__add_channel_tracker: not support");
 #endif
-
         return false;
     }
 
@@ -90,30 +88,34 @@ namespace poll {
 
         auto listen_event = tracker->get_event();
         ev.events = EPOLLONESHOT;
-        ev.events |= (listen_event & IO_EVNET_READ) ? EL_READ_EVENT : 0;
+        ev.events |= (listen_event & IO_EVENT_READ) ? EL_READ_EVENT : 0;
         ev.events |= (listen_event & IO_EVENT_SEND) ? EL_SEND_EVENT : 0;
 
         if (epoll_ctl(fd_, EPOLL_CTL_MOD, tracker->get_fd(), &ev) != 0 &&
             epoll_ctl(fd_, EPOLL_CTL_ADD, tracker->get_fd(), &ev) != 0) {
-            PUMP_WARN_LOG("poll::epoll_poller::__resume_channel_tracker: ec=%d",
-                          net::last_errno());
+            PUMP_WARN_LOG(
+                "epoll_poller::__resume_channel_tracker: ec=%d", net::last_errno());
         }
 #else
-        PUMP_WARN_LOG("poll::epoll_poller::__resume_channel_tracker: not support");
+        PUMP_WARN_LOG("epoll_poller::__resume_channel_tracker: not support");
 #endif
     }
 
     bool epoll_poller::__remove_channel_tracker(channel_tracker_ptr tracker) {
 #if defined(PUMP_HAVE_EPOLL)
+        /*
         epoll_event ev;
         if (epoll_ctl(fd_, EPOLL_CTL_DEL, tracker->get_fd(), &ev) == 0) {
             return true;
         }
 
-        PUMP_WARN_LOG("poll::epoll_poller::__remove_channel_tracker: ec=%d",
-                      net::last_errno());
+        PUMP_WARN_LOG(
+            "epoll_poller::__remove_channel_tracker: ec=%d", net::last_errno());
+        */
+
+        return true;
 #else
-        PUMP_WARN_LOG("poll::epoll_poller::__remove_channel_tracker: not support");
+        PUMP_WARN_LOG("epoll_poller::__remove_channel_tracker: not support");
 #endif
 
         return false;
@@ -121,8 +123,10 @@ namespace poll {
 
     void epoll_poller::__poll(int32 timeout) {
 #if defined(PUMP_HAVE_EPOLL)
-        auto count =
-            ::epoll_wait(fd_, (epoll_event *)events_, EPOLL_EVENT_SIZE, timeout);
+        auto count = ::epoll_wait(fd_, 
+                                  (epoll_event *)events_, 
+                                  EPOLL_EVENT_SIZE, 
+                                  timeout);
         if (count > 0) {
             __dispatch_pending_event(count);
         }
@@ -142,18 +146,13 @@ namespace poll {
             PUMP_LOCK_SPOINTER(ch, tracker->get_channel());
             if (PUMP_UNLIKELY(!ch)) {
                 PUMP_WARN_LOG(
-                    "poll::epoll_poller:__dispatch_pending_event: channel invalid");
+                    "epoll_poller:__dispatch_pending_event: channel invalid");
                 trackers_.erase(tracker);
                 continue;
             }
 
             tracker->set_tracked(false);
 
-            //if (ev->events & EL_READ_EVENT) {
-            //    ch->handle_io_event(IO_EVNET_READ);
-            //} else if (ev->events & EL_SEND_EVENT) {
-            //    ch->handle_io_event(IO_EVENT_SEND);
-            //}
             ch->handle_io_event(tracker->get_event());
 
             if (tracker->is_tracked()) {

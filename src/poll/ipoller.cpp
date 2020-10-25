@@ -56,11 +56,6 @@ namespace poll {
     void iocp_poller::stop() {
 #if defined(PUMP_HAVE_IOCP)
         started_.store(false);
-
-        int32 count = (int32)workrs_.size();
-        for (int32 i = 0; i < count; i++) {
-            PostQueuedCompletionStatus(iocp_, -1, NULL, NULL);
-        }
 #endif
     }
 
@@ -76,79 +71,68 @@ namespace poll {
 
     void iocp_poller::__work_thread() {
 #if defined(PUMP_HAVE_IOCP)
-        int32 tracker_cnt = 0;
         DWORD transferred = 0;
         ULONG_PTR completion_key = 0;
+        net::iocp_task_ptr task = nullptr;
 
-        int32 ttp = 0;
-        void_ptr task = nullptr;
-
-        while (tracker_cnt > 0 || started_.load()) {
+        while (started_.load()) {
             if (GetQueuedCompletionStatus(iocp_,
                                           &transferred,
                                           &completion_key,
                                           (LPOVERLAPPED *)&task,
-                                          INFINITE) == TRUE) {
-                if (!task) {
-                    PUMP_WARN_LOG("net::iocp_poller::__work_thread: task invalid");
-                    continue;
-                }
-
-                PUMP_LOCK_SPOINTER(vptr, net::get_iocp_task_notifier(task));
-                if (!vptr) {
+                                          1000) == TRUE) {
+                PUMP_ASSERT(task);
+ 
+                PUMP_LOCK_SPOINTER(notifier, task->get_notifier());
+                if (!notifier) {
                     PUMP_WARN_LOG(
-                        "net::iocp_poller::__work_thread: task channel notifier invalid");
-                    net::unlink_iocp_task(task);
+                        "iocp_poller::__work_thread: task channel notifier invalid");
+                    task->sub_link();
                     continue;
                 }
 
                 int32 event = IO_EVENT_NONE;
-                ttp = net::get_iocp_task_type(task);
-                if (ttp == IOCP_TASK_SEND || ttp == IOCP_TASK_CONNECT) {
-                    event |= IO_EVENT_SEND;
-                } else if (ttp == IOCP_TASK_READ || ttp == IOCP_TASK_ACCEPT) {
-                    event |= IO_EVNET_READ;
+                int32 task_type = task->get_type();
+                if (task_type & net::IOCP_READ_MASKS) {
+                    event = IO_EVENT_READ;
+                } else if (task_type & net::IOCP_SEND_MASKS) {
+                    event = IO_EVENT_SEND;
                 }
 
-                auto ch = (channel_ptr)vptr;
                 if (event != IO_EVENT_NONE) {
-                    net::set_iocp_task_processed_size(task, transferred);
-                    ch->handle_io_event(event, task);
+                    task->set_processed_size(transferred);
+                    channel_ptr(notifier)->handle_io_event(event, task);
                 } else {
-                    if (ttp == IOCP_TASK_CHANNEL) {
-                        ch->handle_channel_event(uint32(completion_key));
-                    }
+                    channel_ptr(notifier)->handle_channel_event(uint32(completion_key));
                 }
             } else {
                 if (!task) {
-                    PUMP_DEBUG_LOG("net::iocp_poller::__work_thread: task invalid");
                     continue;
                 }
 
-                PUMP_LOCK_SPOINTER(vptr, net::get_iocp_task_notifier(task));
-                if (!vptr) {
+                PUMP_LOCK_SPOINTER(notifier, task->get_notifier());
+                if (!notifier) {
                     PUMP_DEBUG_LOG(
-                        "net::iocp_poller::__work_thread: task channel notifier invalid");
-                    net::unlink_iocp_task(task);
+                        "iocp_poller::__work_thread: task channel notifier invalid");
+                    task->sub_link();
                     continue;
                 }
 
                 int32 event = IO_EVENT_NONE;
-                ttp = net::get_iocp_task_type(task);
-                if (ttp == IOCP_TASK_SEND || ttp == IOCP_TASK_CONNECT) {
-                    event |= IO_EVENT_SEND;
-                } else if (ttp == IOCP_TASK_READ || ttp == IOCP_TASK_ACCEPT) {
-                    event |= IO_EVNET_READ;
+                int32 task_type = task->get_type();
+                if (task_type & net::IOCP_READ_MASKS) {
+                    event = IO_EVENT_READ;
+                } else if (task_type & net::IOCP_SEND_MASKS) {
+                    event = IO_EVENT_SEND;
                 }
 
-                net::set_iocp_task_processed_size(task, 0);
-                net::set_iocp_task_ec(task, net::last_errno());
+                task->set_processed_size(0);
+                task->set_errcode(net::last_errno());
 
-                auto ch = (channel_ptr)vptr;
-                ch->handle_io_event(event, task);
+                channel_ptr(notifier)->handle_io_event(event, task);
             }
 
-            net::unlink_iocp_task(task);
+            task->sub_link();
         }
 #endif
     }
@@ -156,9 +140,8 @@ namespace poll {
     void iocp_poller::push_channel_event(channel_sptr &c, uint32 ev) {
 #if defined(PUMP_HAVE_IOCP)
         auto task = net::new_iocp_task();
-        net::set_iocp_task_notifier(task, c);
-        net::set_iocp_task_type(task, IOCP_TASK_CHANNEL);
-
+        task->set_notifier(c);
+        task->set_type(net::IOCP_TASK_CHANNEL);
         PostQueuedCompletionStatus(iocp_, 1, ev, (LPOVERLAPPED)task);
 #endif
     }

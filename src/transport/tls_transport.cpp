@@ -162,8 +162,7 @@ namespace transport {
         }
 
         if (PUMP_UNLIKELY(max_pending_send_size_ > 0 &&
-                          pending_send_size_.load(std::memory_order_acquire) >=
-                              max_pending_send_size_)) {
+                          pending_send_size_.load(std::memory_order_acquire) >= max_pending_send_size_)) {
             PUMP_WARN_LOG("tls_transport::send: send buffer list full");
             return ERROR_AGAIN;
         }
@@ -177,7 +176,10 @@ namespace transport {
             return ERROR_AGAIN;
         }
 
-        __async_send(iob);
+        if (!__async_send(iob)) {
+            PUMP_WARN_LOG("tls_transport::send: async send failed");
+            return ERROR_FAULT;
+        }
 
         return ERROR_OK;
     }
@@ -194,13 +196,17 @@ namespace transport {
         }
 
         if (PUMP_UNLIKELY(max_pending_send_size_ > 0 &&
-                          pending_send_size_.load(std::memory_order_acquire) >=
-                              max_pending_send_size_)) {
+                          pending_send_size_.load(std::memory_order_acquire) >= max_pending_send_size_)) {
             PUMP_WARN_LOG("tls_transport::send: send buffer list full");
             return ERROR_AGAIN;
         }
 
-        __async_send(iob);
+        if (!__async_send(iob)) {
+            PUMP_WARN_LOG("tcp_transport::send: async send failed");
+            // User and transport will sub the io buffer refences, so add refences for that.
+            iob->add_ref();
+            return ERROR_FAULT;
+        }
 
         return ERROR_OK;
     }
@@ -289,7 +295,7 @@ namespace transport {
     }
 
 #if defined(PUMP_HAVE_IOCP)
-    void tls_transport::on_read_event(void_ptr iocp_task) {
+    void tls_transport::on_read_event(net::iocp_task_ptr iocp_task) {
 #else
     void tls_transport::on_read_event() {
 #endif
@@ -355,7 +361,7 @@ namespace transport {
     }
 
 #if defined(PUMP_HAVE_IOCP)
-    void tls_transport::on_send_event(void_ptr iocp_task) {
+    void tls_transport::on_send_event(net::iocp_task_ptr iocp_task) {
 #else
     void tls_transport::on_send_event() {
 #endif
@@ -432,7 +438,10 @@ namespace transport {
         }
 
         if (!__send_once(flow_.get(), true)) {
-            stop();
+            if (__set_status(TRANSPORT_STARTED, TRANSPORT_STOPPING)) {
+                __close_transport_flow();
+                __post_channel_event(shared_from_this(), 0);
+            }
             return false;
         }
 
@@ -457,13 +466,18 @@ namespace transport {
             return false;
         }
 
+#if defined(PUMP_HAVE_IOCP)
+        if (flow->post_send() == flow::FLOW_ERR_ABORT) {
+            PUMP_ERR_LOG("tls_transport::__send_once: post send task failed");
+            return false;
+        }
+#else
         auto ret = flow->want_to_send();
         if (ret == flow::FLOW_ERR_ABORT) {
             PUMP_ERR_LOG("tls_transport::__send_once: want to send failed");
             return false;
         }
 
-#if !defined(PUMP_HAVE_IOCP)
         if (!resume) {
             PUMP_DEBUG_CHECK(s_tracker_->set_tracked(true));
             return true;
@@ -472,15 +486,14 @@ namespace transport {
         if (PUMP_LIKELY(ret == flow::FLOW_ERR_NO)) {
             last_send_iob_->sub_ref();
             last_send_iob_ = nullptr;
-            if (pending_send_size_.fetch_sub(last_send_iob_size_) ==
-                last_send_iob_size_) {
+            if (pending_send_size_.fetch_sub(last_send_iob_size_) == last_send_iob_size_) {
                 return true;
             }
         }
 
         if (!__start_send_tracker(shared_from_this())) {
             PUMP_ERR_LOG("tls_transport::__send_once: start tracker failed");
-            return true;
+            return false;
         }
 #endif
         return true;

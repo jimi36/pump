@@ -60,7 +60,7 @@ namespace transport {
         }
 
 #if defined(PUMP_HAVE_IOCP)
-        if (flow_->want_to_accept() != flow::FLOW_ERR_NO) {
+        if (flow_->post_accept() != flow::FLOW_ERR_NO) {
             PUMP_ERR_LOG("tcp_acceptor::start: want to accept failed");
             return ERROR_FAULT;
         }
@@ -87,7 +87,7 @@ namespace transport {
     }
 
 #if defined(PUMP_HAVE_IOCP)
-    void tcp_acceptor::on_read_event(void_ptr iocp_task) {
+    void tcp_acceptor::on_read_event(net::iocp_task_ptr iocp_task) {
 #else
     void tcp_acceptor::on_read_event() {
 #endif
@@ -109,7 +109,7 @@ namespace transport {
 
         if (__is_status(TRANSPORT_STARTING) || __is_status(TRANSPORT_STARTED)) {
 #if defined(PUMP_HAVE_IOCP)
-            if (flow->want_to_accept() != flow::FLOW_ERR_NO) {
+            if (flow->post_accept() != flow::FLOW_ERR_NO) {
                 PUMP_ERR_LOG("tcp_acceptor::on_read_event: want to accept failed");
             }
 #else
