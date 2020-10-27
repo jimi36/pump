@@ -28,11 +28,11 @@ namespace protocol {
               transp_(transp) {
             if (server) {
                 create_coming_pocket_ = []() {
-                    return new request;
+                    return object_create<request>();
                 };
             } else {
                 create_coming_pocket_ = []() {
-                    return new response;
+                    return object_create<response>();
                 };
             }
         }
@@ -127,14 +127,14 @@ namespace protocol {
             auto pk = coming_pocket_.get();
             if (!pk) {
                 pk = create_coming_pocket_();
-                coming_pocket_.reset(pk);
+                coming_pocket_.reset(pk, object_delete<pocket>);
             }
 
             int32 parse_size = -1;
             if (read_cache_.empty()) {
                 parse_size = pk->parse(b, size);
                 if (parse_size >= 0 && parse_size < size) {
-                    read_cache_.append(b + parse_size, size - parse_size);
+                    read_cache_.append(b + parse_size, uint32(size - parse_size));
                 }
             } else {
                 read_cache_.append(b, size);

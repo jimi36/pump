@@ -32,8 +32,7 @@ namespace transport {
         /*********************************************************************************
          * Create instance
          ********************************************************************************/
-        PUMP_INLINE static tcp_acceptor_sptr create_instance(
-            const address &listen_address) {
+        PUMP_INLINE static tcp_acceptor_sptr create(const address &listen_address) {
             INLINE_OBJECT_CREATE(obj, tcp_acceptor, (listen_address));
             return tcp_acceptor_sptr(obj, object_delete<tcp_acceptor>);
         }
@@ -63,7 +62,6 @@ namespace transport {
 #else
         virtual void on_read_event() override;
 #endif
-
       private:
         /*********************************************************************************
          * Open accept flow

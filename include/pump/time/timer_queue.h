@@ -33,7 +33,10 @@ namespace time {
         typedef pump_function<void(timer_wptr &)> timer_pending_callback;
 
       public:
-        PUMP_INLINE static timer_queue_sptr create_instance() {
+          /*********************************************************************************
+         * Create instance
+         ********************************************************************************/
+        PUMP_INLINE static timer_queue_sptr create() {
             INLINE_OBJECT_CREATE(obj, timer_queue, ());
             return timer_queue_sptr(obj, object_delete<timer_queue>);
         }

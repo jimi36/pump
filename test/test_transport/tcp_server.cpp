@@ -127,7 +127,7 @@ void start_tcp_server(const std::string &ip, uint16 port) {
         pump_bind(&my_tcp_acceptor::on_stopped_accepting_callback, my_acceptor);
 
     address listen_address(ip, port);
-    tcp_acceptor_sptr acceptor = tcp_acceptor::create_instance(listen_address);
+    tcp_acceptor_sptr acceptor = tcp_acceptor::create(listen_address);
     if (acceptor->start(sv, cbs) != 0) {
         printf("tcp acceptor start error\n");
     }

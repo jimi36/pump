@@ -133,7 +133,7 @@ namespace transport {
 
         tcp_transport_sptr tcp_transport;
         if (PUMP_LIKELY(success)) {
-            tcp_transport = tcp_transport::create_instance();
+            tcp_transport = tcp_transport::create();
             tcp_transport->init(flow->unbind(), local_address, remote_address);
         } else {
             PUMP_DEBUG_LOG("tcp_dialer::on_send_event: dial failed");
@@ -191,7 +191,7 @@ namespace transport {
         cbs.timeout_cb = pump_bind(&tcp_sync_dialer::on_timeouted, shared_from_this());
         cbs.stopped_cb = pump_bind(&tcp_sync_dialer::on_stopped);
 
-        dialer_ = tcp_dialer::create_instance(local_address, remote_address, timeout);
+        dialer_ = tcp_dialer::create(local_address, remote_address, timeout);
         if (dialer_->start(sv, cbs) != ERROR_OK) {
             return base_transport_sptr();
         }

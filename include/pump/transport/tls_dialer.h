@@ -35,10 +35,10 @@ namespace transport {
         /*********************************************************************************
          * Create instance
          ********************************************************************************/
-        PUMP_INLINE static tls_dialer_sptr create_instance(const address &local_address,
-                                                           const address &remote_address,
-                                                           int64 dial_timeout = 0,
-                                                           int64 handshake_timeout = 0) {
+        PUMP_INLINE static tls_dialer_sptr create(const address &local_address,
+                                                  const address &remote_address,
+                                                  int64 dial_timeout = 0,
+                                                  int64 handshake_timeout = 0) {
             INLINE_OBJECT_CREATE(
                 obj,
                 tls_dialer,
@@ -71,7 +71,6 @@ namespace transport {
 #else
         virtual void on_send_event() override;
 #endif
-
       protected:
         /*********************************************************************************
          * Timeout event callback
@@ -136,7 +135,7 @@ namespace transport {
         /*********************************************************************************
          * Create instance
          ********************************************************************************/
-        static tls_sync_dialer_sptr create_instance() {
+        static tls_sync_dialer_sptr create() {
             INLINE_OBJECT_CREATE(obj, tls_sync_dialer, ());
             return tls_sync_dialer_sptr(obj, object_delete<tls_sync_dialer>);
         }

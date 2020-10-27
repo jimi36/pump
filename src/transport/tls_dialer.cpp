@@ -216,7 +216,7 @@ namespace transport {
                 auto local_address = handshaker->get_local_address();
                 auto remote_address = handshaker->get_remote_address();
 
-                tls_transport = tls_transport::create_instance();
+                tls_transport = tls_transport::create();
                 tls_transport->init(flow, local_address, remote_address);
             }
 
@@ -272,7 +272,7 @@ namespace transport {
         cbs.timeout_cb = pump_bind(&tls_sync_dialer::on_timeouted, shared_from_this());
         cbs.stopped_cb = pump_bind(&tls_sync_dialer::on_stopped);
 
-        dialer_ = tls_dialer::create_instance(
+        dialer_ = tls_dialer::create(
             local_address, remote_address, connect_timeout, handshake_timeout);
         if (dialer_->start(sv, cbs) != ERROR_OK) {
             return base_transport_sptr();

@@ -33,7 +33,7 @@ namespace transport {
         /*********************************************************************************
          * Create instance
          ********************************************************************************/
-        PUMP_INLINE static tls_transport_sptr create_instance() {
+        PUMP_INLINE static tls_transport_sptr create() {
             INLINE_OBJECT_CREATE(obj, tls_transport, ());
             return tls_transport_sptr(obj, object_delete<tls_transport>);
         }
@@ -103,7 +103,6 @@ namespace transport {
 #else
         virtual void on_read_event() override;
 #endif
-
         /*********************************************************************************
          * Send event callback
          ********************************************************************************/
@@ -112,7 +111,6 @@ namespace transport {
 #else
         virtual void on_send_event() override;
 #endif
-
       private:
         /*********************************************************************************
          * Constructor

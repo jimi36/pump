@@ -46,7 +46,7 @@ namespace protocol {
             cbs.stopped_cb = pump_bind(&server::on_stopped, wptr);
             cbs.accepted_cb = pump_bind(&server::on_accepted, wptr, _1);
 
-            acceptor_ = transport::tcp_acceptor::create_instance(listen_address);
+            acceptor_ = transport::tcp_acceptor::create(listen_address);
             if (acceptor_->start(sv, cbs) != transport::ERROR_OK) {
                 acceptor_.reset();
                 return false;
@@ -76,7 +76,7 @@ namespace protocol {
             cbs.stopped_cb = pump_bind(&server::on_stopped, wptr);
             cbs.accepted_cb = pump_bind(&server::on_accepted, wptr, _1);
 
-            acceptor_ = transport::tls_acceptor::create_instance_with_file(
+            acceptor_ = transport::tls_acceptor::create_with_file(
                 crtfile, keyfile, listen_address);
             if (acceptor_->start(sv, cbs) != transport::ERROR_OK) {
                 acceptor_.reset();

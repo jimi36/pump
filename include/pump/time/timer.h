@@ -42,9 +42,9 @@ namespace time {
         /*********************************************************************************
          * Create instance
          ********************************************************************************/
-        PUMP_INLINE static timer_sptr create_instance(uint64 timeout,
-                                                      const timer_callback &cb,
-                                                      bool repeated = false) {
+        PUMP_INLINE static timer_sptr create(uint64 timeout,
+                                             const timer_callback &cb,
+                                             bool repeated = false) {
             INLINE_OBJECT_CREATE(obj, timer, (timeout, cb, repeated));
             return timer_sptr(obj, object_delete<timer>);
         }

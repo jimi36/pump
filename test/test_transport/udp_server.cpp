@@ -56,7 +56,7 @@ void start_udp_server(const std::string &ip, uint16 port) {
     udp_server.reset(new my_udp_server);
 
     address localaddr(ip, port);
-    udp_transport_sptr transport = udp_transport::create_instance(localaddr);
+    udp_transport_sptr transport = udp_transport::create(localaddr);
 
     transport_callbacks cbs;
     cbs.read_from_cb = pump_bind(&my_udp_server::on_read_callback,

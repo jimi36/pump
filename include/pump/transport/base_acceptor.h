@@ -97,7 +97,6 @@ namespace transport {
         // Channel tracker
         poll::channel_tracker_sptr tracker_;
 #endif
-
         // Acceptor callbacks
         acceptor_callbacks cbs_;
     };

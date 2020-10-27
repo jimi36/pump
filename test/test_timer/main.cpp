@@ -10,7 +10,7 @@ class Timeout : public std::enable_shared_from_this<Timeout> {
         printf("new timeout\n");
         pump::time::timer_callback cb =
             pump_bind(&Timeout::on_timer_timeout, this);
-        t_ = pump::time::timer::create_instance(1000, cb, true);
+        t_ = pump::time::timer::create(1000, cb, true);
         if (!sv_->start_timer(t_)) {
             printf("start timeout error\n");
         }

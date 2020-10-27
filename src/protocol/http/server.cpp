@@ -51,7 +51,7 @@ namespace protocol {
             acbs.stopped_cb = pump_bind(&server::on_stopped, wptr);
             acbs.accepted_cb = pump_bind(&server::on_accepted, wptr, _1);
 
-            auto accepter = transport::tcp_acceptor::create_instance(listen_address);
+            auto accepter = transport::tcp_acceptor::create(listen_address);
             if (accepter->start(sv, acbs) != transport::ERROR_OK) {
                 return false;
             }
@@ -88,7 +88,7 @@ namespace protocol {
             acbs.accepted_cb = pump_bind(&server::on_accepted, wptr, _1);
 
             auto acceptor = 
-                transport::tls_acceptor::create_instance_with_file(
+                transport::tls_acceptor::create_with_file(
                                 crtfile, keyfile, listen_address, 1000);
             if (acceptor->start(sv, acbs) != transport::ERROR_OK) {
                 return false;

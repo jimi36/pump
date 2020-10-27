@@ -32,9 +32,8 @@ namespace transport {
         /*********************************************************************************
          * Create instance
          ********************************************************************************/
-        PUMP_INLINE static udp_transport_sptr create_instance(
-            const address &local_address) {
-            INLINE_OBJECT_CREATE(obj, udp_transport, (local_address));
+        PUMP_INLINE static udp_transport_sptr create(const address &bind_address) {
+            INLINE_OBJECT_CREATE(obj, udp_transport, (bind_address));
             return udp_transport_sptr(obj, object_delete<udp_transport>);
         }
 
@@ -89,12 +88,11 @@ namespace transport {
 #else
         virtual void on_read_event() override;
 #endif
-
       private:
         /*********************************************************************************
          * Constructor
          ********************************************************************************/
-        udp_transport(const address &local_address) noexcept;
+        udp_transport(const address &bind_address) noexcept;
 
         /*********************************************************************************
          * Open transport flow

@@ -28,7 +28,7 @@ void start_http_server(pump::service_ptr sv, const std::string &ip, int port) {
     cbs.request_cb = pump_bind(&on_new_request, _1, _2);
     cbs.stopped_cb = pump_bind(&on_stopped);
 
-    auto svr = http::server::create_instance();
+    auto svr = http::server::create();
     // if (!svr->start(sv, "cert.pem", "key.pem", bind_address, cbs))
     if (!svr->start(sv, bind_address, cbs))
         printf("http server start error\n");

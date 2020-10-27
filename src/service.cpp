@@ -39,7 +39,7 @@ service::service(bool has_poller)
 #endif
     }
 
-    tqueue_ = time::timer_queue::create_instance();
+    tqueue_ = time::timer_queue::create();
 }
 
 service::~service() {

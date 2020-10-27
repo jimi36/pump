@@ -35,7 +35,7 @@ namespace transport {
         /*********************************************************************************
          * Create instance
          ********************************************************************************/
-        PUMP_INLINE static tls_acceptor_sptr create_instance_with_file(
+        PUMP_INLINE static tls_acceptor_sptr create_with_file(
             const std::string &cert,
             const std::string &key,
             const address &listen_address,
@@ -48,7 +48,7 @@ namespace transport {
         /*********************************************************************************
          * Create instance
          ********************************************************************************/
-        PUMP_INLINE static tls_acceptor_sptr create_instance_with_memory(
+        PUMP_INLINE static tls_acceptor_sptr create_with_memory(
             const std::string &cert,
             const std::string &key,
             const address &listen_address,
@@ -83,7 +83,6 @@ namespace transport {
 #else
         virtual void on_read_event() override;
 #endif
-
       protected:
         /*********************************************************************************
          * TLS handshaked callback

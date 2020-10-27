@@ -19,7 +19,7 @@ void on_data(websocket::client_ptr cli,
 }
 
 void start_ws_client(pump::service_ptr sv, const std::string &url) {
-    websocket::client_sptr cli = websocket::client::create_instance();
+    websocket::client_sptr cli = websocket::client::create();
 
     websocket::client_callbacks cbs;
     cbs.started_cb = pump_bind(&on_started, cli.get());

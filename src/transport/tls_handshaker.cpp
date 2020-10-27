@@ -282,7 +282,7 @@ namespace transport {
         PUMP_ASSERT(!timer_);
         time::timer_callback cb =
             pump_bind(&tls_handshaker::on_timeout, shared_from_this());
-        timer_ = time::timer::create_instance(timeout, cb);
+        timer_ = time::timer::create(timeout, cb);
 
         return get_service()->start_timer(timer_);
     }

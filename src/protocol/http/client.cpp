@@ -61,7 +61,7 @@ namespace protocol {
 
             if (https) {
                 transport::address bind_address("0.0.0.0", 0);
-                auto dialer = transport::tls_sync_dialer::create_instance();
+                auto dialer = transport::tls_sync_dialer::create();
                 transp = dialer->dial(sv_,
                                       bind_address,
                                       peer_address,
@@ -69,7 +69,7 @@ namespace protocol {
                                       tls_handshake_timeout_);
             } else {
                 transport::address bind_address("0.0.0.0", 0);
-                auto dialer = transport::tcp_sync_dialer::create_instance();
+                auto dialer = transport::tcp_sync_dialer::create();
                 transp = dialer->dial(sv_, bind_address, peer_address, dial_timeout_);
             }
 

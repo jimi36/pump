@@ -34,7 +34,7 @@ void on_new_connection(websocket::connection_sptr conn) {
 }
 
 void start_ws_server(pump::service_ptr sv, const std::string &ip, int port) {
-    websocket::server_sptr server = websocket::server::create_instance();
+    websocket::server_sptr server = websocket::server::create();
     server->append_route("/", pump_bind(&on_new_connection, _1));
 
     pump::transport::address bind_address(ip, port);

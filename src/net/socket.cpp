@@ -99,7 +99,6 @@ namespace net {
                 "net::set_keeplive: WSAIoctl SIO_KEEPALIVE_VALS with ec=%d", last_errno());
             return false;
         }
-
 #else
         int32 count = 3;
         if (setsockopt(fd, SOL_TCP, TCP_KEEPIDLE, &keeplive, sizeof(keeplive)) == -1 ||

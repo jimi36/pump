@@ -78,8 +78,9 @@ namespace protocol {
             /*********************************************************************************
              * Create instance
              ********************************************************************************/
-            PUMP_INLINE static server_sptr create_instance() {
-                return server_sptr(new server);
+            PUMP_INLINE static server_sptr create() {
+                INLINE_OBJECT_CREATE(obj, server, ());
+                return server_sptr(obj, object_delete<server>);
             }
 
             /*********************************************************************************

@@ -101,7 +101,7 @@ namespace transport {
         int32 fd = flow->accept(&local_address, &remote_address);
 #endif
         if (fd > 0) {
-            tcp_transport_sptr tcp_transport = tcp_transport::create_instance();
+            tcp_transport_sptr tcp_transport = tcp_transport::create();
             tcp_transport->init(fd, local_address, remote_address);
 
             base_transport_sptr transport = tcp_transport;

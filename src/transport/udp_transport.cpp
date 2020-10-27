@@ -19,9 +19,9 @@
 namespace pump {
 namespace transport {
 
-    udp_transport::udp_transport(const address &local_address) noexcept
+    udp_transport::udp_transport(const address &bind_address) noexcept
         : base_transport(UDP_TRANSPORT, nullptr, -1) {
-        local_address_ = local_address;
+        local_address_ = bind_address;
     }
 
     transport_error udp_transport::start(service_ptr sv,
@@ -162,10 +162,6 @@ namespace transport {
             PUMP_WARN_LOG("udp_transport::on_read_event: flow want_to_read failed");
         }
 #else
-        //if (!r_tracker_->is_started()) {
-        //    PUMP_WARN_LOG("udp_transport::on_read_event: read tracker not started");
-        //    return;
-        //}
         PUMP_DEBUG_CHECK(r_tracker_->set_tracked(true));
 #endif
     }

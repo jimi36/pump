@@ -212,7 +212,7 @@ void start_tls_server(const std::string &ip,
 
     address listen_address(ip, port);
     tls_acceptor_sptr acceptor =
-        tls_acceptor::create_instance_with_memory(cert, key, listen_address);
+        tls_acceptor::create_with_memory(cert, key, listen_address);
     // tls_acceptor_sptr acceptor =
     // tls_acceptor::create_instance_with_file(cert_file, key_file, listen_address);
     if (acceptor->start(sv, cbs) != 0) {

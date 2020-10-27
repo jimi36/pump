@@ -5,7 +5,7 @@
 int loop = 100;
 
 void start_http_client(pump::service_ptr sv, const std::string &url) {
-    http::client_sptr cli = http::client::create_instance(sv);
+    http::client_sptr cli = http::client::create(sv);
 
     http::request_sptr req(new http::request);
     req->set_url(url);

@@ -63,7 +63,7 @@ namespace transport {
         }
 
         PUMP_ASSERT(!connect_timer_);
-        connect_timer_ = time::timer::create_instance(connect_timeout_, cb);
+        connect_timer_ = time::timer::create(connect_timeout_, cb);
 
         return get_service()->start_timer(connect_timer_);
     }

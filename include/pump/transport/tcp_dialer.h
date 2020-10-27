@@ -35,9 +35,9 @@ namespace transport {
         /*********************************************************************************
          * Create instance
          ********************************************************************************/
-        PUMP_INLINE static tcp_dialer_sptr create_instance(const address &local_address,
-                                                           const address &remote_address,
-                                                           int64 connect_timeout = 0) {
+        PUMP_INLINE static tcp_dialer_sptr create(const address &local_address,
+                                                  const address &remote_address,
+                                                  int64 connect_timeout = 0) {
             INLINE_OBJECT_CREATE(
                 obj, tcp_dialer, (local_address, remote_address, connect_timeout));
             return tcp_dialer_sptr(obj, object_delete<tcp_dialer>);
@@ -110,7 +110,7 @@ namespace transport {
         /*********************************************************************************
          * Create instance
          ********************************************************************************/
-        static tcp_sync_dialer_sptr create_instance() {
+        static tcp_sync_dialer_sptr create() {
             return tcp_sync_dialer_sptr(new tcp_sync_dialer);
         }
 

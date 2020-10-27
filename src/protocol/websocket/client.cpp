@@ -193,11 +193,11 @@ namespace protocol {
             // Create transport dialer
             if (u->get_type() == http::URI_WSS) {
                 auto peer_address = http::host_to_address(true, u->get_host());
-                dialer_ = transport::tcp_dialer::create_instance(
+                dialer_ = transport::tcp_dialer::create(
                     bind_address, peer_address, 3000);
             } else if (u->get_type() == http::URI_WS) {
                 auto peer_address = http::host_to_address(false, u->get_host());
-                dialer_ = transport::tls_dialer::create_instance(
+                dialer_ = transport::tls_dialer::create(
                     bind_address, peer_address, 3000, 3000);
             } else {
                 return false;

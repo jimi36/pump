@@ -189,7 +189,7 @@ namespace transport {
             address local_address = handshaker->get_local_address();
             address remote_address = handshaker->get_remote_address();
 
-            tls_transport_sptr tls_transport = tls_transport::create_instance();
+            tls_transport_sptr tls_transport = tls_transport::create();
             tls_transport->init(flow, local_address, remote_address);
 
             base_transport_sptr transport = tls_transport;
