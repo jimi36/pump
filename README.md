@@ -194,10 +194,10 @@ void on_stopped_callback() {
 // transp is tcp transport that created by accptor or dialer.
 void on_new_transport(transport::base_transport_sptr transp)
 {
-	transport::transport_callbacks cbs;
-	cbs.read_cb = pump_bind(&on_read_callback, _1, _2);
-	cbs.stopped_cb = pump_bind(&on_stopped_callback);
-	cbs.disconnected_cb = pump_bind(&on_disconnected_callback);
+    transport::transport_callbacks cbs;
+    cbs.read_cb = pump_bind(&on_read_callback, _1, _2);
+    cbs.stopped_cb = pump_bind(&on_stopped_callback);
+    cbs.disconnected_cb = pump_bind(&on_disconnected_callback);
     if (transp->start(sv, 0, cbs) != transport::ERROR_OK) {
         printf("transport start error\n");
     }
