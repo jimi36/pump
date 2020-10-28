@@ -443,7 +443,9 @@ namespace toolkit {
         freelock_list_queue(int32 size)
             : head_(nullptr), 
               tail_(nullptr), 
-              last_readable_node_(nullptr) {
+              last_readable_node_(nullptr), 
+              capacity_(0), 
+              size_(0) {
             __init_list(size);
         }
 
@@ -471,51 +473,63 @@ namespace toolkit {
          * Push
          ********************************************************************************/
         bool push(const element_type &data) {
+            int32 count_down_to_extend = 1000;
             element_node *current_head = nullptr;
-            element_node *current_head_next = nullptr;
             while (true) {
                 current_head = head_.load(std::memory_order_relaxed);
 
-                // If current head is invalid, list is extending, try again.
-                if (!current_head) {
+                // If current head is nullptr, list is extending, try again.
+                if (current_head == nullptr) {
+                    pump_sched_yield();
+                    continue;
+                }
+                // If current head is occupied, the node had be used, try again.
+                if (current_head->occupied.load(std::memory_order_relaxed)) {
                     continue;
                 }
 
                 // If next node of current head is tail node, list should be extended.
                 if (current_head->next == tail_.load(std::memory_order_relaxed)) {
-                    if (!__extend_list(current_head)) {
-                        do {
-                            current_head = head_.load(std::memory_order_relaxed);
-                        } while (!current_head);
+                    // Lock queue node.
+                    static element_node *lock_node = nullptr;
+                    if (--count_down_to_extend > 0) {
+                        continue;
                     }
-                }
-                current_head_next = current_head->next;
-
-                // Update head node to next node.
-                if (!head_.compare_exchange_strong(current_head,
-                                                   current_head_next,
-                                                   std::memory_order_acquire,
-                                                   std::memory_order_relaxed)) {
-                    continue;
+                    // Update head node to lock node for locking.
+                    if (!head_.compare_exchange_strong(current_head,
+                                                       lock_node,
+                                                       std::memory_order_acquire,
+                                                       std::memory_order_relaxed)) {
+                        continue;
+                    }
+                    // Extend list after current head node.
+                    __extend_list(current_head);
+                    // Update head node to current head next node for unlocking.
+                    head_.compare_exchange_strong(lock_node,
+                                                  current_head->next,
+                                                  std::memory_order_acquire,
+                                                  std::memory_order_relaxed);
+                } else {
+                    // Update head node to next node.
+                    if (!head_.compare_exchange_strong(current_head,
+                                                       current_head->next,
+                                                       std::memory_order_acquire,
+                                                       std::memory_order_relaxed)) {
+                        continue;
+                    }
                 }
 
                 // Mark current head node occupied.
-                bool no_occupied = false;
-                while (!current_head->occupied.compare_exchange_strong(
-                            no_occupied,
-                            true,
-                            std::memory_order_acquire,
-                            std::memory_order_relaxed)) {
-                }
+                current_head->occupied.store(true, std::memory_order_release);
 
                 new ((element_type *)current_head->data) element_type(data);
 
                 // Update last readable node.
                 while (!last_readable_node_.compare_exchange_strong(
-                            current_head,
-                            current_head_next,
-                            std::memory_order_acquire,
-                            std::memory_order_relaxed)) {
+                    current_head,
+                    current_head->next,
+                    std::memory_order_acquire,
+                    std::memory_order_relaxed)) {
                 }
 
                 // Inc list size.
@@ -540,10 +554,15 @@ namespace toolkit {
 
                 // If current tail next node equal to last readable node, means there is
                 // no more data for read, just return false.
-                if (current_tail_next == last_readable_node_.load(std::memory_order_acquire)) {
+                if (current_tail_next == last_readable_node_.load(std::memory_order_relaxed)) {
                     return false;
                 }
 
+                // Next node of current tail should be occupied, else try again.
+                if (!current_tail_next->occupied.load(std::memory_order_acquire)) {
+                    continue;
+                }
+                
                 // Update tail node to next node.
                 if (!tail_.compare_exchange_strong(current_tail,
                                                    current_tail_next,
@@ -588,59 +607,44 @@ namespace toolkit {
          ********************************************************************************/
         void __init_list(int32 size) {
             // Init size must be greater or equal than 3.
-            if (size > 3) {
+            if (size < 3) {
                 size = 3;
             }
 
-            // Create nodes to init list.
-            element_node *head = object_create<element_node>();
-            head_.store(head, std::memory_order_release);
-            for (int32 i = 0; i < size; i++) {
-                head->next = object_create<element_node>();
-                head = head->next;
+            // Create first node as tail.
+            element_node *tail = object_create<element_node>();
+            // Store head node.
+            head_.store(tail, std::memory_order_release);
+            // Store last readable node to head node.
+            last_readable_node_.store(tail, std::memory_order_release);
+            for (int32 i = 1; i < size; i++) {
+                tail->next = object_create<element_node>();
+                tail = tail->next;
             }
-            head->next = head_.load(std::memory_order_acquire);
-            tail_.store(head, std::memory_order_release);
-
-            // Update last readable node to head node.
-            last_readable_node_.store(head_.load(), std::memory_order_release);
+            // Connect tail and head node.
+            tail->next = head_.load(std::memory_order_acquire);
+            // Store tail node.
+            tail_.store(tail, std::memory_order_release);
 
             // Update list capacity.
-            capacity_.fetch_add(3);
+            capacity_.fetch_add(size);
         }
 
         /*********************************************************************************
          * Extend list
          ********************************************************************************/
-        bool __extend_list(element_node *current_head) {
-            // Update head node to nullptr for locking head node.
-            element_node *null_node = nullptr;
-            if (!head_.compare_exchange_strong(current_head,
-                                               null_node,
-                                               std::memory_order_acquire,
-                                               std::memory_order_relaxed)) {
-                return false;
-            }
-
-            // Extend list by insert more nodes after current head node.
+        void __extend_list(element_node *current_head) {
+            // Extend list by insert nodes after current head node.
             element_node *prev_node = current_head;
             element_node *tail_node = prev_node->next;
-            for (int32 i = 0; i < 64; i++) {
+            for (int32 i = 0; i < 1024; i++) {
                 prev_node->next = object_create<element_node>();
                 prev_node = prev_node->next;
             }
             prev_node->next = tail_node;
 
-            // Update head node to current head for unlocking head node.
-            PUMP_DEBUG_CHECK(head_.compare_exchange_strong(null_node,
-                                                           current_head,
-                                                           std::memory_order_acquire,
-                                                           std::memory_order_relaxed));
-
             // Update list capacity.
-            capacity_.fetch_add(32);
-
-            return true;
+            capacity_.fetch_add(1024);
         }
 
       private:
