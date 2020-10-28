@@ -441,7 +441,9 @@ namespace toolkit {
          * Constructor
          ********************************************************************************/
         freelock_list_queue(int32 size)
-            : head_(nullptr), tail_(nullptr), last_readable_node_(nullptr) {
+            : head_(nullptr), 
+              tail_(nullptr), 
+              last_readable_node_(nullptr) {
             __init_list(size);
         }
 
@@ -470,55 +472,59 @@ namespace toolkit {
          ********************************************************************************/
         bool push(const element_type &data) {
             element_node *current_head = nullptr;
+            element_node *current_head_next = nullptr;
             while (true) {
                 current_head = head_.load(std::memory_order_relaxed);
 
-                // If current head is nullptr, list is extending, try again.
-                if (current_head == nullptr ) {
-                    pump_sched_yield();
-                    continue;
-                }
-                // If current head is occupied, the node had be used, try again.
-                if (current_head->occupied.load(std::memory_order_relaxed)) {
+                // If current head is invalid, list is extending, try again.
+                if (!current_head) {
                     continue;
                 }
 
                 // If next node of current head is tail node, list should be extended.
                 if (current_head->next == tail_.load(std::memory_order_relaxed)) {
                     if (!__extend_list(current_head)) {
-                        pump_sched_yield();
-                        continue;
+                        do {
+                            current_head = head_.load(std::memory_order_relaxed);
+                        } while (!current_head);
                     }
                 }
+                current_head_next = current_head->next;
 
                 // Update head node to next node.
                 if (!head_.compare_exchange_strong(current_head,
-                                                   current_head->next,
+                                                   current_head_next,
                                                    std::memory_order_acquire,
                                                    std::memory_order_relaxed)) {
                     continue;
                 }
 
                 // Mark current head node occupied.
-                current_head->occupied.store(true, std::memory_order_release);
+                bool no_occupied = false;
+                while (!current_head->occupied.compare_exchange_strong(
+                            no_occupied,
+                            true,
+                            std::memory_order_acquire,
+                            std::memory_order_relaxed)) {
+                }
 
                 new ((element_type *)current_head->data) element_type(data);
+
+                // Update last readable node.
+                while (!last_readable_node_.compare_exchange_strong(
+                            current_head,
+                            current_head_next,
+                            std::memory_order_acquire,
+                            std::memory_order_relaxed)) {
+                }
 
                 // Inc list size.
                 size_.fetch_add(1);
 
-                // Update last readable node.
-                while (!last_readable_node_.compare_exchange_strong(
-                    current_head,
-                    current_head->next,
-                    std::memory_order_acquire,
-                    std::memory_order_relaxed)) {
-                }
-
-                break;
+                return true;
             }
 
-            return true;
+            return false;
         }
 
         /*********************************************************************************
@@ -534,14 +540,8 @@ namespace toolkit {
 
                 // If current tail next node equal to last readable node, means there is
                 // no more data for read, just return false.
-                if (current_tail_next ==
-                    last_readable_node_.load(std::memory_order_relaxed)) {
+                if (current_tail_next == last_readable_node_.load(std::memory_order_acquire)) {
                     return false;
-                }
-
-                // Next node of current tail should be occupied, else try again.
-                if (!current_tail_next->occupied.load(std::memory_order_relaxed)) {
-                    continue;
                 }
 
                 // Update tail node to next node.
@@ -556,11 +556,11 @@ namespace toolkit {
                 data = *elem;
                 elem->~element_type();
 
-                // Sub list size.
-                size_.fetch_sub(1);
-
                 // Mark next node of current tail unoccupied.
                 current_tail_next->occupied.store(false, std::memory_order_release);
+
+                // Sub list size.
+                size_.fetch_sub(1);
 
                 return true;
             }
@@ -625,20 +625,20 @@ namespace toolkit {
             // Extend list by insert more nodes after current head node.
             element_node *prev_node = current_head;
             element_node *tail_node = prev_node->next;
-            for (int32 i = 0; i < 32; i++) {
+            for (int32 i = 0; i < 64; i++) {
                 prev_node->next = object_create<element_node>();
                 prev_node = prev_node->next;
             }
             prev_node->next = tail_node;
-
-            // Update list capacity.
-            capacity_.fetch_add(32);
 
             // Update head node to current head for unlocking head node.
             PUMP_DEBUG_CHECK(head_.compare_exchange_strong(null_node,
                                                            current_head,
                                                            std::memory_order_acquire,
                                                            std::memory_order_relaxed));
+
+            // Update list capacity.
+            capacity_.fetch_add(32);
 
             return true;
         }
