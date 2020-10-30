@@ -162,6 +162,13 @@ namespace toolkit {
         }
 
         /*********************************************************************************
+         * Empty
+         ********************************************************************************/
+        bool empty() {
+            return size() > 0;
+        }
+
+        /*********************************************************************************
          * Get capacity
          ********************************************************************************/
         int32 capacity() {
@@ -356,6 +363,13 @@ namespace toolkit {
         }
 
         /*********************************************************************************
+         * Empty
+         ********************************************************************************/
+        bool empty() {
+            return size() > 0;
+        }
+
+        /*********************************************************************************
          * Get capacity
          ********************************************************************************/
         int32 capacity() {
@@ -429,10 +443,10 @@ namespace toolkit {
         const static int32 element_size = sizeof(element_type);
         // Element list node
         struct element_node {
-            element_node() : occupied(false), next(nullptr) {
+            element_node() : ready(false), next(nullptr) {
             }
-            std::atomic_bool occupied;
             block data[element_size];
+            std::atomic_bool ready;
             element_node *next;
         };
 
@@ -443,8 +457,7 @@ namespace toolkit {
         freelock_list_queue(int32 size)
             : head_(nullptr), 
               tail_(nullptr), 
-              capacity_(0), 
-              size_(0) {
+              capacity_(0) {
             __init_list(size);
         }
 
@@ -458,7 +471,7 @@ namespace toolkit {
             while (node != nullptr) {
                 element_node *tmp = node->next;
 
-                if (node->occupied.load(std::memory_order_relaxed)) {
+                if (node->ready.load(std::memory_order_relaxed)) {
                     ((element_type *)node->data)->~element_type();
                 }
                 object_delete(node);
@@ -473,43 +486,41 @@ namespace toolkit {
         bool push(const element_type &data) {
             int32 count_down_to_extend = 100;
             element_node *current_head = nullptr;
-            while (true) {
-                current_head = head_.load(std::memory_order_relaxed);
 
-                // If current head is invalid, list is extending and try again.
+            while (true) {
+                // Get current head node.
+                current_head = head_.load(std::memory_order_consume);
+
+                // If current head node is invalid, list is being extended and try again.
                 if (PUMP_UNLIKELY(current_head == nullptr)) {
                     continue;
                 }
 
-                // If next node of current head is tail node, list should be extended.
+                // If next node head is tail node, list may need be extended.
                 if (PUMP_LIKELY(current_head->next != tail_.load(std::memory_order_consume))) {
-                    // Update head node to next node.
-                    if (!head_.compare_exchange_strong(current_head,
-                                                       current_head->next,
-                                                       std::memory_order_release,
-                                                       std::memory_order_relaxed)) {
-                        continue;
+                    // Update list head node to next node.
+                    if (head_.compare_exchange_strong(current_head,
+                                                      current_head->next,
+                                                      std::memory_order_release,
+                                                      std::memory_order_relaxed)) {
+                        break;
                     }
                 } else {
                     // Count down to extend list.
-                    if (PUMP_LIKELY(--count_down_to_extend > 0)) {
-                        continue;
-                    }
-                    // Extend list after current head node.
-                    if (PUMP_UNLIKELY(!__extend_list(current_head))) {
-                        continue;
+                    if (PUMP_UNLIKELY(--count_down_to_extend <= 0)) {
+                        // Extend list after current head node.
+                        if (PUMP_LIKELY(__extend_list(current_head))) {
+                            break;
+                        }
                     }
                 }
-
-                break;
             }
 
+            // Copy data to the node.
             new (current_head->data) element_type(data);
 
-            current_head->occupied.store(true, std::memory_order_release);
-
-            // Inc list size.
-            size_.fetch_add(1, std::memory_order_relaxed);
+            // Mark node ready.
+            current_head->ready.store(true, std::memory_order_release);
 
             return true;
         }
@@ -520,50 +531,48 @@ namespace toolkit {
         template <typename U>
         bool pop(U &data) {
             element_node *current_tail = nullptr;
-            element_node *current_tail_next = nullptr;
-            while (true) {
-                current_tail = tail_.load(std::memory_order_relaxed);
-                current_tail_next = current_tail->next;
+            element_node *next_read_node = nullptr;
 
-                // If tail next node equal to head node, means no data to read.
-                if (current_tail_next == head_.load(std::memory_order_consume)) {
+            while (true) {
+                // Get current tail node.
+                current_tail = tail_.load(std::memory_order_consume);
+                // Get next read node.
+                next_read_node = current_tail->next;
+
+                // Check next read node is ready or not.
+                if (PUMP_LIKELY(next_read_node->ready.load(std::memory_order_consume))) {
+                    // Update tail node to next node.
+                    if (tail_.compare_exchange_strong(current_tail,
+                                                      next_read_node,
+                                                      std::memory_order_release,
+                                                      std::memory_order_relaxed)) {
+                        break;
+                    }
+                }
+
+                // Next read node equal to the head node, means no data and return.
+                if (PUMP_UNLIKELY(next_read_node == head_.load(std::memory_order_consume))) {
                     return false;
                 }
-
-                // Next node of current tail should be occupied, else try again.
-                if (!current_tail_next->occupied.load(std::memory_order_consume)) {
-                    continue;
-                }
-
-                // Update tail node to next node.
-                if (!tail_.compare_exchange_strong(current_tail,
-                                                   current_tail_next,
-                                                   std::memory_order_release,
-                                                   std::memory_order_relaxed)) {
-                    continue;
-                }
-
-                break;
             }
 
-            element_type *elem = (element_type *)current_tail_next->data;
+            // Copy and destory node data.
+            element_type *elem = (element_type *)next_read_node->data;
             data = *elem;
             elem->~element_type();
 
-            // Mark next node of current tail unoccupied.
-            current_tail_next->occupied.store(false, std::memory_order_release);
-
-            // Sub list size.
-            size_.fetch_sub(1, std::memory_order_relaxed);
+            // Mark next read node not ready.
+            next_read_node->ready.store(false, std::memory_order_release);
 
             return true;
         }
 
         /*********************************************************************************
-         * Get size
+         * Empty
          ********************************************************************************/
-        int32 size() {
-            return size_.load(std::memory_order_relaxed);
+        bool empty() {
+            return tail_.load(std::memory_order_relaxed)->next == 
+                        head_.load(std::memory_order_relaxed);
         }
 
         /*********************************************************************************
@@ -595,7 +604,7 @@ namespace toolkit {
             tail_.store(tail, std::memory_order_release);
 
             // Update list capacity.
-            capacity_.fetch_add(size);
+            capacity_.fetch_add(size, std::memory_order_relaxed);
         }
 
         /*********************************************************************************
@@ -630,7 +639,7 @@ namespace toolkit {
                                           std::memory_order_relaxed);
 
             // Update list capacity.
-            capacity_.fetch_add(extend_size);
+            capacity_.fetch_add(extend_size, std::memory_order_relaxed);
 
             return true;
         }
@@ -642,8 +651,6 @@ namespace toolkit {
         std::atomic<element_node *> tail_;
         // List capacity
         std::atomic_int32_t capacity_;
-        // List size
-        std::atomic_int32_t size_;
     };
 
     template <typename Q>
@@ -744,10 +751,10 @@ namespace toolkit {
         }
 
         /*********************************************************************************
-         * Get size
+         * Empty
          ********************************************************************************/
-        int32 size() {
-            return queue_.size();
+        bool empty() {
+            return queue_.empty();
         }
 
       private:
