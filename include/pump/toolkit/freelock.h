@@ -437,25 +437,40 @@ namespace toolkit {
     template <typename T>
     class LIB_PUMP freelock_list_queue : public noncopyable {
       public:
+        // List node
+        template <int32 DataSize>
+        struct list_node {
+            list_node() : next(nullptr), ready(false) {
+            }
+            list_node<DataSize>* next;
+            std::atomic_bool ready;
+            block data[DataSize];
+        };
+
         // Element type
         typedef T element_type;
         // Element type size
         const static int32 element_size = sizeof(element_type);
-        // Element list node
-        struct element_node {
-            element_node() : ready(false), next(nullptr) {
-            }
-            block data[element_size];
-            std::atomic_bool ready;
-            element_node *next;
-        };
+
+        // Element node type
+        typedef list_node<element_size> element_node;
+        // Element node type size
+        const static int32 element_node_size = sizeof(element_node);;
+
+        // Per block element count
+        const static int32 per_block_element_count = 512 / element_node_size;
+        // Block node data size
+        const static int32 block_data_size = element_node_size * per_block_element_count;
+        // Block node type
+        typedef list_node<block_data_size> element_block_node;
 
       public:
         /*********************************************************************************
          * Constructor
          ********************************************************************************/
         freelock_list_queue(int32 size)
-            : head_(nullptr), 
+            : last_block_node_(nullptr),
+              head_(nullptr), 
               tail_(nullptr), 
               capacity_(0) {
             __init_list(size);
@@ -465,62 +480,86 @@ namespace toolkit {
          * Deconstructor
          ********************************************************************************/
         ~freelock_list_queue() {
+            // Get element head node.
             element_node *head = head_.load(std::memory_order_relaxed);
+            // Get next element node of the head element node.
             element_node *node = head->next;
+            // Disconnect list circle.
             head->next = nullptr;
+
             while (node != nullptr) {
+                // Store next element node.
                 element_node *tmp = node->next;
 
+                // Destory element if exists.
                 if (node->ready.load(std::memory_order_relaxed)) {
                     ((element_type *)node->data)->~element_type();
                 }
-                object_delete(node);
 
+                // Destory element node.
+                node->~element_node();
+
+                // Move to next element node.
                 node = tmp;
+            }
+
+            while (last_block_node_) {
+                // Store next block node.
+                element_block_node* tmp = last_block_node_->next;
+
+                // Delete block node.
+                object_delete(last_block_node_);
+                
+                // Move to next block node.
+                last_block_node_ = tmp;
             }
         }
 
         /*********************************************************************************
-         * Push
+         * Push by lvalue
          ********************************************************************************/
-        bool push(const element_type &data) {
-            int32 count_down_to_extend = 100;
-            element_node *current_head = nullptr;
+        PUMP_INLINE bool push(const element_type &data) {
+            return push(std::move(data));
+        }
+
+        /*********************************************************************************
+         * Push by rvalue
+         ********************************************************************************/
+        template <typename U>
+        bool push(U &&data) {
+            element_node *next_write_node = nullptr;
 
             while (true) {
-                // Get current head node.
-                current_head = head_.load(std::memory_order_consume);
+                // Get current head node as write node.
+                next_write_node = head_.load(std::memory_order_relaxed);
 
-                // If current head node is invalid, list is being extended and try again.
-                if (PUMP_UNLIKELY(current_head == nullptr)) {
+                // If current write node is invalid, list is being extended and try again.
+                if (PUMP_UNLIKELY(next_write_node == nullptr)) {
                     continue;
                 }
 
-                // If next node head is tail node, list may need be extended.
-                if (PUMP_LIKELY(current_head->next != tail_.load(std::memory_order_consume))) {
+                // If next write node is the tail node, list is full and try to extend it.
+                if (PUMP_LIKELY(next_write_node->next != tail_.load(std::memory_order_consume))) {
                     // Update list head node to next node.
-                    if (head_.compare_exchange_strong(current_head,
-                                                      current_head->next,
+                    if (head_.compare_exchange_strong(next_write_node,
+                                                      next_write_node->next,
                                                       std::memory_order_release,
                                                       std::memory_order_relaxed)) {
                         break;
                     }
                 } else {
-                    // Count down to extend list.
-                    if (PUMP_UNLIKELY(--count_down_to_extend <= 0)) {
-                        // Extend list after current head node.
-                        if (PUMP_LIKELY(__extend_list(current_head))) {
-                            break;
-                        }
+                    // Extend list after next wirte node.
+                    if (PUMP_LIKELY(__extend_list(next_write_node))) {
+                        break;
                     }
                 }
             }
 
             // Copy data to the node.
-            new (current_head->data) element_type(data);
+            new (next_write_node->data) element_type(data);
 
             // Mark node ready.
-            current_head->ready.store(true, std::memory_order_release);
+            next_write_node->ready.store(true, std::memory_order_release);
 
             return true;
         }
@@ -535,12 +574,13 @@ namespace toolkit {
 
             while (true) {
                 // Get current tail node.
-                current_tail = tail_.load(std::memory_order_consume);
+                current_tail = tail_.load(std::memory_order_relaxed);
                 // Get next read node.
                 next_read_node = current_tail->next;
 
                 // Check next read node is ready or not.
                 if (PUMP_LIKELY(next_read_node->ready.load(std::memory_order_consume))) {
+                    std::atomic_thread_fence(std::memory_order_release);
                     // Update tail node to next node.
                     if (tail_.compare_exchange_strong(current_tail,
                                                       next_read_node,
@@ -550,16 +590,13 @@ namespace toolkit {
                     }
                 }
 
-                // Next read node equal to the head node, means no data and return.
-                if (PUMP_UNLIKELY(next_read_node == head_.load(std::memory_order_consume))) {
-                    return false;
-                }
+                return false;
             }
 
             // Copy and destory node data.
-            element_type *elem = (element_type *)next_read_node->data;
-            data = *elem;
-            elem->~element_type();
+            element_type &elem = *(element_type *)next_read_node->data;
+            data = std::move(elem);
+            elem.~element_type();
 
             // Mark next read node not ready.
             next_read_node->ready.store(false, std::memory_order_release);
@@ -587,24 +624,56 @@ namespace toolkit {
          * Init list
          ********************************************************************************/
         void __init_list(int32 size) {
-            // Init size must be greater or equal than 32.
-            size = size > 32 ? size : 32;
+            // Init size must be greater or equal than per_block_element_count.
+            size = size > per_block_element_count ? size : per_block_element_count;
 
-            // Create first node as tail.
-            element_node *tail = object_create<element_node>();
-            // Store head node.
-            head_.store(tail, std::memory_order_release);
-            for (int32 i = 1; i < size; i++) {
-                tail->next = object_create<element_node>();
-                tail = tail->next;
+            // Create first element block node.
+            element_block_node *bnode = object_create<element_block_node>();
+            // Get element nodes from block node.
+            element_node *enodes = (element_node*)bnode->data;
+
+            // Init first element node.
+            element_node *node = new (enodes) element_node();;
+            // Init head node with the first node.
+            head_.store(node, std::memory_order_release);
+
+            // Build first block element node list.
+            for (int32 i = 1; i < per_block_element_count; i++) {
+                node->next = new (enodes + i) element_node();
+                node = node->next;
             }
-            // Connect tail and head node.
-            tail->next = head_.load(std::memory_order_acquire);
-            // Store tail node.
-            tail_.store(tail, std::memory_order_release);
+
+            // Init last block node.
+            last_block_node_ = bnode;
 
             // Update list capacity.
-            capacity_.fetch_add(size, std::memory_order_relaxed);
+            capacity_.fetch_add(per_block_element_count, std::memory_order_release);
+
+            for (int32 i = per_block_element_count; i < size; i += per_block_element_count) {
+                // Create new element block node.
+                bnode = object_create<element_block_node>();
+
+                // Get element nodes from new block node.
+                enodes = (element_node *)bnode->data;
+
+                // Build block element node list.
+                for (int32 ii = 0; ii < per_block_element_count; ii++) {
+                    node->next = new (enodes + ii) element_node();
+                    node = node->next;
+                }
+
+                // Link block node.
+                bnode->next = last_block_node_;
+                last_block_node_ = bnode;
+
+                // Update list capacity.
+                capacity_.fetch_add(per_block_element_count, std::memory_order_release);
+            }
+
+            // Link tail and head node.
+            node->next = head_.load(std::memory_order_acquire);
+            // Init tail node.
+            tail_.store(node, std::memory_order_release);
         }
 
         /*********************************************************************************
@@ -613,8 +682,7 @@ namespace toolkit {
         bool __extend_list(element_node *current_head) {
             // Empty node
             element_node *empty_node = nullptr;
-            element_node *current_head_next = current_head->next;
-
+            
             // Update head node to lock node for locking.
             if (!head_.compare_exchange_strong(current_head,
                                                empty_node,
@@ -623,34 +691,43 @@ namespace toolkit {
                 return false;
             }
 
-            // Extend list by insert nodes after current head node.
-            int32 extend_size = 32;
+            // Create new element block node.
+            element_block_node *bnode = object_create<element_block_node>();
+            // Get element nodes from new block node.
+            element_node *enodes = (element_node*)bnode->data;
+
+            // Link block node.
+            bnode->next = last_block_node_;
+            last_block_node_ = bnode;
+
+            // Build element node list.
             element_node *node = current_head;
-            for (int32 i = 0; i < extend_size; i++) {
-                node->next = object_create<element_node>();
+            element_node *tail = current_head->next;
+            for (int32 i = 0; i < per_block_element_count; i++) {
+                node->next = new (enodes + i) element_node();
                 node = node->next;
             }
-            node->next = current_head_next;
+            node->next = tail;
 
             // Update head node to current head next node for unlocking.
-            head_.compare_exchange_strong(empty_node,
-                                          current_head->next,
-                                          std::memory_order_acquire,
-                                          std::memory_order_relaxed);
+            head_.store(current_head->next, std::memory_order_release);
 
             // Update list capacity.
-            capacity_.fetch_add(extend_size, std::memory_order_relaxed);
+            capacity_.fetch_add(per_block_element_count, std::memory_order_relaxed);
 
             return true;
         }
 
       private:
+        // 
+        element_block_node *last_block_node_;
         // List head node
         std::atomic<element_node *> head_;
         // List tail node
         std::atomic<element_node *> tail_;
         // List capacity
         std::atomic_int32_t capacity_;
+
     };
 
     template <typename Q>
