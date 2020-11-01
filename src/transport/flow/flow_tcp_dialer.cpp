@@ -87,19 +87,17 @@ namespace transport {
 
         flow_error flow_tcp_dialer::post_connect(const address &remote_address) {
 #if defined(PUMP_HAVE_IOCP)
-            if (!net::post_iocp_connect(
-                    extra_fns_, 
-                    dial_task_, 
-                    remote_address.get(), 
-                    remote_address.len())) {
+            if (!net::post_iocp_connect(extra_fns_, 
+                                        dial_task_, 
+                                        remote_address.get(), 
+                                        remote_address.len())) {
                 PUMP_WARN_LOG("flow_tcp_dialer::post_connect: post iocp connect failed");
                 return FLOW_ERR_ABORT;
             }
 #else
-            if (!net::connect(
-                    fd_, 
-                    (sockaddr *)remote_address.get(), 
-                    remote_address.len())) {
+            if (!net::connect(fd_, 
+                              (sockaddr *)remote_address.get(), 
+                              remote_address.len())) {
                 PUMP_WARN_LOG("flow_tcp_dialer::post_connect: connect failed");
                 return FLOW_ERR_ABORT;
             }

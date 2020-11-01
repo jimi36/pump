@@ -383,8 +383,13 @@ namespace transport {
             return;
         }
 
+        // Free last send io buffer.
+        last_send_iob_->sub_ref();
+        last_send_iob_ = nullptr;
+
         // If there are more buffers to send, we should send next one immediately.
-        if (pending_send_size_.fetch_sub(last_send_iob_size_) > last_send_iob_size_) {
+        if (pending_send_size_.fetch_sub(last_send_iob_size_, 
+                                         std::memory_order_release) > last_send_iob_size_) {
             if (!__send_once(flow, false)) {
                 PUMP_DEBUG_LOG("tls_transport::on_send_event: send once failed");
                 __try_doing_disconnected_process();
@@ -432,8 +437,8 @@ namespace transport {
         PUMP_DEBUG_CHECK(sendlist_.push(iob));
 
         // If there are no more buffers, we should try to get next send chance.
-        if (pending_send_size_.fetch_add(iob->data_size(), std::memory_order_release) >
-            0) {
+        if (pending_send_size_.fetch_add(iob->data_size(), 
+                                         std::memory_order_release) > 0) {
             return true;
         }
 
@@ -449,13 +454,8 @@ namespace transport {
     }
 
     bool tls_transport::__send_once(flow::flow_tls_ptr flow, bool resume) {
-        if (last_send_iob_) {
-            // Reset last send buffer data size.
-            last_send_iob_->sub_ref();
-            last_send_iob_ = nullptr;
-        }
-
         // Get a buffer from sendlist to send.
+        PUMP_ASSERT(!last_send_iob_);
         PUMP_DEBUG_CHECK(sendlist_.pop(last_send_iob_));
 
         // Save last send buffer data size.
@@ -486,7 +486,8 @@ namespace transport {
         if (PUMP_LIKELY(ret == flow::FLOW_ERR_NO)) {
             last_send_iob_->sub_ref();
             last_send_iob_ = nullptr;
-            if (pending_send_size_.fetch_sub(last_send_iob_size_) == last_send_iob_size_) {
+            if (pending_send_size_.fetch_sub(last_send_iob_size_, 
+                                             std::memory_order_release) == last_send_iob_size_) {
                 return true;
             }
         }
