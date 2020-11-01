@@ -551,6 +551,10 @@ namespace toolkit {
                 }
             } while (true);
 
+            // Wait current write node be not ready.
+            while (next_write_node->ready.load(std::memory_order_acquire)) {
+            }
+
             // Copy data to the node.
             new (next_write_node->data) element_type(data);
 
@@ -565,26 +569,36 @@ namespace toolkit {
          ********************************************************************************/
         template <typename U>
         bool pop(U &data) {
-            // Get current tail node.
-            element_node *current_tail = tail_.load(std::memory_order_relaxed);
-            // Get next read node.
-            element_node *next_read_node = current_tail->next;
+            element_node* current_tail = nullptr;
+            element_node* next_read_node = nullptr;
 
-            bool ready = true;
-            if (!next_read_node->ready.compare_exchange_strong(ready,
-                                                               false,
-                                                               std::memory_order_acquire,
-                                                               std::memory_order_relaxed)) {
+            while (true) {
+                // Get current tail node.
+                current_tail = tail_.load(std::memory_order_relaxed);
+                // Get next read node.
+                next_read_node = current_tail->next;
+
+                // Check next read node is ready or not.
+                if (PUMP_LIKELY(next_read_node->ready.load(std::memory_order_consume))) {
+                    // Update tail node to next node.
+                    if (tail_.compare_exchange_strong(current_tail,
+                                                      next_read_node,
+                                                      std::memory_order_release,
+                                                      std::memory_order_relaxed)) {
+                        break;
+                    }
+                }
+
                 return false;
             }
 
             // Copy and destory node data.
-            element_type &elem = *(element_type *)next_read_node->data;
+            element_type& elem = *(element_type*)next_read_node->data;
             data = std::move(elem);
             elem.~element_type();
 
-             // Update tail node to next node.
-            tail_.store(next_read_node, std::memory_order_release);
+            // Mark next read node not ready.
+            next_read_node->ready.store(false, std::memory_order_release);
 
             return true;
         }
