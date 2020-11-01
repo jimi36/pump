@@ -87,8 +87,6 @@ namespace toolkit {
                     break;
                 }
                 cur_write_index = write_index_.load(std::memory_order_relaxed);
-
-                std::atomic_signal_fence(std::memory_order_acquire);
             } while (true);
 
             // New element object
@@ -121,11 +119,11 @@ namespace toolkit {
                                                         cur_read_index + 1,
                                                         std::memory_order_acquire,
                                                         std::memory_order_relaxed)) {
-                    // Copy element object
-                    data = *((element_type *)mem_block_ + count_to_index(cur_read_index));
+                    // Get element object
+                    element_type& elem = *((element_type*)mem_block_ + count_to_index(cur_read_index));
+                    data = elem;
                     // Deconstructor old element object
-                    ((element_type *)mem_block_ + count_to_index(cur_read_index))
-                        ->~element_type();
+                    elem.~element_type();
 
                     while (!max_write_index_.compare_exchange_strong(
                         cur_read_index,
@@ -136,8 +134,6 @@ namespace toolkit {
 
                     return true;
                 }
-
-                std::atomic_signal_fence(std::memory_order_acquire);
             } while (true);  // keep looping to try again!
 
             // Something went wrong. it shouldn't be possible to reach here
@@ -434,7 +430,7 @@ namespace toolkit {
         std::atomic_uint32_t concurrent_cnt_;
     };
 
-    template <typename T>
+    template <typename T, int PerBlockElementCount = 32>
     class LIB_PUMP freelock_list_queue : public noncopyable {
       public:
         // List node
@@ -458,7 +454,7 @@ namespace toolkit {
         const static int32 element_node_size = sizeof(element_node);;
 
         // Per block element count
-        const static int32 per_block_element_count = 512 / element_node_size;
+        const static int32 per_block_element_count = PerBlockElementCount;
         // Block node data size
         const static int32 block_data_size = element_node_size * per_block_element_count;
         // Block node type
@@ -529,7 +525,7 @@ namespace toolkit {
         bool push(U &&data) {
             element_node *next_write_node = nullptr;
 
-            while (true) {
+            do {
                 // Get current head node as write node.
                 next_write_node = head_.load(std::memory_order_relaxed);
 
@@ -539,11 +535,11 @@ namespace toolkit {
                 }
 
                 // If next write node is the tail node, list is full and try to extend it.
-                if (PUMP_LIKELY(next_write_node->next != tail_.load(std::memory_order_consume))) {
+                if (PUMP_LIKELY(next_write_node->next != tail_.load(std::memory_order_acquire))) {
                     // Update list head node to next node.
                     if (head_.compare_exchange_strong(next_write_node,
                                                       next_write_node->next,
-                                                      std::memory_order_release,
+                                                      std::memory_order_acquire,
                                                       std::memory_order_relaxed)) {
                         break;
                     }
@@ -553,7 +549,7 @@ namespace toolkit {
                         break;
                     }
                 }
-            }
+            } while (true);
 
             // Copy data to the node.
             new (next_write_node->data) element_type(data);
@@ -569,27 +565,16 @@ namespace toolkit {
          ********************************************************************************/
         template <typename U>
         bool pop(U &data) {
-            element_node *current_tail = nullptr;
-            element_node *next_read_node = nullptr;
+            // Get current tail node.
+            element_node *current_tail = tail_.load(std::memory_order_relaxed);
+            // Get next read node.
+            element_node *next_read_node = current_tail->next;
 
-            while (true) {
-                // Get current tail node.
-                current_tail = tail_.load(std::memory_order_relaxed);
-                // Get next read node.
-                next_read_node = current_tail->next;
-
-                // Check next read node is ready or not.
-                if (PUMP_LIKELY(next_read_node->ready.load(std::memory_order_consume))) {
-                    std::atomic_thread_fence(std::memory_order_release);
-                    // Update tail node to next node.
-                    if (tail_.compare_exchange_strong(current_tail,
-                                                      next_read_node,
-                                                      std::memory_order_release,
-                                                      std::memory_order_relaxed)) {
-                        break;
-                    }
-                }
-
+            bool ready = true;
+            if (!next_read_node->ready.compare_exchange_strong(ready,
+                                                               false,
+                                                               std::memory_order_acquire,
+                                                               std::memory_order_relaxed)) {
                 return false;
             }
 
@@ -598,8 +583,8 @@ namespace toolkit {
             data = std::move(elem);
             elem.~element_type();
 
-            // Mark next read node not ready.
-            next_read_node->ready.store(false, std::memory_order_release);
+             // Update tail node to next node.
+            tail_.store(next_read_node, std::memory_order_release);
 
             return true;
         }
