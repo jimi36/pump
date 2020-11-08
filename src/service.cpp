@@ -22,12 +22,12 @@
 
 namespace pump {
 
-service::service(bool has_poller)
+service::service(bool with_poller)
     : running_(false),
       read_poller_(nullptr),
       send_poller_(nullptr),
       iocp_poller_(nullptr) {
-    if (has_poller) {
+    if (with_poller) {
 #if defined(PUMP_HAVE_IOCP)
         iocp_poller_ = object_create<poll::iocp_poller>();
 #elif defined(PUMP_HAVE_SELECT)

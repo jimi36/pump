@@ -17,16 +17,35 @@
 #ifndef pump_platform_h
 #define pump_platform_h
 
+#include "pump/config.h"
+
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
 #define OS_WINDOWS
 #elif defined(__linux__) || defined(__unix__)
 #define OS_LINUX
 #endif
 
-#if defined(OS_WINDOWS)
+#if defined(__CYGWIN__)
+#define OS_CYGWIN
+#endif
+
+#if defined(PUMP_HAVE_WINSOCK)
+#if (_WIN32_WINNT < 0x0600)
+#undef _WIN32_WINNT
+#define _WIN32_WINNT 0x0600
+#endif
 #include <winsock2.h>
 #include <windows.h>
+#endif
+
+#if defined( _MSC_VER)
 #pragma warning(disable : 4251)
+#endif
+
+#include <string.h>
+
+#if defined(WITH_STRNCASECMP) && defined(HAVE_STRNGS_HEADER)
+#include <strings.h>
 #endif
 
 #if defined(OS_WINDOWS) && defined(pump_EXPORTS)
@@ -64,15 +83,27 @@
 #define PUMP_UNLIKELY(x) (x)
 #endif
 
-#if defined(OS_WINDOWS)
+#if defined(WITH_STRCPYS)
 #define pump_strncpy strcpy_s
-#define pump_snprintf sprintf_s
-#define pump_strncasecmp _strnicmp
-#define pump_sched_yield SwitchToThread
-#elif defined(__GNUC__)
+#elif defined(WITH_STRNCPY)
 #define pump_strncpy strncpy
+#endif
+
+#if defined(WITH_SPRINTFS)
+#define pump_snprintf sprintf_s
+#elif defined(WITH_SNPRINTF)
 #define pump_snprintf snprintf
+#endif
+
+#if defined(WITH_STRNICMP)
+#define pump_strncasecmp _strnicmp
+#elif defined(WITH_SNPRINTF) 
 #define pump_strncasecmp strncasecmp
+#endif
+
+#if defined(WITH_SWTCHTOTHREAD)
+#define pump_sched_yield SwitchToThread
+#elif defined(WITH_SCHEDYIELD)
 #define pump_sched_yield sched_yield
 #endif
 

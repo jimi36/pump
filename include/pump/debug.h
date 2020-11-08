@@ -17,7 +17,6 @@
 #ifndef pump_defines_h
 #define pump_defines_h
 
-// Import "assert"
 #include <assert.h>
 
 #include "pump/config.h"

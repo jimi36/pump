@@ -28,7 +28,7 @@ namespace pump {
 namespace transport {
     namespace flow {
 
-#define MAX_FLOW_BUFFER_SIZE 4096
+        #define MAX_FLOW_BUFFER_SIZE 4096
 
         enum flow_error {
             FLOW_ERR_NO = 0,

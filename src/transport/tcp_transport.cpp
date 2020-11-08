@@ -289,7 +289,7 @@ namespace transport {
         // If there are more buffers to send, we should send next one immediately.
         if (pending_send_size_.fetch_sub(last_send_iob_size_, 
                                          std::memory_order_release) > last_send_iob_size_) {
-            if (!__send_once(flow, false)) {
+            if (!__send_once(flow, nullptr, false)) {
                 PUMP_DEBUG_LOG("tcp_transport::on_send_event: send once failed");
                 __try_doing_disconnected_process();
             }
@@ -338,15 +338,16 @@ namespace transport {
 
     bool tcp_transport::__async_send(toolkit::io_buffer_ptr iob) {
         // Insert buffer to sendlist.
-        PUMP_DEBUG_CHECK(sendlist_.push(iob));
+        //PUMP_DEBUG_CHECK(sendlist_.push(iob));
 
         // If there are no more buffers, we should try to get next send chance.
         if (pending_send_size_.fetch_add(iob->data_size(), 
                                          std::memory_order_release) > 0) {
+            PUMP_DEBUG_CHECK(sendlist_.push(iob));
             return true;
         }
 
-        if (!__send_once(flow_.get(), true)) {
+        if (!__send_once(flow_.get(), iob, true)) {
             if (__set_status(TRANSPORT_STARTED, TRANSPORT_STOPPING)) {
                 __close_transport_flow();
                 __post_channel_event(shared_from_this(), 0);
@@ -357,10 +358,14 @@ namespace transport {
         return true;
     }
 
-    bool tcp_transport::__send_once(flow::flow_tcp_ptr flow, bool resume) {
+    bool tcp_transport::__send_once(flow::flow_tcp_ptr flow, toolkit::io_buffer_ptr iob, bool resume) {
         // Get a buffer from sendlist to send.
         PUMP_ASSERT(!last_send_iob_);
-        PUMP_DEBUG_CHECK(sendlist_.pop(last_send_iob_));
+        if (iob) {
+            last_send_iob_ = iob;
+        } else {
+            while(!sendlist_.pop(last_send_iob_));
+        }
 
         // Save last send buffer data size.
         last_send_iob_size_ = last_send_iob_->data_size();

@@ -26,9 +26,15 @@ namespace net {
     }
 
     bool set_noblock(int32 fd, int32 noblock) {
-#if defined(OS_WINDOWS)
-        u_long mode = (noblock == 0) ? 0 : 1;  // non-blocking mode
-        if (ioctlsocket(fd, FIONBIO, &mode) != SOCKET_ERROR) {
+#if defined(PUMP_HAVE_WINSOCK)
+#if defined(OS_CYGWIN)
+        long cmd = 0x8004667e;
+        __ms_u_long mode = (noblock == 0) ? 0 : 1;  // non-blocking mode
+#else
+        long cmd = FIONBIO;
+	    u_long mode = (noblock == 0) ? 0 : 1;  // non-blocking mode
+#endif
+        if (ioctlsocket(fd, cmd, &mode) != SOCKET_ERROR) {
             return true;
         }
 #else
@@ -80,7 +86,7 @@ namespace net {
             return false;
         }
 
-#if defined(OS_WINDOWS)
+#if defined(PUMP_HAVE_WINSOCK)
         DWORD bytes = 0;
         struct tcp_keepalive keepalive;
         keepalive.onoff = 1;
@@ -131,7 +137,7 @@ namespace net {
     }
 
     bool update_connect_context(int32 fd) {
-#if defined(OS_WINDOWS)
+#if defined(PUMP_HAVE_WINSOCK)
         if (setsockopt(fd, SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT, nullptr, 0) == 0) {
             return true;
         }
@@ -144,7 +150,7 @@ namespace net {
     }
 
     bool set_udp_conn_reset(int32 fd, bool enable) {
-#if defined(OS_WINDOWS)
+#if defined(PUMP_HAVE_WINSOCK)
         DWORD bytes_returned = 0;
         BOOL behavior = enable ? TRUE : FALSE;
         if (WSAIoctl(fd,
@@ -267,8 +273,8 @@ namespace net {
     }
 
     int32 poll(struct pollfd *pfds, int32 count, int32 timeout) {
-#if defined(OS_WINDOWS)
-        return WSAPoll(pfds, count, timeout);
+#if defined(PUMP_HAVE_WINSOCK)
+        return ::WSAPoll(pfds, count, timeout);
 #else
         return ::poll(pfds, count, timeout);
 #endif
@@ -279,7 +285,7 @@ namespace net {
     }
 
     bool close(int32 fd) {
-#if defined(OS_WINDOWS)
+#if defined(PUMP_HAVE_WINSOCK)
         return (::closesocket(fd) == 0);
 #else
         return (::close(fd) == 0);
@@ -288,7 +294,7 @@ namespace net {
 
     int32 get_socket_error(int32 fd) {
         int32 res = 0;
-#if defined(OS_WINDOWS)
+#if defined(PUMP_HAVE_WINSOCK)
         int32 len = sizeof(res);
         getsockopt(fd, SOL_SOCKET, SO_ERROR, (char *)&res, &len);
 #else

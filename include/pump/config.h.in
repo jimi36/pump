@@ -17,8 +17,6 @@
 #ifndef pump_config_h
 #define pump_config_h
 
-#include "pump/platform.h"
-
 #define PUMP_MAJOR_VERSION @pump_MAJOR_VERSION@
 #define PUMP_MINOR_VERSION @pump_MINOR_VERSION@
 #define PUMP_BUILD_VERSION @pump_BUILD_VERSION@
@@ -28,12 +26,22 @@
 #define PUMP_HAVE_DEBUG_LOG
 #endif
 
+#define @pump_WITH_WINSOCK@
+#if defined(WITH_WINSOCK)
+    #define PUMP_HAVE_WINSOCK
+#endif
+
 #define @pump_WITH_IOCP@
-#if defined(OS_WINDOWS) && defined(WITH_IOCP)
+#if defined(WITH_IOCP)
 #define PUMP_HAVE_IOCP
-#elif defined(OS_LINUX)
+#endif
+
+#define @pump_WITH_EPOLL@
+#if defined(WITH_EPOLL) && !defined(WITH_IOCP)
 #define PUMP_HAVE_EPOLL
-#else
+#endif
+
+#if !defined(WITH_EPOLL) && !defined(WITH_IOCP)
 #define PUMP_HAVE_SELECT
 #endif
 
@@ -48,5 +56,13 @@
 #if defined(WITH_JEMALLOC)
 #define PUMP_HAVE_JEMALLOC
 #endif
+
+#define @pump_HAVE_STRNGS_HEADER@
+#define @pump_HAVE_ICONV_HEADER@
+
+#define @pump_WITH_STRNCPY_FUNC@
+#define @pump_WITH_SNPRINTF_FUNC@
+#define @pump_WITH_STRNCASECMP_FUNC@
+#define @pump_WITH_SCHEDYIELD_FUNC@
 
 #endif

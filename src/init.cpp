@@ -42,17 +42,9 @@ namespace pump {
 
 #if defined(OS_LINUX)
 typedef void (*sighandler_t)(int32);
-static bool setup_signal(int32 sig, int32 flags, sighandler_t hdl) {
-    // Blocking the same signal when signal hander is running
-    struct sigaction act;
-
-    memset(&act, 0, sizeof(act));
-    sigaddset(&act.sa_mask, sig);
-    act.sa_flags = flags;
-    act.sa_handler = hdl;
-
-    if (sigaction(sig, &act, NULL) != 0) {
-        PUMP_WARN_LOG("pump::setup_signal: sigaction failed sig=%d", sig);
+static bool setup_signal(int32 sig, sighandler_t hdl) {
+    if (signal(sig, NULL) != 0) {
+        PUMP_WARN_LOG("pump::setup_signal: signal failed sig=%d", sig);
         return false;
     }
 
@@ -61,7 +53,7 @@ static bool setup_signal(int32 sig, int32 flags, sighandler_t hdl) {
 #endif
 
 bool init() {
-#if defined(OS_WINDOWS)
+#if defined(PUMP_HAVE_WINSOCK)
     WSADATA wsaData;
     WORD wVersionRequested;
     wVersionRequested = MAKEWORD(2, 2);
@@ -69,8 +61,10 @@ bool init() {
         PUMP_WARN_LOG("pump::init: WSAStartup failed");
         return false;
     }
-#elif defined(OS_LINUX)
-    setup_signal(SIGPIPE, 0, SIG_IGN);
+#endif
+
+#if defined(OS_LINUX)
+    setup_signal(SIGPIPE, SIG_IGN);
 #endif
 
 #if defined(PUMP_HAVE_GNUTLS)
@@ -89,10 +83,12 @@ bool init() {
 }
 
 void uninit() {
-#if defined(OS_WINDOWS)
+#if defined(PUMP_HAVE_WINSOCK)
     ::WSACleanup();
-#elif defined(OS_LINUX)
-    setup_signal(SIGPIPE, 0, SIG_DFL);
+#endif
+
+#if defined(OS_LINUX)
+    setup_signal(SIGPIPE, SIG_DFL);
 #endif
 
 #if defined(PUMP_HAVE_IOCP)

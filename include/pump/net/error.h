@@ -19,7 +19,7 @@
 
 #include "pump/config.h"
 
-#ifdef OS_WINDOWS
+#if defined(PUMP_HAVE_WINSOCK)
 #define LANE_EINTR WSAEINTR                      // 10004
 #define LANE_EBADF WSAEBADF                      // 10009
 #define LANE_EACCES WSAEACCES                    // 10013

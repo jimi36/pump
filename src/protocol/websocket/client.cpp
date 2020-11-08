@@ -205,7 +205,7 @@ namespace protocol {
             // Start transport dialer
             transport::dialer_callbacks cbs;
             cbs.dialed_cb = pump_bind(&client::on_dialed, shared_from_this(), _1, _2);
-            cbs.timeout_cb = pump_bind(&client::on_dial_timeouted, shared_from_this());
+            cbs.timeouted_cb = pump_bind(&client::on_dial_timeouted, shared_from_this());
             cbs.stopped_cb = pump_bind(&client::on_dial_stopped, shared_from_this());
             if (!dialer_->start(sv_, cbs)) {
                 return false;

@@ -21,7 +21,6 @@
 #include <vector>
 
 #include "pump/types.h"
-#include "pump/platform.h"
 
 namespace pump {
 

@@ -145,7 +145,7 @@ namespace transport {
         /*********************************************************************************
          * Send once
          ********************************************************************************/
-        bool __send_once(flow::flow_tcp_ptr flow, bool resume);
+        bool __send_once(flow::flow_tcp_ptr flow, toolkit::io_buffer_ptr iob, bool resume);
 
         /*********************************************************************************
          * Try doing dissconnected process

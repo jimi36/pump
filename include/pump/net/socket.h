@@ -18,11 +18,10 @@
 #define pump_net_sockets_h
 
 #include "pump/types.h"
-#include "pump/platform.h"
 
 #include <string>
 
-#if defined(OS_WINDOWS)
+#if defined(PUMP_HAVE_WINSOCK)
 #include <mstcpip.h>
 #include <mswsock.h>
 #include <ws2tcpip.h>

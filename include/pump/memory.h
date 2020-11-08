@@ -17,20 +17,18 @@
 #ifndef pump_memory_h
 #define pump_memory_h
 
-#include "pump/config.h"
-
-#if defined(PUMP_HAVE_JEMALLOC)
-extern "C" {
-#include <jemalloc/jemalloc.h>
-}
-#endif
+#include "pump/platform.h"
 
 // Import "std::forward"
 #include <memory>
 // Import "malloc"
 #include <stdlib.h>
 
-#include "pump/config.h"
+#if defined(PUMP_HAVE_JEMALLOC)
+extern "C" {
+#include <jemalloc/jemalloc.h>
+}
+#endif
 
 #if defined(PUMP_HAVE_JEMALLOC)
 #define pump_free je_free

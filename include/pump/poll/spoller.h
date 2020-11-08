@@ -17,12 +17,12 @@
 #ifndef pump_poll_spoller_h
 #define pump_poll_spoller_h
 
-#if defined(OS_LINUX)
-#include <sys/select.h>
-#endif
-
 #include "pump/net/socket.h"
 #include "pump/poll/poller.h"
+
+#if defined(OS_LINUX) && !defined(OS_CYGWIN)
+#include <sys/select.h>
+#endif
 
 namespace pump {
 namespace poll {
@@ -54,7 +54,11 @@ namespace poll {
       private:
         fd_set read_fds_;
         fd_set write_fds_;
-        struct timeval tv_;
+#if defined(OS_CYGWIN)
+        __ms_timeval tv_;
+#else
+        timeval tv_;
+#endif
     };
 
 }  // namespace poll

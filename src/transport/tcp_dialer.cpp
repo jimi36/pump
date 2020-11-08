@@ -32,7 +32,7 @@ namespace transport {
             return ERROR_INVALID;
         }
 
-        if (!cbs.dialed_cb || !cbs.stopped_cb || !cbs.timeout_cb) {
+        if (!cbs.dialed_cb || !cbs.stopped_cb || !cbs.timeouted_cb) {
             PUMP_ERR_LOG("tcp_dialer::start: callbacks invalid");
             return ERROR_INVALID;
         }
@@ -188,7 +188,7 @@ namespace transport {
 
         dialer_callbacks cbs;
         cbs.dialed_cb = pump_bind(&tcp_sync_dialer::on_dialed, shared_from_this(), _1, _2);
-        cbs.timeout_cb = pump_bind(&tcp_sync_dialer::on_timeouted, shared_from_this());
+        cbs.timeouted_cb = pump_bind(&tcp_sync_dialer::on_timeouted, shared_from_this());
         cbs.stopped_cb = pump_bind(&tcp_sync_dialer::on_stopped);
 
         dialer_ = tcp_dialer::create(local_address, remote_address, timeout);
