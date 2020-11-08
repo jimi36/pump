@@ -3,7 +3,7 @@
 static service *sv;
 
 static int count = 1;
-static int send_loop = 64;
+static int send_loop = 1;
 static int send_pocket_size = 1024 * 4;
 
 class my_tls_dialer : public std::enable_shared_from_this<my_tls_dialer> {
@@ -151,7 +151,7 @@ void start_tls_client(const std::string &ip, uint16 port) {
             pump_bind(&my_tls_dialer::on_dialed_callback, my_dialer.get(), _1, _2);
         cbs.stopped_cb =
             pump_bind(&my_tls_dialer::on_stopped_dialing_callback, my_dialer.get());
-        cbs.timeout_cb =
+        cbs.timeouted_cb =
             pump_bind(&my_tls_dialer::on_dialed_timeout_callback, my_dialer.get());
 
         if (dialer->start(sv, cbs) != 0) {

@@ -1,7 +1,7 @@
 #include "tcp_transport_test.h"
 
 static int count = 1;
-static int send_loop = 4;
+static int send_loop = 1;
 static int send_pocket_size = 1024 * 4;
 
 class my_tcp_dialer;
@@ -149,7 +149,7 @@ void start_once_dialer() {
         pump_bind(&my_tcp_dialer::on_dialed_callback, my_dialer.get(), _1, _2);
     cbs.stopped_cb =
         pump_bind(&my_tcp_dialer::on_stopped_dialing_callback, my_dialer.get());
-    cbs.timeout_cb =
+    cbs.timeouted_cb =
         pump_bind(&my_tcp_dialer::on_dialed_timeout_callback, my_dialer.get());
 
     if (dialer->start(sv, cbs) != 0) {

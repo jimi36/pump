@@ -17,7 +17,7 @@
 #ifndef pump_c_h
 #define pump_c_h
 
-#if defined(pump_EXPORTS)
+#if defined(pump_EXPORTS) && !defined(__linux__) && !defined(__unix__)
 #define LIB_PUMP_C __declspec(dllexport)
 #else
 #define LIB_PUMP_C
