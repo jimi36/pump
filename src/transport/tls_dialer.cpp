@@ -103,8 +103,10 @@ namespace transport {
             __post_channel_event(shared_from_this(), 0);
             return;
         } else if (__set_status(TRANSPORT_HANDSHAKING, TRANSPORT_STOPPING)) {
-            PUMP_ASSERT(handshaker_);
-            handshaker_->stop();
+            if(handshaker_) {
+                handshaker_->stop();
+            }
+            return;
         }
 
         // If in timeouting status at the moment, it means that dialer is timeout

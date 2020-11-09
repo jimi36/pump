@@ -68,16 +68,9 @@ namespace transport {
     void udp_transport::stop() {
         while (__is_status(TRANSPORT_STARTED)) {
             if (__set_status(TRANSPORT_STARTED, TRANSPORT_STOPPING)) {
-                while (true) {
-                    transport_error err = __async_read(READ_ONCE);
-                    if (err == ERROR_FAULT) {
-                        __post_channel_event(shared_from_this(), 0);
-                        return;
-                    } else if (err == ERROR_OK) {
-                        __shutdown_transport_flow();
-                        return;
-                    }
-                }
+                __shutdown_transport_flow();
+                __post_channel_event(shared_from_this(), 0);
+                return;
             }
         }
     }

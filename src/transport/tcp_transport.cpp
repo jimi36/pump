@@ -89,11 +89,9 @@ namespace transport {
             // tracker event callback will be triggered, we can trigger stopped
             // callabck at there.
             if (__set_status(TRANSPORT_STARTED, TRANSPORT_STOPPING)) {
+                __shutdown_transport_flow();
                 if (pending_send_size_.load(std::memory_order_acquire) == 0) {
-                    __close_transport_flow();
                     __post_channel_event(shared_from_this(), 0);
-                } else {
-                    __shutdown_transport_flow();
                 }
                 return;
             }

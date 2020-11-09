@@ -178,7 +178,7 @@ extern "C" {
 	 ********************************************************************************/
 	LIB_PUMP_C int pump_c_acceptor_start(pump_c_service sv,
                                          pump_c_acceptor acceptor, 
-                                         pump_c_acceptor_callbacks cbs);
+                                         struct pump_c_acceptor_callbacks cbs);
 
 	/*********************************************************************************
 	 * Pump c acceptor stop
@@ -215,7 +215,7 @@ extern "C" {
 	 ********************************************************************************/
 	LIB_PUMP_C int pump_c_dialer_start(pump_c_service sv,
                                        pump_c_dialer dialer, 
-                                       pump_c_dialer_callbacks cbs);
+                                       struct pump_c_dialer_callbacks cbs);
 
 	/*********************************************************************************
 	 * Pump c dialer stop
@@ -236,7 +236,7 @@ extern "C" {
 	 ********************************************************************************/
 	LIB_PUMP_C int pump_c_transport_start(pump_c_service sv,
                                           pump_c_transport transp, 
-                                          pump_c_transport_callbacks cbs);
+                                          struct pump_c_transport_callbacks cbs);
 
 	/*********************************************************************************
 	 * Pump c transport stop

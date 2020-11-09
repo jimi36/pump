@@ -181,7 +181,7 @@ void pump_c_acceptor_destory(pump_c_acceptor acceptor) {
 }
 
 static void on_acceptor_accepted_cb(pump_c_acceptor_impl *impl,
-                                        transport::base_transport_sptr &transp) {
+                                    transport::base_transport_sptr &transp) {
     if (impl->cbs.accepted_cb) {
         pump_c_transport_impl *impl_transp = object_create<pump_c_transport_impl>();
         impl_transp->transp = transp;
@@ -202,7 +202,7 @@ static void on_acceptor_stopped_cb(pump_c_acceptor_impl *impl) {
 
 int pump_c_acceptor_start(pump_c_service sv,
                           pump_c_acceptor acceptor, 
-                          pump_c_acceptor_callbacks cbs) {
+                          struct pump_c_acceptor_callbacks cbs) {
     pump_c_service_impl *impl_sv = (pump_c_service_impl*)sv;
     if (!impl_sv) {
         return -1;
@@ -318,7 +318,7 @@ static void on_dialer_stopped(pump_c_dialer_impl *impl) {
 
 int pump_c_dialer_start(pump_c_service sv,
                         pump_c_dialer dialer,
-                        pump_c_dialer_callbacks cbs) {
+                        struct pump_c_dialer_callbacks cbs) {
     pump_c_service_impl *impl_sv = (pump_c_service_impl*)sv;
     if (!impl_sv) {
         return -1;
@@ -401,7 +401,7 @@ static void on_transport_disconnected(pump_c_transport_impl *impl) {
 
 int pump_c_transport_start(pump_c_service sv,
                            pump_c_transport transp, 
-                           pump_c_transport_callbacks cbs) {
+                           struct pump_c_transport_callbacks cbs) {
     pump_c_service_impl *impl_sv = (pump_c_service_impl*)sv;
     if (!impl_sv) {
         return -1;
