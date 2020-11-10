@@ -45,13 +45,10 @@ MACRO(build_test_project NAME)
 	ENDIF()
 ENDMACRO()
 
-
-build_test_project("test_transport")
-
-build_test_project("test_simple")
-
-build_test_project("test_timer")
-
-build_test_project("test_http")
-
-build_test_project("test_ws")
+IF(WITH_TEST)
+    build_test_project("test_transport")
+    build_test_project("test_simple")
+    build_test_project("test_timer")
+    build_test_project("test_http")
+    build_test_project("test_ws")
+ENDIF()
