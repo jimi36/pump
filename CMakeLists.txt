@@ -10,7 +10,7 @@ PROJECT(pump_main)
 
 SET(pump_MAJOR_VERSION 1)
 SET(pump_MINOR_VERSION 2)
-SET(pump_BUILD_VERSION 18)
+SET(pump_BUILD_VERSION 19)
 
 # Specifies root dir
 SET(ROOT_DIR ${PROJECT_SOURCE_DIR})
@@ -28,25 +28,31 @@ INCLUDE(CheckFunctionExists)
 # Append cmake module path
 LIST(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
+# Option build debug (default OFF)
+OPTION(BUILD_DEBUG "Option build debug" OFF)
+
 # Option build with iocp, only for windows (default ON)
 OPTION(WITH_IOCP "Option build with iocp, only for windows" ON)
 
 # Option build with jemalloc (default OFF)
 OPTION(WITH_JEMALLOC "Option build with jemalloc" OFF)
-INCLUDE(option_jemalloc)
 
 # Option build with TLS [DISABLE OPENSSL GNUTLS] (default DISABLE)
 SET(WITH_TLS DISABLE)
-INCLUDE(option_tls)
 
 # Option build with test (default ON)
 OPTION(WITH_TEST "Option build with test" ON)
 
-# Option build debug (default OFF)
-OPTION(BUILD_DEBUG "Option build debug" OFF)
+# Load build options
 INCLUDE(option_build)
 
-# Load cxx compile flags
+# Load jemalloc options
+INCLUDE(option_jemalloc)
+
+# Load tls options
+INCLUDE(option_tls)
+
+# Load compile flags options
 INCLUDE(option_cxxflags)
 
 # Build pump

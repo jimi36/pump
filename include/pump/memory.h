@@ -25,9 +25,8 @@
 #include <stdlib.h>
 
 #if defined(PUMP_HAVE_JEMALLOC)
-extern "C" {
+#define JEMALLOC_NO_RENAME
 #include <jemalloc/jemalloc.h>
-}
 #endif
 
 #if defined(PUMP_HAVE_JEMALLOC)
