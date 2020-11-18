@@ -127,8 +127,10 @@ namespace protocol {
 
             // Service
             service_ptr sv_;
+
             // Transport Dialer
             transport::base_dialer_sptr dialer_;
+
             // Websocket connection
             connection_sptr conn_;
 

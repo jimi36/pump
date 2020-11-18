@@ -26,7 +26,10 @@ namespace pump {
 namespace protocol {
     namespace websocket {
 
-        client::client() noexcept : started_(false), sv_(nullptr), upgraded_(false) {
+        client::client() noexcept 
+          : started_(false), 
+            sv_(nullptr), 
+            upgraded_(false) {
         }
 
         bool client::start(service_ptr sv,
