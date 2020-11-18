@@ -18,7 +18,7 @@ void on_error(websocket::connection_ptr conn, const std::string &msg) {
     ws_conn.reset();
 }
 
-void on_new_connection(websocket::connection_sptr conn) {
+void on_new_connection(const std::string &path, websocket::connection_sptr conn) {
     printf("new ws connection\n");
 
     websocket::connection_callbacks cbs;
@@ -34,15 +34,14 @@ void on_new_connection(websocket::connection_sptr conn) {
 }
 
 void start_ws_server(pump::service_ptr sv, const std::string &ip, int port) {
-    websocket::server_sptr server = websocket::server::create();
-    server->append_route("/", pump_bind(&on_new_connection, _1));
-
     pump::transport::address bind_address(ip, port);
+    websocket::server_sptr server = websocket::server::create(bind_address);
+    //websocket::server_sptr server = websocket::server::create(bind_address, "cert.pem", "key.pem");
 
-    std::map<std::string, std::string> headers;
+    websocket::server_callbacks cbs;
+    cbs.upgraded_cb = pump_bind(&on_new_connection, _1, _2);
 
-    if (!server->start(sv, bind_address, headers))
-        // if (!server->start(sv, "cert.pem", "key.pem", bind_address, headers))
+    if (!server->start(sv, cbs))
         printf("ws server start error\n");
     else
         printf("ws server started\n");

@@ -24,62 +24,37 @@ namespace pump {
 namespace protocol {
     namespace websocket {
 
-        server::server() noexcept : sv_(nullptr) {
-        }
-
-        bool server::start(service_ptr sv,
-                           const transport::address &listen_address,
-                           const std::map<std::string, std::string> &local_headers) {
-            if (acceptor_) {
-                return false;
-            }
-
-            if (!sv) {
-                return false;
-            }
-            sv_ = sv;
-
-            local_headers_ = local_headers;
-
-            transport::acceptor_callbacks cbs;
-            server_wptr wptr = shared_from_this();
-            cbs.stopped_cb = pump_bind(&server::on_stopped, wptr);
-            cbs.accepted_cb = pump_bind(&server::on_accepted, wptr, _1);
-
+        server::server(const transport::address &listen_address) noexcept 
+          : sv_(nullptr) {
             acceptor_ = transport::tcp_acceptor::create(listen_address);
-            if (acceptor_->start(sv, cbs) != transport::ERROR_OK) {
-                acceptor_.reset();
-                return false;
-            }
-
-            return true;
         }
 
-        bool server::start(service_ptr sv,
-                           const std::string &crtfile,
-                           const std::string &keyfile,
-                           const transport::address &listen_address,
-                           const std::map<std::string, std::string> &local_headers) {
-            if (acceptor_) {
-                return false;
-            }
+        server::server(const transport::address &listen_address,
+            const std::string &certfile,
+            const std::string &keyfile) noexcept 
+          : sv_(nullptr) {
+            acceptor_ = transport::tls_acceptor::create_with_file(
+                certfile, 
+                keyfile, 
+                listen_address);
+        }
 
+        bool server::start(service_ptr sv, const server_callbacks &scbs) {
             if (!sv) {
                 return false;
             }
             sv_ = sv;
 
-            local_headers_ = local_headers;
+            if (!scbs.upgraded_cb) {
+                return false;
+            }
+            cbs_ = scbs;
 
             transport::acceptor_callbacks cbs;
             server_wptr wptr = shared_from_this();
             cbs.stopped_cb = pump_bind(&server::on_stopped, wptr);
             cbs.accepted_cb = pump_bind(&server::on_accepted, wptr, _1);
-
-            acceptor_ = transport::tls_acceptor::create_with_file(
-                crtfile, keyfile, listen_address);
             if (acceptor_->start(sv, cbs) != transport::ERROR_OK) {
-                acceptor_.reset();
                 return false;
             }
 
@@ -121,7 +96,12 @@ namespace protocol {
         void server::on_stopped(server_wptr wptr) {
             PUMP_LOCK_WPOINTER(svr, wptr);
             if (svr) {
+                // Stop all upgrading connections
                 svr->__stop_all_upgrading_conns();
+
+                if (svr->cbs_.error_cb) {
+                    svr->cbs_.error_cb("websocket server stopped");
+                }
             }
         }
 
@@ -149,7 +129,9 @@ namespace protocol {
                     return;
                 }
 
-                svr->router_.route(req->get_uri()->get_path(), conn_locker);
+                if (svr->cbs_.upgraded_cb) {
+                    svr->cbs_.upgraded_cb(req->get_uri()->get_path(), conn_locker);
+                }
             }
         }
 
@@ -174,36 +156,13 @@ namespace protocol {
                 return false;
             }
 
-            auto header = req->get_header();
             auto version = req->get_http_version();
-            if (req->get_method() != http::METHOD_GET || version != http::VERSION_11) {
+            if (version != http::VERSION_11) {
                 send_http_error_response(conn, 404, "");
                 return false;
             }
 
-            auto path = req->get_uri()->get_path();
-            if (!router_.has_route(path)) {
-                send_http_error_response(conn, 404, "");
-                return false;
-            }
-
-            std::string local_host = __get_local_header("Host");
-            if (!local_host.empty()) {
-                std::string host;
-                if (!header->get("Host", host) || host != local_host) {
-                    send_http_error_response(conn, 403, "");
-                    return false;
-                }
-            }
-
-            std::string local_origin = __get_local_header("Origin");
-            if (!local_origin.empty()) {
-                std::string origin;
-                if (!header->get("Origin", origin) || origin != local_origin) {
-                    send_http_error_response(conn, 403, "");
-                    return false;
-                }
-            }
+            auto header = req->get_header();
 
             std::string upgrade;
             if (!header->get("Upgrade", upgrade) || upgrade != "websocket") {
@@ -214,16 +173,14 @@ namespace protocol {
 
             std::vector<std::string> connection;
             if (!header->get("Connection", connection) ||
-                std::find(connection.begin(), connection.end(), "Upgrade") ==
-                    connection.end()) {
+                std::find(connection.begin(), connection.end(), "Upgrade") == connection.end()) {
                 send_http_error_response(
                     conn, 400, "Connection header is not found or invalid");
                 return false;
             }
 
             std::string sec_version;
-            if (!header->get("Sec-WebSocket-Version", sec_version) ||
-                sec_version != "13") {
+            if (!header->get("Sec-WebSocket-Version", sec_version) || sec_version != "13") {
                 send_http_error_response(
                     conn, 400, "Sec-WebSocket-Version header is not found or invalid");
                 return false;
@@ -236,10 +193,12 @@ namespace protocol {
                 return false;
             }
 
-            std::vector<std::string> protocs;
-            header->get("Sec-WebSocket-Protocol", protocs);
-            std::string protocol =
-                match_protocol(protocs, __get_local_header("Sec-WebSocket-Protocol"));
+            if (cbs_.check_request_cb) {
+                if (!cbs_.check_request_cb(req)) {
+                    send_http_error_response(conn, 400, "Request is invalid");
+                    return false;
+                }
+            }
 
             http::response resp;
             resp.set_status_code(101);
@@ -249,8 +208,11 @@ namespace protocol {
             resp_header->set("Upgrade", "websocket");
             resp_header->set("Connection", "Upgrade");
             resp_header->set("Sec-WebSocket-Accept", compute_sec_accept_key(sec_key));
-            if (!protocol.empty()) {
-                resp_header->set("Sec-WebSocket-Protocol", protocol);
+
+            std::vector<std::string> protocs;
+            header->get("Sec-WebSocket-Protocol", protocs);
+            for (int32 i = 0; i < (int32)protocs.size(); i++) {
+                resp_header->set("Sec-WebSocket-Protocol", protocs[i]);
             }
 
             std::string data;
@@ -264,15 +226,6 @@ namespace protocol {
                 p.second->stop();
             }
             conns_.clear();
-        }
-
-        const std::string& server::__get_local_header(const std::string &name) const {
-            const static std::string EMPTY("");
-            auto it = local_headers_.find(name);
-            if (it != local_headers_.end()) {
-                return it->second;
-            }
-            return EMPTY;
         }
 
     }  // namespace websocket

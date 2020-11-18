@@ -28,40 +28,13 @@ namespace protocol {
         class server;
         DEFINE_ALL_POINTER_TYPE(server);
 
-        class LIB_PUMP ws_router {
-          public:
-            typedef pump_function<void(connection_sptr &)> route_callback;
-
-          public:
-            /*********************************************************************************
-             * Append router
-             ********************************************************************************/
-            PUMP_INLINE void append(const std::string &path, const route_callback &r) {
-                routers_[path] = r;
-            }
-
-            /*********************************************************************************
-             * Route
-             * If no found router with the path return false.
-             ********************************************************************************/
-            PUMP_INLINE bool route(const std::string &path, connection_sptr &conn) {
-                auto it = routers_.find(path);
-                if (it != routers_.end()) {
-                    it->second(conn);
-                    return true;
-                }
-                return false;
-            }
-
-            /*********************************************************************************
-             * Check route has or not
-             ********************************************************************************/
-            PUMP_INLINE bool has_route(const std::string &path) const {
-                return routers_.find(path) != routers_.end();
-            }
-
-          private:
-            std::map<std::string, route_callback> routers_;
+        struct server_callbacks {
+            // Check upgrade request callback
+            pump_function<bool(http::c_request_ptr)> check_request_cb;
+            // Upgraded callback
+            pump_function<void(const std::string&, connection_sptr&)> upgraded_cb;
+            // Error callback
+            pump_function<void(const std::string&)> error_cb;
         };
 
         class LIB_PUMP server : public std::enable_shared_from_this<server> {
@@ -78,8 +51,16 @@ namespace protocol {
             /*********************************************************************************
              * Create instance
              ********************************************************************************/
-            PUMP_INLINE static server_sptr create() {
-                INLINE_OBJECT_CREATE(obj, server, ());
+            PUMP_INLINE static server_sptr create(
+                const transport::address& listen_address) {
+                INLINE_OBJECT_CREATE(obj, server, (listen_address));
+                return server_sptr(obj, object_delete<server>);
+            }
+            PUMP_INLINE static server_sptr create(
+                const transport::address& listen_address,
+                const std::string& certfile,
+                const std::string& keyfile) {
+                INLINE_OBJECT_CREATE(obj, server, (listen_address, certfile, keyfile));
                 return server_sptr(obj, object_delete<server>);
             }
 
@@ -89,28 +70,9 @@ namespace protocol {
             virtual ~server() = default;
 
             /*********************************************************************************
-             * Append route
-             ********************************************************************************/
-            PUMP_INLINE void append_route(const std::string &path,
-                                          const ws_router::route_callback &rcb) {
-                router_.append(path, rcb);
-            }
-
-            /*********************************************************************************
              * Start
              ********************************************************************************/
-            bool start(service_ptr sv,
-                       const transport::address &listen_address,
-                       const std::map<std::string, std::string> &local_headers);
-
-            /*********************************************************************************
-             * Start
-             ********************************************************************************/
-            bool start(service_ptr sv,
-                       const std::string &crtfile,
-                       const std::string &keyfile,
-                       const transport::address &listen_address,
-                       const std::map<std::string, std::string> &local_headers);
+            bool start(service_ptr sv, const server_callbacks &cbs);
 
             /*********************************************************************************
              * Stop
@@ -155,7 +117,10 @@ namespace protocol {
             /*********************************************************************************
              * Constructor
              ********************************************************************************/
-            server() noexcept;
+            server(const transport::address &listen_address) noexcept;
+            server(const transport::address &listen_address, 
+                   const std::string &certfile,
+                   const std::string &keyfile) noexcept;
 
             /*********************************************************************************
              * Handle http upgrade request
@@ -166,11 +131,6 @@ namespace protocol {
              * Stop all upgrading connections
              ********************************************************************************/
             void __stop_all_upgrading_conns();
-
-            /*********************************************************************************
-             * Get local header
-             ********************************************************************************/
-            const std::string& __get_local_header(const std::string &name) const;
 
           private:
             // Service
@@ -185,11 +145,8 @@ namespace protocol {
             std::mutex conn_mx_;
             std::map<void_ptr, connection_sptr> conns_;
 
-            // Websocket upgrade request headers filter
-            std::map<std::string, std::string> local_headers_;
-
-            // Websocket router
-            ws_router router_;
+            // Callbacks
+            server_callbacks cbs_;
         };
 
     }  // namespace websocket
