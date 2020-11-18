@@ -32,7 +32,7 @@ namespace net {
         __ms_u_long mode = (noblock == 0) ? 0 : 1;  // non-blocking mode
 #else
         long cmd = FIONBIO;
-	    u_long mode = (noblock == 0) ? 0 : 1;  // non-blocking mode
+        u_long mode = (noblock == 0) ? 0 : 1;  // non-blocking mode
 #endif
         if (ioctlsocket(fd, cmd, &mode) != SOCKET_ERROR) {
             return true;
@@ -305,7 +305,7 @@ namespace net {
     }
 
     int32 last_errno() {
-#if defined(OS_WINDOWS)
+#if defined(PUMP_HAVE_WINSOCK)
         return WSAGetLastError();
 #else
         return errno;
