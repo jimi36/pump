@@ -29,7 +29,9 @@
 namespace pump {
 namespace poll {
 
-    class poller : public toolkit::noncopyable {
+    class poller
+      : public toolkit::noncopyable {
+
       protected:
         struct channel_event {
             channel_event(std::shared_ptr<channel> &c, uint32 ev) noexcept

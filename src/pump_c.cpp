@@ -41,14 +41,16 @@ struct pump_c_service_impl {
 pump_c_service pump_c_service_create(int with_poller) {
     pump_c_service_impl *impl = object_create<pump_c_service_impl>();
     impl->sv = object_create<service>(with_poller);
+    if (!impl->sv) {
+        object_delete(impl);
+        return nullptr;
+    }
     return impl;
 }
 
 void pump_c_service_destory(pump_c_service sv) {
     pump_c_service_impl *impl = (pump_c_service_impl*)sv;
-    if (!impl) {
-        return;
-    }
+    PUMP_ASSERT(impl);
 
     if (impl->sv) {
         object_delete(impl->sv);
@@ -60,9 +62,7 @@ void pump_c_service_destory(pump_c_service sv) {
 
 int pump_c_service_start(pump_c_service sv) {
     pump_c_service_impl *impl = (pump_c_service_impl*)sv;
-    if (!impl || !impl->sv) {
-        return -1;
-    }
+    PUMP_ASSERT(impl && impl->sv);
 
     if (!impl->sv->start()) {
         return -1;
@@ -73,9 +73,7 @@ int pump_c_service_start(pump_c_service sv) {
 
 int pump_c_service_stop(pump_c_service sv) {
     pump_c_service_impl *impl = (pump_c_service_impl*)sv;
-    if (!impl || !impl->sv) {
-        return -1;
-    }
+    PUMP_ASSERT(impl && impl->sv);
 
     impl->sv->stop();
     impl->sv->wait_stopped();
@@ -99,19 +97,16 @@ pump_c_timer pump_c_timer_create(int timeout_ms,
 }
 
 void pump_c_timer_destory(pump_c_timer timer) {
-    pump_c_timer_impl *impl = (pump_c_timer_impl*)timer;
-    if (impl) {
-        object_delete(impl);
-    }
+    PUMP_ASSERT(timer);
+    object_delete((pump_c_timer_impl*)timer);
 }
 
 int pump_c_timer_start(pump_c_service sv, pump_c_timer timer) {
     pump_c_service_impl *impl_sv = (pump_c_service_impl*)sv;
-    if (!impl_sv || !impl_sv->sv) {
-        return -1;
-    }
+    PUMP_ASSERT(impl_sv && impl_sv->sv);
 
     pump_c_timer_impl *impl_timer = (pump_c_timer_impl*)timer;
+    PUMP_ASSERT(impl_timer);
     if (!impl_sv->sv->start_timer(impl_timer->t)) {
         return -1;
     }
@@ -121,9 +116,7 @@ int pump_c_timer_start(pump_c_service sv, pump_c_timer timer) {
 
 int pump_c_timer_stop(pump_c_timer timer) {
     pump_c_timer_impl *impl = (pump_c_timer_impl*)timer;
-    if (!impl) {
-        return -1;
-    }
+    PUMP_ASSERT(impl);
 
     impl->t->stop();
 
@@ -164,7 +157,7 @@ pump_c_acceptor pump_c_tls_acceptor_create(const char *ip,
     pump_c_acceptor_impl *impl = object_create<pump_c_acceptor_impl>();
 
     transport::address addr(ip, port);
-    impl->acceptor = 
+    impl->acceptor =
         transport::tls_acceptor::create_with_memory(cert, key, addr, 1000);
 
     impl->cbs.accepted_cb = nullptr;
@@ -174,10 +167,8 @@ pump_c_acceptor pump_c_tls_acceptor_create(const char *ip,
 }
 
 void pump_c_acceptor_destory(pump_c_acceptor acceptor) {
-    pump_c_acceptor_impl *impl = (pump_c_acceptor_impl*)acceptor;
-    if (impl) {
-        object_delete(impl);
-    }
+    PUMP_ASSERT(acceptor);
+    object_delete((pump_c_acceptor_impl*)acceptor);
 }
 
 static void on_acceptor_accepted_cb(pump_c_acceptor_impl *impl,
@@ -204,26 +195,17 @@ int pump_c_acceptor_start(pump_c_service sv,
                           pump_c_acceptor acceptor, 
                           struct pump_c_acceptor_callbacks cbs) {
     pump_c_service_impl *impl_sv = (pump_c_service_impl*)sv;
-    if (!impl_sv) {
-        return -1;
-    }
+    PUMP_ASSERT(impl_sv && impl_sv->sv);
 
 	pump_c_acceptor_impl *impl_acceptor = (pump_c_acceptor_impl*)acceptor;
-    if (!impl_acceptor) {
-        return -1;
-    }
-	
-    transport::base_acceptor_sptr base = impl_acceptor->acceptor;
-    if (!base) {
-        return -1;
-    }
+    PUMP_ASSERT(impl_acceptor && impl_acceptor->acceptor);
 
     impl_acceptor->cbs = cbs;
     
     transport::acceptor_callbacks impl_cbs;
     impl_cbs.accepted_cb = pump_bind(on_acceptor_accepted_cb, impl_acceptor, _1);
     impl_cbs.stopped_cb = pump_bind(on_acceptor_stopped_cb, impl_acceptor);
-    if (base->start(impl_sv->sv, impl_cbs) != 0) {
+    if (impl_acceptor->acceptor->start(impl_sv->sv, impl_cbs) != 0) {
         return -1;
     }
 
@@ -232,16 +214,9 @@ int pump_c_acceptor_start(pump_c_service sv,
 
 int pump_c_acceptor_stop(pump_c_acceptor acceptor) {
     pump_c_acceptor_impl *impl_acceptor = (pump_c_acceptor_impl*)acceptor;
-    if (!impl_acceptor) {
-        return -1;
-    }
+    PUMP_ASSERT(impl_acceptor && impl_acceptor->acceptor);
 
-    transport::base_acceptor_sptr base = impl_acceptor->acceptor;
-    if (!base) {
-        return -1;
-    }
-
-    base->stop();
+    impl_acceptor->acceptor->stop();
 
     return 0;
 }
@@ -281,10 +256,8 @@ pump_c_acceptor pump_c_tls_dialer_create(const char *local_ip,
 }
 
 void pump_c_dialer_destory(pump_c_dialer dialer) {
-    pump_c_dialer_impl *impl = (pump_c_dialer_impl*)dialer;
-    if (impl) {
-        object_delete(impl);
-    }
+    PUMP_ASSERT(dialer);
+    object_delete((pump_c_dialer_impl*)dialer);
 }
 
 static void on_dialer_dialed(pump_c_dialer_impl *impl, 
@@ -320,19 +293,10 @@ int pump_c_dialer_start(pump_c_service sv,
                         pump_c_dialer dialer,
                         struct pump_c_dialer_callbacks cbs) {
     pump_c_service_impl *impl_sv = (pump_c_service_impl*)sv;
-    if (!impl_sv) {
-        return -1;
-    }
+    PUMP_ASSERT(impl_sv && impl_sv->sv);
 
     pump_c_dialer_impl *impl_dialer = (pump_c_dialer_impl*)dialer;
-    if (!impl_dialer) {
-        return -1;
-    }
-
-    transport::base_dialer_sptr base = impl_dialer->dialer;
-    if (!base) {
-        return -1;
-    }
+    PUMP_ASSERT(impl_dialer && impl_dialer->dialer);
     
     impl_dialer->cbs = cbs;
 
@@ -340,7 +304,7 @@ int pump_c_dialer_start(pump_c_service sv,
     impl_cbs.dialed_cb = pump_bind(on_dialer_dialed, impl_dialer, _1, _2);
     impl_cbs.timeouted_cb = pump_bind(on_dialer_timeouted, impl_dialer);
     impl_cbs.stopped_cb = pump_bind(on_dialer_stopped, impl_dialer);
-    if (base->start(impl_sv->sv, impl_cbs) != 0) {
+    if (impl_dialer->dialer->start(impl_sv->sv, impl_cbs) != 0) {
         return -1;
     }
 
@@ -349,25 +313,16 @@ int pump_c_dialer_start(pump_c_service sv,
 
 int pump_c_dialer_stop(pump_c_dialer dialer) {
     pump_c_dialer_impl *impl_dialer = (pump_c_dialer_impl*)dialer;
-    if (!impl_dialer) {
-        return -1;
-    }
+    PUMP_ASSERT(impl_dialer && impl_dialer->dialer);
 
-    transport::base_dialer_sptr base = impl_dialer->dialer;
-    if (!base) {
-        return -1;
-    }
-
-    base->stop();
+    impl_dialer->dialer->stop();
 
     return 0;
 }
 
 void pump_c_transport_destory(pump_c_transport transp) {
-    pump_c_transport_impl *impl = (pump_c_transport_impl*)transp;
-    if (impl) {
-        object_delete(impl);
-    }
+    PUMP_ASSERT(transp);
+    object_delete((pump_c_transport_impl*)transp);
 }
 
 static void on_transport_read(pump_c_transport_impl *impl, 
@@ -403,19 +358,10 @@ int pump_c_transport_start(pump_c_service sv,
                            pump_c_transport transp, 
                            struct pump_c_transport_callbacks cbs) {
     pump_c_service_impl *impl_sv = (pump_c_service_impl*)sv;
-    if (!impl_sv) {
-        return -1;
-    }
+    PUMP_ASSERT(impl_sv && impl_sv->sv);
 
     pump_c_transport_impl *impl_transp = (pump_c_transport_impl*)transp;
-    if (!impl_transp) {
-    return -1;
-    }
-
-    transport::base_transport_sptr base = impl_transp->transp;
-    if (!base) {
-        return -1;
-    }
+    PUMP_ASSERT(impl_transp && impl_transp->transp);
 
     impl_transp->cbs = cbs;
     
@@ -424,7 +370,7 @@ int pump_c_transport_start(pump_c_service sv,
     impl_cbs.read_from_cb = pump_bind(on_transport_read_from, impl_transp, _1, _2, _3);
     impl_cbs.stopped_cb = pump_bind(on_transport_stopped, impl_transp);
     impl_cbs.disconnected_cb = pump_bind(on_transport_disconnected, impl_transp);
-    if (base->start(impl_sv->sv, 0, impl_cbs) != 0) {
+    if (impl_transp->transp->start(impl_sv->sv, 0, impl_cbs) != 0) {
         return -1;
     }
 
@@ -433,32 +379,18 @@ int pump_c_transport_start(pump_c_service sv,
 
 int pump_c_transport_stop(pump_c_transport transp) {
     pump_c_transport_impl *impl_transp = (pump_c_transport_impl*)transp;
-    if (!impl_transp) {
-        return -1;
-    }
+    PUMP_ASSERT(impl_transp && impl_transp->transp);
 
-    transport::base_transport_sptr base = impl_transp->transp;
-    if (!base) {
-        return -1;
-    }
-
-    base->stop();
+    impl_transp->transp->stop();
 
     return 0;
 }
 
 int pump_c_transport_send(pump_c_transport transp, const char *b, int size) {
     pump_c_transport_impl *impl_transp = (pump_c_transport_impl*)transp;
-    if (!impl_transp) {
-        return -1;
-    }
+    PUMP_ASSERT(impl_transp && impl_transp->transp);
 
-    transport::base_transport_sptr base = impl_transp->transp;
-    if (!base) {
-        return -1;
-    }
-
-    if (base->send(b, size) <= 0) {
+    if (impl_transp->transp->send(b, size) <= 0) {
         return -1;
     }
 

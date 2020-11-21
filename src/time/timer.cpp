@@ -26,12 +26,12 @@ namespace time {
     const static int32 TIMER_PENDING = 3;
 
     timer::timer(uint64 timeout, const timer_callback &cb, bool repeated) noexcept
-        : queue_(nullptr),
-          status_(TIMER_INIT),
-          cb_(cb),
-          repeated_(repeated),
-          timeout_(timeout),
-          overtime_(0) {
+      : queue_(nullptr),
+        status_(TIMER_INIT),
+        cb_(cb),
+        repeated_(repeated),
+        timeout_(timeout),
+        overtime_(0) {
     }
 
     bool timer::__start(timer_queue_ptr queue) {

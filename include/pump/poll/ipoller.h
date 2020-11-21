@@ -25,7 +25,9 @@
 namespace pump {
 namespace poll {
 
-    class iocp_poller : public poller {
+    class iocp_poller
+      : public poller {
+
       public:
         /*********************************************************************************
          * Constructor

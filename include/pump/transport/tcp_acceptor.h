@@ -26,8 +26,10 @@ namespace transport {
     class tcp_acceptor;
     DEFINE_ALL_POINTER_TYPE(tcp_acceptor);
 
-    class LIB_PUMP tcp_acceptor : public base_acceptor,
-                                  public std::enable_shared_from_this<tcp_acceptor> {
+    class LIB_PUMP tcp_acceptor
+      : public base_acceptor,
+        public std::enable_shared_from_this<tcp_acceptor> {
+
       public:
         /*********************************************************************************
          * Create instance

@@ -29,8 +29,10 @@ namespace transport {
     class tls_acceptor;
     DEFINE_ALL_POINTER_TYPE(tls_acceptor);
 
-    class LIB_PUMP tls_acceptor : public base_acceptor,
-                                  public std::enable_shared_from_this<tls_acceptor> {
+    class LIB_PUMP tls_acceptor
+      : public base_acceptor,
+        public std::enable_shared_from_this<tls_acceptor> {
+
       public:
         /*********************************************************************************
          * Create instance

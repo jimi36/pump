@@ -37,7 +37,9 @@ namespace protocol {
             pump_function<void(const std::string&)> error_cb;
         };
 
-        class LIB_PUMP server : public std::enable_shared_from_this<server> {
+        class LIB_PUMP server
+          : public std::enable_shared_from_this<server> {
+
           public:
             typedef pump_function<service_ptr()> select_service_callback;
 

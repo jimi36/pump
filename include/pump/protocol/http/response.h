@@ -23,7 +23,9 @@ namespace pump {
 namespace protocol {
     namespace http {
 
-        class LIB_PUMP response : public pocket {
+        class LIB_PUMP response
+          : public pocket {
+
           public:
             /*********************************************************************************
              * Constructor

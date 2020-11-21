@@ -21,8 +21,8 @@ namespace transport {
     namespace flow {
 
         flow_tcp_acceptor::flow_tcp_acceptor() noexcept
-            : is_ipv6_(false), 
-              iob_(nullptr) {
+          : is_ipv6_(false), 
+            iob_(nullptr) {
 #if defined(PUMP_HAVE_IOCP)
             accept_task_ = nullptr;
 #endif

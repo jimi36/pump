@@ -21,7 +21,9 @@ namespace time {
 
     const static uint64 TIMER_DEFAULT_INTERVAL = 1000;
 
-    timer_queue::timer_queue() noexcept : started_(false), next_observe_time_(0) {
+    timer_queue::timer_queue() noexcept
+      : started_(false), 
+        next_observe_time_(0) {
     }
 
     bool timer_queue::start(const timer_pending_callback &cb) {

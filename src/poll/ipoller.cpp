@@ -19,7 +19,8 @@
 namespace pump {
 namespace poll {
 
-    iocp_poller::iocp_poller() noexcept : iocp_(nullptr) {
+    iocp_poller::iocp_poller() noexcept
+      : iocp_(nullptr) {
 #if defined(PUMP_HAVE_IOCP)
         iocp_ = net::get_iocp_handler();
 #endif

@@ -29,7 +29,9 @@ namespace transport {
 
         class ssl_net_layer;
 
-        class flow_tls : public flow_base {
+        class flow_tls 
+          : public flow_base {
+
           public:
             friend class ssl_net_layer;
 

@@ -85,7 +85,10 @@ namespace transport {
         ERROR_FAULT
     };
 
-    class LIB_PUMP base_channel : public service_getter, public poll::channel {
+    class LIB_PUMP base_channel
+      : public service_getter,
+        public poll::channel {
+
       public:
         /*********************************************************************************
          * Constructor

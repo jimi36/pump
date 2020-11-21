@@ -21,8 +21,8 @@ namespace transport {
     namespace flow {
 
         flow_tls::flow_tls() noexcept
-            : is_handshaked_(false),
-              session_(nullptr) {
+          : is_handshaked_(false),
+            session_(nullptr) {
 #if defined(PUMP_HAVE_IOCP)
             read_task_ = nullptr;
             send_task_ = nullptr;

@@ -21,7 +21,7 @@ namespace pump {
 namespace transport {
 
     tcp_acceptor::tcp_acceptor(const address &listen_address) noexcept
-        : base_acceptor(TCP_ACCEPTOR, listen_address) {
+      : base_acceptor(TCP_ACCEPTOR, listen_address) {
     }
 
     transport_error tcp_acceptor::start(service_ptr sv, const acceptor_callbacks &cbs) {

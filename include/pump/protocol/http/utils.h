@@ -20,15 +20,15 @@
 #include "pump/utils.h"
 #include "pump/transport/address.h"
 
-#define HTTP_CR "\r\n"
-
-#define HTTP_CR_LEN 2
-
-#define HTTP_LINE_MAX_LEN 2048
-
 namespace pump {
 namespace protocol {
     namespace http {
+
+        #define HTTP_CR "\r\n"
+
+        #define HTTP_CR_LEN 2
+
+        #define HTTP_LINE_MAX_LEN 2048
 
         /*********************************************************************************
          * Find http line end position

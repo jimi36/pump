@@ -36,13 +36,17 @@ namespace protocol {
             pump_function<void(const std::string &)> error_cb;
         };
 
-        class LIB_PUMP client : public std::enable_shared_from_this<client> {
+        class LIB_PUMP client 
+          : public std::enable_shared_from_this<client> {
+
           public:
             /*********************************************************************************
              * Create instance
              ********************************************************************************/
-            PUMP_INLINE static client_sptr create() {
-                INLINE_OBJECT_CREATE(obj, client, ());
+            PUMP_INLINE static client_sptr create(
+                const std::string &url,
+                const std::map<std::string, std::string> &headers) {
+                INLINE_OBJECT_CREATE(obj, client, (url, headers));
                 return client_sptr(obj, object_delete<client>);
             }
 
@@ -53,12 +57,8 @@ namespace protocol {
 
             /*********************************************************************************
              * Start
-             * This will try to create a websocket connection with the upgrade config.
              ********************************************************************************/
-            bool start(service_ptr sv,
-                       const client_callbacks &cbs,
-                       const std::string &url,
-                       const std::map<std::string, std::string> &headers);
+            bool start(service_ptr sv, const client_callbacks &cbs);
 
             /*********************************************************************************
              * Stop
@@ -108,13 +108,13 @@ namespace protocol {
             /*********************************************************************************
              * Constructor
              ********************************************************************************/
-            client() noexcept;
+            client(const std::string &url, 
+                   const std::map<std::string, std::string> &headers) noexcept;
 
             /*********************************************************************************
              * Start dial and upgrade
              ********************************************************************************/
-            bool __start(const std::string &url,
-                         const std::map<std::string, std::string> &headers);
+            bool __start();
 
             /*********************************************************************************
              * Check http upgrade response
@@ -135,8 +135,10 @@ namespace protocol {
             connection_sptr conn_;
 
             // Upgrade info
-            bool upgraded_;
+            bool is_upgraded_;
+            std::string upgrade_url_;
             http::request_sptr upgrade_req_;
+            std::map<std::string, std::string> upgrade_req_headers_;
 
             // Client callbacks
             client_callbacks cbs_;

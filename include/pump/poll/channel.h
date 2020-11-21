@@ -44,7 +44,9 @@ namespace poll {
         CH_OPT_DELETE = 0x03
     };
 
-    class LIB_PUMP channel : public toolkit::noncopyable {
+    class LIB_PUMP channel
+      : public toolkit::noncopyable {
+
       public:
         /*********************************************************************************
          * Constructor
@@ -156,7 +158,9 @@ namespace poll {
     const int32 TRACKER_EVENT_DEL = 0;
     const int32 TRACKER_EVENT_ADD = 1;
 
-    class channel_tracker : public toolkit::noncopyable {
+    class channel_tracker
+      : public toolkit::noncopyable {
+
       public:
         /*********************************************************************************
          * Constructor

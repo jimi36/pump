@@ -35,7 +35,9 @@ namespace protocol {
             pump_function<void(const std::string &)> error_cb;
         };
 
-        class LIB_PUMP connection : public std::enable_shared_from_this<connection> {
+        class LIB_PUMP connection 
+          : public std::enable_shared_from_this<connection> {
+
           public:
             /*********************************************************************************
              * Constructor

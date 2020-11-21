@@ -22,7 +22,9 @@
 namespace pump {
 namespace transport {
 
-    class LIB_PUMP base_acceptor : public base_channel {
+    class LIB_PUMP base_acceptor
+      : public base_channel {
+
       public:
         /*********************************************************************************
          * Constructor

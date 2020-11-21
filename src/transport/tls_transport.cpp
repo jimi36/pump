@@ -20,10 +20,10 @@ namespace pump {
 namespace transport {
 
     tls_transport::tls_transport() noexcept
-        : base_transport(TLS_TRANSPORT, nullptr, -1),
-          last_send_iob_size_(0),
-          last_send_iob_(nullptr),
-          sendlist_(1024) {
+      : base_transport(TLS_TRANSPORT, nullptr, -1),
+        last_send_iob_size_(0),
+        last_send_iob_(nullptr),
+        sendlist_(1024) {
     }
 
     tls_transport::~tls_transport() {

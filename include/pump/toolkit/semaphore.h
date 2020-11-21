@@ -51,7 +51,9 @@ __declspec(dllimport) int __stdcall ReleaseSemaphore(void *hSemaphore,
 namespace pump {
 namespace toolkit {
 
-    class LIB_PUMP semaphore : public noncopyable {
+    class LIB_PUMP semaphore
+      : public noncopyable {
+
       public:
         /*********************************************************************************
          * Constructor

@@ -39,7 +39,9 @@ namespace protocol {
         class request;
         DEFINE_ALL_POINTER_TYPE(request);
 
-        class LIB_PUMP request : public pocket {
+        class LIB_PUMP request 
+          : public pocket {
+
           public:
             /*********************************************************************************
              * Constructor

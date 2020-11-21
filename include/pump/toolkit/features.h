@@ -39,7 +39,9 @@ namespace toolkit {
     /*********************************************************************************
      * Defer class
      ********************************************************************************/
-    class LIB_PUMP defer : public noncopyable {
+    class LIB_PUMP defer
+      : public noncopyable {
+
       public:
         defer(const pump_function<void()> &&cb) {
             cb_ = cb;

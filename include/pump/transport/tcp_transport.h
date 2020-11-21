@@ -27,8 +27,10 @@ namespace transport {
     class tcp_transport;
     DEFINE_ALL_POINTER_TYPE(tcp_transport);
 
-    class LIB_PUMP tcp_transport : public base_transport,
-                                   public std::enable_shared_from_this<tcp_transport> {
+    class LIB_PUMP tcp_transport
+      : public base_transport,
+        public std::enable_shared_from_this<tcp_transport> {
+
       public:
         /*********************************************************************************
          * Create instance

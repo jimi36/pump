@@ -22,7 +22,8 @@ namespace transport {
 
         const static uint32 UDP_BUFFER_SIZE = 1024 * 64;
 
-        flow_udp::flow_udp() noexcept : read_iob_(nullptr) {
+        flow_udp::flow_udp() noexcept
+          : read_iob_(nullptr) {
 #if defined(PUMP_HAVE_IOCP)
             read_task_ = nullptr;
 #endif

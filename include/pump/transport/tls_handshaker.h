@@ -27,8 +27,10 @@ namespace transport {
     class tls_handshaker;
     DEFINE_ALL_POINTER_TYPE(tls_handshaker);
 
-    class tls_handshaker : public base_channel,
-                           public std::enable_shared_from_this<tls_handshaker> {
+    class tls_handshaker
+      : public base_channel,
+        public std::enable_shared_from_this<tls_handshaker> {
+
       public:
         struct tls_handshaker_callbacks {
             pump_function<void(tls_handshaker_ptr, bool)> handshaked_cb;

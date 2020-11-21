@@ -8,8 +8,8 @@ namespace pump {
 namespace toolkit {
 
     base_buffer::base_buffer() noexcept 
-        : raw_(nullptr), 
-          raw_size_(0) {
+      : raw_(nullptr), 
+        raw_size_(0) {
     }
 
     base_buffer::~base_buffer() {

@@ -4,7 +4,10 @@ namespace pump {
 namespace toolkit {
 
     bits_reader::bits_reader(c_uint8_ptr b, uint32 size) noexcept
-        : left_bc_(8), used_bc_(0), all_bc_(size * 8), byte_pos_(b) {
+      : left_bc_(8), 
+        used_bc_(0), 
+        all_bc_(size * 8), 
+        byte_pos_(b) {
         PUMP_ASSERT(b);
         PUMP_ASSERT(size > 0);
     }
@@ -135,7 +138,10 @@ namespace toolkit {
     }
 
     bits_writer::bits_writer(uint8_ptr b, uint32 size) noexcept
-        : left_bc_(8), used_bc_(0), all_bc_(size * 8), byte_pos_(b) {
+      : left_bc_(8), 
+        used_bc_(0), 
+        all_bc_(size * 8), 
+        byte_pos_(b) {
         PUMP_ASSERT(b);
         PUMP_ASSERT(size > 0);
     }

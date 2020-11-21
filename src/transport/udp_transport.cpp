@@ -20,7 +20,7 @@ namespace pump {
 namespace transport {
 
     udp_transport::udp_transport(const address &bind_address) noexcept
-        : base_transport(UDP_TRANSPORT, nullptr, -1) {
+      : base_transport(UDP_TRANSPORT, nullptr, -1) {
         local_address_ = bind_address;
     }
 

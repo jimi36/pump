@@ -26,9 +26,9 @@ namespace transport {
                                const std::string &key,
                                const address &listen_address,
                                int64 handshake_timeout)
-        : base_acceptor(TLS_ACCEPTOR, listen_address),
-          xcred_(nullptr),
-          handshake_timeout_(0) {
+      : base_acceptor(TLS_ACCEPTOR, listen_address),
+        xcred_(nullptr),
+        handshake_timeout_(0) {
         if (is_file) {
             xcred_ = ssl::create_tls_certificate_by_file(false, cert, key);
         } else {

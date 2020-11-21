@@ -25,9 +25,17 @@ namespace pump {
 namespace protocol {
     namespace http {
 
-        enum pocket_type { PK_UNKNOWN = 0, PK_REQUEST, PK_RESPONSE };
+        enum pocket_type { 
+            PK_UNKNOWN = 0, 
+            PK_REQUEST, PK_RESPONSE
+        };
 
-        enum protocol_version { VERSION_UNKNOWN = 0, VERSION_10, VERSION_11, VERSION_20 };
+        enum protocol_version { 
+            VERSION_UNKNOWN = 0, 
+            VERSION_10, 
+            VERSION_11, 
+            VERSION_20
+        };
 
         enum pocket_parse_status {
             PARSE_NONE = 0,

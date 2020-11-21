@@ -34,7 +34,9 @@ namespace poll {
 #define EPOLL_EVENT_SIZE 1024
 #endif
 
-    epoll_poller::epoll_poller() noexcept : fd_(-1), events_(nullptr) {
+    epoll_poller::epoll_poller() noexcept
+      : fd_(-1), 
+        events_(nullptr) {
 #if defined(PUMP_HAVE_EPOLL)
         fd_ = ::epoll_create1(0);
         if (fd_ <= 0) {

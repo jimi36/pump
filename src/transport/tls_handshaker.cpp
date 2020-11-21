@@ -24,7 +24,7 @@ namespace transport {
     const int32 TLS_HANDSHAKE_ERROR = 2;
 
     tls_handshaker::tls_handshaker() noexcept
-        : base_channel(TLS_HANDSHAKER, nullptr, -1) {
+      : base_channel(TLS_HANDSHAKER, nullptr, -1) {
     }
 
     void tls_handshaker::init(int32 fd,

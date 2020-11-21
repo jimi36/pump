@@ -20,10 +20,10 @@ namespace pump {
 namespace transport {
 
     tcp_transport::tcp_transport() noexcept
-        : base_transport(TCP_TRANSPORT, nullptr, -1),
-          last_send_iob_size_(0),
-          last_send_iob_(nullptr),
-          sendlist_(64) {
+      : base_transport(TCP_TRANSPORT, nullptr, -1),
+        last_send_iob_size_(0),
+        last_send_iob_(nullptr),
+        sendlist_(64) {
     }
 
     tcp_transport::~tcp_transport() {

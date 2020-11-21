@@ -20,7 +20,8 @@ namespace pump {
 namespace transport {
     namespace flow {
 
-        flow_tcp_dialer::flow_tcp_dialer() noexcept : is_ipv6_(false) {
+        flow_tcp_dialer::flow_tcp_dialer() noexcept
+          : is_ipv6_(false) {
 #if defined(PUMP_HAVE_IOCP)
             dial_task_ = nullptr;
 #endif

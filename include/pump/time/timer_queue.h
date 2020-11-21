@@ -28,7 +28,9 @@
 namespace pump {
 namespace time {
 
-    class timer_queue : public toolkit::noncopyable {
+    class timer_queue
+      : public toolkit::noncopyable {
+
       protected:
         typedef pump_function<void(timer_wptr &)> timer_pending_callback;
 

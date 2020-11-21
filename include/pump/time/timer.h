@@ -34,7 +34,9 @@ namespace time {
 
     typedef pump_function<void()> timer_callback;
 
-    class LIB_PUMP timer : public std::enable_shared_from_this<timer> {
+    class LIB_PUMP timer
+      : public std::enable_shared_from_this<timer> {
+
       protected:
         friend class timer_queue;
 

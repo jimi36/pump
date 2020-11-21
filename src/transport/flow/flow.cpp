@@ -20,7 +20,8 @@ namespace pump {
 namespace transport {
     namespace flow {
 
-        flow_base::flow_base() noexcept : fd_(-1){
+        flow_base::flow_base() noexcept 
+          : fd_(-1){
 #if defined(PUMP_HAVE_IOCP)
             extra_fns_ = nullptr;
 #endif

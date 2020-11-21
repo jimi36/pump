@@ -42,9 +42,15 @@ namespace protocol {
             pump_function<void(const std::string &)> error_cb;
         };
 
-        enum read_type { READ_NONE = 0, READ_FRAME, READ_POCKET };
+        enum read_type { 
+            READ_NONE = 0, 
+            READ_FRAME, 
+            READ_POCKET 
+        };
 
-        class LIB_PUMP connection : public std::enable_shared_from_this<connection> {
+        class LIB_PUMP connection 
+          : public std::enable_shared_from_this<connection> {
+
           protected:
             friend class client;
             friend class server;
@@ -99,7 +105,10 @@ namespace protocol {
              * Check connection is valid or not
              ********************************************************************************/
             PUMP_INLINE bool is_valid() const {
-                return transp_ && transp_->is_started();
+                if (transp_ && transp_->is_started()) {
+                    return true;
+                }
+                return false;
             }
 
           protected:

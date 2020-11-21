@@ -25,9 +25,9 @@ namespace transport {
                            const address &remote_address,
                            int64 dial_timeout,
                            int64 handshake_timeout) noexcept
-        : base_dialer(TLS_DIALER, local_address, remote_address, dial_timeout),
-          xcred_(nullptr),
-          handshake_timeout_(handshake_timeout) {
+      : base_dialer(TLS_DIALER, local_address, remote_address, dial_timeout),
+        xcred_(nullptr),
+        handshake_timeout_(handshake_timeout) {
         xcred_ = ssl::create_tls_client_certificate();
     }
 

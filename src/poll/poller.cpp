@@ -20,7 +20,11 @@ namespace pump {
 namespace poll {
 
     poller::poller() noexcept
-        : started_(false), cev_cnt_(0), cevents_(1024), tev_cnt_(0), tevents_(1024) {
+      : started_(false), 
+        cev_cnt_(0), 
+        cevents_(1024), 
+        tev_cnt_(0), 
+        tevents_(1024) {
     }
 
     bool poller::start() {

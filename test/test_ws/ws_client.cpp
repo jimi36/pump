@@ -19,16 +19,14 @@ void on_data(websocket::client_ptr cli,
 }
 
 void start_ws_client(pump::service_ptr sv, const std::string &url) {
-    websocket::client_sptr cli = websocket::client::create();
+    std::map<std::string, std::string> headers;
+    websocket::client_sptr cli = websocket::client::create(url, headers);
 
     websocket::client_callbacks cbs;
     cbs.started_cb = pump_bind(&on_started, cli.get());
     cbs.error_cb = pump_bind(&on_error, cli.get(), _1);
     cbs.data_cb = pump_bind(&on_data, cli.get(), _1, _2, _3);
-
-    std::map<std::string, std::string> headers;
-
-    if (!cli->start(sv, cbs, url, headers))
+    if (!cli->start(sv, cbs))
         printf("websocket client start error\n");
     else
         printf("websocket client startd\n");

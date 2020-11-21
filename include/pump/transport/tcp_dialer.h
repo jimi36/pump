@@ -106,6 +106,7 @@ namespace transport {
 
     class LIB_PUMP tcp_sync_dialer
         : public std::enable_shared_from_this<tcp_sync_dialer> {
+
       public:
         /*********************************************************************************
          * Create instance

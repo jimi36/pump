@@ -20,9 +20,8 @@ namespace pump {
 namespace transport {
 
     address::address() noexcept 
-        : is_v6_(false), 
-          addrlen_(0), 
-          port_(0) {
+      : is_v6_(false), 
+        addrlen_(0) {
         memset(&addr_, 0, sizeof(addr_));
     }
 
@@ -33,8 +32,6 @@ namespace transport {
             } else {
                 is_v6_ = false;
             }
-
-            __update();
         }
     }
 
@@ -46,8 +43,6 @@ namespace transport {
         } else {
             is_v6_ = false;
         }
-
-        __update();
     }
 
     bool address::set(const std::string &ip, uint16 port) {
@@ -57,8 +52,6 @@ namespace transport {
             } else {
                 is_v6_ = false;
             }
-
-            __update();
         } else {
             return false;
         }
@@ -78,14 +71,59 @@ namespace transport {
         addrlen_ = addrlen;
         memcpy(addr_, addr, addrlen);
 
-        __update();
-
         return true;
     }
 
+    std::string address::ip() const {
+        block host[128] = { 0 };
+        if (is_v6_) {
+            auto v6 = (struct sockaddr_in6*)addr_;
+            if (!::inet_ntop(AF_INET6, &(v6->sin6_addr), host, sizeof(host) - 1)) {
+                return std::string();
+            }
+        } else {
+            auto v4 = (struct sockaddr_in*)addr_;
+            if (!::inet_ntop(AF_INET, &(v4->sin_addr), host, sizeof(host) - 1)) {
+                return std::string();
+            }
+        }
+
+        return std::move(std::string(host));
+    }
+
+    uint16 address::port() const {
+        uint16 port = 0;
+        if (is_v6_) {
+            auto v6 = (struct sockaddr_in6*)addr_;
+            port = ntohs(v6->sin6_port);
+        } else {
+            auto v4 = (struct sockaddr_in*)addr_;
+            port = ntohs(v4->sin_port);
+        }
+
+        return port;
+    }
+
     std::string address::to_string() const {
-        block tmp[126] = {0};
-        pump_snprintf(tmp, sizeof(tmp) - 1, "%s:%d", ip_.c_str(), port_);
+        uint16 port = 0;
+        block host[128] = { 0 };
+        if (is_v6_) {
+            auto v6 = (struct sockaddr_in6*)addr_;
+            if (!::inet_ntop(AF_INET6, &(v6->sin6_addr), host, sizeof(host) - 1)) {
+                return std::string();
+            }
+            port = ntohs(v6->sin6_port);
+        }
+        else {
+            auto v4 = (struct sockaddr_in*)addr_;
+            if (!::inet_ntop(AF_INET, &(v4->sin_addr), host, sizeof(host) - 1)) {
+                return std::string();
+            }
+            port = ntohs(v4->sin_port);
+        }
+
+        block tmp[128] = { 0 };
+        pump_snprintf(tmp, sizeof(tmp) - 1, "%s:%d", host, port);
         return std::move(std::string(tmp));
     }
 
@@ -105,23 +143,6 @@ namespace transport {
             return false;
         }
         return memcmp(addr_, other.addr_, addrlen_) < 0;
-    }
-
-    void address::__update() {
-        block host[128] = {0};
-        if (is_v6_) {
-            auto v6 = (struct sockaddr_in6 *)addr_;
-            if (::inet_ntop(AF_INET6, &(v6->sin6_addr), host, sizeof(host))) {
-                ip_ = host;
-            }
-            port_ = ntohs(v6->sin6_port);
-        } else {
-            auto v4 = (struct sockaddr_in *)addr_;
-            if (::inet_ntop(AF_INET, &(v4->sin_addr), host, sizeof(host))) {
-                ip_ = host;
-            }
-            port_ = ntohs(v4->sin_port);
-        }
     }
 
 }  // namespace transport

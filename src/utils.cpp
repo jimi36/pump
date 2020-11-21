@@ -147,14 +147,13 @@ std::string join_strings(const std::vector<std::string> &src, const std::string 
 }
 
 std::vector<std::string> split_string(const std::string &src, const std::string &sep) {
-    std::vector<std::string> out;
-
     std::regex regx(sep);
-    out.insert(out.end(),
-               std::sregex_token_iterator(src.begin(), src.end(), regx, -1),
-               std::sregex_token_iterator());
-
-    return out;
+    std::vector<std::string> result;
+    std::sregex_token_iterator iter(src.begin(), src.end(), regx, -1);
+    while (iter != std::sregex_token_iterator()) {
+        result.push_back((iter++)->str());
+    }
+    return result;
 }
 
 }  // namespace pump

@@ -39,7 +39,9 @@ namespace transport {
             FLOW_ERR_COUNT
         };
 
-        class flow_base : public toolkit::noncopyable {
+        class flow_base 
+          : public toolkit::noncopyable {
+
           public:
             /*********************************************************************************
              * Constructor

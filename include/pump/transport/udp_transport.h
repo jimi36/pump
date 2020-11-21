@@ -26,8 +26,10 @@ namespace transport {
     class udp_transport;
     DEFINE_ALL_POINTER_TYPE(udp_transport);
 
-    class LIB_PUMP udp_transport : public base_transport,
-                                   public std::enable_shared_from_this<udp_transport> {
+    class LIB_PUMP udp_transport
+      : public base_transport,
+        public std::enable_shared_from_this<udp_transport> {
+
       public:
         /*********************************************************************************
          * Create instance

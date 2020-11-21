@@ -29,8 +29,10 @@ namespace transport {
     class tls_dialer;
     DEFINE_ALL_POINTER_TYPE(tls_dialer);
 
-    class LIB_PUMP tls_dialer : public base_dialer,
-                                public std::enable_shared_from_this<tls_dialer> {
+    class LIB_PUMP tls_dialer
+      : public base_dialer,
+        public std::enable_shared_from_this<tls_dialer> {
+
       public:
         /*********************************************************************************
          * Create instance
@@ -131,6 +133,7 @@ namespace transport {
 
     class LIB_PUMP tls_sync_dialer
         : public std::enable_shared_from_this<tls_sync_dialer> {
+
       public:
         /*********************************************************************************
          * Create instance

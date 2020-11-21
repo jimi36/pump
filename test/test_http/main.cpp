@@ -21,8 +21,11 @@ int main(int argc, const char **argv) {
     } else if (type == "c") {
         if (argc < 3) return -1;
 
-        std::string url = argv[2];
-        start_http_client(sv, url);
+        std::vector<std::string> urls;
+        for (int i = 2; i < argc; i++) {
+            urls.push_back(argv[i]);
+        }
+        start_http_client(sv, urls);
     }
 
     return 0;

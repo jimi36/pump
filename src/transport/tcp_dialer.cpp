@@ -23,7 +23,7 @@ namespace transport {
     tcp_dialer::tcp_dialer(const address &local_address,
                            const address &remote_address,
                            int64 timeout) noexcept
-        : base_dialer(TCP_DIALER, local_address, remote_address, timeout) {
+      : base_dialer(TCP_DIALER, local_address, remote_address, timeout) {
     }
 
     transport_error tcp_dialer::start(service_ptr sv, const dialer_callbacks &cbs) {

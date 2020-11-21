@@ -36,7 +36,9 @@ namespace protocol {
             pump_function<void()> stopped_cb;
         };
 
-        class LIB_PUMP server : public std::enable_shared_from_this<server> {
+        class LIB_PUMP server 
+          : public std::enable_shared_from_this<server> {
+
           public:
             /*********************************************************************************
              * Create instance

@@ -20,7 +20,9 @@ namespace pump {
 namespace transport {
     namespace flow {
 
-        flow_tcp::flow_tcp() noexcept : read_iob_(nullptr), send_iob_(nullptr) {
+        flow_tcp::flow_tcp() noexcept 
+          : read_iob_(nullptr), 
+            send_iob_(nullptr) {
 #if defined(PUMP_HAVE_IOCP)
             read_task_ = nullptr;
             send_task_ = nullptr;

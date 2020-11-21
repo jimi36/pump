@@ -25,7 +25,14 @@ namespace pump {
 namespace protocol {
     namespace http {
 
-        enum uri_type { UIR_NONE = 0, URI_HTTP, URI_HTTPS, URI_WS, URI_WSS, URI_END };
+        enum uri_type { 
+            UIR_NONE = 0, 
+            URI_HTTP, 
+            URI_HTTPS, 
+            URI_WS, 
+            URI_WSS, 
+            URI_END 
+        };
 
         class LIB_PUMP uri {
           public:
@@ -33,7 +40,7 @@ namespace protocol {
              * Constructor
              ********************************************************************************/
             uri() noexcept;
-            uri(const std::string& url) noexcept;
+            uri(const std::string &url) noexcept;
 
             /*********************************************************************************
              * Deconstructor
@@ -88,7 +95,7 @@ namespace protocol {
             /*********************************************************************************
              * Get path
              ********************************************************************************/
-            PUMP_INLINE const std::string &get_path() const {
+            PUMP_INLINE const std::string& get_path() const {
                 return path_;
             }
 
@@ -133,7 +140,7 @@ namespace protocol {
                                 uri_type &ut,
                                 std::string &host,
                                 std::string &path,
-                                std::map<std::string, std::string> params);
+                                std::map<std::string, std::string> &params);
 
     }  // namespace http
 }  // namespace protocol

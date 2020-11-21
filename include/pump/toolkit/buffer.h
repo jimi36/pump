@@ -89,7 +89,9 @@ namespace toolkit {
     class io_buffer;
     DEFINE_RAW_POINTER_TYPE(io_buffer);
 
-    class io_buffer : public base_buffer {
+    class io_buffer
+      : public base_buffer {
+
       public:
         /*********************************************************************************
          * Create
@@ -214,7 +216,10 @@ namespace toolkit {
         /*********************************************************************************
          * Constructor
          ********************************************************************************/
-        io_buffer() noexcept : data_size_(0), read_pos_(0), ref_cnt_(1) {
+        io_buffer() noexcept
+          : data_size_(0), 
+            read_pos_(0), 
+            ref_cnt_(1) {
         }
 
         /*********************************************************************************

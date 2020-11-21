@@ -20,7 +20,8 @@ namespace pump {
 namespace toolkit {
 
     spin_mutex::spin_mutex(int32 per_loop) noexcept
-        : per_loop_(per_loop), locked_(false) {
+      : per_loop_(per_loop), 
+        locked_(false) {
     }
 
     void spin_mutex::lock() {

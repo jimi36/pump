@@ -72,7 +72,6 @@ namespace time {
                       tm_time.tm_sec,
                       milliseconds);
 #endif
-
         return date;
     }
 

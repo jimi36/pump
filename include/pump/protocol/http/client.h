@@ -28,8 +28,10 @@ namespace protocol {
         class client;
         DEFINE_ALL_POINTER_TYPE(client);
 
-        class LIB_PUMP client : public toolkit::noncopyable,
-                                public std::enable_shared_from_this<client> {
+        class LIB_PUMP client 
+          : public toolkit::noncopyable,
+            public std::enable_shared_from_this<client> {
+
           public:
             /*********************************************************************************
              * Create instance
@@ -72,18 +74,11 @@ namespace protocol {
                 __destroy_connection();
             }
 
-            /*********************************************************************************
-             * Get http connection
-             ********************************************************************************/
-            PUMP_INLINE connection_sptr get_connection() {
-                return conn_;
-            }
-
           private:
             /*********************************************************************************
              * Constructor
              ********************************************************************************/
-            client(service_ptr sv);
+             client(service_ptr sv);
 
             /*********************************************************************************
              * Create http connection
@@ -98,38 +93,40 @@ namespace protocol {
             /*********************************************************************************
              * Destroy http connection
              ********************************************************************************/
-            void __notify_response(response_sptr &resp);
+            void __notify_response(connection_ptr conn, response_sptr &&resp);
 
           private:
             /*********************************************************************************
              * Handel connection response
              ********************************************************************************/
-            static void on_response(client_wptr wptr, pocket_sptr &&pk);
+            static void on_response(client_wptr wptr, connection_ptr conn, pocket_sptr &&pk);
 
             /*********************************************************************************
              * Handel connection disconnected
              ********************************************************************************/
-            static void on_error(client_wptr wptr, const std::string &msg);
+            static void on_error(client_wptr wptr, connection_ptr conn, const std::string &msg);
 
           private:
             // Service
             service_ptr sv_;
-            
-            // TLS credentials
-            void_ptr cert_;
 
             // Dial timeout ms tims
             int64 dial_timeout_;
-
             // TLS handshake timeout ms time
             int64 tls_handshake_timeout_;
 
             // Http connection
             connection_sptr conn_;
 
+            // Last request host
+            std::string last_req_host_;
+
             // Response condition
             std::mutex resp_mx_;
             std::condition_variable resp_cond_;
+            bool wait_for_response_;
+
+            // Response
             response_sptr resp_;
         };
 
