@@ -27,18 +27,18 @@ namespace protocol {
         connection::connection(service_ptr sv,
                                transport::base_transport_sptr &transp,
                                bool has_mask) noexcept
-            : sv_(sv),
-              transp_(transp),
-              rt_(READ_NONE),
-              has_mask_(has_mask),
-              decode_phase_(DECODE_FRAME_HEADER) {
-            closed_.clear();
-
+          : sv_(sv),
+            transp_(transp),
+            rt_(READ_NONE),
+            has_mask_(has_mask),
+            decode_phase_(DECODE_FRAME_HEADER) {
             if (has_mask_) {
                 *(uint32_ptr)(mask_key_) = (uint32)::time(0);
             } else {
                 memset(mask_key_, 0, sizeof(mask_key_));
             }
+
+            closed_.clear();
         }
 
         bool connection::start_upgrade(bool client, const upgrade_callbacks &ucbs) {
@@ -50,6 +50,7 @@ namespace protocol {
             if (!ucbs.pocket_cb || !ucbs.error_cb) {
                 return false;
             }
+
             ucbs_ = ucbs;
 
             transport::transport_callbacks tcbs;
@@ -80,6 +81,9 @@ namespace protocol {
         }
 
         bool connection::start(const connection_callbacks &cbs) {
+            PUMP_ASSERT(!pocket_);
+            PUMP_ASSERT(decode_phase_ == DECODE_FRAME_HEADER);
+
             PUMP_LOCK_SPOINTER(transp, transp_);
             if (!transp || !transp->is_started()) {
                 return false;
@@ -88,12 +92,10 @@ namespace protocol {
             if (!cbs.frame_cb || !cbs.error_cb) {
                 return false;
             }
+
             cbs_ = cbs;
 
             rt_ = READ_FRAME;
-
-            PUMP_ASSERT(!pocket_);
-            PUMP_ASSERT(decode_phase_ == DECODE_FRAME_HEADER);
 
             if (transp->read_for_loop() != transport::ERROR_OK) {
                 return false;
@@ -117,15 +119,15 @@ namespace protocol {
         }
 
         bool connection::async_read_next_frame() {
+            PUMP_ASSERT(!pocket_);
+            PUMP_ASSERT(decode_phase_ == DECODE_FRAME_HEADER);
+
             PUMP_LOCK_SPOINTER(transp, transp_);
             if (!transp || !transp->is_started()) {
                 return false;
             }
 
             rt_ = READ_FRAME;
-
-            PUMP_ASSERT(!pocket_);
-            PUMP_ASSERT(decode_phase_ == DECODE_FRAME_HEADER);
 
             if (transp->read_for_once() != transport::ERROR_OK) {
                 return false;
@@ -212,23 +214,19 @@ namespace protocol {
 
         void connection::on_disconnected(connection_wptr wptr) {
             PUMP_LOCK_WPOINTER(conn, wptr);
-            if (!conn) {
-                return;
-            }
-
-            if (!conn->closed_.test_and_set()) {
-                conn->cbs_.error_cb("websocket connection disconnected");
+            if (conn) {
+                if (!conn->closed_.test_and_set()) {
+                    conn->cbs_.error_cb("websocket connection disconnected");
+                }
             }
         }
 
         void connection::on_stopped(connection_wptr wptr) {
             PUMP_LOCK_WPOINTER(conn, wptr);
-            if (!conn) {
-                return;
-            }
-
-            if (!conn->closed_.test_and_set()) {
-                conn->cbs_.error_cb("websocket connection stopped");
+            if (conn) {
+                if (!conn->closed_.test_and_set()) {
+                    conn->cbs_.error_cb("websocket connection stopped");
+                }
             }
         }
 
@@ -245,8 +243,9 @@ namespace protocol {
             } else {
                 read_cache_.append(b, size);
                 parse_size = pk->parse(read_cache_.data(), (int32)read_cache_.size());
-                if (parse_size > 0)
+                if (parse_size > 0) {
                     read_cache_ = read_cache_.substr(parse_size);
+                }
             }
 
             if (parse_size == -1) {
@@ -288,8 +287,7 @@ namespace protocol {
                 decode_phase_ = DECODE_FRAME_HEADER;
 
                 if (payload_size > 0 && decode_hdr_.mask == 1) {
-                    mask_transform(
-                        (uint8_ptr)(b + hdr_size), payload_size, decode_hdr_.mask_key);
+                    mask_transform((uint8_ptr)(b + hdr_size), payload_size, decode_hdr_.mask_key);
                 }
 
                 uint32 optcode = decode_hdr_.optcode;

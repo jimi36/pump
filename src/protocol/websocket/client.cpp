@@ -26,16 +26,16 @@ namespace pump {
 namespace protocol {
     namespace websocket {
 
-        client::client() noexcept 
+        client::client(const std::string& url,
+                       const std::map<std::string, std::string>& headers) noexcept
           : started_(false), 
             sv_(nullptr), 
-            upgraded_(false) {
+            is_upgraded_(false),
+            upgrade_url_(url), 
+            upgrade_req_headers_(headers) {
         }
 
-        bool client::start(service_ptr sv,
-                           const client_callbacks &cbs,
-                           const std::string &url,
-                           const std::map<std::string, std::string> &headers) {
+        bool client::start(service_ptr sv,const client_callbacks &cbs) {
             // Check service.
             if (!sv) {
                 return false;
@@ -55,7 +55,7 @@ namespace protocol {
 
             cbs_ = cbs;
 
-            if (!__start(url, headers)) {
+            if (!__start()) {
                 return false;
             }
 
@@ -172,15 +172,14 @@ namespace protocol {
             }
         }
 
-        bool client::__start(const std::string &url,
-                             const std::map<std::string, std::string> &headers) {
+        bool client::__start() {
             // Create upgrade request
-            upgrade_req_.reset(new http::request(url));
+            upgrade_req_.reset(new http::request(upgrade_url_));
             upgrade_req_->set_http_version(http::VERSION_11);
             upgrade_req_->set_method(http::METHOD_GET);
             auto u = upgrade_req_->get_uri();
             auto header = upgrade_req_->get_header();
-            for (auto &h : headers) {
+            for (auto &h : upgrade_req_headers_) {
                 header->set(h.first, h.second);
             }
             if (!header->has("Host")) {
@@ -196,12 +195,10 @@ namespace protocol {
             // Create transport dialer
             if (u->get_type() == http::URI_WSS) {
                 auto peer_address = http::host_to_address(true, u->get_host());
-                dialer_ = transport::tcp_dialer::create(
-                    bind_address, peer_address, 3000);
+                dialer_ = transport::tcp_dialer::create(bind_address, peer_address, 3000);
             } else if (u->get_type() == http::URI_WS) {
                 auto peer_address = http::host_to_address(false, u->get_host());
-                dialer_ = transport::tls_dialer::create(
-                    bind_address, peer_address, 3000, 3000);
+                dialer_ = transport::tls_dialer::create(bind_address, peer_address, 3000, 3000);
             } else {
                 return false;
             }

@@ -21,10 +21,10 @@ namespace protocol {
     namespace http {
 
         content::content() noexcept
-            : parse_finished_(false),
-              is_chunked_(false),
-              next_chunk_size_(0),
-              length_(0) {
+          : parse_finished_(false),
+            is_chunked_(false),
+            next_chunk_size_(0),
+            length_(0) {
         }
 
         void content::append(c_block_ptr b, int32 size) {

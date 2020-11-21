@@ -27,9 +27,12 @@ namespace protocol {
             }
 
             while (len >= HTTP_CR_LEN) {
-                if (memcmp(src, HTTP_CR, HTTP_CR_LEN) == 0) {
-                    src += HTTP_CR_LEN;
-                    return src;
+                if (*src == '\r') {
+                    if (*(src + 1) == '\n') {
+                        src += HTTP_CR_LEN;
+                        return src;
+                    }
+                    return nullptr;
                 }
                 len--;
                 src++;
@@ -57,18 +60,21 @@ namespace protocol {
         }
 
         bool url_encode(const std::string &src, std::string &des) {
-            uint32 len = (uint32)src.length();
-            for (uint32 i = 0; i < len; i++) {
-                if (isalnum((uint8)src[i]) || (src[i] == '-') || (src[i] == '_') ||
-                    (src[i] == '.') || (src[i] == '~')) {
-                    des.append(1, src[i]);
-                } else if (src[i] == ' ') {
+            uint8 val = 0;
+            c_block_ptr beg = src.c_str();
+            c_block_ptr end = beg + src.size();
+            while (beg != end) {
+                val = uint8(*beg);
+                if (isalnum(val) || (val == '-') || (val == '_') || (val == '.') || (val == '~')) {
+                    des.append(1, val);
+                } else if (*beg == ' ') {
                     des.append(1, '+');
                 } else {
                     des.append(1, '%');
-                    des.append(1, decnum_to_hexchar((uint8)src[i] >> 4));
-                    des.append(1, decnum_to_hexchar((uint8)src[i] % 16));
+                    des.append(1, decnum_to_hexchar(val >> 4));
+                    des.append(1, decnum_to_hexchar(val % 16));
                 }
+                ++beg;
             }
             return true;
         }

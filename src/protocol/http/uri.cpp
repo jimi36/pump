@@ -21,7 +21,13 @@ namespace pump {
 namespace protocol {
     namespace http {
 
-        const std::string ut_strings[] = {"", "http", "https", "ws", "wss"};
+        const std::string ut_strings[] = {
+            "", 
+            "http", 
+            "https", 
+            "ws", 
+            "wss"
+        };
 
         std::string get_ut_string(uri_type ut) {
             return ut_strings[int32(ut)];
@@ -31,7 +37,7 @@ namespace protocol {
                        uri_type &ut,
                        std::string &host,
                        std::string &path,
-                       std::map<std::string, std::string> params) {
+                       std::map<std::string, std::string> &params) {
             std::string sut;
             {
                 auto result = split_string(url, "[:]");
@@ -45,8 +51,7 @@ namespace protocol {
             ut = UIR_NONE;
             c_block_ptr p = url.c_str();
             for (int32 i = (int32)URI_HTTP; i < (int32)URI_END; i++) {
-                if (pump_strncasecmp(ut_strings[i].c_str(), sut.c_str(), sut.size()) ==
-                    0) {
+                if (pump_strncasecmp(ut_strings[i].c_str(), sut.c_str(), sut.size()) == 0) {
                     p += ut_strings[i].size();
                     ut = (uri_type)i;
                     break;
@@ -96,7 +101,8 @@ namespace protocol {
             return true;
         }
 
-        uri::uri() noexcept : ut_(UIR_NONE) {
+        uri::uri() noexcept
+          : ut_(UIR_NONE) {
         }
 
         uri::uri(const std::string& url) noexcept {

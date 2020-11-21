@@ -26,8 +26,9 @@ namespace protocol {
 
         static void init_http_code_desc_map() {
             static bool inited = false;
-            if (inited)
+            if (inited) {
                 return;
+            }
             inited = true;
 
             http_code_desc_map[0] = "";
@@ -224,8 +225,7 @@ namespace protocol {
 
         int32 response::__serialize_response_line(std::string &buffer) const {
             block tmp[128] = {0};
-            int32 size = pump_snprintf(tmp,
-                                       sizeof(tmp) - 1,
+            int32 size = pump_snprintf(tmp, sizeof(tmp) - 1,
                                        "%s %d %s\r\n",
                                        get_http_version_string().c_str(),
                                        status_code_,

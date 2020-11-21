@@ -20,7 +20,8 @@ namespace pump {
 namespace protocol {
     namespace http {
 
-        server::server() noexcept : sv_(nullptr) {
+        server::server() noexcept
+          : sv_(nullptr) {
         }
 
         server::~server() {

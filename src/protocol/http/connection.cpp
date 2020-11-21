@@ -22,10 +22,9 @@ namespace pump {
 namespace protocol {
     namespace http {
 
-        connection::connection(bool server,
-                               transport::base_transport_sptr &transp) noexcept
-            : coming_pocket_(nullptr), 
-              transp_(transp) {
+        connection::connection(bool server, transport::base_transport_sptr &transp) noexcept
+          : coming_pocket_(nullptr), 
+            transp_(transp) {
             if (server) {
                 create_coming_pocket_ = []() {
                     return object_create<request>();
@@ -85,42 +84,34 @@ namespace protocol {
         bool connection::send(c_pocket_ptr pk) {
             std::string data;
             pk->serialize(data);
-            return transp_->send(data.c_str(), (uint32)data.size()) ==
-                   transport::ERROR_OK;
+            return transp_->send(data.c_str(), (uint32)data.size()) == transport::ERROR_OK;
         }
 
         bool connection::send(c_content_ptr ct) {
             std::string data;
             ct->serialize(data);
-            return transp_->send(data.c_str(), (uint32)data.size()) ==
-                   transport::ERROR_OK;
+            return transp_->send(data.c_str(), (uint32)data.size()) == transport::ERROR_OK;
         }
 
         void connection::on_read(connection_wptr wptr, c_block_ptr b, int32 size) {
             PUMP_LOCK_WPOINTER(conn, wptr);
-            if (!conn) {
-                return;
+            if (conn) {
+                conn->__handle_http_data(b, size);
             }
-
-            conn->__handle_http_data(b, size);
         }
 
         void connection::on_disconnected(connection_wptr wptr) {
             PUMP_LOCK_WPOINTER(conn, wptr);
-            if (!conn) {
-                return;
+            if (conn) {
+                conn->http_cbs_.error_cb("http connection disconnected");
             }
-
-            conn->http_cbs_.error_cb("http connection disconnected");
         }
 
         void connection::on_stopped(connection_wptr wptr) {
             PUMP_LOCK_WPOINTER(conn, wptr);
-            if (!conn) {
-                return;
+            if (conn) {
+                conn->http_cbs_.error_cb("http connection stopped");
             }
-
-            conn->http_cbs_.error_cb("http connection stopped");
         }
 
         void connection::__handle_http_data(c_block_ptr b, int32 size) {

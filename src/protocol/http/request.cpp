@@ -23,18 +23,24 @@ namespace protocol {
     namespace http {
 
         static c_block_ptr request_method_strings[] = {
-            "UNKNOWN", "GET", "POST", "HEAD", "PUT", "DELETE"};
+            "UNKNOWN", 
+            "GET", 
+            "POST", 
+            "HEAD", 
+            "PUT", 
+            "DELETE"
+        };
 
         request::request(void_ptr ctx) noexcept
-            : pocket(PK_REQUEST), 
-              ctx_(ctx), 
-              method_(METHOD_UNKNOWN) {
+          : pocket(PK_REQUEST), 
+            ctx_(ctx), 
+            method_(METHOD_UNKNOWN) {
         }
 
         request::request(const std::string &url, void_ptr ctx) noexcept
-            : pocket(PK_REQUEST), 
-              ctx_(ctx), 
-              method_(METHOD_UNKNOWN) {
+          : pocket(PK_REQUEST), 
+            ctx_(ctx), 
+            method_(METHOD_UNKNOWN) {
             uri_.parse(url);
         }
 
@@ -226,8 +232,7 @@ namespace protocol {
 
         int32 request::__serialize_request_line(std::string &buf) const {
             block tmp[256] = {0};
-            int32 size = snprintf(tmp,
-                                  sizeof(tmp) - 1,
+            int32 size = snprintf(tmp, sizeof(tmp) - 1,
                                   "%s %s %s\r\n",
                                   request_method_strings[method_],
                                   uri_.get_path().c_str(),

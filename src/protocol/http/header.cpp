@@ -20,9 +20,10 @@ namespace pump {
 namespace protocol {
     namespace http {
 
-#define HEAD_VALUE_SEP "; "
+        #define HEAD_VALUE_SEP "; "
 
-        header::header() noexcept : parse_finished_(false) {
+        header::header() noexcept
+          : parse_finished_(false) {
         }
 
         int32 header::parse(c_block_ptr b, int32 size) {
@@ -30,12 +31,11 @@ namespace protocol {
                 return 0;
             }
 
-            c_block_ptr beg = b;
-            c_block_ptr end = b;
-
             uint32 len = 0;
             std::string name;
             std::string value;
+            c_block_ptr beg = b;
+            c_block_ptr end = b;
             c_block_ptr line_end = nullptr;
             while ((line_end = find_http_line_end(beg, uint32(size - (end - b))))) {
                 // Check header parsed complete
@@ -59,7 +59,7 @@ namespace protocol {
                 while (end < line_end && (*end == ' ' || *end == ':')) {
                     ++end;
                 }
-                if (end >= line_end - HTTP_CR_LEN) {
+                if (end > line_end - HTTP_CR_LEN) {
                     return -1;
                 }
 
@@ -67,10 +67,9 @@ namespace protocol {
                 beg = end;
                 end = line_end - HTTP_CR_LEN;
                 len = (uint32)(end - beg);
-                if (len == 0) {
-                    return -1;
+                if (len > 0) {
+                    value.assign(beg, len);
                 }
-                value.assign(beg, len);
 
                 // Save header
                 set(name, value);
