@@ -26,6 +26,7 @@ namespace protocol {
     namespace http {
 
         class LIB_PUMP header {
+
           public:
             /*********************************************************************************
              * Constructor

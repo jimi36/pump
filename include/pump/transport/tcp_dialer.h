@@ -29,8 +29,10 @@ namespace transport {
     class tcp_dialer;
     DEFINE_ALL_POINTER_TYPE(tcp_dialer);
 
-    class LIB_PUMP tcp_dialer : public base_dialer,
-                                public std::enable_shared_from_this<tcp_dialer> {
+    class LIB_PUMP tcp_dialer
+      : public base_dialer,
+        public std::enable_shared_from_this<tcp_dialer> {
+
       public:
         /*********************************************************************************
          * Create instance
@@ -105,7 +107,7 @@ namespace transport {
     DEFINE_ALL_POINTER_TYPE(tcp_sync_dialer);
 
     class LIB_PUMP tcp_sync_dialer
-        : public std::enable_shared_from_this<tcp_sync_dialer> {
+      : public std::enable_shared_from_this<tcp_sync_dialer> {
 
       public:
         /*********************************************************************************

@@ -47,6 +47,7 @@ namespace protocol {
         };
 
         class LIB_PUMP pocket {
+
           public:
             /*********************************************************************************
              * Constructor

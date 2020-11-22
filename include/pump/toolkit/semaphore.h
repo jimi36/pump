@@ -175,7 +175,9 @@ namespace toolkit {
 #endif
     };
 
-    class LIB_PUMP light_semaphore : public noncopyable {
+    class LIB_PUMP light_semaphore
+      : public noncopyable {
+
       public:
         /*********************************************************************************
          * Constructor

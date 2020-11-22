@@ -26,6 +26,7 @@ namespace pump {
 namespace toolkit {
 
     class LIB_PUMP spin_mutex {
+
       public:
         /*********************************************************************************
          * Constructor

@@ -132,7 +132,7 @@ namespace transport {
     DEFINE_ALL_POINTER_TYPE(tls_sync_dialer);
 
     class LIB_PUMP tls_sync_dialer
-        : public std::enable_shared_from_this<tls_sync_dialer> {
+      : public std::enable_shared_from_this<tls_sync_dialer> {
 
       public:
         /*********************************************************************************

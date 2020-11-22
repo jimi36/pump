@@ -31,7 +31,9 @@ namespace pump {
 namespace toolkit {
 
     template <typename T>
-    class LIB_PUMP freelock_array_queue : public noncopyable {
+    class LIB_PUMP freelock_array_queue
+      : public noncopyable {
+
       public:
         // Element type
         typedef T element_type;
@@ -59,8 +61,8 @@ namespace toolkit {
             if (mem_block_) {
                 int32 read_index = read_index_.load();
                 int32 max_read_index = max_read_index_.load();
-                while (count_to_index(read_index) != count_to_index(max_read_index)) {
-                    ((element_type *)mem_block_ + count_to_index(read_index++))
+                while (__count_to_index(read_index) != __count_to_index(max_read_index)) {
+                    ((element_type *)mem_block_ + __count_to_index(read_index++))
                         ->~element_type();
                 }
                 pump_free(mem_block_);
@@ -75,8 +77,8 @@ namespace toolkit {
             int32 cur_write_index = write_index_.load(std::memory_order_relaxed);
             do {
                 // Array is full
-                if (count_to_index(cur_write_index + 1) ==
-                    count_to_index(max_write_index_.load(std::memory_order_acquire))) {
+                if (__count_to_index(cur_write_index + 1) ==
+                    __count_to_index(max_write_index_.load(std::memory_order_acquire))) {
                     return false;
                 }
 
@@ -89,9 +91,8 @@ namespace toolkit {
                 cur_write_index = write_index_.load(std::memory_order_acquire);
             } while (true);
 
-            // New element object
-            new ((element_type *)mem_block_ + count_to_index(cur_write_index))
-                element_type(data);
+            // Construct element object
+            new ((element_type *)mem_block_ + __count_to_index(cur_write_index)) element_type(data);
 
             while (!max_read_index_.compare_exchange_weak(cur_write_index,
                                                           cur_write_index + 1,
@@ -110,8 +111,8 @@ namespace toolkit {
         bool pop(U &data) {
             do {
                 int32 cur_read_index = read_index_.load(std::memory_order_relaxed);
-                int32 array_read_index = count_to_index(cur_read_index);
-                if (array_read_index == count_to_index(max_read_index_.load(std::memory_order_acquire))) {
+                int32 array_read_index = __count_to_index(cur_read_index);
+                if (array_read_index == __count_to_index(max_read_index_.load(std::memory_order_acquire))) {
                     return false;
                 }
 
@@ -122,6 +123,7 @@ namespace toolkit {
                     // Copy element.
                     element_type& elem = *((element_type*)mem_block_ + array_read_index);
                     data = elem;
+
                     // Deconstruct element.
                     elem.~element_type();
 
@@ -142,7 +144,7 @@ namespace toolkit {
         /*********************************************************************************
          * Get size
          ********************************************************************************/
-        int32 size() {
+        PUMP_INLINE int32 size() const {
             int32 cur_read_index = read_index_.load(std::memory_order_relaxed);
             int32 cur_write_index = write_index_.load(std::memory_order_relaxed);
 
@@ -156,22 +158,22 @@ namespace toolkit {
         /*********************************************************************************
          * Empty
          ********************************************************************************/
-        bool empty() {
+        PUMP_INLINE bool empty() const {
             return size() > 0;
         }
 
         /*********************************************************************************
          * Get capacity
          ********************************************************************************/
-        int32 capacity() {
+        PUMP_INLINE int32 capacity() const {
             return size_;
         }
 
       private:
         /*********************************************************************************
-         * Map count to index
+         * Count to index
          ********************************************************************************/
-        PUMP_INLINE int32 count_to_index(int32 count) {
+        PUMP_INLINE int32 __count_to_index(int32 count) const {
             return (count % size_);
         }
 
@@ -196,7 +198,9 @@ namespace toolkit {
     };
 
     template <typename T, int PerBlockElementCount = 32>
-    class LIB_PUMP freelock_list_queue : public noncopyable {
+    class LIB_PUMP freelock_list_queue
+      : public noncopyable {
+
       public:
         // Element type
         typedef T element_type;
@@ -228,10 +232,10 @@ namespace toolkit {
          * Constructor
          ********************************************************************************/
         freelock_list_queue(int32 size)
-            : tail_block_node_(nullptr),
-              capacity_(0),
-              head_(nullptr), 
-              tail_(nullptr) {
+          : tail_block_node_(nullptr),
+            capacity_(0),
+            head_(nullptr), 
+            tail_(nullptr) {
             __init_list(size);
         }
 
@@ -357,15 +361,15 @@ namespace toolkit {
         /*********************************************************************************
          * Empty
          ********************************************************************************/
-        bool empty() {
-            return tail_.load(std::memory_order_relaxed)->next == 
-                        head_.load(std::memory_order_relaxed);
+        PUMP_INLINE bool empty() const {
+            element_node *tail = tail_.load(std::memory_order_relaxed)->next;
+            return tail == head_.load(std::memory_order_relaxed);
         }
 
         /*********************************************************************************
          * Get capacity
          ********************************************************************************/
-        int32 capacity() {
+        PUMP_INLINE int32 capacity() const {
             return capacity_.load(std::memory_order_relaxed);
         }
 
@@ -457,7 +461,9 @@ namespace toolkit {
     };
 
     template <typename Q>
-    class LIB_PUMP block_freelock_queue : public noncopyable {
+    class LIB_PUMP block_freelock_queue 
+      : public noncopyable {
+
       public:
         // Inner queue type
         typedef Q inner_queue_type;
@@ -526,10 +532,9 @@ namespace toolkit {
         }
 
         template <typename U, typename Rep, typename Period>
-        bool dequeue(U &item, std::chrono::duration<Rep, Period> const &timeout) {
+        bool dequeue(U &item, const std::chrono::duration<Rep, Period> &timeout) {
             if (semaphone_.wait(
-                    std::chrono::duration_cast<std::chrono::microseconds>(timeout)
-                        .count())) {
+                    std::chrono::duration_cast<std::chrono::microseconds>(timeout).count())) {
                 while (!queue_.pop(item)) {
                     continue;
                 }

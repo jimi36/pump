@@ -28,6 +28,7 @@ namespace transport {
     #define ADDRESS_MAX_LEN 64
 
     class LIB_PUMP address {
+
       public:
         /*********************************************************************************
          * Constructor

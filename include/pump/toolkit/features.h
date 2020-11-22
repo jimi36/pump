@@ -27,6 +27,7 @@ namespace toolkit {
      * Noncopyable base class
      ********************************************************************************/
     class LIB_PUMP noncopyable {
+
       protected:
         noncopyable() = default;
         ~noncopyable() = default;

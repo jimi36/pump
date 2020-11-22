@@ -25,6 +25,7 @@ namespace pump {
 namespace toolkit {
 
     class LIB_PUMP bits_reader {
+
       public:
         /*********************************************************************************
          * Constructor
@@ -70,6 +71,7 @@ namespace toolkit {
     };
 
     class LIB_PUMP bits_writer {
+
       public:
         /*********************************************************************************
          * Constructor
