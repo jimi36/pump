@@ -122,7 +122,7 @@ namespace transport {
             port = ntohs(v4->sin_port);
         }
 
-        block tmp[128] = { 0 };
+        block tmp[256] = { 0 };
         pump_snprintf(tmp, sizeof(tmp) - 1, "%s:%d", host, port);
         return std::move(std::string(tmp));
     }
