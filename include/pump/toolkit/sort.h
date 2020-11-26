@@ -23,15 +23,6 @@ namespace pump {
 namespace toolkit {
 
     /*********************************************************************************
-     * Swap *a and *b
-     ********************************************************************************/
-    // template<typename T> inline void swap(T& a, T& b)
-    //{
-    //	a = a ^ b; b = a ^ b; a = a ^ b;
-    //	T tmp = a; a = b; b = tmp;
-    //}
-
-    /*********************************************************************************
      * Bubble sort algorithm.
      * a      ---->   array of Comparable items.
      * left   ---->   the left-most index of the subarray.

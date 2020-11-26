@@ -197,7 +197,7 @@ int pump_c_acceptor_start(pump_c_service sv,
     pump_c_service_impl *impl_sv = (pump_c_service_impl*)sv;
     PUMP_ASSERT(impl_sv && impl_sv->sv);
 
-	pump_c_acceptor_impl *impl_acceptor = (pump_c_acceptor_impl*)acceptor;
+    pump_c_acceptor_impl *impl_acceptor = (pump_c_acceptor_impl*)acceptor;
     PUMP_ASSERT(impl_acceptor && impl_acceptor->acceptor);
 
     impl_acceptor->cbs = cbs;
@@ -223,7 +223,7 @@ int pump_c_acceptor_stop(pump_c_acceptor acceptor) {
 
 pump_c_acceptor pump_c_tcp_dialer_create(const char *local_ip, 
                                          int local_port,
-		                                 const char *remote_ip, 
+                                         const char *remote_ip, 
                                          int remote_port) {
     pump_c_dialer_impl *impl = object_create<pump_c_dialer_impl>();
 

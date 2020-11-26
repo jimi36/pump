@@ -75,7 +75,7 @@
 #define LANE_ENOPROTOOPT ENOPROTOOPT             // 92 Protocol not available
 #define LANE_EPROTONOSUPPORT EPROTONOSUPPORT     // 93 Protocol not supported
 #define LANE_ESOCKTNOSUPPORT ESOCKTNOSUPPORT     // 94 Socket type not supported
-#define LANE_EOPNOTSUPP EOPNOTSUPP	             // 95 Operation not supported on transport endpoint
+#define LANE_EOPNOTSUPP EOPNOTSUPP               // 95 Operation not supported on transport endpoint
 #define LANE_EPFNOSUPPORT EPFNOSUPPORT           // 96 Protocol family not supported
 #define LANE_EAFNOSUPPORT EAFNOSUPPORT           // 97 Address family not supported by protocol
 #define LANE_EADDRINUSE EADDRINUSE               // 98 Address already in use
