@@ -108,14 +108,7 @@ namespace transport {
             PUMP_WARN_LOG("base_transport::__stop_read_tracker: tracker no exists");
             return;
         }
-
-        if (!tracker->is_started()) {
-            PUMP_WARN_LOG("base_transport::__stop_read_tracker: tracker not started");
-            return;
-        }
-
-        PUMP_DEBUG_CHECK(
-            get_service()->remove_channel_tracker(tracker_locker, READ_POLLER));
+        get_service()->remove_channel_tracker(tracker_locker, READ_POLLER);
     }
 
     void base_transport::__stop_send_tracker() {
@@ -124,14 +117,7 @@ namespace transport {
             PUMP_WARN_LOG("base_transport::__stop_send_tracker: tracker no exists");
             return;
         }
-
-        if (!tracker->is_started()) {
-            PUMP_WARN_LOG("base_transport::__stop_send_tracker: tracker not started");
-            return;
-        }
-
-        PUMP_DEBUG_CHECK(
-            get_service()->remove_channel_tracker(tracker_locker, WRITE_POLLER));
+        get_service()->remove_channel_tracker(tracker_locker, WRITE_POLLER);
     }
 #endif
 

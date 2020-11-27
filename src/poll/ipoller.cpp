@@ -138,12 +138,14 @@ namespace poll {
 #endif
     }
 
-    void iocp_poller::push_channel_event(channel_sptr &c, uint32 ev) {
+    bool iocp_poller::push_channel_event(channel_sptr &c, uint32 ev) {
 #if defined(PUMP_HAVE_IOCP)
         auto task = net::new_iocp_task();
         task->set_notifier(c);
         task->set_type(net::IOCP_TASK_CHANNEL);
-        PostQueuedCompletionStatus(iocp_, 1, ev, (LPOVERLAPPED)task);
+        return PostQueuedCompletionStatus(iocp_, 1, ev, (LPOVERLAPPED)task) == TRUE;
+#else
+        return false;
 #endif
     }
 

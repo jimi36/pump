@@ -129,22 +129,21 @@ namespace pump {
         }
     }
 
-    bool service::remove_channel_tracker(poll::channel_tracker_sptr &tracker, int32_t pt) {
+    void service::remove_channel_tracker(poll::channel_tracker_sptr &tracker, int32_t pt) {
         if (pt == READ_POLLER) {
             read_poller_->remove_channel_tracker(tracker);
         } else {
             send_poller_->remove_channel_tracker(tracker);
         }
-        return true;
     }
 
     bool service::resume_channel_tracker(poll::channel_tracker_ptr tracker, int32_t pt) {
         if (pt == READ_POLLER) {
-            read_poller_->resume_channel_tracker(tracker);
+            return read_poller_->resume_channel_tracker(tracker);
         } else {
-            send_poller_->resume_channel_tracker(tracker);
+            return send_poller_->resume_channel_tracker(tracker);
         }
-        return true;
+        return false;
     }
 #endif
 

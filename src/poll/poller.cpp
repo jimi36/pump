@@ -87,35 +87,35 @@ namespace poll {
 
     void poller::remove_channel_tracker(channel_tracker_sptr &tracker) {
         // Mark tracker no started
-        tracker->mark_started(false);
+        if (tracker->mark_started(false)) {
+            // Create tracker event
+            auto tev = object_create<channel_tracker_event>(tracker, TRACKER_EVENT_DEL);
+            PUMP_DEBUG_CHECK(tevents_.push(tev));
 
-        // Create tracker event
-        auto tev = object_create<channel_tracker_event>(tracker, TRACKER_EVENT_DEL);
-        PUMP_DEBUG_CHECK(tevents_.push(tev));
-
-        // Add pending trakcer event count
-        tev_cnt_.fetch_add(1, std::memory_order_release);
+            // Add pending trakcer event count
+            tev_cnt_.fetch_add(1, std::memory_order_release);
+        }
     }
 
-    void poller::resume_channel_tracker(channel_tracker_ptr tracker) {
+    bool poller::resume_channel_tracker(channel_tracker_ptr tracker) {
         if (!tracker->is_started()) {
             PUMP_WARN_LOG("poller::resume_channel_tracker: tracker not started");
-            return;
+            return false;
         }
 
         if (!tracker->set_tracked(true)) {
             PUMP_WARN_LOG("poller::add_channel_tracker: tracker already tracked");
-            return;
+            return false;
         }
 
-        __resume_channel_tracker(tracker);
+        return __resume_channel_tracker(tracker);
     }
 #endif
 
-    void poller::push_channel_event(channel_sptr &c, uint32 event) {
+    bool poller::push_channel_event(channel_sptr &c, uint32 event) {
         if (!started_.load()) {
             PUMP_WARN_LOG("poller::push_channel_event: poller not started");
-            return;
+            return false;
         }
 
         // Create channel event
@@ -124,6 +124,8 @@ namespace poll {
 
         // Add pending channel event count
         cev_cnt_.fetch_add(1, std::memory_order_release);
+
+        return true;
     }
 
     void poller::__handle_channel_events() {

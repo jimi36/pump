@@ -46,14 +46,7 @@ namespace transport {
             PUMP_WARN_LOG("base_dialer::__stop_dial_tracker: tracker no exists");
             return;
         }
-
-        if (!tracker->is_started()) {
-            PUMP_WARN_LOG("base_dialer::__stop_dial_tracker: tracker not started");
-            return;
-        }
-
-        PUMP_DEBUG_CHECK(
-            get_service()->remove_channel_tracker(tracker_locker, WRITE_POLLER));
+        get_service()->remove_channel_tracker(tracker_locker, WRITE_POLLER);
     }
 #endif
 
