@@ -23,18 +23,18 @@
 namespace pump {
 namespace time {
 
-    const static uint64 US_PER_MS = 1000;
-    const static uint64 MS_PER_SECOND = US_PER_MS;
-    const static uint64 US_PER_SECOND = US_PER_MS * US_PER_MS;
+    const static uint64_t US_PER_MS = 1000;
+    const static uint64_t MS_PER_SECOND = US_PER_MS;
+    const static uint64_t US_PER_SECOND = US_PER_MS * US_PER_MS;
 
-    uint64 get_clock_microsecond() {
+    uint64_t get_clock_microsecond() {
         return std::chrono::time_point_cast<std::chrono::microseconds>(
                    std::chrono::steady_clock::now())
             .time_since_epoch()
             .count();
     }
 
-    uint64 get_clock_milliseconds() {
+    uint64_t get_clock_milliseconds() {
         return std::chrono::time_point_cast<std::chrono::milliseconds>(
                    std::chrono::steady_clock::now())
             .time_since_epoch()
@@ -44,9 +44,9 @@ namespace time {
     std::string timestamp::to_string() const {
         struct tm tm_time;
         char date[64] = {0};
-        uint64 ms = ms_.count();
+        uint64_t ms = ms_.count();
         time_t seconds = static_cast<time_t>(ms / MS_PER_SECOND);
-        uint32 milliseconds = static_cast<uint32>(ms % MS_PER_SECOND);
+        uint32_t milliseconds = static_cast<uint32_t>(ms % MS_PER_SECOND);
 #if defined(OS_WINDOWS)
         localtime_s(&tm_time, &seconds);
         pump_snprintf(date,
@@ -78,10 +78,10 @@ namespace time {
     std::string timestamp::format(const std::string &format) const {
         struct tm tm_time;
         char date[64] = {0};
-        uint32 idx = 0, len = 0;
-        uint64 ms = ms_.count();
+        uint32_t idx = 0, len = 0;
+        uint64_t ms = ms_.count();
         time_t seconds = static_cast<time_t>(ms / MS_PER_SECOND);
-        uint32 millisecond = static_cast<uint32>(ms % MS_PER_SECOND);
+        uint32_t millisecond = static_cast<uint32_t>(ms % MS_PER_SECOND);
 #if defined(OS_WINDOWS)
         localtime_s(&tm_time, &seconds);
         while (idx < format.size()) {
@@ -156,7 +156,7 @@ namespace time {
         return date;
     }
 
-    uint64 timestamp::now_time() {
+    uint64_t timestamp::now_time() {
         auto now = std::chrono::time_point_cast<std::chrono::milliseconds>(
             std::chrono::system_clock::now());
         std::chrono::milliseconds ms(now.time_since_epoch().count());

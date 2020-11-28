@@ -40,14 +40,14 @@ namespace protocol {
             /*********************************************************************************
              * Set status code
              ********************************************************************************/
-            PUMP_INLINE void set_status_code(int32 status_code) {
+            PUMP_INLINE void set_status_code(int32_t status_code) {
                 status_code_ = status_code;
             }
 
             /*********************************************************************************
              * Get response status code
              ********************************************************************************/
-            PUMP_INLINE int32 get_status_code() const {
+            PUMP_INLINE int32_t get_status_code() const {
                 return status_code_;
             }
 
@@ -56,28 +56,28 @@ namespace protocol {
              * This parse http pocket, and return parsed size. If this return -1, it means
              * parsed error.
              ********************************************************************************/
-            virtual int32 parse(c_block_ptr b, int32 size) override;
+            virtual int32_t parse(const block_t *b, int32_t size) override;
 
             /*********************************************************************************
              * Serialize
              * This will serialize http response and return serialized size.
              ********************************************************************************/
-            virtual int32 serialize(std::string &buffer) const override;
+            virtual int32_t serialize(std::string &buffer) const override;
 
           private:
             /*********************************************************************************
              * Parse http start line
              ********************************************************************************/
-            int32 __parse_start_line(c_block_ptr b, int32 size);
+            int32_t __parse_start_line(const block_t *b, int32_t size);
 
             /*********************************************************************************
              * Serialize http response line
              ********************************************************************************/
-            int32 __serialize_response_line(std::string &buffer) const;
+            int32_t __serialize_response_line(std::string &buffer) const;
 
           private:
             // Status code
-            int32 status_code_;
+            int32_t status_code_;
         };
         DEFINE_ALL_POINTER_TYPE(response);
 

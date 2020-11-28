@@ -49,7 +49,7 @@ namespace transport {
          * max_pending_send_size is ignore on udp transport.
          ********************************************************************************/
         virtual transport_error start(service_ptr sv,
-                                      int32 max_pending_send_size,
+                                      int32_t max_pending_send_size,
                                       const transport_callbacks &cbs) override;
 
         /*********************************************************************************
@@ -77,8 +77,8 @@ namespace transport {
         /*********************************************************************************
          * Send
          ********************************************************************************/
-        virtual transport_error send(c_block_ptr b,
-                                     uint32 size,
+        virtual transport_error send(const block_t *b,
+                                     int32_t size,
                                      const address &address) override;
 
       protected:
@@ -122,7 +122,7 @@ namespace transport {
         /*********************************************************************************
          * Async read
          ********************************************************************************/
-        transport_error __async_read(uint32 state);
+        transport_error __async_read(uint32_t state);
 
       private:
         // Udp flow

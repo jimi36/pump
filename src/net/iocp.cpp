@@ -31,9 +31,9 @@ namespace net {
         return g_iocp;
     }
 
-    int32 create_iocp_socket(int32 domain, int32 type, iocp_handler iocp) {
-        int32 fd =
-            (int32)::WSASocket(domain, type, IPPROTO_IP, NULL, 0, WSA_FLAG_OVERLAPPED);
+    int32_t create_iocp_socket(int32_t domain, int32_t type, iocp_handler iocp) {
+        int32_t fd =
+            (int32_t)::WSASocket(domain, type, IPPROTO_IP, NULL, 0, WSA_FLAG_OVERLAPPED);
 
         if (fd == SOCKET_ERROR ||
             CreateIoCompletionPort((HANDLE)fd, iocp, 0, 0) == NULL) {
@@ -77,9 +77,9 @@ namespace net {
     bool get_iocp_client_address(void_ptr ex_fns,
                                  iocp_task_ptr task,
                                  sockaddr **local,
-                                 int32_ptr llen,
+                                 int32_t *llen,
                                  sockaddr **remote,
-                                 int32_ptr rlen) {
+                                 int32_t *rlen) {
         auto get_addrs = (LPFN_GETACCEPTEXSOCKADDRS)get_accept_addrs_fn(ex_fns);
         if (!get_addrs) {
             PUMP_WARN_LOG("net::get_iocp_accepted_address: get_addrs invalid");
@@ -92,7 +92,7 @@ namespace net {
         if (setsockopt(task->un_.client_fd,
                        SOL_SOCKET,
                        SO_UPDATE_ACCEPT_CONTEXT,
-                       (block_ptr)&fd,
+                       (block_t*)&fd,
                        sizeof(fd)) == SOCKET_ERROR) {
             PUMP_WARN_LOG(
                 "net::get_iocp_accepted_address: setsockopt failed with ec=%d", last_errno());
@@ -104,7 +104,7 @@ namespace net {
     bool post_iocp_connect(void_ptr ex_fns,
                            iocp_task_ptr task,
                            const sockaddr *addr,
-                           int32 addrlen) {
+                           int32_t addrlen) {
         auto connect_ex = (LPFN_CONNECTEX)get_iocp_connect_fn(ex_fns);
         if (!connect_ex) {
             PUMP_WARN_LOG("net::post_iocp_connect: connect_ex invalid");

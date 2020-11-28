@@ -40,33 +40,10 @@ typedef SSIZE_T ssize_t;
     DEFINE_RAW_POINTER_TYPE(class_name)     \
     DEFINE_SMART_POINTER_TYPE(class_name)
 
-namespace pump {
-
-typedef std::int8_t int8;
-DEFINE_RAW_POINTER_TYPE(int8);
-typedef std::uint8_t uint8;
-DEFINE_RAW_POINTER_TYPE(uint8);
-typedef std::int16_t int16;
-DEFINE_RAW_POINTER_TYPE(int16);
-typedef std::uint16_t uint16;
-DEFINE_RAW_POINTER_TYPE(uint16);
-typedef std::int32_t int32;
-DEFINE_RAW_POINTER_TYPE(int32);
-typedef std::uint32_t uint32;
-DEFINE_RAW_POINTER_TYPE(uint32);
-typedef std::int64_t int64;
-DEFINE_RAW_POINTER_TYPE(int64);
-typedef std::uint64_t uint64;
-DEFINE_RAW_POINTER_TYPE(uint64);
-typedef float float32;
-DEFINE_RAW_POINTER_TYPE(float32);
-typedef double float64;
-DEFINE_RAW_POINTER_TYPE(float64);
-typedef char block;
-DEFINE_RAW_POINTER_TYPE(block);
-
 DEFINE_ALL_POINTER_TYPE(void);
 
-}  // namespace pump
+typedef char block_t;
+typedef float float32_t;
+typedef double float64_t;
 
 #endif

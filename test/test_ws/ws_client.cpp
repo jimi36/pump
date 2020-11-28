@@ -10,8 +10,8 @@ void on_error(websocket::client_ptr cli, const std::string &msg) {
 }
 
 void on_data(websocket::client_ptr cli,
-             pump::c_block_ptr b,
-             pump::uint32 size,
+             const block_t *b,
+             uint32_t size,
              bool msg_end) {
     std::string data(b, size);
     std::string msg = pump::utf8_to_gbk(data);

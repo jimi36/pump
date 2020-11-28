@@ -29,10 +29,10 @@ namespace poll {
     /*********************************************************************************
      * IO event
      ********************************************************************************/
-    const int32 IO_EVENT_NONE = 0x00;   // none event
-    const int32 IO_EVENT_READ = 0x01;   // read event
-    const int32 IO_EVENT_SEND = 0x02;   // send event
-    const int32 IO_EVENT_ERROR = 0x04;  // error event
+    const int32_t IO_EVENT_NONE = 0x00;   // none event
+    const int32_t IO_EVENT_READ = 0x01;   // read event
+    const int32_t IO_EVENT_SEND = 0x02;   // send event
+    const int32_t IO_EVENT_ERROR = 0x04;  // error event
 
     /*********************************************************************************
      * Channel opt type
@@ -51,7 +51,7 @@ namespace poll {
         /*********************************************************************************
          * Constructor
          ********************************************************************************/
-        explicit channel(int32 fd) noexcept : ctx_(nullptr), fd_(fd) {
+        explicit channel(int32_t fd) noexcept : ctx_(nullptr), fd_(fd) {
         }
 
         /*********************************************************************************
@@ -62,7 +62,7 @@ namespace poll {
         /*********************************************************************************
          * Get channel fd
          ********************************************************************************/
-        PUMP_INLINE int32 get_fd() const {
+        PUMP_INLINE int32_t get_fd() const {
             return fd_;
         }
 
@@ -84,7 +84,7 @@ namespace poll {
          * Handle io event
          ********************************************************************************/
 #if defined(PUMP_HAVE_IOCP)
-        PUMP_INLINE void handle_io_event(uint32 ev, net::iocp_task_ptr iocp_task) {
+        PUMP_INLINE void handle_io_event(uint32_t ev, net::iocp_task_ptr iocp_task) {
             if (ev & IO_EVENT_READ) {
                 on_read_event(iocp_task);
             } else if (ev & IO_EVENT_SEND) {
@@ -92,7 +92,7 @@ namespace poll {
             }
         }
 #else
-        PUMP_INLINE void handle_io_event(uint32 ev) {
+        PUMP_INLINE void handle_io_event(uint32_t ev) {
             if (ev & IO_EVENT_READ) {
                 on_read_event();
             } else if (ev & IO_EVENT_SEND) {
@@ -103,7 +103,7 @@ namespace poll {
         /*********************************************************************************
          * Handle channel event
          ********************************************************************************/
-        PUMP_INLINE void handle_channel_event(int32 ev) {
+        PUMP_INLINE void handle_channel_event(int32_t ev) {
             on_channel_event(ev);
         }
 
@@ -111,7 +111,7 @@ namespace poll {
         /*********************************************************************************
          * Set channel fd
          ********************************************************************************/
-        PUMP_INLINE void __set_fd(int32 fd) {
+        PUMP_INLINE void __set_fd(int32_t fd) {
             fd_ = fd;
         }
 
@@ -139,24 +139,24 @@ namespace poll {
         /*********************************************************************************
          * Channel event callback
          ********************************************************************************/
-        virtual void on_channel_event(uint32 ev) {
+        virtual void on_channel_event(int32_t ev) {
         }
 
       protected:
         // Channel context
         void_ptr ctx_;
         // Channel fd
-        int32 fd_;
+        int32_t fd_;
     };
     DEFINE_ALL_POINTER_TYPE(channel);
 
-    const int32 TRACK_NONE = (IO_EVENT_NONE);
-    const int32 TRACK_READ = (IO_EVENT_READ);
-    const int32 TRACK_SEND = (IO_EVENT_SEND);
-    const int32 TRACK_BOTH = (IO_EVENT_READ | IO_EVENT_SEND);
+    const int32_t TRACK_NONE = (IO_EVENT_NONE);
+    const int32_t TRACK_READ = (IO_EVENT_READ);
+    const int32_t TRACK_SEND = (IO_EVENT_SEND);
+    const int32_t TRACK_BOTH = (IO_EVENT_READ | IO_EVENT_SEND);
 
-    const int32 TRACKER_EVENT_DEL = 0;
-    const int32 TRACKER_EVENT_ADD = 1;
+    const int32_t TRACKER_EVENT_DEL = 0;
+    const int32_t TRACKER_EVENT_ADD = 1;
 
     class channel_tracker
       : public toolkit::noncopyable {
@@ -165,14 +165,14 @@ namespace poll {
         /*********************************************************************************
          * Constructor
          ********************************************************************************/
-        channel_tracker(channel_sptr &ch, int32 ev) noexcept
+        channel_tracker(channel_sptr &ch, int32_t ev) noexcept
             : started_(false), 
               tracked_(false), 
               event_(ev), 
               fd_(ch->get_fd()), 
               ch_(ch) {
         }
-        channel_tracker(channel_sptr &&ch, int32 ev) noexcept
+        channel_tracker(channel_sptr &&ch, int32_t ev) noexcept
             : started_(false), 
               tracked_(false), 
               event_(ev), 
@@ -230,21 +230,21 @@ namespace poll {
         /*********************************************************************************
          * Get fd
          ********************************************************************************/
-        PUMP_INLINE int32 get_fd() const {
+        PUMP_INLINE int32_t get_fd() const {
             return fd_;
         }
 
         /*********************************************************************************
          * Set track event
          ********************************************************************************/
-        PUMP_INLINE void set_event(int32 ev) {
+        PUMP_INLINE void set_event(int32_t ev) {
             event_ = ev;
         }
 
         /*********************************************************************************
          * Get track event
          ********************************************************************************/
-        PUMP_INLINE int32 get_event() const {
+        PUMP_INLINE int32_t get_event() const {
             return event_;
         }
 
@@ -254,9 +254,9 @@ namespace poll {
         // Tracked state
         std::atomic_bool tracked_;
         // Track event
-        int32 event_;
+        int32_t event_;
         // Track fd
-        int32 fd_;
+        int32_t fd_;
         // Channel
         channel_wptr ch_;
     };

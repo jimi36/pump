@@ -38,20 +38,20 @@ namespace toolkit {
         // Element type
         typedef T element_type;
         // Element type size
-        const static uint32 element_size = sizeof(element_type);
+        const static uint32_t element_size = sizeof(element_type);
 
       public:
         /*********************************************************************************
          * Constructor
          ********************************************************************************/
-        freelock_array_queue(uint32 size)
+        freelock_array_queue(uint32_t size)
             : size_(size),
               mem_block_(nullptr),
               write_index_(0),
               max_write_index_(0),
               read_index_(0),
               max_read_index_(0) {
-            mem_block_ = (block_ptr)pump_malloc(size * element_size);
+            mem_block_ = (block_t*)pump_malloc(size * element_size);
         }
 
         /*********************************************************************************
@@ -59,8 +59,8 @@ namespace toolkit {
          ********************************************************************************/
         ~freelock_array_queue() {
             if (mem_block_) {
-                int32 read_index = read_index_.load();
-                int32 max_read_index = max_read_index_.load();
+                int32_t read_index = read_index_.load();
+                int32_t max_read_index = max_read_index_.load();
                 while (__count_to_index(read_index) != __count_to_index(max_read_index)) {
                     ((element_type *)mem_block_ + __count_to_index(read_index++))
                         ->~element_type();
@@ -74,7 +74,7 @@ namespace toolkit {
          * Return false if array is full, thread safe.
          ********************************************************************************/
         bool push(const element_type &data) {
-            int32 cur_write_index = write_index_.load(std::memory_order_relaxed);
+            int32_t cur_write_index = write_index_.load(std::memory_order_relaxed);
             do {
                 // Array is full
                 if (__count_to_index(cur_write_index + 1) ==
@@ -110,8 +110,8 @@ namespace toolkit {
         template <typename U>
         bool pop(U &data) {
             do {
-                int32 cur_read_index = read_index_.load(std::memory_order_relaxed);
-                int32 array_read_index = __count_to_index(cur_read_index);
+                int32_t cur_read_index = read_index_.load(std::memory_order_relaxed);
+                int32_t array_read_index = __count_to_index(cur_read_index);
                 if (array_read_index == __count_to_index(max_read_index_.load(std::memory_order_acquire))) {
                     return false;
                 }
@@ -144,9 +144,9 @@ namespace toolkit {
         /*********************************************************************************
          * Get size
          ********************************************************************************/
-        PUMP_INLINE int32 size() const {
-            int32 cur_read_index = read_index_.load(std::memory_order_relaxed);
-            int32 cur_write_index = write_index_.load(std::memory_order_relaxed);
+        PUMP_INLINE int32_t size() const {
+            int32_t cur_read_index = read_index_.load(std::memory_order_relaxed);
+            int32_t cur_write_index = write_index_.load(std::memory_order_relaxed);
 
             if (cur_write_index >= cur_read_index) {
                 return (cur_write_index - cur_read_index);
@@ -165,7 +165,7 @@ namespace toolkit {
         /*********************************************************************************
          * Get capacity
          ********************************************************************************/
-        PUMP_INLINE int32 capacity() const {
+        PUMP_INLINE int32_t capacity() const {
             return size_;
         }
 
@@ -173,16 +173,16 @@ namespace toolkit {
         /*********************************************************************************
          * Count to index
          ********************************************************************************/
-        PUMP_INLINE int32 __count_to_index(int32 count) const {
+        PUMP_INLINE int32_t __count_to_index(int32_t count) const {
             return (count % size_);
         }
 
       private:
         // Capacity size
-        int32 size_;
+        int32_t size_;
 
         // Element memory block
-        block_ptr mem_block_;
+        block_t *mem_block_;
 
         // Next write index
         std::atomic_int32_t write_index_;
@@ -205,13 +205,13 @@ namespace toolkit {
         // Element type
         typedef T element_type;
         // Element type size
-        const static int32 element_size = sizeof(element_type);
+        const static int32_t element_size = sizeof(element_type);
 
         // List element node
         struct list_element_node {
             list_element_node() : next(this+1), ready(false) {
             }
-            block data[element_size];
+            block_t data[element_size];
             list_element_node* next;
             std::atomic_bool ready;
         };
@@ -231,7 +231,7 @@ namespace toolkit {
         /*********************************************************************************
          * Constructor
          ********************************************************************************/
-        freelock_list_queue(int32 size)
+        freelock_list_queue(int32_t size)
           : tail_block_node_(nullptr),
             capacity_(0),
             head_(nullptr), 
@@ -369,7 +369,7 @@ namespace toolkit {
         /*********************************************************************************
          * Get capacity
          ********************************************************************************/
-        PUMP_INLINE int32 capacity() const {
+        PUMP_INLINE int32_t capacity() const {
             return capacity_.load(std::memory_order_relaxed);
         }
 
@@ -377,7 +377,7 @@ namespace toolkit {
         /*********************************************************************************
          * Init list
          ********************************************************************************/
-        void __init_list(int32 size) {
+        void __init_list(int32_t size) {
             // Init size must be greater or equal than per_block_element_count.
             size = size > PerBlockElementCount ? size : PerBlockElementCount;
 
@@ -391,7 +391,7 @@ namespace toolkit {
             // Update list capacity.
             capacity_.fetch_add(PerBlockElementCount, std::memory_order_release);
 
-            for (int32 i = PerBlockElementCount; i < size; i += PerBlockElementCount) {
+            for (int32_t i = PerBlockElementCount; i < size; i += PerBlockElementCount) {
                 // Create new element block node.
                 block_node *bnode = object_create<block_node>();
                 // Link block node.
@@ -455,7 +455,7 @@ namespace toolkit {
         // Head element node
         std::atomic<element_node *> head_;
         // Atomic padding
-        block padding_[64];
+        block_t padding_[64];
         // Tail element node
         std::atomic<element_node *> tail_;
     };
@@ -474,7 +474,8 @@ namespace toolkit {
         /*********************************************************************************
          * Constructor
          ********************************************************************************/
-        block_freelock_queue(uint32 init_size = 1024) : queue_(init_size) {
+        block_freelock_queue(uint32_t size = 1024)
+          : queue_(size) {
         }
 
         /*********************************************************************************
@@ -521,7 +522,7 @@ namespace toolkit {
          * This will block until dequeue success or timeout.
          ********************************************************************************/
         template <typename U>
-        bool dequeue(U &item, uint64 timeout) {
+        bool dequeue(U &item, uint64_t timeout) {
             if (semaphone_.wait(timeout)) {
                 while (!queue_.pop(item)) {
                     continue;

@@ -43,7 +43,7 @@ namespace transport {
             }
         }
 
-        flow_error flow_tcp::init(poll::channel_sptr &&ch, int32 fd) {
+        flow_error flow_tcp::init(poll::channel_sptr &&ch, int32_t fd) {
             PUMP_DEBUG_ASSIGN(ch, ch_, ch);
             PUMP_DEBUG_ASSIGN(fd > 0, fd_, fd);
 
@@ -76,13 +76,13 @@ namespace transport {
 #endif
 
 #if defined(PUMP_HAVE_IOCP)
-        c_block_ptr flow_tcp::read(net::iocp_task_ptr iocp_task, int32_ptr size) {
+        const block_t* flow_tcp::read(net::iocp_task_ptr iocp_task, int32_t *size) {
             *size = iocp_task->get_processed_size();
             return read_iob_->buffer();
         }
 #else
-        c_block_ptr flow_tcp::read(int32_ptr size) {
-            block_ptr buf = (block_ptr)read_iob_->buffer();
+        const block_t* flow_tcp::read(int32_t *size) {
+            block_t *buf = (block_t*)read_iob_->buffer();
             *size = net::read(fd_, buf, read_iob_->buffer_size());
             return buf;
         }
@@ -101,7 +101,7 @@ namespace transport {
         }
 
         flow_error flow_tcp::send(net::iocp_task_ptr iocp_task) {
-            int32 size = iocp_task->get_processed_size();
+            int32_t size = iocp_task->get_processed_size();
             if (size > 0) {
                 if (PUMP_LIKELY(send_iob_->shift(size) == 0)) {
                     send_task_->unbind_io_buffer();
@@ -118,7 +118,7 @@ namespace transport {
 #else
         flow_error flow_tcp::want_to_send(toolkit::io_buffer_ptr iob) {
             PUMP_DEBUG_ASSIGN(iob, send_iob_, iob);
-            int32 size = net::send(fd_, send_iob_->data(), send_iob_->data_size());
+            int32_t size = net::send(fd_, send_iob_->data(), send_iob_->data_size());
             if (PUMP_LIKELY(size > 0)) {
                 if (PUMP_LIKELY(send_iob_->shift(size) == 0)) {
                     send_iob_ = nullptr;
@@ -138,12 +138,12 @@ namespace transport {
                 return FLOW_ERR_NO_DATA;
             }
 
-            int32 data_size = (int32)send_iob_->data_size();
+            int32_t data_size = (int32_t)send_iob_->data_size();
             if (data_size == 0) {
                 return FLOW_ERR_NO_DATA;
             }
 
-            int32 size = net::send(fd_, send_iob_->data(), data_size);
+            int32_t size = net::send(fd_, send_iob_->data(), data_size);
             if (PUMP_LIKELY(size > 0)) {
                 if (PUMP_LIKELY(send_iob_->shift(size) > 0)) {
                     return FLOW_ERR_AGAIN;

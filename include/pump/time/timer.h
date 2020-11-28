@@ -44,7 +44,7 @@ namespace time {
         /*********************************************************************************
          * Create instance
          ********************************************************************************/
-        PUMP_INLINE static timer_sptr create(uint64 timeout,
+        PUMP_INLINE static timer_sptr create(uint64_t timeout,
                                              const timer_callback &cb,
                                              bool repeated = false) {
             INLINE_OBJECT_CREATE(obj, timer, (timeout, cb, repeated));
@@ -69,7 +69,7 @@ namespace time {
         /*********************************************************************************
          * Get overtime
          ********************************************************************************/
-        PUMP_INLINE uint64 time() const {
+        PUMP_INLINE uint64_t time() const {
             return overtime_;
         }
 
@@ -91,7 +91,7 @@ namespace time {
         /*********************************************************************************
          * Constructor
          ********************************************************************************/
-        timer(uint64 timeout, const timer_callback &cb, bool repeated) noexcept;
+        timer(uint64_t timeout, const timer_callback &cb, bool repeated) noexcept;
 
         /*********************************************************************************
          * Start
@@ -106,7 +106,7 @@ namespace time {
         /*********************************************************************************
          * Set status
          ********************************************************************************/
-        PUMP_INLINE bool __set_status(int32 o, int32 n) {
+        PUMP_INLINE bool __set_status(int32_t o, int32_t n) {
             return status_.compare_exchange_strong(o, n);
         }
 
@@ -120,9 +120,9 @@ namespace time {
         // Repeated status
         bool repeated_;
         // Timeout with ms
-        uint64 timeout_;
+        uint64_t timeout_;
         // Timeout time with ms
-        uint64 overtime_;
+        uint64_t overtime_;
     };
 
 }  // namespace time

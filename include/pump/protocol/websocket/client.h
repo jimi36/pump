@@ -31,7 +31,7 @@ namespace protocol {
             // Started callback
             pump_function<void()> started_cb;
             // Data callback
-            pump_function<void(c_block_ptr, uint32, bool)> data_cb;
+            pump_function<void(const block_t*, int32_t, bool)> data_cb;
             // Error callback
             pump_function<void(const std::string &)> error_cb;
         };
@@ -68,7 +68,7 @@ namespace protocol {
             /*********************************************************************************
              * Send
              ********************************************************************************/
-            bool send(c_block_ptr b, uint32 size);
+            bool send(const block_t *b, int32_t size);
 
           protected:
             /*********************************************************************************
@@ -97,7 +97,7 @@ namespace protocol {
             /*********************************************************************************
              * Frame callback
              ********************************************************************************/
-            static void on_frame(client_wptr wptr, c_block_ptr b, uint32 size, bool end);
+            static void on_frame(client_wptr wptr, const block_t *b, int32_t size, bool end);
 
             /*********************************************************************************
              * Connection error closed

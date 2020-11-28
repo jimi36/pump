@@ -21,7 +21,7 @@ namespace pump {
 namespace protocol {
     namespace http {
 
-        c_block_ptr find_http_line_end(c_block_ptr src, int32 len) {
+        const block_t* find_http_line_end(const block_t *src, int32_t len) {
             if (len < HTTP_CR_LEN) {
                 return nullptr;
             }
@@ -42,9 +42,9 @@ namespace protocol {
         }
 
         bool url_decode(const std::string &src, std::string &des) {
-            uint32 len = (uint32)src.length();
-            for (uint32 i = 0; i < len; i++) {
-                uint8 ch = src[i];
+            uint32_t len = (uint32_t)src.length();
+            for (uint32_t i = 0; i < len; i++) {
+                uint8_t ch = src[i];
                 if (ch == '+') {
                     ch = ' ';
                 } else if (ch == '%') {
@@ -54,17 +54,17 @@ namespace protocol {
                          hexchar_to_decnum(src[i + 2]);
                     i += 2;
                 }
-                des.append(1, (block)ch);
+                des.append(1, (block_t)ch);
             }
             return true;
         }
 
         bool url_encode(const std::string &src, std::string &des) {
-            uint8 val = 0;
-            c_block_ptr beg = src.c_str();
-            c_block_ptr end = beg + src.size();
+            uint8_t val = 0;
+            const block_t *beg = src.c_str();
+            const block_t *end = beg + src.size();
             while (beg != end) {
-                val = uint8(*beg);
+                val = uint8_t(*beg);
                 if (isalnum(val) || (val == '-') || (val == '_') || (val == '.') || (val == '~')) {
                     des.append(1, val);
                 } else if (*beg == ' ') {
@@ -85,7 +85,7 @@ namespace protocol {
                 PUMP_ASSERT(false);
             }
 
-            uint16 port = https ? 443 : 80;
+            uint16_t port = https ? 443 : 80;
             if (results.size() > 1) {
                 port = atoi(results[1].c_str());
             }

@@ -25,11 +25,11 @@ namespace protocol {
     namespace websocket {
 
         void init_frame_header(frame_header_ptr hdr,
-                               uint32 fin,
-                               uint32 optcode,
-                               uint32 mask,
-                               uint8 mask_key[4],
-                               uint64 payload_len) {
+                               uint32_t fin,
+                               uint32_t optcode,
+                               uint32_t mask,
+                               uint8_t mask_key[4],
+                               uint64_t payload_len) {
             memset(hdr, 0, sizeof(frame_header));
 
             hdr->fin = fin;
@@ -45,15 +45,15 @@ namespace protocol {
                 hdr->payload_len = payload_len;
             } else if (payload_len <= 65535) {
                 hdr->payload_len = 126;
-                hdr->ex_payload_len = (uint32)payload_len;
+                hdr->ex_payload_len = (uint32_t)payload_len;
             } else {
                 hdr->payload_len = 127;
                 hdr->ex_payload_len = payload_len;
             }
         }
 
-        uint32 get_frame_header_size(c_frame_header_ptr hdr) {
-            uint32 size = 2;
+        int32_t get_frame_header_size(c_frame_header_ptr hdr) {
+            int32_t size = 2;
 
             if (hdr->mask == 1) {
                 size += 4;
@@ -68,12 +68,12 @@ namespace protocol {
             return size;
         }
 
-        int32 decode_frame_header(c_block_ptr b, uint32 size, frame_header_ptr hdr) {
+        int32_t decode_frame_header(const block_t *b, int32_t size, frame_header_ptr hdr) {
             // Init frame header
             memset(hdr, 0, sizeof(frame_header));
 
             // Init bits reader
-            toolkit::bits_reader r((c_uint8_ptr)b, size);
+            toolkit::bits_reader r((const uint8_t*)b, size);
 
 #define READ_BITS(bits, tmp, val) \
     if (!r.read(bits, &tmp)) {    \
@@ -81,8 +81,8 @@ namespace protocol {
     }                             \
     val = tmp
 
-            uint32 tmp32 = 0;
-            uint64 tmp64 = 0;
+            uint32_t tmp32 = 0;
+            uint64_t tmp64 = 0;
             READ_BITS(1, tmp32, hdr->fin);
             READ_BITS(1, tmp32, hdr->rsv1);
             READ_BITS(1, tmp32, hdr->rsv2);
@@ -107,12 +107,12 @@ namespace protocol {
                 }
             }
 
-            return r.used_bc() / 8;
+            return int32_t(r.used_bc() / 8);
         }
 
-        int32 encode_frame_header(c_frame_header_ptr hdr, block_ptr b, uint32 size) {
+        int32_t encode_frame_header(c_frame_header_ptr hdr, block_t *b, int32_t size) {
             // Init bits writer
-            toolkit::bits_writer w((uint8_ptr)b, size);
+            toolkit::bits_writer w((uint8_t*)b, size);
 
             if (!w.write(1, hdr->fin) ||
                 !w.write(1, hdr->rsv1) || 
@@ -146,8 +146,8 @@ namespace protocol {
             return w.used_bc() / 8;
         }
 
-        void mask_transform(uint8_ptr b, uint32 size, uint8 mask_key[4]) {
-            for (uint32 i = 0; i < size; i++) {
+        void mask_transform(uint8_t *b, int32_t size, uint8_t mask_key[4]) {
+            for (int32_t i = 0; i < size; i++) {
                 b[i] = b[i] ^ mask_key[i % 4];
             }
         }

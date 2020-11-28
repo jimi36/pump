@@ -98,24 +98,24 @@ namespace protocol {
              * This parse http pocket, and return parsed size. If this return -1, it
              *means parsed error.
              ********************************************************************************/
-            virtual int32 parse(c_block_ptr b, int32 size) override;
+            virtual int32_t parse(const block_t *b, int32_t size) override;
 
             /*********************************************************************************
              * Serialize
              * This will serialize http pocket and return serialized size.
              ********************************************************************************/
-            virtual int32 serialize(std::string &buf) const override;
+            virtual int32_t serialize(std::string &buf) const override;
 
           private:
             /*********************************************************************************
              * Parse http start line
              ********************************************************************************/
-            int32 __parse_start_line(c_block_ptr b, int32 size);
+            int32_t __parse_start_line(const block_t *b, int32_t size);
 
             /*********************************************************************************
              * Serialize http request line
              ********************************************************************************/
-            int32 __serialize_request_line(std::string &buffer) const;
+            int32_t __serialize_request_line(std::string &buffer) const;
 
           private:
             // Request context

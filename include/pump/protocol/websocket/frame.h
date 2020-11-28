@@ -23,28 +23,28 @@ namespace pump {
 namespace protocol {
     namespace websocket {
 
-        const uint32 FRAME_OPTCODE_SEQUEL = 0x0;
-        const uint32 FRAME_OPTCODE_TEXT = 0x1;
-        const uint32 FRAME_OPTCODE_BINARY = 0x2;
-        const uint32 FRAME_OPTCODE_CLOSE = 0x8;
-        const uint32 FRAME_OPTCODE_PING = 0x9;
-        const uint32 FRAME_OPTCODE_PONG = 0xA;
+        const uint32_t FRAME_OPTCODE_SEQUEL = 0x0;
+        const uint32_t FRAME_OPTCODE_TEXT = 0x1;
+        const uint32_t FRAME_OPTCODE_BINARY = 0x2;
+        const uint32_t FRAME_OPTCODE_CLOSE = 0x8;
+        const uint32_t FRAME_OPTCODE_PING = 0x9;
+        const uint32_t FRAME_OPTCODE_PONG = 0xA;
 
         struct frame_header {
-            uint32 fin : 1;
+            uint32_t fin : 1;
 
-            uint32 rsv1 : 1;
-            uint32 rsv2 : 1;
-            uint32 rsv3 : 1;
+            uint32_t rsv1 : 1;
+            uint32_t rsv2 : 1;
+            uint32_t rsv3 : 1;
 
-            uint32 optcode : 4;
+            uint32_t optcode : 4;
 
-            uint32 mask : 1;
+            uint32_t mask : 1;
 
-            uint32 payload_len : 7;
-            uint64 ex_payload_len;
+            uint32_t payload_len : 7;
+            uint64_t ex_payload_len;
 
-            uint8 mask_key[4];
+            uint8_t mask_key[4];
         };
         DEFINE_RAW_POINTER_TYPE(frame_header);
 
@@ -52,31 +52,31 @@ namespace protocol {
          * Init frame header
          ********************************************************************************/
         void init_frame_header(frame_header_ptr hdr,
-                               uint32 fin,
-                               uint32 optcode,
-                               uint32 mask,
-                               uint8 mask_key[4],
-                               uint64 payload_len);
+                               uint32_t fin,
+                               uint32_t optcode,
+                               uint32_t mask,
+                               uint8_t mask_key[4],
+                               uint64_t payload_len);
 
         /*********************************************************************************
          * Get ws frame header size
          ********************************************************************************/
-        uint32 get_frame_header_size(c_frame_header_ptr hdr);
+        int32_t get_frame_header_size(c_frame_header_ptr hdr);
 
         /*********************************************************************************
          * Decode ws frame header
          ********************************************************************************/
-        int32 decode_frame_header(c_block_ptr b, uint32 size, frame_header_ptr hdr);
+        int32_t decode_frame_header(const block_t *b, int32_t size, frame_header_ptr hdr);
 
         /*********************************************************************************
          * Encode ws frame header
          ********************************************************************************/
-        int32 encode_frame_header(c_frame_header_ptr hdr, block_ptr b, uint32 size);
+        int32_t encode_frame_header(c_frame_header_ptr hdr, block_t *b, int32_t size);
 
         /*********************************************************************************
          * Mask transform
          ********************************************************************************/
-        void mask_transform(uint8_ptr b, uint32 size, uint8 mask_key[4]);
+        void mask_transform(uint8_t *b, int32_t size, uint8_t mask_key[4]);
 
     }  // namespace websocket
 }  // namespace protocol

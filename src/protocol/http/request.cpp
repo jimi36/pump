@@ -22,7 +22,7 @@ namespace pump {
 namespace protocol {
     namespace http {
 
-        static c_block_ptr request_method_strings[] = {
+        static const block_t *request_method_strings[] = {
             "UNKNOWN", 
             "GET", 
             "POST", 
@@ -44,7 +44,7 @@ namespace protocol {
             uri_.parse(url);
         }
 
-        int32 request::parse(c_block_ptr b, int32 size) {
+        int32_t request::parse(const block_t *b, int32_t size) {
             if (parse_status_ == PARSE_FINISHED) {
                 return 0;
             }
@@ -53,8 +53,8 @@ namespace protocol {
                 parse_status_ = PARSE_LINE;
             }
 
-            c_block_ptr pos = b;
-            int32 parse_size = 0;
+            const block_t *pos = b;
+            int32_t parse_size = 0;
             if (parse_status_ == PARSE_LINE) {
                 parse_size = __parse_start_line(pos, size);
                 if (parse_size <= 0) {
@@ -72,7 +72,7 @@ namespace protocol {
                 if (parse_size < 0) {
                     return parse_size;
                 } else if (parse_size == 0) {
-                    return int32(pos - b);
+                    return int32_t(pos - b);
                 }
 
                 pos += parse_size;
@@ -91,7 +91,7 @@ namespace protocol {
             if (parse_status_ == PARSE_CONTENT) {
                 content_ptr ct = ct_.get();
                 if (!ct) {
-                    int32 ct_length = 0;
+                    int32_t ct_length = 0;
                     if (header_.get("Content-Length", ct_length) && ct_length > 0) {
                         ct = new content();
                         ct->set_length_to_parse(ct_length);
@@ -114,7 +114,7 @@ namespace protocol {
                     if (parse_size < 0) {
                         return parse_size;
                     } else if (parse_size == 0) {
-                        return int32(pos - b);
+                        return int32_t(pos - b);
                     }
 
                     pos += parse_size;
@@ -126,13 +126,13 @@ namespace protocol {
                 }
             }
 
-            return int32(pos - b);
+            return int32_t(pos - b);
         }
 
-        int32 request::serialize(std::string &buffer) const {
-            int32 serialize_size = 0;
+        int32_t request::serialize(std::string &buffer) const {
+            int32_t serialize_size = 0;
 
-            int32 size = __serialize_request_line(buffer);
+            int32_t size = __serialize_request_line(buffer);
             if (size < 0) {
                 return -1;
             }
@@ -155,11 +155,11 @@ namespace protocol {
             return serialize_size;
         }
 
-        int32 request::__parse_start_line(c_block_ptr b, int32 size) {
-            c_block_ptr pos = b;
+        int32_t request::__parse_start_line(const block_t *b, int32_t size) {
+            const block_t *pos = b;
 
             // Find request line end
-            c_block_ptr line_end = find_http_line_end(pos, size);
+            const block_t *line_end = find_http_line_end(pos, size);
             if (!line_end) {
                 return 0;
             }
@@ -180,7 +180,7 @@ namespace protocol {
             }
 
             // Parse request path
-            c_block_ptr tmp = pos;
+            const block_t *tmp = pos;
             while (pos < line_end && *pos != ' ' && *pos != '?') {
                 ++pos;
             }
@@ -206,11 +206,11 @@ namespace protocol {
                 }
 
                 auto vals = split_string(params, "[=&]");
-                uint32 cnt = (uint32)vals.size();
+                uint32_t cnt = (uint32_t)vals.size();
                 if (vals.empty() || cnt % 2 != 0) {
                     return -1;
                 }
-                for (uint32 i = 0; i < cnt; i += 2) {
+                for (uint32_t i = 0; i < cnt; i += 2) {
                     uri_.set_param(vals[i], vals[i + 1]);
                 }
             }
@@ -227,12 +227,12 @@ namespace protocol {
                 return -1;
             }
 
-            return int32(line_end - b);
+            return int32_t(line_end - b);
         }
 
-        int32 request::__serialize_request_line(std::string &buf) const {
-            block tmp[256] = {0};
-            int32 size = snprintf(tmp, sizeof(tmp) - 1,
+        int32_t request::__serialize_request_line(std::string &buf) const {
+            block_t tmp[256] = {0};
+            int32_t size = snprintf(tmp, sizeof(tmp) - 1,
                                   "%s %s %s\r\n",
                                   request_method_strings[method_],
                                   uri_.get_path().c_str(),

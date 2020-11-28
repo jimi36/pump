@@ -43,10 +43,10 @@ namespace transport {
 
     struct transport_callbacks {
         // Read callback for tcp and tls
-        pump_function<void(c_block_ptr, int32)> read_cb;
+        pump_function<void(const block_t*, int32_t)> read_cb;
         // Read from callback for udp
-        pump_function<void(c_block_ptr, int32, const address&)> read_from_cb;
-        // Transport disconnected callback
+        pump_function<void(const block_t*, int32_t, const address&)> read_from_cb;
+        // Transport disconnected callback for tcp and tls
         pump_function<void()> disconnected_cb;
         // Transport stopped callback
         pump_function<void()> stopped_cb;

@@ -147,7 +147,7 @@ namespace pump {
     }
 #endif
 
-    bool service::post_channel_event(poll::channel_sptr &ch, uint32 event) {
+    bool service::post_channel_event(poll::channel_sptr &ch, int32_t event) {
 #if defined(PUMP_HAVE_IOCP)
         iocp_poller_->push_channel_event(ch, event);
 #else

@@ -33,7 +33,7 @@ namespace protocol {
         /*********************************************************************************
          * Find http line end position
          ********************************************************************************/
-        LIB_PUMP c_block_ptr find_http_line_end(c_block_ptr src, int32 len);
+        LIB_PUMP const block_t* find_http_line_end(const block_t *src, int32_t len);
 
         /*********************************************************************************
          * Decode url string

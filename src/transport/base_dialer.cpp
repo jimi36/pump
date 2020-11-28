@@ -19,7 +19,7 @@
 namespace pump {
 namespace transport {
 
-    void base_dialer::on_channel_event(uint32 ev) {
+    void base_dialer::on_channel_event(int32_t ev) {
         __trigger_interrupt_callbacks();
     }
 

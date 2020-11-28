@@ -27,7 +27,7 @@ namespace codec {
     /*********************************************************************************
      * Base64 encode string length
      ********************************************************************************/
-    LIB_PUMP uint32 base64_encode_length(const std::string &in);
+    LIB_PUMP uint32_t base64_encode_length(const std::string &in);
 
     /*********************************************************************************
      * Base64 encode
@@ -37,7 +37,7 @@ namespace codec {
     /*********************************************************************************
      * Base64 decode string length
      ********************************************************************************/
-    LIB_PUMP uint32 base64_decode_length(const std::string &in);
+    LIB_PUMP uint32_t base64_decode_length(const std::string &in);
 
     /*********************************************************************************
      * Base64 decode

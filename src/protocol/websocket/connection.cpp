@@ -33,7 +33,7 @@ namespace protocol {
             has_mask_(has_mask),
             decode_phase_(DECODE_FRAME_HEADER) {
             if (has_mask_) {
-                *(uint32_ptr)(mask_key_) = (uint32)::time(0);
+                *(uint32_t*)(mask_key_) = (uint32_t)::time(0);
             } else {
                 memset(mask_key_, 0, sizeof(mask_key_));
             }
@@ -136,7 +136,7 @@ namespace protocol {
             return true;
         }
 
-        bool connection::send_buffer(c_block_ptr b, uint32 size) {
+        bool connection::send_buffer(const block_t *b, int32_t size) {
             PUMP_LOCK_SPOINTER(transp, transp_);
             if (!transp || !transp->is_started()) {
                 return false;
@@ -149,7 +149,7 @@ namespace protocol {
             return true;
         }
 
-        bool connection::send(c_block_ptr b, uint32 size) {
+        bool connection::send(const block_t *b, int32_t size) {
             PUMP_LOCK_SPOINTER(transp, transp_);
             if (!transp || !transp->is_started()) {
                 return false;
@@ -157,11 +157,11 @@ namespace protocol {
 
             frame_header hdr;
             init_frame_header(&hdr, 1, FRAME_OPTCODE_TEXT, has_mask_, mask_key_, size);
-            uint32 hdr_size = get_frame_header_size(&hdr);
+            int32_t hdr_size = get_frame_header_size(&hdr);
 
             // Encode frame header
             std::string buffer(hdr_size, 0);
-            if (encode_frame_header(&hdr, (block_ptr)buffer.c_str(), hdr_size) == 0) {
+            if (encode_frame_header(&hdr, (block_t*)buffer.c_str(), hdr_size) == 0) {
                 PUMP_ASSERT(false);
             }
 
@@ -169,11 +169,11 @@ namespace protocol {
             buffer.append(b, size);
             // Make mask payload data if having mask
             if (has_mask_) {
-                mask_transform((uint8 *)(buffer.data() + hdr_size), size, mask_key_);
+                mask_transform((uint8_t*)(buffer.data() + hdr_size), size, mask_key_);
             }
 
             // Send frame
-            if (transp->send(buffer.c_str(), (uint32)buffer.size()) !=
+            if (transp->send(buffer.c_str(), (int32_t)buffer.size()) !=
                 transport::ERROR_OK) {
                 return false;
             }
@@ -181,16 +181,16 @@ namespace protocol {
             return true;
         }
 
-        void connection::on_read(connection_wptr wptr, c_block_ptr b, int32 size) {
+        void connection::on_read(connection_wptr wptr, const block_t *b, int32_t size) {
             PUMP_LOCK_WPOINTER(conn, wptr);
             if (conn) {
                 if (!conn->read_cache_.empty()) {
                     conn->read_cache_.append(b, size);
                     b = conn->read_cache_.data();
-                    size = (int32)conn->read_cache_.size();
+                    size = (int32_t)conn->read_cache_.size();
                 }
 
-                int32 used_size = -1;
+                int32_t used_size = -1;
                 if (conn->rt_ == READ_FRAME) {
                     used_size = conn->__handle_frame(b, size);
                 } else if (conn->rt_ > READ_FRAME) {
@@ -230,19 +230,19 @@ namespace protocol {
             }
         }
 
-        int32 connection::__handle_pocket(c_block_ptr b, uint32 size) {
+        int32_t connection::__handle_pocket(const block_t *b, int32_t size) {
             auto pk = pocket_.get();
             PUMP_ASSERT(pk);
 
-            int32 parse_size = -1;
+            int32_t parse_size = -1;
             if (read_cache_.empty()) {
                 parse_size = pk->parse(b, size);
-                if (parse_size >= 0 && parse_size < (int32)size) {
-                    read_cache_.append(b + parse_size, (int32)size - parse_size);
+                if (parse_size >= 0 && parse_size < size) {
+                    read_cache_.append(b + parse_size, size - parse_size);
                 }
             } else {
                 read_cache_.append(b, size);
-                parse_size = pk->parse(read_cache_.data(), (int32)read_cache_.size());
+                parse_size = pk->parse(read_cache_.data(), (int32_t)read_cache_.size());
                 if (parse_size > 0) {
                     read_cache_ = read_cache_.substr(parse_size);
                 }
@@ -261,9 +261,9 @@ namespace protocol {
             return parse_size;
         }
 
-        int32 connection::__handle_frame(c_block_ptr b, uint32 size) {
-            int32 hdr_size = 0;
-            uint32 payload_size = 0;
+        int32_t connection::__handle_frame(const block_t *b, int32_t size) {
+            int32_t hdr_size = 0;
+            int32_t payload_size = 0;
 
             if (decode_phase_ == DECODE_FRAME_HEADER) {
                 hdr_size = decode_frame_header(b, size, &decode_hdr_);
@@ -275,9 +275,9 @@ namespace protocol {
             }
 
             if (decode_phase_ == DECODE_FRAME_PAYLOAD) {
-                payload_size = decode_hdr_.payload_len;
+                payload_size = (int32_t)decode_hdr_.payload_len;
                 if (payload_size > 126) {
-                    payload_size = (uint32)decode_hdr_.ex_payload_len;
+                    payload_size = (int32_t)decode_hdr_.ex_payload_len;
                 }
 
                 if (hdr_size + payload_size > size) {
@@ -287,10 +287,10 @@ namespace protocol {
                 decode_phase_ = DECODE_FRAME_HEADER;
 
                 if (payload_size > 0 && decode_hdr_.mask == 1) {
-                    mask_transform((uint8_ptr)(b + hdr_size), payload_size, decode_hdr_.mask_key);
+                    mask_transform((uint8_t*)(b + hdr_size), payload_size, decode_hdr_.mask_key);
                 }
 
-                uint32 optcode = decode_hdr_.optcode;
+                uint32_t optcode = decode_hdr_.optcode;
                 if (optcode == FRAME_OPTCODE_SEQUEL || optcode == FRAME_OPTCODE_TEXT ||
                     optcode == FRAME_OPTCODE_BINARY) {
                     cbs_.frame_cb(b + hdr_size, payload_size, decode_hdr_.fin == 1);
@@ -314,46 +314,46 @@ namespace protocol {
                 transp_->read_for_once();
             }
 
-            return int32(hdr_size + payload_size);
+            return hdr_size + payload_size;
         }
 
         void connection::__send_ping_frame() {
             frame_header hdr;
             init_frame_header(&hdr, 1, FRAME_OPTCODE_PING, 0, 0, 0);
-            uint32 hdr_size = get_frame_header_size(&hdr);
+            uint32_t hdr_size = get_frame_header_size(&hdr);
 
             std::string buffer(hdr_size, 0);
-            if (encode_frame_header(&hdr, (block_ptr)buffer.c_str(), hdr_size) == 0) {
+            if (encode_frame_header(&hdr, (block_t*)buffer.c_str(), hdr_size) == 0) {
                 PUMP_ASSERT(false);
             }
 
-            transp_->send(buffer.c_str(), (uint32)buffer.size());
+            transp_->send(buffer.c_str(), (int32_t)buffer.size());
         }
 
         void connection::__send_pong_frame() {
             frame_header hdr;
             init_frame_header(&hdr, 1, FRAME_OPTCODE_PONG, 0, 0, 0);
-            uint32 hdr_size = get_frame_header_size(&hdr);
+            int32_t hdr_size = get_frame_header_size(&hdr);
 
             std::string buffer(hdr_size, 0);
-            if (encode_frame_header(&hdr, (block_ptr)buffer.c_str(), hdr_size) == 0) {
+            if (encode_frame_header(&hdr, (block_t*)buffer.c_str(), hdr_size) == 0) {
                 PUMP_ASSERT(false);
             }
 
-            transp_->send(buffer.c_str(), (uint32)buffer.size());
+            transp_->send(buffer.c_str(), (int32_t)buffer.size());
         }
 
         void connection::__send_close_frame() {
             frame_header hdr;
             init_frame_header(&hdr, 1, FRAME_OPTCODE_CLOSE, 0, 0, 0);
-            uint32 hdr_size = get_frame_header_size(&hdr);
+            int32_t hdr_size = get_frame_header_size(&hdr);
 
             std::string buffer(hdr_size, 0);
-            if (encode_frame_header(&hdr, (block_ptr)buffer.c_str(), hdr_size) == 0) {
+            if (encode_frame_header(&hdr, (block_t*)buffer.c_str(), hdr_size) == 0) {
                 PUMP_ASSERT(false);
             }
 
-            transp_->send(buffer.c_str(), (uint32)buffer.size());
+            transp_->send(buffer.c_str(), (int32_t)buffer.size());
         }
 
     }  // namespace websocket

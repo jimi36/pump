@@ -19,12 +19,12 @@
 namespace pump {
 namespace transport {
 
-    void base_transport::on_channel_event(uint32 ev) {
+    void base_transport::on_channel_event(int32_t ev) {
         __interrupt_and_trigger_callbacks();
     }
 
-    uint32 base_transport::__change_read_state(uint32 state) {
-        uint32 old_state = read_state_.load();
+    uint32_t base_transport::__change_read_state(uint32_t state) {
+        uint32_t old_state = read_state_.load();
         if (old_state == READ_ONCE || old_state == READ_LOOP) {
             if (!read_state_.compare_exchange_strong(old_state, state)) {
                 return READ_INVALID;

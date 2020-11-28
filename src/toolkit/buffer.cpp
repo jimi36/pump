@@ -18,10 +18,10 @@ namespace toolkit {
         }
     }
 
-    bool base_buffer::__init_with_size(uint32 size) {
+    bool base_buffer::__init_with_size(uint32_t size) {
         try {
             if (!raw_) {
-                raw_ = (block_ptr)pump_malloc(size);
+                raw_ = (block_t*)pump_malloc(size);
                 if (raw_) {
                     raw_size_ = size;
                     return true;
@@ -33,10 +33,10 @@ namespace toolkit {
         return false;
     }
 
-    bool base_buffer::__init_with_copy(c_block_ptr b, uint32 size) {
+    bool base_buffer::__init_with_copy(const block_t *b, uint32_t size) {
         try {
             if (!raw_ && b && size > 0) {
-                raw_ = (block_ptr)pump_malloc(size);
+                raw_ = (block_t*)pump_malloc(size);
                 if (raw_) {
                     memcpy(raw_, b, size);
                     raw_size_ = size;
@@ -49,16 +49,16 @@ namespace toolkit {
         return false;
     }
 
-    bool base_buffer::__init_with_ownership(c_block_ptr b, uint32 size) {
+    bool base_buffer::__init_with_ownership(const block_t *b, uint32_t size) {
         if (!raw_ && b && size > 0) {
-            raw_ = (block_ptr)b;
+            raw_ = (block_t*)b;
             raw_size_ = size;
             return true;
         }
         return false;
     }
 
-    bool io_buffer::append(c_block_ptr b, uint32 size) {
+    bool io_buffer::append(const block_t *b, uint32_t size) {
         if (!b || size == 0) {
             return false;
         }
@@ -71,7 +71,7 @@ namespace toolkit {
             reset();
         }
 
-        uint32 left = raw_size_ - read_pos_ - data_size_;
+        uint32_t left = raw_size_ - read_pos_ - data_size_;
         if (size < left) {
             memcpy(raw_ + read_pos_ + data_size_, b, size);
             data_size_ += size;
@@ -81,8 +81,8 @@ namespace toolkit {
             data_size_ += size;
             read_pos_ = 0;
         } else {
-            uint32 new_size_ = raw_size_ + size * 2;
-            raw_ = (block_ptr)pump_realloc(raw_, new_size_);
+            uint32_t new_size_ = raw_size_ + size * 2;
+            raw_ = (block_t*)pump_realloc(raw_, new_size_);
             if (!raw_) {
                 return false;
             }

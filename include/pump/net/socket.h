@@ -43,145 +43,151 @@ namespace net {
     /*********************************************************************************
      * Create socket file descriptor
      ********************************************************************************/
-    int32 create_socket(int32 domain, int32 type);
+    int32_t create_socket(int32_t domain, int32_t type);
 
     /*********************************************************************************
      * Set nonblock flag
      ********************************************************************************/
-    bool set_noblock(int32 fd, int32 noblock);
+    bool set_noblock(int32_t fd, int32_t noblock);
 
     /*********************************************************************************
      * Set linger flag
      ********************************************************************************/
-    bool set_linger(int32 fd, uint16 on, uint16 linger);
+    bool set_linger(int32_t fd, uint16_t on, uint16_t linger);
 
     /*********************************************************************************
      * Set read buffer size
      ********************************************************************************/
-    bool set_read_bs(int32 fd, int32 size);
+    bool set_read_bs(int32_t fd, int32_t size);
 
     /*********************************************************************************
      * Set send buffer size
      ********************************************************************************/
-    bool set_send_bs(int32 fd, int32 size);
+    bool set_send_bs(int32_t fd, int32_t size);
 
     /*********************************************************************************
      * Set tcp keeplive
      ********************************************************************************/
-    bool set_keeplive(int32 fd, int32 keeplive, int32 keepinterval);
+    bool set_keeplive(int32_t fd, int32_t keeplive, int32_t keepinterval);
 
     /*********************************************************************************
      * Set reuse address
      ********************************************************************************/
-    bool set_reuse(int32 fd, int32 reuse);
+    bool set_reuse(int32_t fd, int32_t reuse);
 
     /*********************************************************************************
      * Set tcp no delay
      ********************************************************************************/
-    bool set_nodelay(int32 fd, int32 nodelay);
+    bool set_nodelay(int32_t fd, int32_t nodelay);
 
     /*********************************************************************************
      * Update connect context
      ********************************************************************************/
-    bool update_connect_context(int32 fd);
+    bool update_connect_context(int32_t fd);
 
     /*********************************************************************************
      * Set udp connection reset
      * This is for windows system, other system will return true
      ********************************************************************************/
-    bool set_udp_conn_reset(int32 fd, bool enable);
+    bool set_udp_conn_reset(int32_t fd, bool enable);
 
     /*********************************************************************************
      * Bind address
      ********************************************************************************/
-    bool bind(int32 fd, struct sockaddr *addr, int32 addrlen);
+    bool bind(int32_t fd, struct sockaddr *addr, int32_t addrlen);
 
     /*********************************************************************************
      * Listen socket
      ********************************************************************************/
-    bool listen(int32 fd, int32 backlog = 65535);
+    bool listen(int32_t fd, int32_t backlog = 65535);
 
     /*********************************************************************************
      * Accept socket
      ********************************************************************************/
-    int32 accept(int32 fd, struct sockaddr *addr, int32_ptr addrlen);
+    int32_t accept(int32_t fd, struct sockaddr *addr, int32_t *addrlen);
 
     /*********************************************************************************
      * Connect
      ********************************************************************************/
-    bool connect(int32 fd, struct sockaddr *addr, int32 addrlen);
+    bool connect(int32_t fd, struct sockaddr *addr, int32_t addrlen);
 
     /*********************************************************************************
      * Read
      ********************************************************************************/
-    int32 read(int32 fd, block_ptr b, int32 size);
+    int32_t read(int32_t fd, block_t *b, int32_t size);
 
     /*********************************************************************************
      * Readfrom
      ********************************************************************************/
-    int32 read_from(
-        int32 fd, block_ptr b, int32 size, struct sockaddr *addr, int32_ptr addrlen);
+    int32_t read_from(int32_t fd, 
+                      block_t *b, 
+                      int32_t size, 
+                      struct sockaddr *addr, 
+                      int32_t *addrlen);
 
     /*********************************************************************************
      * Send
      ********************************************************************************/
-    int32 send(int32 fd, c_block_ptr b, int32 size);
+    int32_t send(int32_t fd, const block_t *b, int32_t size);
 
     /*********************************************************************************
      * Sendto
      ********************************************************************************/
-    int32 send_to(
-        int32 fd, c_block_ptr b, int32 size, struct sockaddr *addr, int32 addrlen);
+    int32_t send_to(int32_t fd, 
+                    const block_t *b,
+                    int32_t size, 
+                    struct sockaddr *addr, 
+                    int32_t addrlen);
 
     /*********************************************************************************
      * Poll a socket events
      ********************************************************************************/
-    int32 poll(struct pollfd *pfds, int32 count, int32 timeout);
+    int32_t poll(struct pollfd *pfds, int32_t count, int32_t timeout);
 
     /*********************************************************************************
      * Close the ability of writing
      ********************************************************************************/
-    void shutdown(int32 fd);
+    void shutdown(int32_t fd);
 
     /*********************************************************************************
      * Close socket
      ********************************************************************************/
-    bool close(int32 fd);
+    bool close(int32_t fd);
 
     /*********************************************************************************
      * Get socket error
      ********************************************************************************/
-    int32 get_socket_error(int32 fd);
+    int32_t get_socket_error(int32_t fd);
 
     /*********************************************************************************
      * Get last errno
      ********************************************************************************/
-    int32 last_errno();
+    int32_t last_errno();
 
     /*********************************************************************************
      * Get local address of the socket
      ********************************************************************************/
-    bool local_address(int32 fd, struct sockaddr *addr, int32_ptr addrlen);
+    bool local_address(int32_t fd, struct sockaddr *addr, int32_t *addrlen);
 
     /*********************************************************************************
      * Get remote address of the socket
      ********************************************************************************/
-    bool remote_address(int32 fd, struct sockaddr *addr, int32_ptr addrlen);
+    bool remote_address(int32_t fd, struct sockaddr *addr, int32_t *addrlen);
 
     /*********************************************************************************
      * Transfrom address to string
      * On success return string address like 127.0.0.1:80, else return empty
      *string
      ********************************************************************************/
-    std::string address_to_string(struct sockaddr *addr, int32 addrlen);
+    std::string address_to_string(struct sockaddr *addr, int32_t addrlen);
 
     /*********************************************************************************
      * Transfrom string to address
      ********************************************************************************/
     bool string_to_address(const std::string &ip,
-                           uint16 port,
+                           uint16_t port,
                            struct sockaddr *addr,
-                           int32_ptr addrlen);
+                           int32_t *addrlen);
 
 }  // namespace net
 }  // namespace pump

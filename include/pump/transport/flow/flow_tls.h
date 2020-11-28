@@ -53,7 +53,7 @@ namespace transport {
              *     FLOW_ERR_ABORT => error
              ********************************************************************************/
             flow_error init(poll::channel_sptr &ch,
-                            int32 fd,
+                            int32_t fd,
                             void_ptr xcred,
                             bool client);
 
@@ -96,7 +96,7 @@ namespace transport {
             /*********************************************************************************
              * Read from ssl
              ********************************************************************************/
-            int32 read_from_ssl(block_ptr b, int32 size);
+            int32_t read_from_ssl(block_t *b, int32_t size);
 
             /*********************************************************************************
              * Check there are data to read or not

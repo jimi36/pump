@@ -68,7 +68,7 @@ namespace pump {
         /*********************************************************************************
          * Delete channel
          ********************************************************************************/
-        bool remove_channel_tracker(poll::channel_tracker_sptr &tracker, int32_t pt);
+        void remove_channel_tracker(poll::channel_tracker_sptr &tracker, int32_t pt);
 
         /*********************************************************************************
          * Resume channel
@@ -78,7 +78,7 @@ namespace pump {
         /*********************************************************************************
          * Post channel event
          ********************************************************************************/
-        bool post_channel_event(poll::channel_sptr &ch, uint32 event);
+        bool post_channel_event(poll::channel_sptr &ch, int32_t event);
 
         /*********************************************************************************
          * Post callback task

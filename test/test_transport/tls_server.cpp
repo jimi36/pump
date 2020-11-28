@@ -2,23 +2,22 @@
 
 static service *sv;
 
-static int send_loop = 0;
-static int send_pocket_size = 1024 * 4;
+static int32_t send_pocket_size = 1024 * 4;
 
 struct transport_context {
     transport_context(tls_transport_sptr t) {
         transport = t;
         read_size = 0;
         read_pocket_size = 0;
-        last_report_time = ::time(0);
+        last_report_time = (int32_t)::time(0);
         idx = t->get_fd();
     }
 
     tls_transport_sptr transport;
-    uint64 read_size;
-    int32 read_pocket_size;
-    int32 last_report_time;
-    int32 idx;
+    uint64_t read_size;
+    int32_t read_pocket_size;
+    int32_t last_report_time;
+    int32_t idx;
 };
 
 class my_tls_acceptor : public std::enable_shared_from_this<my_tls_acceptor> {
@@ -61,7 +60,7 @@ class my_tls_acceptor : public std::enable_shared_from_this<my_tls_acceptor> {
     /*********************************************************************************
      * Tcp read event callback
      ********************************************************************************/
-    void on_read_callback(base_transport_ptr transp, c_block_ptr b, int32 size) {
+    void on_read_callback(base_transport_ptr transp, const block_t *b, int32_t size) {
         static int last_fd = 0;
         if (last_fd != transp->get_fd()) {
             // printf("transport %d read\n", transp->get_fd());
@@ -89,9 +88,9 @@ class my_tls_acceptor : public std::enable_shared_from_this<my_tls_acceptor> {
             printf("tls transport %d disconnected all read size %fMB\n",
                    transp->get_fd(),
                    (double)it->second->read_size / 1024 / 1024);
-            printf("tls transport %d disconnected all read pocket %lld\n",
+            printf("tls transport %d disconnected all read pocket %d\n",
                    transp->get_fd(),
-                   it->second->read_size / 4096);
+                   (int32_t)it->second->read_size / 4096);
             delete it->second;
             transports_.erase(it);
         }
@@ -106,14 +105,14 @@ class my_tls_acceptor : public std::enable_shared_from_this<my_tls_acceptor> {
         if (it != transports_.end()) {
             printf("tls transport disconnected all read size %fMB\n",
                    (double)it->second->read_size / 1024 / 1024);
-            printf("tls transport disconnected all read pocket %llu\n",
-                   it->second->read_size / 4096);
+            printf("tls transport disconnected all read pocket %d\n",
+                   (int32_t)it->second->read_size / 4096);
             delete it->second;
         }
     }
 
     void send_data(base_transport_ptr transport) {
-        if (transport->send(send_data_.data(), send_data_.size()) != 0)
+        if (transport->send(send_data_.data(), (int32_t)send_data_.size()) != 0)
             printf("send data error\n");
     }
 
@@ -197,7 +196,7 @@ tjiSDBXej+xcoYNOHSlaB+7fIqIq5IA6t5ZZB6xH3TwILG7AsUxV\n\
 ";
 
 void start_tls_server(const std::string &ip,
-                      uint16 port,
+                      uint16_t port,
                       const std::string &cert_file,
                       const std::string &key_file) {
     sv = new service;

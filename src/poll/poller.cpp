@@ -112,7 +112,7 @@ namespace poll {
     }
 #endif
 
-    bool poller::push_channel_event(channel_sptr &c, uint32 event) {
+    bool poller::push_channel_event(channel_sptr &c, int32_t event) {
         if (!started_.load()) {
             PUMP_WARN_LOG("poller::push_channel_event: poller not started");
             return false;
@@ -130,7 +130,7 @@ namespace poll {
 
     void poller::__handle_channel_events() {
         channel_event_ptr ev = nullptr;
-        int32 cnt = cev_cnt_.exchange(0);
+        int32_t cnt = cev_cnt_.exchange(0);
         while (cnt > 0) {
             PUMP_DEBUG_CHECK(cevents_.pop(ev));
             PUMP_LOCK_WPOINTER(ch, ev->ch);
@@ -145,7 +145,7 @@ namespace poll {
     }
 
     void poller::__handle_channel_tracker_events() {
-        int32 cnt = tev_cnt_.exchange(0);
+        int32_t cnt = tev_cnt_.exchange(0);
         channel_tracker_event_ptr ev = nullptr;
         while (cnt > 0) {
             PUMP_DEBUG_CHECK(tevents_.pop(ev));

@@ -62,12 +62,12 @@ namespace codec {
 
     /* Hash a single 512-bit block. This is the core of the algorithm. */
 
-    void sha1_transform(uint32 state[5], const uint8 buffer[64]) {
-        uint32 a, b, c, d, e;
+    void sha1_transform(uint32_t state[5], const uint8_t buffer[64]) {
+        uint32_t a, b, c, d, e;
 
         typedef union {
-            uint8 c[64];
-            uint32 l[16];
+            uint8_t c[64];
+            uint32_t l[16];
         } CHAR64LONG16;
 
 #ifdef SHA1HANDSOFF
@@ -196,8 +196,9 @@ namespace codec {
 
     /* Run your data through this. */
 
-    void sha1_update(SHA1_CTX *ctx, c_block_ptr data, uint32 len) {
-        uint32 i, j;
+    void sha1_update(SHA1_CTX *ctx, const block_t *data, int32_t size) {
+        uint32_t i, j;
+        uint32_t len = uint32_t(size);
 
         j = ctx->count[0];
         if ((ctx->count[0] += len << 3) < j) {
@@ -209,7 +210,7 @@ namespace codec {
             memcpy(&ctx->buffer[j], data, (i = 64 - j));
             sha1_transform(ctx->state, ctx->buffer);
             for (; i + 63 < len; i += 64) {
-                sha1_transform(ctx->state, (c_uint8_ptr)&data[i]);
+                sha1_transform(ctx->state, (const uint8_t*)&data[i]);
             }
             j = 0;
         } else {
@@ -220,12 +221,12 @@ namespace codec {
 
     /* Add padding and return the message digest. */
 
-    void sha1_final(SHA1_CTX *ctx, uint8 digest[20]) {
-        uint32 i;
+    void sha1_final(SHA1_CTX *ctx, uint8_t digest[20]) {
+        uint32_t i;
 
-        uint8 finalcount[8];
+        uint8_t finalcount[8];
 
-        uint8 c;
+        uint8_t c;
 
 #if 0 /* untested "improvement" by DHR */
             /* Convert context->count to a sequence of bytes
@@ -238,7 +239,7 @@ namespace codec {
             for (i = 0; i < 2; i++) {
                 uint32_t t = ctx->count[i];
 
-                int j;
+                int32_t j;
 
                 for (j = 0; j < 4; t >>= 8, j++) {
                     *--fcp = (uint8)t;
@@ -247,32 +248,32 @@ namespace codec {
 #else
         for (i = 0; i < 8; i++) {
             /* Endian independent */
-            finalcount[i] = (uint8)((ctx->count[(i >= 4 ? 0 : 1)] >> ((3 - (i & 3)) * 8)) & 255);
+            finalcount[i] = (uint8_t)((ctx->count[(i >= 4 ? 0 : 1)] >> ((3 - (i & 3)) * 8)) & 255);
         }
 #endif
         c = 0200;
-        sha1_update(ctx, (c_block_ptr)&c, 1);
+        sha1_update(ctx, (const block_t*)&c, 1);
         while ((ctx->count[0] & 504) != 448) {
             c = 0000;
-            sha1_update(ctx, (c_block_ptr)&c, 1);
+            sha1_update(ctx, (const block_t*)&c, 1);
         }
         /* Should cause a sha1_transform() */
-        sha1_update(ctx, (c_block_ptr)finalcount, 8);
+        sha1_update(ctx, (const block_t*)finalcount, 8);
         for (i = 0; i < 20; i++) {
-            digest[i] = (uint8)((ctx->state[i >> 2] >> ((3 - (i & 3)) * 8)) & 255);
+            digest[i] = (uint8_t)((ctx->state[i >> 2] >> ((3 - (i & 3)) * 8)) & 255);
         }
         /* Wipe variables */
         memset(ctx, '\0', sizeof(*ctx));
         memset(&finalcount, '\0', sizeof(finalcount));
     }
 
-    void sha1(c_block_ptr str, uint32 len, block digest[20]) {
+    void sha1(const block_t *data, int32_t size, uint8_t digest[20]) {
         SHA1_CTX ctx;
         sha1_init(&ctx);
-        for (uint32 ii = 0; ii < len; ii += 1) {
-            sha1_update(&ctx, str + ii, 1);
+        for (uint32_t i = 0; i < uint32_t(size); i += 1) {
+            sha1_update(&ctx, data + i, 1);
         }
-        sha1_final(&ctx, (uint8_ptr)digest);
+        sha1_final(&ctx, (uint8_t*)digest);
     }
 
 }  // namespace codec

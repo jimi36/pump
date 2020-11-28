@@ -60,7 +60,7 @@ namespace transport {
         /*********************************************************************************
          * Channel event callback
          ********************************************************************************/
-        virtual void on_channel_event(uint32 ev) override;
+        virtual void on_channel_event(int32_t ev) override;
 
       protected:
         /*********************************************************************************

@@ -30,7 +30,7 @@ namespace protocol {
         };
 
         std::string get_ut_string(uri_type ut) {
-            return ut_strings[int32(ut)];
+            return ut_strings[uint32_t(ut)];
         }
 
         bool parse_url(const std::string &url,
@@ -49,8 +49,8 @@ namespace protocol {
             }
 
             ut = UIR_NONE;
-            c_block_ptr p = url.c_str();
-            for (int32 i = (int32)URI_HTTP; i < (int32)URI_END; i++) {
+            const block_t *p = url.c_str();
+            for (int32_t i = (int32_t)URI_HTTP; i < (int32_t)URI_END; i++) {
                 if (pump_strncasecmp(ut_strings[i].c_str(), sut.c_str(), sut.size()) == 0) {
                     p += ut_strings[i].size();
                     ut = (uri_type)i;
@@ -66,7 +66,7 @@ namespace protocol {
             }
             p += 3;
 
-            c_block_ptr end = strstr(p, "/");
+            const block_t *end = strstr(p, "/");
             if (!end) {
                 host.assign(p);
                 path.assign("/");
@@ -90,11 +90,11 @@ namespace protocol {
             }
 
             auto kvs = split_string(new_params, "[=&]");
-            uint32 cnt = (uint32)kvs.size();
+            uint32_t cnt = (uint32_t)kvs.size();
             if (cnt % 2 != 0) {
                 return false;
             }
-            for (uint32 i = 0; i < cnt; i += 2) {
+            for (uint32_t i = 0; i < cnt; i += 2) {
                 params[kvs[i]] = kvs[i + 1];
             }
 

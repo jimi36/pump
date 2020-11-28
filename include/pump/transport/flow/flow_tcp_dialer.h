@@ -59,11 +59,11 @@ namespace transport {
              * Return socket error code.
              ********************************************************************************/
 #if defined(PUMP_HAVE_IOCP)
-            int32 connect(net::iocp_task_ptr iocp_task,
+            int32_t connect(net::iocp_task_ptr iocp_task,
                           address_ptr local_address,
                           address_ptr remote_address);
 #else
-            int32 connect(address_ptr local_address, address_ptr remote_address);
+            int32_t connect(address_ptr local_address, address_ptr remote_address);
 #endif
           private:
             // IPV6

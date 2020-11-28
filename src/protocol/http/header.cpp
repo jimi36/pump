@@ -26,18 +26,18 @@ namespace protocol {
           : parse_finished_(false) {
         }
 
-        int32 header::parse(c_block_ptr b, int32 size) {
+        int32_t header::parse(const block_t *b, int32_t size) {
             if (parse_finished_) {
                 return 0;
             }
 
-            uint32 len = 0;
+            uint32_t len = 0;
             std::string name;
             std::string value;
-            c_block_ptr beg = b;
-            c_block_ptr end = b;
-            c_block_ptr line_end = nullptr;
-            while ((line_end = find_http_line_end(beg, uint32(size - (end - b))))) {
+            const block_t *beg = b;
+            const block_t *end = b;
+            const block_t *line_end = nullptr;
+            while ((line_end = find_http_line_end(beg, uint32_t(size - (end - b))))) {
                 // Check header parsed complete
                 if (beg + HTTP_CR_LEN == line_end) {
                     beg += HTTP_CR_LEN;
@@ -49,7 +49,7 @@ namespace protocol {
                 while (end < line_end && *end != ':') {
                     ++end;
                 }
-                len = (uint32)(end - beg);
+                len = uint32_t(end - beg);
                 if (end >= line_end || len <= 0) {
                     return -1;
                 }
@@ -66,7 +66,7 @@ namespace protocol {
                 // Parse header value
                 beg = end;
                 end = line_end - HTTP_CR_LEN;
-                len = (uint32)(end - beg);
+                len = uint32_t(end - beg);
                 if (len > 0) {
                     value.assign(beg, len);
                 }
@@ -77,13 +77,13 @@ namespace protocol {
                 beg = end = line_end;
             }
 
-            return (int32)(beg - b);
+            return int32_t(beg - b);
         }
 
-        int32 header::serialize(std::string &buffer) const {
-            int32 size = 0;
+        int32_t header::serialize(std::string &buffer) const {
+            int32_t size = 0;
             std::string value;
-            block tmp[HTTP_LINE_MAX_LEN] = {0};
+            block_t tmp[HTTP_LINE_MAX_LEN] = {0};
             for (auto beg = headers_.begin(); beg != headers_.end(); beg++) {
                 auto cnt = beg->second.size();
                 if (cnt == 0) {
@@ -107,8 +107,8 @@ namespace protocol {
             return size;
         }
 
-        void header::set(const std::string &name, int32 value) {
-            block tmp[32] = {0};
+        void header::set(const std::string &name, int32_t value) {
+            block_t tmp[32] = {0};
             pump_snprintf(tmp, sizeof(tmp) - 1, "%d", value);
             headers_[name].push_back(tmp);
         }
@@ -123,8 +123,8 @@ namespace protocol {
             }
         }
 
-        void header::set_unique(const std::string &name, int32 value) {
-            block tmp[32] = {0};
+        void header::set_unique(const std::string &name, int32_t value) {
+            block_t tmp[32] = {0};
             pump_snprintf(tmp, sizeof(tmp) - 1, "%d", value);
             headers_[name] = std::vector<std::string>(1, tmp);
         }
@@ -133,7 +133,7 @@ namespace protocol {
             headers_[name] = split_string(value, "[,;] *");
         }
 
-        bool header::get(const std::string &name, int32 &value) const {
+        bool header::get(const std::string &name, int32_t &value) const {
             auto it = headers_.find(name);
             if (it == headers_.end() || it->second.empty()) {
                 return false;

@@ -22,7 +22,7 @@ namespace pump {
 namespace protocol {
     namespace http {
 
-        static std::unordered_map<int32, std::string> http_code_desc_map;
+        static std::unordered_map<int32_t, std::string> http_code_desc_map;
 
         static void init_http_code_desc_map() {
             static bool inited = false;
@@ -71,7 +71,7 @@ namespace protocol {
             http_code_desc_map[505] = "HTTP Version Not Supported";
         }
 
-        static const std::string &get_http_code_desc(int32 code) {
+        static const std::string &get_http_code_desc(int32_t code) {
             auto it = http_code_desc_map.find(code);
             if (it != http_code_desc_map.end()) {
                 return it->second;
@@ -83,7 +83,7 @@ namespace protocol {
             init_http_code_desc_map();
         }
 
-        int32 response::parse(c_block_ptr b, int32 size) {
+        int32_t response::parse(const block_t *b, int32_t size) {
             if (parse_status_ == PARSE_FINISHED) {
                 return 0;
             }
@@ -92,8 +92,8 @@ namespace protocol {
                 parse_status_ = PARSE_LINE;
             }
 
-            c_block_ptr pos = b;
-            int32 parse_size = 0;
+            const block_t *pos = b;
+            int32_t parse_size = 0;
             if (parse_status_ == PARSE_LINE) {
                 parse_size = __parse_start_line(pos, size);
                 if (parse_size <= 0) {
@@ -111,7 +111,7 @@ namespace protocol {
                 if (parse_size < 0) {
                     return parse_size;
                 } else if (parse_size == 0) {
-                    return int32(pos - b);
+                    return int32_t(pos - b);
                 }
 
                 pos += parse_size;
@@ -125,7 +125,7 @@ namespace protocol {
             if (parse_status_ == PARSE_CONTENT) {
                 content_ptr ct = ct_.get();
                 if (!ct) {
-                    int32 ct_len = 0;
+                    int32_t ct_len = 0;
                     if (header_.get("Content-Length", ct_len) && ct_len > 0) {
                         ct = new content();
                         ct->set_length_to_parse(ct_len);
@@ -148,7 +148,7 @@ namespace protocol {
                     if (parse_size < 0) {
                         return parse_size;
                     } else if (parse_size == 0) {
-                        return int32(pos - b);
+                        return int32_t(pos - b);
                     }
 
                     pos += parse_size;
@@ -160,13 +160,13 @@ namespace protocol {
                 }
             }
 
-            return int32(pos - b);
+            return int32_t(pos - b);
         }
 
-        int32 response::serialize(std::string &buffer) const {
-            int32 serialize_size = 0;
+        int32_t response::serialize(std::string &buffer) const {
+            int32_t serialize_size = 0;
 
-            int32 size = __serialize_response_line(buffer);
+            int32_t size = __serialize_response_line(buffer);
             if (size < 0) {
                 return -1;
             }
@@ -189,10 +189,10 @@ namespace protocol {
             return serialize_size;
         }
 
-        int32 response::__parse_start_line(c_block_ptr b, int32 size) {
-            c_block_ptr pos = b;
+        int32_t response::__parse_start_line(const block_t *b, int32_t size) {
+            const block_t *pos = b;
 
-            c_block_ptr line_end = find_http_line_end(pos, size);
+            const block_t *line_end = find_http_line_end(pos, size);
             if (!line_end) {
                 return 0;
             }
@@ -214,18 +214,18 @@ namespace protocol {
                 ++pos;
             }
             while (pos < line_end && *pos != ' ') {
-                status_code_ = status_code_ * 10 + int32(*(pos++) - '0');
+                status_code_ = status_code_ * 10 + int32_t(*(pos++) - '0');
             }
             if (pos == line_end) {
                 return -1;
             }
 
-            return int32(line_end - b);
+            return int32_t(line_end - b);
         }
 
-        int32 response::__serialize_response_line(std::string &buffer) const {
-            block tmp[128] = {0};
-            int32 size = pump_snprintf(tmp, sizeof(tmp) - 1,
+        int32_t response::__serialize_response_line(std::string &buffer) const {
+            block_t tmp[128] = {0};
+            int32_t size = pump_snprintf(tmp, sizeof(tmp) - 1,
                                        "%s %d %s\r\n",
                                        get_http_version_string().c_str(),
                                        status_code_,

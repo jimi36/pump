@@ -41,7 +41,7 @@ namespace poll {
         //SYSTEM_INFO sys_info;
         //GetSystemInfo(&sys_info);
         //for (DWORD i = 0; i < (sys_info.dwNumberOfProcessors * 2); ++i) {
-        for (int32 i = 0; i < 2; ++i) {
+        for (int32_t i = 0; i < 2; ++i) {
             std::thread *worker =
                 object_create<std::thread>(pump_bind(&iocp_poller::__work_thread, this));
             workrs_.push_back(worker);
@@ -62,8 +62,8 @@ namespace poll {
 
     void iocp_poller::wait_stopped() {
 #if defined(PUMP_HAVE_IOCP)
-        int32 count = (int32)workrs_.size();
-        for (int32 i = 0; i < count; i++) {
+        int32_t count = (int32_t)workrs_.size();
+        for (int32_t i = 0; i < count; i++) {
             workrs_[i]->join();
         }
         workrs_.clear();
@@ -92,8 +92,8 @@ namespace poll {
                     continue;
                 }
 
-                int32 event = IO_EVENT_NONE;
-                int32 task_type = task->get_type();
+                int32_t event = IO_EVENT_NONE;
+                int32_t task_type = task->get_type();
                 if (task_type & net::IOCP_READ_MASKS) {
                     event = IO_EVENT_READ;
                 } else if (task_type & net::IOCP_SEND_MASKS) {
@@ -104,7 +104,7 @@ namespace poll {
                     task->set_processed_size(transferred);
                     channel_ptr(notifier)->handle_io_event(event, task);
                 } else {
-                    channel_ptr(notifier)->handle_channel_event(uint32(completion_key));
+                    channel_ptr(notifier)->handle_channel_event(int32_t(completion_key));
                 }
             } else {
                 if (!task) {
@@ -119,8 +119,8 @@ namespace poll {
                     continue;
                 }
 
-                int32 event = IO_EVENT_NONE;
-                int32 task_type = task->get_type();
+                int32_t event = IO_EVENT_NONE;
+                int32_t task_type = task->get_type();
                 if (task_type & net::IOCP_READ_MASKS) {
                     event = IO_EVENT_READ;
                 } else if (task_type & net::IOCP_SEND_MASKS) {
@@ -138,7 +138,7 @@ namespace poll {
 #endif
     }
 
-    bool iocp_poller::push_channel_event(channel_sptr &c, uint32 ev) {
+    bool iocp_poller::push_channel_event(channel_sptr &c, int32_t ev) {
 #if defined(PUMP_HAVE_IOCP)
         auto task = net::new_iocp_task();
         task->set_notifier(c);

@@ -7,8 +7,8 @@ class my_udp_client {
     /*********************************************************************************
      * Read event callback for udp
      ********************************************************************************/
-    virtual void on_read_callback(base_transport_ptr transp, c_block_ptr b,
-                                  int32 size, const address &remote_address) {}
+    virtual void on_read_callback(base_transport_ptr transp, const block_t *b,
+                                  int32_t size, const address &remote_address) {}
 
     /*********************************************************************************
      * Stopped event callback
@@ -21,7 +21,7 @@ class my_udp_client {
     virtual void on_disconnected_callback(base_transport_ptr transp) {}
 };
 
-void send(udp_transport_sptr transport, const std::string &ip, uint16 port) {
+void send(udp_transport_sptr transport, const std::string &ip, uint16_t port) {
     char buf[4096];
     address addr(ip, port);
     while (1) {
@@ -37,7 +37,7 @@ void send(udp_transport_sptr transport, const std::string &ip, uint16 port) {
 
 static std::shared_ptr<my_udp_client> udp_client;
 
-void start_udp_client(const std::string &ip, uint16 port) {
+void start_udp_client(const std::string &ip, uint16_t port) {
     sv = new service;
     sv->start();
 

@@ -49,14 +49,14 @@ namespace protocol {
             /*********************************************************************************
              * Set connect timeout time
              ********************************************************************************/
-            PUMP_INLINE void set_connect_timeout(int64 timeout) {
+            PUMP_INLINE void set_connect_timeout(int64_t timeout) {
                 dial_timeout_ = timeout > 0 ? timeout : 0;
             }
 
             /*********************************************************************************
              * Set tls handshake timeout time
              ********************************************************************************/
-            PUMP_INLINE void set_tls_handshake_timeout(int64 timeout) {
+            PUMP_INLINE void set_tls_handshake_timeout(int64_t timeout) {
                 tls_handshake_timeout_ = timeout > 0 ? timeout : 0;
             }
 
@@ -111,9 +111,9 @@ namespace protocol {
             service_ptr sv_;
 
             // Dial timeout ms tims
-            int64 dial_timeout_;
+            int64_t dial_timeout_;
             // TLS handshake timeout ms time
-            int64 tls_handshake_timeout_;
+            int64_t tls_handshake_timeout_;
 
             // Http connection
             connection_sptr conn_;

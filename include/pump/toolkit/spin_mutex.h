@@ -31,7 +31,7 @@ namespace toolkit {
         /*********************************************************************************
          * Constructor
          ********************************************************************************/
-        spin_mutex(int32 per_loop = 3) noexcept;
+        spin_mutex(int32_t per_loop = 32) noexcept;
 
         /*********************************************************************************
          * Deconstructor
@@ -66,7 +66,7 @@ namespace toolkit {
         }
 
       private:
-        int32 per_loop_;
+        int32_t per_loop_;
         std::atomic_bool locked_;
     };
 

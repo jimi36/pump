@@ -29,12 +29,12 @@ namespace time {
     /*********************************************************************************
      * Get clock microsecond, just for calculating time difference
      ********************************************************************************/
-    LIB_PUMP uint64 get_clock_microsecond();
+    LIB_PUMP uint64_t get_clock_microsecond();
 
     /*********************************************************************************
      * Get clock milliseconds, just for calculating time difference
      ********************************************************************************/
-    LIB_PUMP uint64 get_clock_milliseconds();
+    LIB_PUMP uint64_t get_clock_milliseconds();
 
     class LIB_PUMP timestamp {
       public:
@@ -44,35 +44,35 @@ namespace time {
         timestamp() noexcept {
             ms_ = std::chrono::milliseconds(now_time());
         }
-        timestamp(uint64 ms) noexcept {
+        timestamp(uint64_t ms) noexcept {
             ms_ = std::chrono::milliseconds(ms);
         }
 
         /*********************************************************************************
          * Increase time value
          ********************************************************************************/
-        PUMP_INLINE void increase(uint64 ms) {
+        PUMP_INLINE void increase(uint64_t ms) {
             ms_ += std::chrono::milliseconds(ms);
         }
 
         /*********************************************************************************
          * Reduce time value
          ********************************************************************************/
-        PUMP_INLINE void reduce(uint64 ms) {
+        PUMP_INLINE void reduce(uint64_t ms) {
             ms_ -= std::chrono::milliseconds(ms);
         }
 
         /*********************************************************************************
          * Set the time value
          ********************************************************************************/
-        PUMP_INLINE void set(uint64 ms) {
+        PUMP_INLINE void set(uint64_t ms) {
             ms_ = std::chrono::milliseconds(ms);
         }
 
         /*********************************************************************************
          * Get the time value
          ********************************************************************************/
-        PUMP_INLINE uint64 time() const {
+        PUMP_INLINE uint64_t time() const {
             return ms_.count();
         }
 
@@ -96,7 +96,7 @@ namespace time {
         /*********************************************************************************
          * Get now milliseconds
          ********************************************************************************/
-        static uint64 now_time();
+        static uint64_t now_time();
 
         /*********************************************************************************
          * Create now timestamp

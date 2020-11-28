@@ -12,7 +12,7 @@ int main(int argc, const char **argv) {
     std::string tag = argv[1];
     std::string tp = argv[2];
     std::string ip = argv[3];
-    uint16 port = atoi(argv[4]);
+    uint16_t port = atoi(argv[4]);
 
     if (tag == "tcp") {
         printf("start tcp test\n");

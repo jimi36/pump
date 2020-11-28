@@ -24,22 +24,22 @@
 
 namespace pump {
 
-uint8 decnum_to_hexchar(uint8 n) {
+uint8_t decnum_to_hexchar(uint8_t n) {
     if (n >= 0 && n <= 9) {
-        return uint8('0') + n;
+        return uint8_t('0') + n;
     } else if (n >= 10 && n <= 15) {
-        return uint8('A') + n - 10;
+        return uint8_t('A') + n - 10;
     }
     return 0;
 }
 
-uint8 hexchar_to_decnum(uint8 c) {
+uint8_t hexchar_to_decnum(uint8_t c) {
     if (c >= '0' && c <= '9') {
-        return uint8(c - '0');
+        return uint8_t(c - '0');
     } else if (c >= 'a' && c <= 'f') {
-        return (uint8(c - 'a') + 10);
+        return (uint8_t(c - 'a') + 10);
     } else if (c >= 'A' && c <= 'F') {
-        return (uint8(c - 'A') + 10);
+        return (uint8_t(c - 'A') + 10);
     }
     return 0;
 }
@@ -50,7 +50,7 @@ std::string gbk_to_utf8(const std::string &in) {
     std::wstring wstr(MultiByteToWideChar(CP_ACP, 0, in.c_str(), -1, NULL, 0) - 1,
                       wchar_t(0));
     MultiByteToWideChar(
-        CP_ACP, 0, in.c_str(), -1, (wchar_t *)wstr.data(), (int32)wstr.size());
+        CP_ACP, 0, in.c_str(), -1, (wchar_t *)wstr.data(), (int32_t)wstr.size());
 
     std::string str(
         WideCharToMultiByte(CP_UTF8, 0, (wchar_t *)wstr.data(), -1, NULL, 0, NULL, NULL) -
@@ -61,7 +61,7 @@ std::string gbk_to_utf8(const std::string &in) {
                         (wchar_t *)wstr.data(),
                         -1,
                         (char *)str.data(),
-                        (int32)str.size(),
+                        (int32_t)str.size(),
                         NULL,
                         NULL);
 
@@ -96,7 +96,7 @@ std::string utf8_to_gbk(const std::string &in) {
                         (LPCSTR)in.c_str(),
                         -1,
                         (wchar_t *)wstr.data(),
-                        (int32)wstr.size() - 1);
+                        (int32_t)wstr.size() - 1);
 
     std::string str(WideCharToMultiByte(CP_ACP, 0, wstr.data(), -1, NULL, 0, NULL, NULL),
                     0);
@@ -105,7 +105,7 @@ std::string utf8_to_gbk(const std::string &in) {
                         wstr.data(),
                         -1,
                         (char *)str.data(),
-                        (int32)str.size() - 1,
+                        (int32_t)str.size() - 1,
                         NULL,
                         NULL);
 

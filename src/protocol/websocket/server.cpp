@@ -211,13 +211,13 @@ namespace protocol {
 
             std::vector<std::string> protocs;
             header->get("Sec-WebSocket-Protocol", protocs);
-            for (int32 i = 0; i < (int32)protocs.size(); i++) {
+            for (int32_t i = 0; i < (int32_t)protocs.size(); i++) {
                 resp_header->set("Sec-WebSocket-Protocol", protocs[i]);
             }
 
             std::string data;
             resp.serialize(data);
-            return conn->send_buffer(data.c_str(), (uint32)data.size());
+            return conn->send_buffer(data.c_str(), (int32_t)data.size());
         }
 
         void server::__stop_all_upgrading_conns() {

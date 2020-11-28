@@ -56,7 +56,7 @@ namespace transport {
          * Start tls transport
          ********************************************************************************/
         virtual transport_error start(service_ptr sv,
-                                      int32 max_pending_send_size,
+                                      int32_t max_pending_send_size,
                                       const transport_callbacks &cbs) override;
 
         /*********************************************************************************
@@ -83,7 +83,7 @@ namespace transport {
         /*********************************************************************************
          * Send
          ********************************************************************************/
-        virtual transport_error send(c_block_ptr b, uint32 size) override;
+        virtual transport_error send(const block_t *b, int32_t size) override;
 
         /*********************************************************************************
          * Send io buffer
@@ -95,7 +95,7 @@ namespace transport {
         /*********************************************************************************
          * Channel event callback
          ********************************************************************************/
-        virtual void on_channel_event(uint32 ev) override;
+        virtual void on_channel_event(int32_t ev) override;
 
         /*********************************************************************************
          * Read event callback
@@ -140,7 +140,7 @@ namespace transport {
         /*********************************************************************************
          * Async read
          ********************************************************************************/
-        transport_error __async_read(uint32 state);
+        transport_error __async_read(uint32_t state);
 
         /*********************************************************************************
          * Async send
@@ -167,7 +167,7 @@ namespace transport {
         flow::flow_tls_sptr flow_;
 
         // Last send buffer
-        volatile int32 last_send_iob_size_;
+        volatile int32_t last_send_iob_size_;
         volatile toolkit::io_buffer_ptr last_send_iob_;
 
         // When sending data, transport will append buffer to sendlist at first. On

@@ -26,15 +26,15 @@ namespace net {
 
 #if defined(PUMP_HAVE_IOCP)
 
-    const int32 IOCP_READ_MASKS = 0x10;
-    const int32 IOCP_SEND_MASKS = 0x20;
+    const int32_t IOCP_READ_MASKS = 0x10;
+    const int32_t IOCP_SEND_MASKS = 0x20;
 
-    const int32 IOCP_TASK_NONE = 0x00;
-    const int32 IOCP_TASK_READ = IOCP_READ_MASKS;
-    const int32 IOCP_TASK_ACCEPT = IOCP_READ_MASKS | 0x01;
-    const int32 IOCP_TASK_SEND = IOCP_SEND_MASKS;
-    const int32 IOCP_TASK_CONNECT = IOCP_SEND_MASKS | 0x01;
-    const int32 IOCP_TASK_CHANNEL = 0x40;
+    const int32_t IOCP_TASK_NONE = 0x00;
+    const int32_t IOCP_TASK_READ = IOCP_READ_MASKS;
+    const int32_t IOCP_TASK_ACCEPT = IOCP_READ_MASKS | 0x01;
+    const int32_t IOCP_TASK_SEND = IOCP_SEND_MASKS;
+    const int32_t IOCP_TASK_CONNECT = IOCP_SEND_MASKS | 0x01;
+    const int32_t IOCP_TASK_CHANNEL = 0x40;
 
     typedef void_ptr iocp_handler;
 
@@ -44,13 +44,13 @@ namespace net {
         // IOCP buffer
         WSABUF buf_;
         // IOCP task type
-        int32 type_;
+        int32_t type_;
         // IOCP processed size
         DWORD processed_size_;
         // IOCP fd
-        int32 fd_;
+        int32_t fd_;
         // IOCP error code
-        int32 errcode_;
+        int32_t errcode_;
         // Channel notifier
         std::weak_ptr<void> ch_notifier_;
         // IO buffer
@@ -60,11 +60,11 @@ namespace net {
 
         union {
             // Client fd for accepting
-            int32 client_fd;
+            int32_t client_fd;
             // IP address for connecting
             struct {
-                int8 addr[64];
-                int32 addr_len;
+                int8_t addr[64];
+                int32_t addr_len;
             } ip;
         } un_;
 
@@ -107,42 +107,42 @@ namespace net {
         /*********************************************************************************
          * Set task type
          ********************************************************************************/
-        PUMP_INLINE void set_type(int32 tp) {
+        PUMP_INLINE void set_type(int32_t tp) {
             type_ = tp;
         }
 
         /*********************************************************************************
          * Get task type
          ********************************************************************************/
-        PUMP_INLINE int32 get_type() {
+        PUMP_INLINE int32_t get_type() {
             return type_;
         }
 
         /*********************************************************************************
          * Set task fd
          ********************************************************************************/
-        PUMP_INLINE void set_fd(int32 fd) {
+        PUMP_INLINE void set_fd(int32_t fd) {
             fd_ = fd;
         }
 
         /*********************************************************************************
          * Get task fd
          ********************************************************************************/
-        PUMP_INLINE int32 get_fd(void_ptr task) {
+        PUMP_INLINE int32_t get_fd(void_ptr task) {
             return fd_;
         }
 
         /*********************************************************************************
          * Set client socket fd
          ********************************************************************************/
-        PUMP_INLINE void set_client_fd(int32 client_fd) {
+        PUMP_INLINE void set_client_fd(int32_t client_fd) {
             un_.client_fd = client_fd;
         }
 
         /*********************************************************************************
          * Get client socket fd
          ********************************************************************************/
-        PUMP_INLINE int32 get_client_fd() {
+        PUMP_INLINE int32_t get_client_fd() {
             return un_.client_fd;
         }
 
@@ -164,14 +164,14 @@ namespace net {
         /*********************************************************************************
          * Set error code
          ********************************************************************************/
-        PUMP_INLINE void set_errcode(int32 ec) {
+        PUMP_INLINE void set_errcode(int32_t ec) {
             errcode_ = ec;
         }
 
         /*********************************************************************************
          * Get error code
          ********************************************************************************/
-        PUMP_INLINE int32 get_errcode() {
+        PUMP_INLINE int32_t get_errcode() {
             return errcode_;
         }
 
@@ -184,10 +184,10 @@ namespace net {
             iob->add_ref();
             iob_ = iob;
             if (iob->data_size() > 0) {
-                buf_.buf = (block_ptr)iob->data();
+                buf_.buf = (CHAR*)iob->data();
                 buf_.len = iob->data_size();
             } else {
-                buf_.buf = (block_ptr)iob->buffer();
+                buf_.buf = (CHAR*)iob->buffer();
                 buf_.len = iob->buffer_size();
             }
         }
@@ -207,27 +207,27 @@ namespace net {
         PUMP_INLINE void update_io_buffer() {
             PUMP_ASSERT(iob_);
             buf_.len = iob_->data_size();
-            buf_.buf = (block_ptr)iob_->data();
+            buf_.buf = (CHAR*)iob_->data();
         }
 
         /*********************************************************************************
          * Set processed size
          ********************************************************************************/
-        PUMP_INLINE void set_processed_size(int32 size) {
+        PUMP_INLINE void set_processed_size(int32_t size) {
             processed_size_ = size;
         }
 
         /*********************************************************************************
          * Get processed size
          ********************************************************************************/
-        PUMP_INLINE int32 get_processed_size() {
+        PUMP_INLINE int32_t get_processed_size() {
             return processed_size_;
         }
 
         /*********************************************************************************
          * Get processed data
          ********************************************************************************/
-        PUMP_INLINE block_ptr get_processed_data(int32_ptr size) {
+        PUMP_INLINE block_t* get_processed_data(int32_t *size) {
             *size = processed_size_;
             return buf_.buf;
         }
@@ -235,7 +235,7 @@ namespace net {
         /*********************************************************************************
          * Get remote address for udp reading from
          ********************************************************************************/
-        PUMP_INLINE sockaddr *get_remote_address(int32_ptr addrlen) {
+        PUMP_INLINE sockaddr *get_remote_address(int32_t *addrlen) {
             *addrlen = un_.ip.addr_len;
             return (sockaddr *)un_.ip.addr;
         }
@@ -271,7 +271,7 @@ namespace net {
     /*********************************************************************************
      * Create iocp socket
      ********************************************************************************/
-    int32 create_iocp_socket(int32 domain, int32 type, iocp_handler iocp);
+    int32_t create_iocp_socket(int32_t domain, int32_t type, iocp_handler iocp);
 
     /*********************************************************************************
      * Post iocp accept
@@ -284,9 +284,9 @@ namespace net {
     bool get_iocp_client_address(void_ptr ex_fns,
                                  iocp_task_ptr task,
                                  sockaddr **local,
-                                 int32_ptr llen,
+                                 int32_t *llen,
                                  sockaddr **remote,
-                                 int32_ptr rlen);
+                                 int32_t *rlen);
 
     /*********************************************************************************
      * Post iocp connect
@@ -294,7 +294,7 @@ namespace net {
     bool post_iocp_connect(void_ptr ex_fns,
                            iocp_task_ptr task,
                            const sockaddr *addr,
-                           int32 addrlen);
+                           int32_t addrlen);
 
     /*********************************************************************************
      * Post iocp read

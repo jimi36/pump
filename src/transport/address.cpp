@@ -25,7 +25,7 @@ namespace transport {
         memset(&addr_, 0, sizeof(addr_));
     }
 
-    address::address(const std::string &ip, uint16 port) {
+    address::address(const std::string &ip, uint16_t port) {
         if (net::string_to_address(ip, port, (struct sockaddr *)addr_, &addrlen_)) {
             if (addrlen_ == sizeof(struct sockaddr_in6)) {
                 is_v6_ = true;
@@ -35,7 +35,7 @@ namespace transport {
         }
     }
 
-    address::address(const struct sockaddr *addr, int32 addr_len) {
+    address::address(const struct sockaddr *addr, int32_t addr_len) {
         addrlen_ = addr_len;
         memcpy(&addr_, addr, addr_len);
         if (addrlen_ == sizeof(struct sockaddr_in6)) {
@@ -45,7 +45,7 @@ namespace transport {
         }
     }
 
-    bool address::set(const std::string &ip, uint16 port) {
+    bool address::set(const std::string &ip, uint16_t port) {
         if (net::string_to_address(ip, port, (struct sockaddr *)addr_, &addrlen_)) {
             if (addrlen_ == sizeof(struct sockaddr_in6)) {
                 is_v6_ = true;
@@ -59,7 +59,7 @@ namespace transport {
         return true;
     }
 
-    bool address::set(const struct sockaddr *addr, int32 addrlen) {
+    bool address::set(const struct sockaddr *addr, int32_t addrlen) {
         if (addrlen == sizeof(struct sockaddr_in6)) {
             is_v6_ = true;
         } else if (addrlen == sizeof(struct sockaddr_in)) {
@@ -75,7 +75,7 @@ namespace transport {
     }
 
     std::string address::ip() const {
-        block host[128] = { 0 };
+        block_t host[128] = { 0 };
         if (is_v6_) {
             auto v6 = (struct sockaddr_in6*)addr_;
             if (!::inet_ntop(AF_INET6, &(v6->sin6_addr), host, sizeof(host) - 1)) {
@@ -91,8 +91,8 @@ namespace transport {
         return std::move(std::string(host));
     }
 
-    uint16 address::port() const {
-        uint16 port = 0;
+    uint16_t address::port() const {
+        uint16_t port = 0;
         if (is_v6_) {
             auto v6 = (struct sockaddr_in6*)addr_;
             port = ntohs(v6->sin6_port);
@@ -105,8 +105,8 @@ namespace transport {
     }
 
     std::string address::to_string() const {
-        uint16 port = 0;
-        block host[128] = { 0 };
+        uint16_t port = 0;
+        block_t host[128] = { 0 };
         if (is_v6_) {
             auto v6 = (struct sockaddr_in6*)addr_;
             if (!::inet_ntop(AF_INET6, &(v6->sin6_addr), host, sizeof(host) - 1)) {
@@ -122,7 +122,7 @@ namespace transport {
             port = ntohs(v4->sin_port);
         }
 
-        block tmp[256] = { 0 };
+        block_t tmp[256] = { 0 };
         pump_snprintf(tmp, sizeof(tmp) - 1, "%s:%d", host, port);
         return std::move(std::string(tmp));
     }

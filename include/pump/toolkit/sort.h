@@ -30,8 +30,8 @@ namespace toolkit {
      * range is [left, right)
      ********************************************************************************/
     template <typename T>
-    void bubble_sort(const T *a, int32 left, int32 right) {
-        for (int32 i = left; i < right; ++i) {
+    void bubble_sort(const T *a, int32_t left, int32_t right) {
+        for (int32_t i = left; i < right; ++i) {
             for (int32 j = i + 1; j < right; ++j) {
                 if (a[i] > a[j]) {
                     std::swap(a[i], a[j]);
@@ -48,11 +48,11 @@ namespace toolkit {
      * range is [left, right)
      ********************************************************************************/
     template <typename T>
-    void select_sort(const T *a, int32 left, int32 right) {
+    void select_sort(const T *a, int32_t left, int32_t right) {
         int32 min_pos;
-        for (int32 i = left; i < right; ++i) {
+        for (int32_t i = left; i < right; ++i) {
             min_pos = i;
-            for (int32 j = i + 1; j < right; ++j) {
+            for (int32_t j = i + 1; j < right; ++j) {
                 if (a[j] < a[min_pos]) {
                     min_pos = j;
                 }
@@ -71,8 +71,8 @@ namespace toolkit {
      * range is [left, right)
      ********************************************************************************/
     template <typename T>
-    void insert_sort(T *a, int32 left, int32 right) {
-        for (int32 i = left + 1; i < right; ++i) {
+    void insert_sort(T *a, int32_t left, int32_t right) {
+        for (int32_t i = left + 1; i < right; ++i) {
             T tem = a[i];
             int32 j = i;
             for (; j >= left && tem < a[j - 1]; --j) {
@@ -90,9 +90,9 @@ namespace toolkit {
      * range is [left, right)
      ********************************************************************************/
     template <typename T>
-    int32 __median_pos(T *a, int32 left, int32 right) {
-        int32 i = left;
-        int32 j = right - 1;
+    int32_t __median_pos(T *a, int32_t left, int32_t right) {
+        int32_t i = left;
+        int32_t j = right - 1;
         T pivot = a[left];
         while (i < j) {
             while (a[j] >= pivot && j > i) {
@@ -121,11 +121,11 @@ namespace toolkit {
      * range is [left, right)
      ********************************************************************************/
     template <typename T>
-    void quick_sort(T *a, int32 left, int32 right) {
+    void quick_sort(T *a, int32_t left, int32_t right) {
         static int32 min_size = 10;
 
         if (right - left > min_size) {
-            int32 pos = __median_pos(a, left, right);
+            int32_t pos = __median_pos(a, left, right);
             quick_sort(a, left, pos);
             quick_sort(a, pos + 1, right);
         } else {
@@ -140,7 +140,7 @@ namespace toolkit {
      * i      ---->   rott index of the subtree.
      ********************************************************************************/
     template <typename T>
-    void __max_heapify(T *a, int32 s, int32 i) {
+    void __max_heapify(T *a, int32_t s, int32_t i) {
         int32 l = i * 2;
         int32 r = i * 2 + 1;
 
@@ -164,8 +164,8 @@ namespace toolkit {
      * s      ---->   size of the array.
      ********************************************************************************/
     template <typename T>
-    void __bulid_max_heap(T *a, int32 s) {
-        for (int32 i = s / 2; i >= 0; --i) {
+    void __bulid_max_heap(T *a, int32_t s) {
+        for (int32_t i = s / 2; i >= 0; --i) {
             __max_heapify(a, s, i);
         }
     }
@@ -176,9 +176,9 @@ namespace toolkit {
      * s      ---->   size of the array.
      ********************************************************************************/
     template <typename T>
-    void heap_sort(T *a, int32 s) {
+    void heap_sort(T *a, int32_t s) {
         __bulid_max_heap(a, s);
-        for (int32 i = s - 1; i >= 1; --i) {
+        for (int32_t i = s - 1; i >= 1; --i) {
             std::swap(a[0], a[i]);
             __max_heapify(a, --s, 0);
         }

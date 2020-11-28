@@ -30,7 +30,7 @@ namespace toolkit {
         /*********************************************************************************
          * Constructor
          ********************************************************************************/
-        bits_reader(c_uint8_ptr b, uint32 size) noexcept;
+        bits_reader(const uint8_t *b, uint32_t size) noexcept;
 
         /*********************************************************************************
          * Deconstructor
@@ -40,15 +40,15 @@ namespace toolkit {
         /*********************************************************************************
          * Read into integer
          ********************************************************************************/
-        bool read(uint32 bc, uint8_ptr val);
-        bool read(uint32 bc, uint16_ptr val);
-        bool read(uint32 bc, uint32_ptr val);
-        bool read(uint32 bc, uint64_ptr val);
+        bool read(uint32_t bc, uint8_t *val);
+        bool read(uint32_t bc, uint16_t *val);
+        bool read(uint32_t bc, uint32_t *val);
+        bool read(uint32_t bc, uint64_t *val);
 
         /*********************************************************************************
          * Get used bit count
          ********************************************************************************/
-        PUMP_INLINE uint32 used_bc() const {
+        PUMP_INLINE uint32_t used_bc() const {
             return used_bc_;
         }
 
@@ -57,17 +57,17 @@ namespace toolkit {
          * Read one byte
          * Bit count has to be less than 8.
          ********************************************************************************/
-        uint8 __read_from_byte(uint32 bc);
+        uint8_t __read_from_byte(uint32_t bc);
 
       private:
         // Left bit count
-        uint32 left_bc_;
+        uint32_t left_bc_;
         // Used bit count
-        uint32 used_bc_;
+        uint32_t used_bc_;
         // All bit count
-        uint32 all_bc_;
+        uint32_t all_bc_;
         // Current byte pos
-        c_uint8_ptr byte_pos_;
+        const uint8_t *byte_pos_;
     };
 
     class LIB_PUMP bits_writer {
@@ -76,7 +76,7 @@ namespace toolkit {
         /*********************************************************************************
          * Constructor
          ********************************************************************************/
-        bits_writer(uint8_ptr b, uint32 size) noexcept;
+        bits_writer(uint8_t *b, uint32_t size) noexcept;
 
         /*********************************************************************************
          * Deconstructor
@@ -86,15 +86,15 @@ namespace toolkit {
         /*********************************************************************************
          * Write integer
          ********************************************************************************/
-        bool write(uint32 bc, uint8 val);
-        bool write(uint32 bc, uint16 val);
-        bool write(uint32 bc, uint32 val);
-        bool write(uint32 bc, uint64 val);
+        bool write(uint32_t bc, uint8_t val);
+        bool write(uint32_t bc, uint16_t val);
+        bool write(uint32_t bc, uint32_t val);
+        bool write(uint32_t bc, uint64_t val);
 
         /*********************************************************************************
          * Get used bit count
          ********************************************************************************/
-        PUMP_INLINE uint32 used_bc() const {
+        PUMP_INLINE uint32_t used_bc() const {
             return used_bc_;
         }
 
@@ -103,17 +103,17 @@ namespace toolkit {
          * Read one byte
          * Bit count has to be less than 8
          ********************************************************************************/
-        void __write_to_byte(uint32 bc, uint8 val);
+        void __write_to_byte(uint32_t bc, uint8_t val);
 
       private:
         // Left bit count
-        uint32 left_bc_;
+        uint32_t left_bc_;
         // Used bit count
-        uint32 used_bc_;
+        uint32_t used_bc_;
         // All bit count
-        uint32 all_bc_;
+        uint32_t all_bc_;
         // Current byte pos
-        uint8_ptr byte_pos_;
+        uint8_t *byte_pos_;
     };
 
 }  // namespace toolkit

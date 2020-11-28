@@ -26,7 +26,7 @@ namespace transport {
         __close_accept_flow();
     }
 
-    void base_acceptor::on_channel_event(uint32 ev) {
+    void base_acceptor::on_channel_event(int32_t ev) {
         __trigger_interrupt_callbacks();
     }
 

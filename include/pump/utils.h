@@ -27,12 +27,12 @@ namespace pump {
 /*********************************************************************************
  * Transform dec number to hex char
  ********************************************************************************/
-LIB_PUMP uint8 decnum_to_hexchar(uint8 n);
+LIB_PUMP uint8_t decnum_to_hexchar(uint8_t n);
 
 /*********************************************************************************
  * Transform hex char to dec number
  ********************************************************************************/
-LIB_PUMP uint8 hexchar_to_decnum(uint8 c);
+LIB_PUMP uint8_t hexchar_to_decnum(uint8_t c);
 
 /*********************************************************************************
  * Transform gbk to utf8

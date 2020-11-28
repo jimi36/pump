@@ -21,11 +21,11 @@
 namespace pump {
 namespace net {
 
-    int32 create_socket(int32 domain, int32 type) {
-        return (int32)::socket(domain, type, 0);
+    int32_t create_socket(int32_t domain, int32_t type) {
+        return (int32_t)::socket(domain, type, 0);
     }
 
-    bool set_noblock(int32 fd, int32 noblock) {
+    bool set_noblock(int32_t fd, int32_t noblock) {
 #if defined(PUMP_HAVE_WINSOCK)
 #if defined(OS_CYGWIN)
         long cmd = 0x8004667e;
@@ -38,7 +38,7 @@ namespace net {
             return true;
         }
 #else
-        int32 flags = fcntl(fd, F_GETFL, 0);
+        int32_t flags = fcntl(fd, F_GETFL, 0);
         flags = (noblock == 0) ? (flags & ~O_NONBLOCK) : (flags | O_NONBLOCK);
         if (fcntl(fd, F_SETFL, flags) != -1) {
             return true;
@@ -48,11 +48,11 @@ namespace net {
         return false;
     }
 
-    bool set_linger(int32 fd, uint16 on, uint16 linger) {
+    bool set_linger(int32_t fd, uint16_t on, uint16_t linger) {
         struct linger lgr;
         lgr.l_onoff = on;
         lgr.l_linger = linger;
-        if (setsockopt(fd, SOL_SOCKET, SO_LINGER, (c_block_ptr)&lgr, sizeof(lgr)) == 0) {
+        if (setsockopt(fd, SOL_SOCKET, SO_LINGER, (const block_t*)&lgr, sizeof(lgr)) == 0) {
             return true;
         }
 
@@ -60,8 +60,8 @@ namespace net {
         return false;
     }
 
-    bool set_read_bs(int32 fd, int32 size) {
-        if (setsockopt(fd, SOL_SOCKET, SO_RCVBUF, (c_block_ptr)&size, sizeof(size)) == 0) {
+    bool set_read_bs(int32_t fd, int32_t size) {
+        if (setsockopt(fd, SOL_SOCKET, SO_RCVBUF, (const block_t*)&size, sizeof(size)) == 0) {
             return true;
         }
 
@@ -69,8 +69,8 @@ namespace net {
         return false;
     }
 
-    bool set_send_bs(int32 fd, int32 size) {
-        if (setsockopt(fd, SOL_SOCKET, SO_SNDBUF, (c_block_ptr)&size, sizeof(size)) == 0) {
+    bool set_send_bs(int32_t fd, int32_t size) {
+        if (setsockopt(fd, SOL_SOCKET, SO_SNDBUF, (const block_t*)&size, sizeof(size)) == 0) {
             return true;
         }
 
@@ -78,9 +78,9 @@ namespace net {
         return false;
     }
 
-    bool set_keeplive(int32 fd, int32 keeplive, int32 interval) {
-        int32 on = 1;
-        if (setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, (const char *)&on, sizeof(on)) == -1) {
+    bool set_keeplive(int32_t fd, int32_t keeplive, int32_t interval) {
+        int32_t on = 1;
+        if (setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, (const block_t*)&on, sizeof(on)) == -1) {
             PUMP_WARN_LOG(
                 "net::set_keeplive: setsockopt SO_KEEPALIVE with ec=%d", last_errno());
             return false;
@@ -106,7 +106,7 @@ namespace net {
             return false;
         }
 #else
-        int32 count = 3;
+        int32_t count = 3;
         if (setsockopt(fd, SOL_TCP, TCP_KEEPIDLE, &keeplive, sizeof(keeplive)) == -1 ||
             setsockopt(fd, SOL_TCP, TCP_KEEPINTVL, &interval, sizeof(interval)) == -1 ||
             setsockopt(fd, SOL_TCP, TCP_KEEPCNT, &count, sizeof(count)) == -1) {
@@ -118,8 +118,8 @@ namespace net {
         return true;
     }
 
-    bool set_reuse(int32 fd, int32 reuse) {
-        if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (c_block_ptr)&reuse, sizeof(reuse)) == 0) {
+    bool set_reuse(int32_t fd, int32_t reuse) {
+        if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (const block_t*)&reuse, sizeof(reuse)) == 0) {
             return true;
         }
 
@@ -127,8 +127,8 @@ namespace net {
         return false;
     }
 
-    bool set_nodelay(int32 fd, int32 nodelay) {
-        if (setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, (c_block_ptr)&nodelay, sizeof(nodelay)) == 0) {
+    bool set_nodelay(int32_t fd, int32_t nodelay) {
+        if (setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, (const block_t*)&nodelay, sizeof(nodelay)) == 0) {
             return true;
         }
 
@@ -136,7 +136,7 @@ namespace net {
         return false;
     }
 
-    bool update_connect_context(int32 fd) {
+    bool update_connect_context(int32_t fd) {
 #if defined(PUMP_HAVE_WINSOCK)
         if (setsockopt(fd, SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT, nullptr, 0) == 0) {
             return true;
@@ -149,7 +149,7 @@ namespace net {
 #endif
     }
 
-    bool set_udp_conn_reset(int32 fd, bool enable) {
+    bool set_udp_conn_reset(int32_t fd, bool enable) {
 #if defined(PUMP_HAVE_WINSOCK)
         DWORD bytes_returned = 0;
         BOOL behavior = enable ? TRUE : FALSE;
@@ -170,7 +170,7 @@ namespace net {
         return true;
     }
 
-    bool bind(int32 fd, struct sockaddr *addr, int32 addrlen) {
+    bool bind(int32_t fd, struct sockaddr *addr, int32_t addrlen) {
         if (::bind(fd, addr, addrlen) == 0) {
             return true;
         }
@@ -179,7 +179,7 @@ namespace net {
         return false;
     }
 
-    bool listen(int32 fd, int32 backlog) {
+    bool listen(int32_t fd, int32_t backlog) {
         if (::listen(fd, backlog) == 0) {
             return true;
         }
@@ -188,17 +188,17 @@ namespace net {
         return false;
     }
 
-    int32 accept(int32 fd, struct sockaddr *addr, int32_ptr addrlen) {
-        int32 client = (int32)::accept(fd, addr, (socklen_t *)addrlen);
+    int32_t accept(int32_t fd, struct sockaddr *addr, int32_t *addrlen) {
+        int32_t client = (int32_t)::accept(fd, addr, (socklen_t*)addrlen);
         if (client < 0) {
             PUMP_WARN_LOG("net::accept: with ec=%d", last_errno());
         }
         return client;
     }
 
-    bool connect(int32 fd, struct sockaddr *addr, int32 addrlen) {
+    bool connect(int32_t fd, struct sockaddr *addr, int32_t addrlen) {
         if (::connect(fd, addr, addrlen) != 0) {
-            int32 ec = net::last_errno();
+            int32_t ec = net::last_errno();
             if (ec != LANE_EALREADY && 
                 ec != LANE_EWOULDBLOCK && 
                 ec != LANE_EINPROGRESS) {
@@ -209,12 +209,12 @@ namespace net {
         return true;
     }
 
-    int32 read(int32 fd, block_ptr b, int32 size) {
+    int32_t read(int32_t fd, block_t *b, int32_t size) {
         size = ::recv(fd, b, size, 0);
         if (PUMP_LIKELY(size > 0)) {
             return size;
         } else if (size < 0) {
-           int32 ec = net::last_errno();
+           int32_t ec = net::last_errno();
             if (ec == LANE_EINPROGRESS || 
                 ec == LANE_EWOULDBLOCK) {
                 size = -1;
@@ -225,11 +225,14 @@ namespace net {
         return size;
     }
 
-    int32 read_from(
-        int32 fd, block_ptr b, int32 size, struct sockaddr *addr, int32_ptr addrlen) {
-        size = ::recvfrom(fd, b, size, 0, (struct sockaddr *)addr, (socklen_t *)addrlen);
+    int32_t read_from(int32_t fd, 
+                      block_t *b, 
+                      int32_t size, 
+                      struct sockaddr *addr, 
+                      int32_t *addrlen) {
+        size = ::recvfrom(fd, b, size, 0, (struct sockaddr*)addr, (socklen_t*)addrlen);
         if (size < 0) {
-            int32 ec = net::last_errno();
+            int32_t ec = net::last_errno();
             if (ec == LANE_EINPROGRESS || 
                 ec == LANE_EWOULDBLOCK) {
                 size = -1;
@@ -240,12 +243,12 @@ namespace net {
         return size;
     }
 
-    int32 send(int32 fd, c_block_ptr b, int32 size) {
+    int32_t send(int32_t fd, const block_t *b, int32_t size) {
         size = ::send(fd, b, size, 0);
         if (PUMP_LIKELY(size > 0)) {
             return size;
         } else if (size < 0) {
-            int32 ec = net::last_errno();
+            int32_t ec = net::last_errno();
             if (ec == LANE_EINPROGRESS || 
                 ec == LANE_EWOULDBLOCK) {
                 size = -1;
@@ -256,12 +259,15 @@ namespace net {
         return size;
     }
 
-    int32 send_to(
-        int32 fd, c_block_ptr b, int32 size, struct sockaddr *addr, int32 addrlen) {
+    int32_t send_to(int32_t fd, 
+                    const block_t *b, 
+                    int32_t size, 
+                    struct sockaddr *addr, 
+                    int32_t addrlen) {
         socklen_t len = addrlen;
         size = ::sendto(fd, b, size, 0, addr, len);
         if (size < 0) {
-            int32 ec = net::last_errno();
+            int32_t ec = net::last_errno();
             if (ec == LANE_EINPROGRESS || 
                 ec == LANE_EWOULDBLOCK) {
                 size = -1;
@@ -272,7 +278,7 @@ namespace net {
         return size;
     }
 
-    int32 poll(struct pollfd *pfds, int32 count, int32 timeout) {
+    int32_t poll(struct pollfd *pfds, int32_t count, int32_t timeout) {
 #if defined(PUMP_HAVE_WINSOCK)
         return ::WSAPoll(pfds, count, timeout);
 #else
@@ -280,11 +286,11 @@ namespace net {
 #endif
     }
 
-    void shutdown(int32 fd) {
+    void shutdown(int32_t fd) {
         ::shutdown(fd, 0);
     }
 
-    bool close(int32 fd) {
+    bool close(int32_t fd) {
 #if defined(PUMP_HAVE_WINSOCK)
         return (::closesocket(fd) == 0);
 #else
@@ -292,11 +298,11 @@ namespace net {
 #endif
     }
 
-    int32 get_socket_error(int32 fd) {
-        int32 res = 0;
+    int32_t get_socket_error(int32_t fd) {
+        int32_t res = 0;
 #if defined(PUMP_HAVE_WINSOCK)
-        int32 len = sizeof(res);
-        getsockopt(fd, SOL_SOCKET, SO_ERROR, (char *)&res, &len);
+        int32_t len = sizeof(res);
+        getsockopt(fd, SOL_SOCKET, SO_ERROR, (block_t*)&res, &len);
 #else
         socklen_t len = sizeof(res);
         getsockopt(fd, SOL_SOCKET, SO_ERROR, &res, &len);
@@ -304,7 +310,7 @@ namespace net {
         return res;
     }
 
-    int32 last_errno() {
+    int32_t last_errno() {
 #if defined(PUMP_HAVE_WINSOCK)
         return WSAGetLastError();
 #else
@@ -312,7 +318,7 @@ namespace net {
 #endif
     }
 
-    bool local_address(int32 fd, struct sockaddr *addr, int32_ptr addrlen) {
+    bool local_address(int32_t fd, struct sockaddr *addr, int32_t *addrlen) {
         if (getsockname(fd, addr, (socklen_t*)addrlen) == 0) {
             return true;
         }
@@ -321,7 +327,7 @@ namespace net {
         return false;
     }
 
-    bool remote_address(int32 fd, struct sockaddr *addr, int32_ptr addrlen) {
+    bool remote_address(int32_t fd, struct sockaddr *addr, int32_t *addrlen) {
         if (getpeername(fd, addr, (socklen_t*)addrlen) == 0) {
             return true;
         }
@@ -330,16 +336,16 @@ namespace net {
         return false;
     }
 
-    std::string address_to_string(struct sockaddr *addr, int32 addrlen) {
+    std::string address_to_string(struct sockaddr *addr, int32_t addrlen) {
         char host[128] = {0};
         if (addrlen == sizeof(struct sockaddr_in)) {
-            struct sockaddr_in *v4 = (struct sockaddr_in *)addr;
+            struct sockaddr_in *v4 = (struct sockaddr_in*)addr;
             if (inet_ntop(AF_INET, &(v4->sin_addr), host, sizeof(host)) != nullptr) {
                 pump_snprintf(host + strlen(host), 10, ":%d", ntohs(v4->sin_port));
                 return std::string(host);
             }
         } else {
-            struct sockaddr_in6 *v6 = (struct sockaddr_in6 *)addr;
+            struct sockaddr_in6 *v6 = (struct sockaddr_in6*)addr;
             if (::inet_ntop(AF_INET6, &(v6->sin6_addr), host, sizeof(host)) != nullptr) {
                 pump_snprintf(host + strlen(host), 10, ":%d", ntohs(v6->sin6_port));
                 return std::string(host);
@@ -351,9 +357,9 @@ namespace net {
     }
 
     bool string_to_address(const std::string &ip,
-                           uint16 port,
+                           uint16_t port,
                            struct sockaddr *addr,
-                           int32_ptr addrlen) {
+                           int32_t *addrlen) {
         addrinfo hints;
         addrinfo *res = nullptr;
 
@@ -363,10 +369,10 @@ namespace net {
         hints.ai_protocol = IPPROTO_UDP;
         hints.ai_flags = AI_NUMERICHOST;
         if (getaddrinfo(ip.c_str(), 0, &hints, &res) == 0) {
-            struct sockaddr_in6 *v6 = (struct sockaddr_in6 *)addr;
+            struct sockaddr_in6 *v6 = (struct sockaddr_in6*)addr;
             *v6 = *(struct sockaddr_in6 *)res->ai_addr;
             v6->sin6_port = htons(port);
-            *addrlen = (int32)res->ai_addrlen;
+            *addrlen = (int32_t)res->ai_addrlen;
             freeaddrinfo(res);
             return true;
         }
@@ -376,10 +382,10 @@ namespace net {
         hints.ai_socktype = SOCK_DGRAM;
         hints.ai_protocol = IPPROTO_UDP;
         if (getaddrinfo(ip.c_str(), nullptr, &hints, &res) == 0) {
-            struct sockaddr_in *v4 = (struct sockaddr_in *)addr;
-            *v4 = *(struct sockaddr_in *)res->ai_addr;
+            struct sockaddr_in *v4 = (struct sockaddr_in*)addr;
+            *v4 = *(struct sockaddr_in*)res->ai_addr;
             v4->sin_port = htons(port);
-            *addrlen = (int32)res->ai_addrlen;
+            *addrlen = (int32_t)res->ai_addrlen;
             freeaddrinfo(res);
             return true;
         }

@@ -8,7 +8,7 @@ class my_tcp_dialer;
 
 static service *sv;
 
-static uint16 server_port;
+static uint16_t server_port;
 static std::string server_ip;
 
 static std::mutex dial_mx;
@@ -76,7 +76,7 @@ class my_tcp_dialer : public std::enable_shared_from_this<my_tcp_dialer> {
     /*********************************************************************************
      * Tcp read event callback
      ********************************************************************************/
-    void on_read_callback(base_transport_ptr transp, c_block_ptr b, int32 size) {
+    void on_read_callback(base_transport_ptr transp, const block_t *b, int32_t size) {
         read_size_ += size;
         all_read_size_ += size;
         read_pocket_size_ += size;
@@ -115,7 +115,7 @@ class my_tcp_dialer : public std::enable_shared_from_this<my_tcp_dialer> {
     }
 
     inline bool send_data() {
-        if (transport_->send(send_data_.data(), send_data_.size()) != 0) {
+        if (transport_->send(send_data_.data(), (int32_t)send_data_.size()) != 0) {
             printf("send error\n");
             return false;
         }
@@ -124,10 +124,10 @@ class my_tcp_dialer : public std::enable_shared_from_this<my_tcp_dialer> {
     }
 
   public:
-    volatile int32 read_size_;
-    volatile int32 read_pocket_size_;
-    volatile int32 all_read_size_;
-    int64 last_report_time_;
+    volatile int32_t read_size_;
+    volatile int32_t read_pocket_size_;
+    volatile int32_t all_read_size_;
+    int64_t last_report_time_;
 
     std::string send_data_;
 
@@ -181,13 +181,13 @@ class time_report {
         }
         dial_mx.unlock();
 
-        printf("client read speed is %fMB/s at %llu\n",
+        printf("client read speed is %fMB/s at %d\n",
                (double)read_size / 1024 / 1024 / 1,
-               ::time(0));
+               (int32_t)::time(0));
     }
 };
 
-void start_tcp_client(const std::string &ip, uint16 port) {
+void start_tcp_client(const std::string &ip, uint16_t port) {
     server_ip = ip;
     server_port = port;
 

@@ -57,7 +57,7 @@ namespace poll {
         /*********************************************************************************
          * Push channel event
          ********************************************************************************/
-        virtual void push_channel_event(channel_sptr &c, uint32 ev) override;
+        virtual bool push_channel_event(channel_sptr &c, int32_t ev) override;
 
       protected:
         /*********************************************************************************

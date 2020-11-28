@@ -41,8 +41,8 @@ extern "C" {
 namespace pump {
 
 #if defined(OS_LINUX)
-typedef void (*sighandler_t)(int32);
-static bool setup_signal(int32 sig, sighandler_t hdl) {
+typedef void (*sighandler_t)(int32_t);
+static bool setup_signal(int32_t sig, sighandler_t hdl) {
     if (signal(sig, NULL) != 0) {
         PUMP_WARN_LOG("pump::setup_signal: signal failed sig=%d", sig);
         return false;

@@ -50,21 +50,21 @@ namespace poll {
         /*********************************************************************************
          * Awake channel tracker for derived class
          ********************************************************************************/
-        virtual void __resume_channel_tracker(channel_tracker_ptr tracker) override;
+        virtual bool __resume_channel_tracker(channel_tracker_ptr tracker) override;
 
         /*********************************************************************************
          * Poll
          ********************************************************************************/
-        virtual void __poll(int32 timeout) override;
+        virtual void __poll(int32_t timeout) override;
 
       private:
         /*********************************************************************************
          * Dispatch pending event
          ********************************************************************************/
-        void __dispatch_pending_event(int32 count);
+        void __dispatch_pending_event(int32_t count);
 
       private:
-        int32 fd_;
+        int32_t fd_;
         void_ptr events_;
     };
 

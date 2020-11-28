@@ -59,16 +59,16 @@ namespace transport {
              * Read from
              ********************************************************************************/
 #if defined(PUMP_HAVE_IOCP)
-            c_block_ptr read_from(net::iocp_task_ptr iocp_task,
-                                  int32_ptr size,
+            const block_t* read_from(net::iocp_task_ptr iocp_task,
+                                  int32_t *size,
                                   address_ptr from_address);
 #else
-            c_block_ptr read_from(int32_ptr size, address_ptr from_address);
+            const block_t* read_from(int32_t *size, address_ptr from_address);
 #endif
             /*********************************************************************************
              * Send to
              ********************************************************************************/
-            int32 send(c_block_ptr b, uint32 size, const address &to_address);
+            int32_t send(const block_t *b, int32_t size, const address &to_address);
 
           private:
             // Read cache

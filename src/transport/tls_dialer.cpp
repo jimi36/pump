@@ -23,8 +23,8 @@ namespace transport {
 
     tls_dialer::tls_dialer(const address &local_address,
                            const address &remote_address,
-                           int64 dial_timeout,
-                           int64 handshake_timeout) noexcept
+                           int64_t dial_timeout,
+                           int64_t handshake_timeout) noexcept
       : base_dialer(TLS_DIALER, local_address, remote_address, dial_timeout),
         xcred_(nullptr),
         handshake_timeout_(handshake_timeout) {
@@ -262,8 +262,8 @@ namespace transport {
     base_transport_sptr tls_sync_dialer::dial(service_ptr sv,
                                               const address &local_address,
                                               const address &remote_address,
-                                              int64 connect_timeout,
-                                              int64 handshake_timeout) {
+                                              int64_t connect_timeout,
+                                              int64_t handshake_timeout) {
         if (dialer_) {
             return base_transport_sptr();
         }

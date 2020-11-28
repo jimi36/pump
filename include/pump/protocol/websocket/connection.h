@@ -30,7 +30,7 @@ namespace protocol {
 
         struct connection_callbacks {
             // Frame callback
-            pump_function<void(c_block_ptr, uint32, bool)> frame_cb;
+            pump_function<void(const block_t*, int32_t, bool)> frame_cb;
             // Error callback
             pump_function<void(const std::string &)> error_cb;
         };
@@ -93,13 +93,13 @@ namespace protocol {
              * Send buffer
              * Send raw buffer without packing as frame.
              ********************************************************************************/
-            bool send_buffer(c_block_ptr b, uint32 size);
+            bool send_buffer(const block_t *b, int32_t size);
 
             /*********************************************************************************
              * Send
              * Send buffer with packing as frame.
              ********************************************************************************/
-            bool send(c_block_ptr b, uint32 size);
+            bool send(const block_t *b, int32_t size);
 
             /*********************************************************************************
              * Check connection is valid or not
@@ -115,7 +115,7 @@ namespace protocol {
             /*********************************************************************************
              * Read event callback
              ********************************************************************************/
-            static void on_read(connection_wptr wptr, c_block_ptr b, int32 size);
+            static void on_read(connection_wptr wptr, const block_t *b, int32_t size);
 
             /*********************************************************************************
              * Disconnected event callback
@@ -131,12 +131,12 @@ namespace protocol {
             /*********************************************************************************
              * Handle frame
              ********************************************************************************/
-            int32 __handle_pocket(c_block_ptr b, uint32 size);
+            int32_t __handle_pocket(const block_t *b, int32_t size);
 
             /*********************************************************************************
              * Handle frame
              ********************************************************************************/
-            int32 __handle_frame(c_block_ptr b, uint32 size);
+            int32_t __handle_frame(const block_t *b, int32_t size);
 
             /*********************************************************************************
              * Send ping frame
@@ -171,11 +171,11 @@ namespace protocol {
 
             // Frame mask
             bool has_mask_;
-            uint8 mask_key_[4];
+            uint8_t mask_key_[4];
             // Frame closed
             std::atomic_flag closed_;
             // Frame decode info
-            int16 decode_phase_;
+            int16_t decode_phase_;
             frame_header decode_hdr_;
 
             // Upgrade callback

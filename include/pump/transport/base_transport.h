@@ -93,7 +93,7 @@ namespace transport {
         /*********************************************************************************
          * Constructor
          ********************************************************************************/
-        base_channel(transport_type type, service_ptr sv, int32 fd) noexcept
+        base_channel(transport_type type, service_ptr sv, int32_t fd) noexcept
             : service_getter(sv),
               poll::channel(fd),
               type_(type),
@@ -123,7 +123,7 @@ namespace transport {
         /*********************************************************************************
          * Set channel status
          ********************************************************************************/
-        PUMP_INLINE bool __set_status(uint32 o, uint32 n) {
+        PUMP_INLINE bool __set_status(uint32_t o, uint32_t n) {
             return transport_state_.compare_exchange_strong(o, n);
         }
 
@@ -131,7 +131,7 @@ namespace transport {
          * Check transport is in status
          ********************************************************************************/
         PUMP_INLINE bool __is_status(
-            uint32 status,
+            uint32_t status,
             const std::memory_order order = std::memory_order_acquire) const {
             return transport_state_.load(order) == status;
         }
@@ -139,10 +139,10 @@ namespace transport {
         /*********************************************************************************
          * Post channel event
          ********************************************************************************/
-        PUMP_INLINE void __post_channel_event(poll::channel_sptr &&ch, uint32 event) {
+        PUMP_INLINE void __post_channel_event(poll::channel_sptr &&ch, int32_t event) {
             get_service()->post_channel_event(ch, event);
         }
-        PUMP_INLINE void __post_channel_event(poll::channel_sptr &ch, uint32 event) {
+        PUMP_INLINE void __post_channel_event(poll::channel_sptr &ch, int32_t event) {
             get_service()->post_channel_event(ch, event);
         }
 
@@ -158,7 +158,7 @@ namespace transport {
         /*********************************************************************************
          * Constructor
          ********************************************************************************/
-        base_transport(transport_type type, service_ptr sv, int32 fd)
+        base_transport(transport_type type, service_ptr sv, int32_t fd)
             : base_channel(type, sv, fd),
               read_state_(READ_NONE),
               max_pending_send_size_(-1),
@@ -179,7 +179,7 @@ namespace transport {
          * Start
          ********************************************************************************/
         virtual transport_error start(service_ptr sv,
-                                      int32 max_pending_send_size,
+                                      int32_t max_pending_send_size,
                                       const transport_callbacks &cbs) = 0;
 
         /*********************************************************************************
@@ -209,7 +209,7 @@ namespace transport {
         /*********************************************************************************
          * Send
          ********************************************************************************/
-        virtual transport_error send(c_block_ptr b, uint32 size) {
+        virtual transport_error send(const block_t *b, int32_t size) {
             return ERROR_DISABLE;
         }
 
@@ -224,8 +224,8 @@ namespace transport {
         /*********************************************************************************
          * Send
          ********************************************************************************/
-        virtual transport_error send(c_block_ptr b,
-                                     uint32 size,
+        virtual transport_error send(const block_t *b,
+                                     int32_t size,
                                      const address &address) {
             return ERROR_DISABLE;
         }
@@ -233,21 +233,21 @@ namespace transport {
         /*********************************************************************************
          * Get pending send buffer size
          ********************************************************************************/
-        uint32 get_pending_send_size() const {
+        int32_t get_pending_send_size() const {
             return pending_send_size_;
         }
 
         /*********************************************************************************
          * Get max pending send buffer size
          ********************************************************************************/
-        uint32 get_max_pending_send_size() const {
+        int32_t get_max_pending_send_size() const {
             return max_pending_send_size_;
         }
 
         /*********************************************************************************
          * Set max pending send buffer size
          ********************************************************************************/
-        void set_max_pending_send_size(uint32 max_size) {
+        void set_max_pending_send_size(int32_t max_size) {
             max_pending_send_size_ = max_size;
         }
 
@@ -269,7 +269,7 @@ namespace transport {
         /*********************************************************************************
          * Channel event callback
          ********************************************************************************/
-        virtual void on_channel_event(uint32 ev) override;
+        virtual void on_channel_event(int32_t ev) override;
 
       protected:
         /*********************************************************************************
@@ -280,7 +280,7 @@ namespace transport {
         /*********************************************************************************
          * Chane read state
          ********************************************************************************/
-        uint32 __change_read_state(uint32 state);
+        uint32_t __change_read_state(uint32_t state);
 
         /*********************************************************************************
          * Interrupt and trigger callbacks
@@ -315,7 +315,7 @@ namespace transport {
         std::atomic_uint read_state_;
 
         // Pending send buffer size
-        int32 max_pending_send_size_;
+        int32_t max_pending_send_size_;
         std::atomic_int32_t pending_send_size_;
 
         // Transport callbacks

@@ -20,7 +20,7 @@ namespace pump {
 namespace transport {
     namespace flow {
 
-        const static uint32 UDP_BUFFER_SIZE = 1024 * 64;
+        const static uint32_t UDP_BUFFER_SIZE = 1024 * 64;
 
         flow_udp::flow_udp() noexcept
           : read_iob_(nullptr) {
@@ -40,7 +40,7 @@ namespace transport {
         flow_error flow_udp::init(poll::channel_sptr &&ch, const address &bind_address) {
             PUMP_DEBUG_ASSIGN(ch, ch_, ch);
 
-            int32 domain = AF_INET;
+            int32_t domain = AF_INET;
             if (bind_address.is_ipv6()) {
                 domain = AF_INET6;
             }
@@ -97,37 +97,37 @@ namespace transport {
 #endif
 
 #if defined(PUMP_HAVE_IOCP)
-        c_block_ptr flow_udp::read_from(net::iocp_task_ptr iocp_task,
-                                        int32_ptr size,
+        const block_t* flow_udp::read_from(net::iocp_task_ptr iocp_task,
+                                        int32_t *size,
                                         address_ptr from_address) {
-            c_block_ptr buf = iocp_task->get_processed_data(size);
+            const block_t *buf = iocp_task->get_processed_data(size);
             if (PUMP_LIKELY(*size > 0)) {
-                int32 addrlen = 0;
+                int32_t addrlen = 0;
                 sockaddr *addr = iocp_task->get_remote_address(&addrlen);
                 from_address->set(addr, addrlen);
             }
             return buf;
         }
 #else
-        c_block_ptr flow_udp::read_from(int32_ptr size, address_ptr from_address) {
-            block addr[ADDRESS_MAX_LEN];
-            int32 addrlen = ADDRESS_MAX_LEN;
-            block_ptr buf = (block_ptr)read_iob_->buffer();
+        const block_t* flow_udp::read_from(int32_t *size, address_ptr from_address) {
+            block_t addr[ADDRESS_MAX_LEN];
+            int32_t addrlen = ADDRESS_MAX_LEN;
+            block_t *buf = (block_t*)read_iob_->buffer();
             *size = net::read_from(fd_, 
                                    buf, 
                                    read_iob_->buffer_size(), 
-                                   (sockaddr *)addr, &addrlen);
-            from_address->set((sockaddr *)addr, addrlen);
+                                   (sockaddr*)addr, &addrlen);
+            from_address->set((sockaddr*)addr, addrlen);
 
             return buf;
         }
 #endif
 
-        int32 flow_udp::send(c_block_ptr b, uint32 size, const address &to_address) {
+        int32_t flow_udp::send(const block_t *b, int32_t size, const address &to_address) {
             return net::send_to(fd_, 
                                 b, 
                                 size,
-                                (struct sockaddr *)to_address.get(),
+                                (struct sockaddr*)to_address.get(),
                                 to_address.len());
         }
 

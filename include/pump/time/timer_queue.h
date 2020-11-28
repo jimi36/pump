@@ -98,14 +98,14 @@ namespace time {
         // Pending timer callback
         timer_pending_callback pending_cb_;
         // Next observer time
-        uint64 next_observe_time_;
+        uint64_t next_observe_time_;
         // Observer thread
         std::shared_ptr<std::thread> observer_;
         // Observer condition
         std::mutex observer_mx_;
         std::condition_variable observer_cv_;
         // Timers
-        std::multimap<uint64, timer_wptr> timers_;
+        std::multimap<uint64_t, timer_wptr> timers_;
     };
     DEFINE_ALL_POINTER_TYPE(timer_queue);
 

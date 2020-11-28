@@ -58,7 +58,7 @@ namespace toolkit {
         /*********************************************************************************
          * Constructor
          ********************************************************************************/
-        semaphore(int32 ini_count = 0) {
+        semaphore(int32_t ini_count = 0) {
 #if defined(OS_WINDOWS)
             const long maxLong = 0x7fffffff;
             sema_ = CreateSemaphoreW(nullptr, ini_count, maxLong, nullptr);
@@ -90,7 +90,7 @@ namespace toolkit {
             const unsigned long infinite = 0xffffffff;
             return WaitForSingleObject(sema_, infinite) == 0;
 #elif defined(OS_LINUX)
-            int32 rc;
+            int32_t rc;
             do {
                 rc = sem_wait(&sema_);
             } while (rc == -1 && errno == EINTR);
@@ -106,7 +106,7 @@ namespace toolkit {
 #if defined(OS_WINDOWS)
             return WaitForSingleObject(sema_, 0) == 0;
 #elif defined(OS_LINUX)
-            int32 rc;
+            int32_t rc;
             do {
                 rc = sem_trywait(&sema_);
             } while (rc == -1 && errno == EINTR);
@@ -118,13 +118,13 @@ namespace toolkit {
          * Wait with timeout
          * Wait for the signal until timeout.
          ********************************************************************************/
-        bool wait_with_timeout(uint64 usecs) {
+        bool wait_with_timeout(uint64_t usecs) {
 #if defined(OS_WINDOWS)
             return WaitForSingleObject(sema_, (unsigned long)(usecs / 1000)) == 0;
 #elif defined(OS_LINUX)
             struct timespec ts;
-            const int32 usecs_in_1_sec = 1000000;
-            const int32 nsecs_in_1_sec = 1000000000;
+            const int32_t usecs_in_1_sec = 1000000;
+            const int32_t nsecs_in_1_sec = 1000000000;
             clock_gettime(CLOCK_REALTIME, &ts);
             ts.tv_sec += (time_t)(usecs / usecs_in_1_sec);
             ts.tv_nsec += (long)(usecs % usecs_in_1_sec) * 1000;
@@ -135,7 +135,7 @@ namespace toolkit {
                 ++ts.tv_sec;
             }
 
-            int32 rc;
+            int32_t rc;
             do {
                 rc = sem_timedwait(&sema_, &ts);
             } while (rc == -1 && errno == EINTR);
@@ -157,7 +157,7 @@ namespace toolkit {
         /*********************************************************************************
          * Signal
          ********************************************************************************/
-        void signal(int32 count = 1) {
+        void signal(int32_t count = 1) {
 #if defined(OS_WINDOWS)
             while (!ReleaseSemaphore(sema_, count, nullptr));
 #elif defined(OS_LINUX)
@@ -182,7 +182,8 @@ namespace toolkit {
         /*********************************************************************************
          * Constructor
          ********************************************************************************/
-        light_semaphore(int64 init_count = 0) : count_(init_count) {
+        light_semaphore(int64_t init_count = 0)
+          : count_(init_count) {
             assert(init_count >= 0);
         }
 
@@ -190,7 +191,7 @@ namespace toolkit {
          * Try wait one signal and return immediately
          ********************************************************************************/
         bool try_wait() {
-            int64 old_count = count_.load(std::memory_order_relaxed);
+            int64_t old_count = count_.load(std::memory_order_relaxed);
             while (old_count > 0) {
                 if (count_.compare_exchange_weak(old_count,
                                                  old_count - 1,
@@ -212,27 +213,27 @@ namespace toolkit {
         /*********************************************************************************
          * Wait one signal with timeout
          ********************************************************************************/
-        bool wait(int64 timeout_usecs) {
+        bool wait(int64_t timeout_usecs) {
             return try_wait() || __wait_with_spinning(timeout_usecs);
         }
 
         /*********************************************************************************
          * Signal
          ********************************************************************************/
-        void signal(int64 count = 1) {
+        void signal(int64_t count = 1) {
             PUMP_ASSERT(count >= 0);
-            int64 old_count = count_.fetch_add(count, std::memory_order_release);
-            int64 to_release = -old_count < count ? -old_count : count;
+            int64_t old_count = count_.fetch_add(count, std::memory_order_release);
+            int64_t to_release = -old_count < count ? -old_count : count;
             if (to_release > 0) {
-                semaphone_.signal((int32)to_release);
+                semaphone_.signal((int32_t)to_release);
             }
         }
 
         /*********************************************************************************
          * Get signal count
          ********************************************************************************/
-        int64 count() const {
-            int64 count = count_.load(std::memory_order_relaxed);
+        int64_t count() const {
+            int64_t count = count_.load(std::memory_order_relaxed);
             return count > 0 ? count : 0;
         }
 
@@ -240,12 +241,12 @@ namespace toolkit {
         /*********************************************************************************
          * Wait with spinning and timeout
          ********************************************************************************/
-        bool __wait_with_spinning(int64 timeout_usecs = -1) {
-            int64 old_count;
+        bool __wait_with_spinning(int64_t timeout_usecs = -1) {
+            int64_t old_count;
             // Is there a better way to set the initial spin count?
             // If we lower it to 1000, testBenaphore becomes 15x slower on my Core
             // i7-5930K Windows PC, as threads start hitting the kernel semaphore.
-            int32 spin = 10000;
+            int32_t spin = 10000;
             while (--spin >= 0) {
                 old_count = count_.load(std::memory_order_relaxed);
                 if ((old_count > 0) &&
@@ -265,7 +266,7 @@ namespace toolkit {
             if (timeout_usecs < 0) {
                 return semaphone_.wait();
             }
-            if (semaphone_.wait_with_timeout((uint64)timeout_usecs)) {
+            if (semaphone_.wait_with_timeout((uint64_t)timeout_usecs)) {
                 return true;
             }
             // At this point, we've timed out waiting for the semaphore, but the

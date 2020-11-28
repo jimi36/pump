@@ -34,20 +34,20 @@ namespace poll {
 
       protected:
         struct channel_event {
-            channel_event(std::shared_ptr<channel> &c, uint32 ev) noexcept
+            channel_event(std::shared_ptr<channel> &c, int32_t ev) noexcept
                 : ch(c), event(ev) {
             }
             channel_wptr ch;
-            uint32 event;
+            int32_t event;
         };
         DEFINE_RAW_POINTER_TYPE(channel_event);
 
         struct channel_tracker_event {
-            channel_tracker_event(channel_tracker_sptr &t, int32 ev) noexcept
+            channel_tracker_event(channel_tracker_sptr &t, int32_t ev) noexcept
                 : tracker(t), event(ev) {
             }
             channel_tracker_sptr tracker;
-            int32 event;
+            int32_t event;
         };
         DEFINE_RAW_POINTER_TYPE(channel_tracker_event);
 
@@ -93,13 +93,13 @@ namespace poll {
         /*********************************************************************************
          * Awake channel tracker
          ********************************************************************************/
-        virtual void resume_channel_tracker(channel_tracker_ptr tracker);
+        virtual bool resume_channel_tracker(channel_tracker_ptr tracker);
 #endif
 
         /*********************************************************************************
          * Push channel event
          ********************************************************************************/
-        virtual void push_channel_event(channel_sptr &c, uint32 event);
+        virtual bool push_channel_event(channel_sptr &c, int32_t event);
 
       protected:
         /*********************************************************************************
@@ -120,14 +120,15 @@ namespace poll {
         /*********************************************************************************
          * Awake channel tracker for derived class
          ********************************************************************************/
-        virtual void __resume_channel_tracker(channel_tracker_ptr tracker) {
+        virtual bool __resume_channel_tracker(channel_tracker_ptr tracker) {
+            return true;
         }
 
         /*********************************************************************************
          * Poll
          * Timeout is polling timeout time. If set to -1, then no wait
          ********************************************************************************/
-        virtual void __poll(int32 timeout) {
+        virtual void __poll(int32_t timeout) {
         }
 
       private:

@@ -19,7 +19,7 @@
 namespace pump {
 namespace poll {
 
-    PUMP_INLINE static bool is_selectable(int32 fd) {
+    PUMP_INLINE static bool is_selectable(int32_t fd) {
         return fd < 1024 && fd >= 0;
     }
 
@@ -30,13 +30,13 @@ namespace poll {
         tv_.tv_usec = 0;
     }
 
-    void select_poller::__poll(int32 timeout) {
+    void select_poller::__poll(int32_t timeout) {
         FD_ZERO(&read_fds_);
         FD_ZERO(&write_fds_);
 
-        int32 fd = -1;
-        int32 maxfd = -1;
-        int32 listen_event = IO_EVENT_NONE;
+        int32_t fd = -1;
+        int32_t maxfd = -1;
+        int32_t listen_event = IO_EVENT_NONE;
         channel_tracker_ptr tracker = nullptr;
         for (auto &item : trackers_) {
             tracker = item.second.get();
@@ -63,7 +63,7 @@ namespace poll {
 
         tv_.tv_sec = timeout / 1000;
         tv_.tv_usec = (timeout % 1000) * 1000;
-        int32 count = ::select(maxfd + 1, &read_fds_, &write_fds_, NULL, &tv_);
+        int32_t count = ::select(maxfd + 1, &read_fds_, &write_fds_, NULL, &tv_);
 #if defined(OS_WINDOWS)
         if (maxfd == -1 && timeout > 0) {
             Sleep(1);
@@ -91,8 +91,8 @@ namespace poll {
             }
 
 #if defined(PUMP_HAVE_SELECT)
-            int32 fd = tracker->get_fd();
-            int32 listen_event = tracker->get_event();
+            int32_t fd = tracker->get_fd();
+            int32_t listen_event = tracker->get_event();
             if (listen_event & IO_EVENT_READ) {
                 if (FD_ISSET(fd, rfds)) {
                     PUMP_DEBUG_CHECK(tracker->set_tracked(false));

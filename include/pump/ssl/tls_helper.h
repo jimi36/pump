@@ -35,8 +35,8 @@ namespace ssl {
         void_ptr send_bio;
 #endif
         // Net read buffer
-        int32 net_read_data_pos;
-        int32 net_read_data_size;
+        int32_t net_read_data_pos;
+        int32_t net_read_data_size;
         toolkit::io_buffer_ptr net_read_iob;
 
         // Net send buffer
@@ -87,7 +87,7 @@ namespace ssl {
      * Create tls session
      * This will create ssl context, net read buffer and net send buffer.
      ********************************************************************************/
-    tls_session_ptr create_tls_session(void_ptr xcred, bool client, uint32 buffer_size);
+    tls_session_ptr create_tls_session(void_ptr xcred, bool client, int32_t buffer_size);
 
     /*********************************************************************************
      * Destory tls session
@@ -101,19 +101,19 @@ namespace ssl {
      * If handshading incomplete return 1.
      * If handshaking error return -1.
      ********************************************************************************/
-    int32 tls_handshake(tls_session_ptr session);
+    int32_t tls_handshake(tls_session_ptr session);
 
     /*********************************************************************************
      * TLS read
      * If success return read size, else return 0.
      ********************************************************************************/
-    int32 tls_read(tls_session_ptr session, block_ptr b, int32 size);
+    int32_t tls_read(tls_session_ptr session, block_t *b, int32_t size);
 
     /*********************************************************************************
      * TLS send
      * If success return send size, else return 0.
      ********************************************************************************/
-    int32 tls_send(tls_session_ptr session, c_block_ptr b, int32 size);
+    int32_t tls_send(tls_session_ptr session, const block_t *b, int32_t size);
 
 }  // namespace ssl
 }  // namespace pump

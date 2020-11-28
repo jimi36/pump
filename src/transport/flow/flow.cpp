@@ -27,8 +27,8 @@ namespace transport {
 #endif
         }
 
-        int32 flow_base::unbind() {
-            int32 fd = fd_;
+        int32_t flow_base::unbind() {
+            int32_t fd = fd_;
             fd_ = -1;
             return fd;
         }

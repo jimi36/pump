@@ -40,19 +40,18 @@ namespace transport {
             PUMP_DEBUG_ASSIGN(ch, ch_, ch);
 
             is_ipv6_ = bind_address.is_ipv6();
-            int32 domain = is_ipv6_ ? AF_INET6 : AF_INET;
+            int32_t domain = is_ipv6_ ? AF_INET6 : AF_INET;
 
 #if defined(PUMP_HAVE_IOCP)
             fd_ = net::create_iocp_socket(domain, SOCK_STREAM, net::get_iocp_handler());
             if (fd_ == -1) {
-                PUMP_ERR_LOG("flow_tcp_dialer::init: create iocp socket fialed");
+                PUMP_ERR_LOG("flow_tcp_dialer::init: create iocp socket failed");
                 return FLOW_ERR_ABORT;
             }
 
             extra_fns_ = net::new_iocp_extra_function(fd_);
             if (!extra_fns_) {
-                PUMP_ERR_LOG(
-                    "flow_tcp_dialer::init: new iocp function fialed");
+                PUMP_ERR_LOG("flow_tcp_dialer::init: new iocp function failed");
                 return FLOW_ERR_ABORT;
             }
 
@@ -62,7 +61,7 @@ namespace transport {
             dial_task_->set_type(net::IOCP_TASK_CONNECT);
 #else
             if ((fd_ = net::create_socket(domain, SOCK_STREAM)) == -1) {
-                PUMP_ERR_LOG("flow_tcp_dialer::init: create socket fialed");
+                PUMP_ERR_LOG("flow_tcp_dialer::init: create socket failed");
                 return FLOW_ERR_ABORT;
             }
 #endif
@@ -107,11 +106,11 @@ namespace transport {
         }
 
 #if defined(PUMP_HAVE_IOCP)
-        int32 flow_tcp_dialer::connect(net::iocp_task_ptr iocp_task,
+        int32_t flow_tcp_dialer::connect(net::iocp_task_ptr iocp_task,
                                        address_ptr local_address,
                                        address_ptr remote_address) {
             PUMP_ASSERT(iocp_task);
-            int32 ec = iocp_task->get_errcode();
+            int32_t ec = iocp_task->get_errcode();
             if (ec != 0) {
                 return ec;
             }
@@ -121,8 +120,8 @@ namespace transport {
                 return net::get_socket_error(fd_);
             }
 
-            int32 addrlen = 0;
-            block addr[ADDRESS_MAX_LEN];
+            int32_t addrlen = 0;
+            block_t addr[ADDRESS_MAX_LEN];
 
             addrlen = ADDRESS_MAX_LEN;
             net::local_address(fd_, (sockaddr *)addr, &addrlen);
@@ -135,9 +134,9 @@ namespace transport {
             return ec;
         }
 #else
-        int32 flow_tcp_dialer::connect(address_ptr local_address,
+        int32_t flow_tcp_dialer::connect(address_ptr local_address,
                                        address_ptr remote_address) {
-            int32 ec = net::get_socket_error(fd_);
+            int32_t ec = net::get_socket_error(fd_);
             if (ec != 0) {
                 return ec;
             }
@@ -147,8 +146,8 @@ namespace transport {
                 return net::get_socket_error(fd_);
             }
 
-            int32 addrlen = 0;
-            block addr[ADDRESS_MAX_LEN];
+            int32_t addrlen = 0;
+            block_t addr[ADDRESS_MAX_LEN];
 
             addrlen = ADDRESS_MAX_LEN;
             net::local_address(fd_, (sockaddr *)addr, &addrlen);

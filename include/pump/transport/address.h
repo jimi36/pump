@@ -34,8 +34,8 @@ namespace transport {
          * Constructor
          ********************************************************************************/
         address() noexcept;
-        address(const std::string &ip, uint16 port);
-        address(const struct sockaddr *addr, int32 addrlen);
+        address(const std::string &ip, uint16_t port);
+        address(const struct sockaddr *addr, int32_t addrlen);
 
         /*********************************************************************************
          * Deconstructor
@@ -45,8 +45,8 @@ namespace transport {
         /*********************************************************************************
          * Set and Get address
          ********************************************************************************/
-        bool set(const std::string &ip, uint16 port);
-        bool set(const struct sockaddr *addr, int32 addrlen);
+        bool set(const std::string &ip, uint16_t port);
+        bool set(const struct sockaddr *addr, int32_t addrlen);
 
         /*********************************************************************************
          * Get address struct
@@ -61,7 +61,7 @@ namespace transport {
         /*********************************************************************************
          * Get port
          ********************************************************************************/
-        uint16 port() const;
+        uint16_t port() const;
 
         /*********************************************************************************
          * Get ip
@@ -71,7 +71,7 @@ namespace transport {
         /*********************************************************************************
          * Set and Get address struct size
          ********************************************************************************/
-        PUMP_INLINE int32 len() const {
+        PUMP_INLINE int32_t len() const {
             return addrlen_;
         }
 
@@ -100,8 +100,8 @@ namespace transport {
       private:
         bool is_v6_;
 
-        int32 addrlen_;
-        block addr_[ADDRESS_MAX_LEN];
+        int32_t addrlen_;
+        block_t addr_[ADDRESS_MAX_LEN];
     };
     DEFINE_ALL_POINTER_TYPE(address);
 

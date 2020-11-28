@@ -25,7 +25,7 @@ namespace transport {
     }
 
     transport_error udp_transport::start(service_ptr sv,
-                                         int32 max_pending_send_size,
+                                         int32_t max_pending_send_size,
                                          const transport_callbacks &cbs) {
         if (!sv) {
             PUMP_ERR_LOG("udp_transport::start: service invalid");
@@ -95,8 +95,8 @@ namespace transport {
         return ERROR_UNSTART;
     }
 
-    transport_error udp_transport::send(c_block_ptr b,
-                                        uint32 size,
+    transport_error udp_transport::send(const block_t *b,
+                                        int32_t size,
                                         const address &address) {
         if (!b || size == 0) {
             PUMP_ERR_LOG("udp_transport::send: buffer invalid");
@@ -123,15 +123,15 @@ namespace transport {
         auto flow = flow_.get();
 
         // Get and change read state to READ_PENDING.
-        uint32 pending_state = READ_PENDING;
-        uint32 old_state = read_state_.exchange(pending_state);
+        uint32_t pending_state = READ_PENDING;
+        uint32_t old_state = read_state_.exchange(pending_state);
 
         address addr;
-        int32 size = 0;
+        int32_t size = 0;
 #if defined(PUMP_HAVE_IOCP)
-        c_block_ptr b = flow->read_from(iocp_task, &size, &addr);
+        const block_t *b = flow->read_from(iocp_task, &size, &addr);
 #else
-        c_block_ptr b = flow->read_from(&size, &addr);
+        const block_t *b = flow->read_from(&size, &addr);
 #endif
         if (PUMP_LIKELY(size > 0)) {
             cbs_.read_from_cb(b, size, addr);
@@ -174,8 +174,8 @@ namespace transport {
         return true;
     }
 
-    transport_error udp_transport::__async_read(uint32 state) {
-        uint32 old_state = __change_read_state(state);
+    transport_error udp_transport::__async_read(uint32_t state) {
+        uint32_t old_state = __change_read_state(state);
         if (old_state == READ_INVALID) {
             return ERROR_AGAIN;
         } else if (old_state >= READ_ONCE) {

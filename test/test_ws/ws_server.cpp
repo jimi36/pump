@@ -3,8 +3,8 @@
 websocket::connection_sptr ws_conn;
 
 void on_receive(websocket::connection_ptr conn,
-                const char *b,
-                unsigned int size,
+                const block_t *b,
+                int32_t size,
                 bool msg_end) {
     std::string data(b, size);
     std::string gbk = pump::utf8_to_gbk(data);
@@ -28,7 +28,7 @@ void on_new_connection(const std::string &path, websocket::connection_sptr conn)
 
     std::string msg = "hello world";
     std::string data = pump::gbk_to_utf8(msg);
-    conn->send(data.c_str(), data.size());
+    conn->send(data.c_str(), (int32_t)data.size());
 
     ws_conn = conn;
 }

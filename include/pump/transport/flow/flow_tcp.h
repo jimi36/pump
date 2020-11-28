@@ -43,7 +43,7 @@ namespace transport {
              *     FLOW_ERR_NO    => success
              *     FLOW_ERR_ABORT => error
              ********************************************************************************/
-            flow_error init(poll::channel_sptr &&ch, int32 fd);
+            flow_error init(poll::channel_sptr &&ch, int32_t fd);
 
 #if defined(PUMP_HAVE_IOCP)
             /*********************************************************************************
@@ -59,9 +59,9 @@ namespace transport {
              * Read
              ********************************************************************************/
 #if defined(PUMP_HAVE_IOCP)
-            c_block_ptr read(net::iocp_task_ptr iocp_task, int32_ptr size);
+            const block_t* read(net::iocp_task_ptr iocp_task, int32_t *size);
 #else
-            c_block_ptr read(int32_ptr size);
+            const block_t* read(int32_t *size);
 #endif
 
 #if defined(PUMP_HAVE_IOCP)

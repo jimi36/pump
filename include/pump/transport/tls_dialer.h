@@ -39,8 +39,8 @@ namespace transport {
          ********************************************************************************/
         PUMP_INLINE static tls_dialer_sptr create(const address &local_address,
                                                   const address &remote_address,
-                                                  int64 dial_timeout = 0,
-                                                  int64 handshake_timeout = 0) {
+                                                  int64_t dial_timeout = 0,
+                                                  int64_t handshake_timeout = 0) {
             INLINE_OBJECT_CREATE(
                 obj,
                 tls_dialer,
@@ -112,15 +112,15 @@ namespace transport {
          ********************************************************************************/
         tls_dialer(const address &local_address,
                    const address &remote_address,
-                   int64 dial_timeout,
-                   int64 handshake_timeout) noexcept;
+                   int64_t dial_timeout,
+                   int64_t handshake_timeout) noexcept;
 
       private:
         // GNUTLS credentials
         void_ptr xcred_;
 
         // Handshake timeout
-        int64 handshake_timeout_;
+        int64_t handshake_timeout_;
         // Handshaker
         tls_handshaker_sptr handshaker_;
 
@@ -154,8 +154,8 @@ namespace transport {
         base_transport_sptr dial(service_ptr sv,
                                  const address &local_address,
                                  const address &remote_address,
-                                 int64 connect_timeout,
-                                 int64 handshake_timeout);
+                                 int64_t connect_timeout,
+                                 int64_t handshake_timeout);
 
       protected:
         /*********************************************************************************

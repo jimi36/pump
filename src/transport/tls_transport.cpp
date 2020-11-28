@@ -47,7 +47,7 @@ namespace transport {
     }
 
     transport_error tls_transport::start(service_ptr sv,
-                                         int32 max_pending_send_size,
+                                         int32_t max_pending_send_size,
                                          const transport_callbacks &cbs) {
         if (!flow_) {
             PUMP_ERR_LOG("tls_transport::start: flow invalid");
@@ -148,7 +148,7 @@ namespace transport {
         return ERROR_UNSTART;
     }
 
-    transport_error tls_transport::send(c_block_ptr b, uint32 size) {
+    transport_error tls_transport::send(const block_t *b, int32_t size) {
         if (!b || size == 0) {
             PUMP_ERR_LOG("tls_transport::send: buffer invalid");
             return ERROR_INVALID;
@@ -209,7 +209,7 @@ namespace transport {
         return ERROR_OK;
     }
 
-    void tls_transport::on_channel_event(uint32 ev) {
+    void tls_transport::on_channel_event(int32_t ev) {
         if (!__is_status(TRANSPORT_STARTED)) {
             __interrupt_and_trigger_callbacks();
             return;
@@ -233,12 +233,12 @@ namespace transport {
         }
 
         // Get and change read state to READ_PENDING.
-        uint32 pending_state = READ_PENDING;
-        uint32 old_state = read_state_.exchange(pending_state);
+        uint32_t pending_state = READ_PENDING;
+        uint32_t old_state = read_state_.exchange(pending_state);
 
-        int32 ret = 0;
-        int32 size = 0;
-        block sslb[MAX_FLOW_BUFFER_SIZE];
+        int32_t ret = 0;
+        int32_t size = 0;
+        block_t sslb[MAX_FLOW_BUFFER_SIZE];
         do {
             ret = flow->read_from_ssl(sslb + size, MAX_FLOW_BUFFER_SIZE - size);
             if (ret > 0) {
@@ -311,12 +311,12 @@ namespace transport {
         }
 
         // Get old read state and change read state to READ_PENDING.
-        uint32 pending_state = READ_PENDING;
-        uint32 old_state = read_state_.exchange(pending_state);
+        uint32_t pending_state = READ_PENDING;
+        uint32_t old_state = read_state_.exchange(pending_state);
 
-        int32 rret = 0;
-        int32 size = 0;
-        block sslb[MAX_FLOW_BUFFER_SIZE];
+        int32_t rret = 0;
+        int32_t size = 0;
+        block_t sslb[MAX_FLOW_BUFFER_SIZE];
         do {
             rret = flow->read_from_ssl(sslb + size, MAX_FLOW_BUFFER_SIZE - size);
             if (rret > 0) {
@@ -401,8 +401,8 @@ namespace transport {
         }
     }
 
-    transport_error tls_transport::__async_read(uint32 state) {
-        uint32 old_state = __change_read_state(state);
+    transport_error tls_transport::__async_read(uint32_t state) {
+        uint32_t old_state = __change_read_state(state);
         if (old_state == READ_INVALID) {
             return ERROR_AGAIN;
         } else if (old_state >= READ_ONCE) {

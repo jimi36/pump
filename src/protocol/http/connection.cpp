@@ -84,16 +84,16 @@ namespace protocol {
         bool connection::send(c_pocket_ptr pk) {
             std::string data;
             pk->serialize(data);
-            return transp_->send(data.c_str(), (uint32)data.size()) == transport::ERROR_OK;
+            return transp_->send(data.c_str(), (int32_t)data.size()) == transport::ERROR_OK;
         }
 
         bool connection::send(c_content_ptr ct) {
             std::string data;
             ct->serialize(data);
-            return transp_->send(data.c_str(), (uint32)data.size()) == transport::ERROR_OK;
+            return transp_->send(data.c_str(), (int32_t)data.size()) == transport::ERROR_OK;
         }
 
-        void connection::on_read(connection_wptr wptr, c_block_ptr b, int32 size) {
+        void connection::on_read(connection_wptr wptr, const block_t *b, int32_t size) {
             PUMP_LOCK_WPOINTER(conn, wptr);
             if (conn) {
                 conn->__handle_http_data(b, size);
@@ -114,22 +114,22 @@ namespace protocol {
             }
         }
 
-        void connection::__handle_http_data(c_block_ptr b, int32 size) {
+        void connection::__handle_http_data(const block_t *b, int32_t size) {
             auto pk = coming_pocket_.get();
             if (!pk) {
                 pk = create_coming_pocket_();
                 coming_pocket_.reset(pk, object_delete<pocket>);
             }
 
-            int32 parse_size = -1;
+            int32_t parse_size = -1;
             if (read_cache_.empty()) {
                 parse_size = pk->parse(b, size);
                 if (parse_size >= 0 && parse_size < size) {
-                    read_cache_.append(b + parse_size, uint32(size - parse_size));
+                    read_cache_.append(b + parse_size, uint32_t(size - parse_size));
                 }
             } else {
                 read_cache_.append(b, size);
-                parse_size = pk->parse(read_cache_.data(), (int32)read_cache_.size());
+                parse_size = pk->parse(read_cache_.data(), (int32_t)read_cache_.size());
                 if (parse_size > 0)
                     read_cache_ = read_cache_.substr(parse_size);
             }

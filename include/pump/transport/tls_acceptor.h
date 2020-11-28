@@ -41,7 +41,7 @@ namespace transport {
             const std::string &cert,
             const std::string &key,
             const address &listen_address,
-            int64 handshake_timeout = 0) {
+            int64_t handshake_timeout = 0) {
             INLINE_OBJECT_CREATE(
                 obj, tls_acceptor, (true, cert, key, listen_address, handshake_timeout));
             return tls_acceptor_sptr(obj, object_delete<tls_acceptor>);
@@ -54,7 +54,7 @@ namespace transport {
             const std::string &cert,
             const std::string &key,
             const address &listen_address,
-            int64 handshake_timeout = 0) {
+            int64_t handshake_timeout = 0) {
             INLINE_OBJECT_CREATE(
                 obj, tls_acceptor, (false, cert, key, listen_address, handshake_timeout));
             return tls_acceptor_sptr(obj, object_delete<tls_acceptor>);
@@ -107,7 +107,7 @@ namespace transport {
                      const std::string &cert_mem,
                      const std::string &key_mem,
                      const address &listen_address,
-                     int64 handshake_timeout);
+                     int64_t handshake_timeout);
 
         /*********************************************************************************
          * Open accept flow
@@ -139,7 +139,7 @@ namespace transport {
         void_ptr xcred_;
 
         // GNUTLS handshake timeout time
-        int64 handshake_timeout_;
+        int64_t handshake_timeout_;
 
         // Handshakers
         std::mutex handshaker_mx_;

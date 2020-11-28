@@ -99,7 +99,7 @@ namespace protocol {
             /*********************************************************************************
              * Read event callback
              ********************************************************************************/
-            static void on_read(connection_wptr wptr, c_block_ptr b, int32 size);
+            static void on_read(connection_wptr wptr, const block_t *b, int32_t size);
 
             /*********************************************************************************
              * Disconnected event callback
@@ -115,7 +115,7 @@ namespace protocol {
             /*********************************************************************************
              * Handle http data
              ********************************************************************************/
-            void __handle_http_data(c_block_ptr b, int32 size);
+            void __handle_http_data(const block_t *b, int32_t size);
 
             /*********************************************************************************
              * Stop transport

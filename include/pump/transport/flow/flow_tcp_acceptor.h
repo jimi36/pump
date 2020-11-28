@@ -59,11 +59,11 @@ namespace transport {
              * Accept
              ********************************************************************************/
 #if defined(PUMP_HAVE_IOCP)
-            int32 accept(net::iocp_task_ptr iocp_task,
+            int32_t accept(net::iocp_task_ptr iocp_task,
                          address_ptr local_address,
                          address_ptr remote_address);
 #else
-            int32 accept(address_ptr local_address, address_ptr remote_address);
+            int32_t accept(address_ptr local_address, address_ptr remote_address);
 #endif
           private:
             // IPV6

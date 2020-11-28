@@ -19,15 +19,15 @@
 namespace pump {
 namespace transport {
 
-    const int32 TLS_HANDSHAKE_DONE = 0;
-    const int32 TLS_HANDSHAKE_DOING = 1;
-    const int32 TLS_HANDSHAKE_ERROR = 2;
+    const int32_t TLS_HANDSHAKE_DONE = 0;
+    const int32_t TLS_HANDSHAKE_DOING = 1;
+    const int32_t TLS_HANDSHAKE_ERROR = 2;
 
     tls_handshaker::tls_handshaker() noexcept
       : base_channel(TLS_HANDSHAKER, nullptr, -1) {
     }
 
-    void tls_handshaker::init(int32 fd,
+    void tls_handshaker::init(int32_t fd,
                               bool client,
                               void_ptr xcred,
                               const address &local_address,
@@ -39,7 +39,7 @@ namespace transport {
     }
 
     bool tls_handshaker::start(service_ptr sv,
-                               int64 timeout,
+                               int64_t timeout,
                                const tls_handshaker_callbacks &cbs) {
         if (!flow_) {
             PUMP_ERR_LOG("tls_handshaker::start: flow invalid");
@@ -206,7 +206,7 @@ namespace transport {
         }
     }
 
-    bool tls_handshaker::__open_flow(int32 fd, void_ptr xcred, bool is_client) {
+    bool tls_handshaker::__open_flow(int32_t fd, void_ptr xcred, bool is_client) {
         // Setup flow
         PUMP_ASSERT(!flow_);
         flow_.reset(object_create<flow::flow_tls>(), object_delete<flow::flow_tls>);
@@ -275,7 +275,7 @@ namespace transport {
         }
     }
 
-    bool tls_handshaker::__start_handshake_timer(int64 timeout) {
+    bool tls_handshaker::__start_handshake_timer(int64_t timeout) {
         if (timeout <= 0)
             return true;
 

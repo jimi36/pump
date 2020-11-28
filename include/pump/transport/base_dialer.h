@@ -32,7 +32,7 @@ namespace transport {
         base_dialer(transport_type type,
                     const address &local_address,
                     const address &remote_address,
-                    int64 connect_timeout) noexcept
+                    int64_t connect_timeout) noexcept
           : base_channel(type, nullptr, -1),
             local_address_(local_address),
             remote_address_(remote_address),
@@ -76,7 +76,7 @@ namespace transport {
         /*********************************************************************************
          * Channel event callback
          ********************************************************************************/
-        virtual void on_channel_event(uint32 ev) override;
+        virtual void on_channel_event(int32_t ev) override;
 
       protected:
         /*********************************************************************************
@@ -124,7 +124,7 @@ namespace transport {
         address remote_address_;
 
         // Connect timer
-        int64 connect_timeout_;
+        int64_t connect_timeout_;
         std::shared_ptr<time::timer> connect_timer_;
 
 #if !defined(PUMP_HAVE_IOCP)

@@ -12,14 +12,14 @@ class my_udp_server {
     /*********************************************************************************
      * Udp read event callback
      ********************************************************************************/
-    virtual void on_read_callback(base_transport_ptr transp, c_block_ptr b,
-                                  int32 size, const address &remote_address) {
+    virtual void on_read_callback(base_transport_ptr transp, const block_t *b,
+                                  int32_t size, const address &remote_address) {
         if (size > 0) read_size_ += size;
 
-        uint64 now = ::time(0);
+        uint64_t now = ::time(0);
         if (now > last_report_time_) {
-            float32 speed =
-                (float32)read_size_ / 1024 / 1024 / (now - last_report_time_);
+            float32_t speed =
+                (float32_t)read_size_ / 1024 / 1024 / (now - last_report_time_);
             printf("read speed %02f M/s\n", speed);
 
             read_size_ = 0;
@@ -43,13 +43,13 @@ class my_udp_server {
     virtual void on_disconnected_callback(base_transport_ptr transp) {}
 
   private:
-    int32 read_size_;
-    uint64 last_report_time_;
+    int32_t read_size_;
+    uint64_t last_report_time_;
 };
 
 static std::shared_ptr<my_udp_server> udp_server;
 
-void start_udp_server(const std::string &ip, uint16 port) {
+void start_udp_server(const std::string &ip, uint16_t port) {
     sv = new service;
     sv->start();
 

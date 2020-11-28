@@ -43,34 +43,34 @@ namespace protocol {
              * This parse http header and return parsed size. If this return -1, it means
              * parsed error.
              ********************************************************************************/
-            int32 parse(c_block_ptr b, int32 size);
+            int32_t parse(const block_t *b, int32_t size);
 
             /*********************************************************************************
              * Serialize
              * This will serialize http header and end CR(\r\n), then return serialized
              *size.
              ********************************************************************************/
-            int32 serialize(std::string &buf) const;
+            int32_t serialize(std::string &buf) const;
 
             /*********************************************************************************
              * Set http header
              * If the header field with the name has existed, the value will append to the
              * existed value.
              ********************************************************************************/
-            void set(const std::string &name, int32 value);
+            void set(const std::string &name, int32_t value);
             void set(const std::string &name, const std::string &value);
 
             /*********************************************************************************
              * Set http header
              * If the header field has existed, the field vaule will be replace.
              ********************************************************************************/
-            void set_unique(const std::string &name, int32 value);
+            void set_unique(const std::string &name, int32_t value);
             void set_unique(const std::string &name, const std::string &value);
 
             /*********************************************************************************
              * Get http header
              ********************************************************************************/
-            bool get(const std::string &name, int32 &value) const;
+            bool get(const std::string &name, int32_t &value) const;
             bool get(const std::string &name, std::string &value) const;
             bool get(const std::string &name, std::vector<std::string> &values) const;
 

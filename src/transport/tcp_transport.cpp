@@ -30,7 +30,7 @@ namespace transport {
         __clear_sendlist();
     }
 
-    void tcp_transport::init(int32 fd,
+    void tcp_transport::init(int32_t fd,
                              const address &local_address,
                              const address &remote_address) {
         local_address_ = local_address;
@@ -41,7 +41,7 @@ namespace transport {
     }
 
     transport_error tcp_transport::start(service_ptr sv,
-                                         int32 max_pending_send_size,
+                                         int32_t max_pending_send_size,
                                          const transport_callbacks &cbs) {
         if (flow_) {
             PUMP_ERR_LOG("tcp_transport::start: flow exists");
@@ -147,7 +147,7 @@ namespace transport {
         return ERROR_UNSTART;
     }
 
-    transport_error tcp_transport::send(c_block_ptr b, uint32 size) {
+    transport_error tcp_transport::send(const block_t *b, int32_t size) {
         if (!b || size == 0) {
             PUMP_ERR_LOG("tcp_transport::send: buffer invalid ");
             return ERROR_INVALID;
@@ -216,14 +216,14 @@ namespace transport {
         auto flow = flow_.get();
 
         // Get and change read state to READ_PENDING.
-        uint32 pending_state = READ_PENDING;
-        uint32 old_state = read_state_.exchange(pending_state);
+        uint32_t pending_state = READ_PENDING;
+        uint32_t old_state = read_state_.exchange(pending_state);
 
-        int32 size = 0;
+        int32_t size = 0;
 #if defined(PUMP_HAVE_IOCP)
-        c_block_ptr b = flow->read(iocp_task, &size);
+        const block_t *b = flow->read(iocp_task, &size);
 #else
-        c_block_ptr b = flow->read(&size);
+        const block_t *b = flow->read(&size);
 #endif
         if (PUMP_LIKELY(size > 0)) {
             // Read callback
@@ -312,8 +312,8 @@ namespace transport {
         return true;
     }
 
-    transport_error tcp_transport::__async_read(uint32 state) {
-        uint32 old_state = __change_read_state(state);
+    transport_error tcp_transport::__async_read(uint32_t state) {
+        uint32_t old_state = __change_read_state(state);
         if (old_state == READ_INVALID) {
             return ERROR_AGAIN;
         } else if (old_state >= READ_ONCE) {

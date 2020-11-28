@@ -71,7 +71,7 @@ class my_tls_dialer : public std::enable_shared_from_this<my_tls_dialer> {
     /*********************************************************************************
      * Tls read event callback
      ********************************************************************************/
-    void on_read_callback(base_transport_ptr transp, c_block_ptr b, int32 size) {
+    void on_read_callback(base_transport_ptr transp, const block_t *b, int32_t size) {
         read_size_ += size;
         read_pocket_size_ += size;
 
@@ -97,7 +97,7 @@ class my_tls_dialer : public std::enable_shared_from_this<my_tls_dialer> {
     }
 
     void send_data() {
-        if (transport_->send(send_data_.data(), send_data_.size()) != 0)
+        if (transport_->send(send_data_.data(), (int32_t)send_data_.size()) != 0)
             printf("send data error\n");
     }
 
@@ -106,9 +106,9 @@ class my_tls_dialer : public std::enable_shared_from_this<my_tls_dialer> {
     }
 
   public:
-    int32 read_size_;
-    int32 read_pocket_size_;
-    int64 last_report_time_;
+    int32_t read_size_;
+    int32_t read_pocket_size_;
+    int64_t last_report_time_;
 
     std::string send_data_;
 
@@ -131,7 +131,7 @@ class tls_time_report {
     }
 };
 
-void start_tls_client(const std::string &ip, uint16 port) {
+void start_tls_client(const std::string &ip, uint16_t port) {
     sv = new service;
     sv->start();
 

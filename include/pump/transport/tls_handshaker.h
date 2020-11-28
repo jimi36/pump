@@ -55,7 +55,7 @@ namespace transport {
         /*********************************************************************************
          * Init
          ********************************************************************************/
-        void init(int32 fd,
+        void init(int32_t fd,
                   bool client,
                   void_ptr xcred,
                   const address &local_address,
@@ -64,7 +64,7 @@ namespace transport {
         /*********************************************************************************
          * Start tls handshaker
          ********************************************************************************/
-        bool start(service_ptr sv, int64 timeout, const tls_handshaker_callbacks &cbs);
+        bool start(service_ptr sv, int64_t timeout, const tls_handshaker_callbacks &cbs);
 
         /*********************************************************************************
          * Stop transport
@@ -118,7 +118,7 @@ namespace transport {
         /*********************************************************************************
          * Open flow
          ********************************************************************************/
-        bool __open_flow(int32 fd, void_ptr xcred, bool client);
+        bool __open_flow(int32_t fd, void_ptr xcred, bool client);
 
         /*********************************************************************************
          * Close flow
@@ -137,7 +137,7 @@ namespace transport {
         /*********************************************************************************
          * Start handshake timer
          ********************************************************************************/
-        bool __start_handshake_timer(int64 timeout);
+        bool __start_handshake_timer(int64_t timeout);
 
         /*********************************************************************************
          * Stop handshake timer

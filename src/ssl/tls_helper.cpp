@@ -40,7 +40,7 @@ namespace ssl {
                                              void_ptr data,
                                              size_t maxlen) {
             tls_session_ptr s = (tls_session_ptr)ptr;
-            int32 size = s->read_from_net_read_buffer((block_ptr)data, (int32)maxlen);
+            int32_t size = s->read_from_net_read_buffer((block_ptr)data, (int32)maxlen);
             if (size == 0) {
                 return -1;
             }
@@ -61,7 +61,7 @@ namespace ssl {
     };
 #endif
 
-    tls_session_ptr create_tls_session(void_ptr xcred, bool client, uint32 buffer_size) {
+    tls_session_ptr create_tls_session(void_ptr xcred, bool client, int32_t buffer_size) {
 #if defined(PUMP_HAVE_GNUTLS)
         tls_session_ptr session = object_create<tls_session>();
         gnutls_session_t ssl_ctx = nullptr;
@@ -147,9 +147,9 @@ namespace ssl {
 #endif
     }
 
-    int32 tls_handshake(tls_session_ptr session) {
+    int32_t tls_handshake(tls_session_ptr session) {
 #if defined(PUMP_HAVE_GNUTLS)
-        int32 ret = gnutls_handshake((gnutls_session_t)session->ssl_ctx);
+        int32_t ret = gnutls_handshake((gnutls_session_t)session->ssl_ctx);
         if (ret == 0) {
             // Handshake compelte.
             return 0;
@@ -159,7 +159,7 @@ namespace ssl {
         }
 #elif defined(PUMP_HAVE_OPENSSL)
         if (session->net_read_data_size > 0) {
-            int32 bio_size =
+            int32_t bio_size =
                 BIO_write((BIO *)session->read_bio,
                           session->net_read_iob->buffer() + session->net_read_data_pos,
                           session->net_read_data_size);
@@ -167,8 +167,8 @@ namespace ssl {
             session->net_read_data_pos += bio_size;
         }
 
-        int32 ret = SSL_do_handshake((SSL *)session->ssl_ctx);
-        int32 ec = SSL_get_error((SSL *)session->ssl_ctx, ret);
+        int32_t ret = SSL_do_handshake((SSL *)session->ssl_ctx);
+        int32_t ec = SSL_get_error((SSL *)session->ssl_ctx, ret);
         if (ec != SSL_ERROR_SSL) {
             BUF_MEM *bptr = nullptr;
             PUMP_DEBUG_CHECK(BIO_get_mem_ptr((BIO *)session->send_bio, &bptr));
@@ -188,9 +188,9 @@ namespace ssl {
         return -1;
     }
 
-    int32 tls_read(tls_session_ptr session, block_ptr b, int32 size) {
+    int32_t tls_read(tls_session_ptr session, block_t *b, int32_t size) {
 #if defined(PUMP_HAVE_GNUTLS)
-        int32 ret = (int32)gnutls_read((gnutls_session_t)session->ssl_ctx, b, size);
+        int32_t ret = (int32_t)gnutls_read((gnutls_session_t)session->ssl_ctx, b, size);
         if (ret > 0) {
             return ret;
         } else if (ret == GNUTLS_E_AGAIN) {
@@ -201,14 +201,14 @@ namespace ssl {
             return -1;
         }
 
-        int32 bio_size = BIO_write((BIO *)session->read_bio,
-                                   session->net_read_iob->buffer(),
-                                   session->net_read_data_size);
+        int32_t bio_size = BIO_write((BIO *)session->read_bio,
+                                     session->net_read_iob->buffer(),
+                                     session->net_read_data_size);
         PUMP_ASSERT(bio_size == session->net_read_data_size);
         session->net_read_data_size -= bio_size;
         session->net_read_data_pos = 0;
 
-        int32 ret = SSL_read((SSL *)session->ssl_ctx, b, size);
+        int32_t ret = SSL_read((SSL *)session->ssl_ctx, b, size);
         if (PUMP_LIKELY(ret > 0)) {
             return ret;
         }
@@ -220,11 +220,11 @@ namespace ssl {
         return 0;
     }
 
-    int32 tls_send(tls_session_ptr session, c_block_ptr b, int32 size) {
+    int32_t tls_send(tls_session_ptr session, const block_t *b, int32_t size) {
 #if defined(PUMP_HAVE_GNUTLS)
-        return (int32)gnutls_write((gnutls_session_t)session->ssl_ctx, b, size);
+        return (int32_t)gnutls_write((gnutls_session_t)session->ssl_ctx, b, size);
 #elif defined(PUMP_HAVE_OPENSSL)
-        int32 ret = SSL_write((SSL *)session->ssl_ctx, b, size);
+        int32_t ret = SSL_write((SSL *)session->ssl_ctx, b, size);
         if (PUMP_LIKELY(ret > 0)) {
             BUF_MEM *bptr = nullptr;
             PUMP_DEBUG_CHECK(BIO_get_mem_ptr((BIO *)session->send_bio, &bptr));

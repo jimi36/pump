@@ -20,8 +20,7 @@ class Timeout : public std::enable_shared_from_this<Timeout> {
      * Timer timeout callback
      ********************************************************************************/
     void on_timer_timeout() {
-        printf("timeout event pending %llu\n",
-               pump::time::get_clock_milliseconds());
+        printf("timeout event pending %d\n", (int32_t)time(0));
     }
 
   private:
@@ -30,8 +29,7 @@ class Timeout : public std::enable_shared_from_this<Timeout> {
 };
 
 int main(int argc, const char **argv) {
-    auto tm = new pump::time::timestamp;
-
+    
     pump::service *sv = new pump::service;
     sv->start();
 

@@ -25,7 +25,7 @@ namespace transport {
                                const std::string &cert,
                                const std::string &key,
                                const address &listen_address,
-                               int64 handshake_timeout)
+                               int64_t handshake_timeout)
       : base_acceptor(TLS_ACCEPTOR, listen_address),
         xcred_(nullptr),
         handshake_timeout_(0) {
@@ -115,9 +115,9 @@ namespace transport {
 
         address local_address, remote_address;
 #if defined(PUMP_HAVE_IOCP)
-        int32 fd = flow->accept(iocp_task, &local_address, &remote_address);
+        int32_t fd = flow->accept(iocp_task, &local_address, &remote_address);
 #else
-        int32 fd = flow->accept(&local_address, &remote_address);
+        int32_t fd = flow->accept(&local_address, &remote_address);
 #endif
         if (PUMP_LIKELY(fd > 0)) {
             tls_handshaker_ptr handshaker = __create_handshaker();

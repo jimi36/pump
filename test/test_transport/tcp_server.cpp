@@ -1,9 +1,8 @@
 #include "tcp_transport_test.h"
 
 static service *sv;
-static service *sv1;
 
-static int send_pocket_size = 1024 * 4;
+static uint32_t send_pocket_size = 1024 * 4;
 
 struct transport_context {
     transport_context(tcp_transport_sptr t) {
@@ -11,16 +10,16 @@ struct transport_context {
         all_read_size = 0;
         read_size = 0;
         read_pocket_size = 0;
-        last_report_time = ::time(0);
+        last_report_time = (int32_t)::time(0);
         idx = t->get_fd();
     }
 
     tcp_transport_sptr transport;
-    uint64 all_read_size;
-    uint32 read_size;
-    uint32 read_pocket_size;
-    int32 last_report_time;
-    int32 idx;
+    uint64_t all_read_size;
+    uint32_t read_size;
+    uint32_t read_pocket_size;
+    int32_t last_report_time;
+    int32_t idx;
 };
 
 class my_tcp_acceptor : public std::enable_shared_from_this<my_tcp_acceptor> {
@@ -61,8 +60,8 @@ class my_tcp_acceptor : public std::enable_shared_from_this<my_tcp_acceptor> {
     /*********************************************************************************
      * Tcp read event callback
      ********************************************************************************/
-    void on_read_callback(base_transport_ptr transp, c_block_ptr b,
-                          int32 size) {
+    void on_read_callback(base_transport_ptr transp, const block_t *b,
+                          int32_t size) {
         transport_context *ctx = (transport_context *)transp->get_context();
 
         ctx->read_size += size;
@@ -84,8 +83,8 @@ class my_tcp_acceptor : public std::enable_shared_from_this<my_tcp_acceptor> {
         if (it != transports_.end()) {
             printf("tcp transport disconnected all read size %fMB\n",
                    (double)it->second->all_read_size / 1024 / 1024);
-            printf("tcp transport disconnected all read pocket %lld\n",
-                   it->second->all_read_size / 4096);
+            printf("tcp transport disconnected all read pocket %d\n",
+                   (int32_t)it->second->all_read_size / 4096);
             delete it->second;
             transports_.erase(it);
         }
@@ -104,7 +103,7 @@ class my_tcp_acceptor : public std::enable_shared_from_this<my_tcp_acceptor> {
     }
 
     inline void send_data(base_transport_ptr transport) {
-        transport->send(send_data_.data(), send_data_.size());
+        transport->send(send_data_.data(), (int32_t)send_data_.size());
     }
 
   private:
@@ -114,7 +113,7 @@ class my_tcp_acceptor : public std::enable_shared_from_this<my_tcp_acceptor> {
     std::map<void_ptr, transport_context *> transports_;
 };
 
-void start_tcp_server(const std::string &ip, uint16 port) {
+void start_tcp_server(const std::string &ip, uint16_t port) {
     sv = new service;
     sv->start();
 

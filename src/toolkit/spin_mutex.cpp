@@ -19,13 +19,13 @@
 namespace pump {
 namespace toolkit {
 
-    spin_mutex::spin_mutex(int32 per_loop) noexcept
+    spin_mutex::spin_mutex(int32_t per_loop) noexcept
       : per_loop_(per_loop), 
         locked_(false) {
     }
 
     void spin_mutex::lock() {
-        int32 loop = 0;
+        int32_t loop = 0;
         bool exp = false;
 
         while (1) {

@@ -14,8 +14,8 @@ using namespace transport;
 
 using namespace pump;
 
-extern void start_tcp_server(const std::string &ip, uint16 port);
+extern void start_tcp_server(const std::string &ip, uint16_t port);
 
-extern void start_tcp_client(const std::string &ip, uint16 port);
+extern void start_tcp_client(const std::string &ip, uint16_t port);
 
 #endif

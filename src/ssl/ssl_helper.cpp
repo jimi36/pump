@@ -63,7 +63,7 @@ namespace ssl {
                                             const std::string &key) {
 #if defined(PUMP_HAVE_GNUTLS)
         gnutls_certificate_credentials_t xcred;
-        int32 ret = gnutls_certificate_allocate_credentials(&xcred);
+        int32_t ret = gnutls_certificate_allocate_credentials(&xcred);
         if (ret != 0) {
             PUMP_ERR_LOG(
                 "ssl_helper::generate_tls_certificate_by_file: "
@@ -114,7 +114,7 @@ namespace ssl {
                                               const std::string &key) {
 #if defined(PUMP_HAVE_GNUTLS)
         gnutls_certificate_credentials_t xcred;
-        int32 ret = gnutls_certificate_allocate_credentials(&xcred);
+        int32_t ret = gnutls_certificate_allocate_credentials(&xcred);
         if (ret != 0) {
             PUMP_ERR_LOG(
                 "ssl_helper::generate_tls_certificate_by_buffer: "
@@ -130,7 +130,7 @@ namespace ssl {
         gnutls_key.data = (unsigned char *)key.data();
         gnutls_key.size = (unsigned int)key.size();
 
-        int32 ret2 = gnutls_certificate_set_x509_key_mem(
+        int32_t ret2 = gnutls_certificate_set_x509_key_mem(
             xcred, &gnutls_cert, &gnutls_key, GNUTLS_X509_FMT_PEM);
         if (ret2 != 0) {
             PUMP_ERR_LOG(

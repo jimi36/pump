@@ -76,13 +76,13 @@ namespace protocol {
              * This parse http pocket, and return parsed size. If this return -1, it means
              * parsed error.
              ********************************************************************************/
-            virtual int32 parse(c_block_ptr b, int32 size) = 0;
+            virtual int32_t parse(const block_t *b, int32_t size) = 0;
 
             /*********************************************************************************
              * Serialize
              * This serialize http pocket and return serialized size.
              ********************************************************************************/
-            virtual int32 serialize(std::string &buffer) const = 0;
+            virtual int32_t serialize(std::string &buffer) const = 0;
 
             /*********************************************************************************
              * Get http header

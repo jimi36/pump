@@ -77,7 +77,7 @@ namespace protocol {
             }
         }
 
-        bool client::send(c_block_ptr b, uint32 size) {
+        bool client::send(const block_t *b, int32_t size) {
             // Check started state.
             if (!started_.load()) {
                 return false;
@@ -112,7 +112,7 @@ namespace protocol {
                 std::string data;
                 PUMP_ASSERT(cli->upgrade_req_);
                 cli->upgrade_req_->serialize(data);
-                if (!cli->conn_->send_buffer(data.c_str(), (uint32)data.size())) {
+                if (!cli->conn_->send_buffer(data.c_str(), (int32_t)data.size())) {
                     cli->cbs_.error_cb("client connection send upgrade request error");
                 }
 
@@ -157,7 +157,7 @@ namespace protocol {
             }
         }
 
-        void client::on_frame(client_wptr wptr, c_block_ptr b, uint32 size, bool end) {
+        void client::on_frame(client_wptr wptr, const block_t *b, int32_t size, bool end) {
             PUMP_LOCK_WPOINTER(cli, wptr);
             if (cli) {
                 cli->cbs_.data_cb(b, size, end);

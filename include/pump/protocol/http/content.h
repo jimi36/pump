@@ -46,19 +46,19 @@ namespace protocol {
             /*********************************************************************************
              * Append data
              ********************************************************************************/
-            void append(c_block_ptr b, int32 size);
+            void append(const block_t *b, int32_t size);
             void append(const std::string &data);
 
             /*********************************************************************************
              * Parse
              * This return parsed size. If return -1, it means parse error.
              ********************************************************************************/
-            int32 parse(c_block_ptr b, int32 size);
+            int32_t parse(const block_t *b, int32_t size);
 
             /*********************************************************************************
              * Serialize
              ********************************************************************************/
-            int32 serialize(std::string &buf) const;
+            int32_t serialize(std::string &buf) const;
 
             /*********************************************************************************
              * Get data
@@ -71,7 +71,7 @@ namespace protocol {
              * Set content length to parse
              * If chunked mode is set, content length will be ignore.
              ********************************************************************************/
-            PUMP_INLINE void set_length_to_parse(int32 len) {
+            PUMP_INLINE void set_length_to_parse(int32_t len) {
                 length_ = len;
             }
 
@@ -86,12 +86,12 @@ namespace protocol {
             /*********************************************************************************
              * Parse content by content length
              ********************************************************************************/
-            int32 __parse_by_length(c_block_ptr b, int32 size);
+            int32_t __parse_by_length(const block_t *b, int32_t size);
 
             /*********************************************************************************
              * Parse content by chunk mode
              ********************************************************************************/
-            int32 __parse_by_chunk(c_block_ptr b, int32 size);
+            int32_t __parse_by_chunk(const block_t *b, int32_t size);
 
           private:
             // Parse finished mark
@@ -99,12 +99,12 @@ namespace protocol {
             // Chunk mode mark
             bool is_chunked_;
             // Next chunk size for chunk mode
-            int32 next_chunk_size_;
+            int32_t next_chunk_size_;
             // Content data
             std::string data_;
             // Content length
             // If chunk mode is set, this will be ignore.
-            int32 length_;
+            int32_t length_;
         };
         DEFINE_ALL_POINTER_TYPE(content);
 

@@ -19,7 +19,7 @@
 namespace pump {
 namespace time {
 
-    const static uint64 TIMER_DEFAULT_INTERVAL = 1000;
+    const static uint64_t TIMER_DEFAULT_INTERVAL = 1000;
 
     timer_queue::timer_queue() noexcept
       : started_(false), 

@@ -20,12 +20,12 @@
 namespace pump {
 namespace time {
 
-    const static int32 TIMER_INIT = 0;
-    const static int32 TIMER_STOPPED = 1;
-    const static int32 TIMER_STARTED = 2;
-    const static int32 TIMER_PENDING = 3;
+    const static int32_t TIMER_INIT = 0;
+    const static int32_t TIMER_STOPPED = 1;
+    const static int32_t TIMER_STARTED = 2;
+    const static int32_t TIMER_PENDING = 3;
 
-    timer::timer(uint64 timeout, const timer_callback &cb, bool repeated) noexcept
+    timer::timer(uint64_t timeout, const timer_callback &cb, bool repeated) noexcept
       : queue_(nullptr),
         status_(TIMER_INIT),
         cb_(cb),

@@ -7,7 +7,7 @@ int loop = 100;
 void start_http_client(pump::service_ptr sv, const std::vector<std::string> &urls) {
     http::client_sptr cli = http::client::create(sv);
 
-    for (int ii = 0; ii < urls.size(); ii++) {
+    for (int ii = 0; ii < (int)urls.size(); ii++) {
         http::request_sptr req(new http::request);
         req->set_url(urls[ii]);
         req->set_method(http::METHOD_GET);
@@ -32,7 +32,7 @@ void start_http_client(pump::service_ptr sv, const std::vector<std::string> &url
             //std::cout << html.size() <<std::endl;
         }
         auto end = pump::time::get_clock_milliseconds();
-        printf("request used %llums succ %d\n", end - beg, succ);
+        printf("request used %dms succ %d\n", int32_t(end - beg), succ);
     }
 
     sv->wait_stopped();
