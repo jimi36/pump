@@ -370,7 +370,7 @@ namespace net {
         hints.ai_flags = AI_NUMERICHOST;
         if (getaddrinfo(ip.c_str(), 0, &hints, &res) == 0) {
             struct sockaddr_in6 *v6 = (struct sockaddr_in6*)addr;
-            *v6 = *(struct sockaddr_in6 *)res->ai_addr;
+            *v6 = *(struct sockaddr_in6*)res->ai_addr;
             v6->sin6_port = htons(port);
             *addrlen = (int32_t)res->ai_addrlen;
             freeaddrinfo(res);

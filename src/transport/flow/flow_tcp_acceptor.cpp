@@ -86,7 +86,7 @@ namespace transport {
                 PUMP_ERR_LOG("flow_tcp_acceptor::init: set nodelay failed");
                 return FLOW_ERR_ABORT;
             }
-            if (!net::bind(fd_, (sockaddr *)listen_address.get(), listen_address.len())) {
+            if (!net::bind(fd_, (sockaddr*)listen_address.get(), listen_address.len())) {
                 PUMP_ERR_LOG("flow_tcp_acceptor::init: bind failed");
                 return FLOW_ERR_ABORT;
             }
@@ -157,17 +157,17 @@ namespace transport {
                                         address_ptr remote_address) {
             int32_t addrlen = ADDRESS_MAX_LEN;
             int32_t client_fd =
-                net::accept(fd_, (struct sockaddr *)iob_->buffer(), &addrlen);
+                net::accept(fd_, (struct sockaddr*)iob_->buffer(), &addrlen);
             if (client_fd == -1) {
                 PUMP_WARN_LOG("flow_tcp_acceptor::accept: accept fialed");
                 return -1;
             }
             
-            remote_address->set((sockaddr *)iob_->buffer(), addrlen);
+            remote_address->set((sockaddr*)iob_->buffer(), addrlen);
 
             addrlen = ADDRESS_MAX_LEN;
-            net::local_address(client_fd, (sockaddr *)iob_->buffer(), &addrlen);
-            local_address->set((sockaddr *)iob_->buffer(), addrlen);
+            net::local_address(client_fd, (sockaddr*)iob_->buffer(), &addrlen);
+            local_address->set((sockaddr*)iob_->buffer(), addrlen);
 
             if (!net::set_noblock(client_fd, 1) || !net::set_nodelay(client_fd, 1)) {
                 PUMP_WARN_LOG("flow_tcp_acceptor::accept: set noblock nodelay fialed");

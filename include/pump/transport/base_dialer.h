@@ -51,7 +51,7 @@ namespace transport {
         /*********************************************************************************
          * Start
          ********************************************************************************/
-        virtual transport_error start(service_ptr sv, const dialer_callbacks& cbs) = 0;
+        virtual transport_error start(service_ptr sv, const dialer_callbacks &cbs) = 0;
 
         /*********************************************************************************
          * Stop

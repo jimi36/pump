@@ -62,7 +62,7 @@ namespace toolkit {
                 int32_t read_index = read_index_.load();
                 int32_t max_read_index = max_read_index_.load();
                 while (__count_to_index(read_index) != __count_to_index(max_read_index)) {
-                    ((element_type *)mem_block_ + __count_to_index(read_index++))
+                    ((element_type*)mem_block_ + __count_to_index(read_index++))
                         ->~element_type();
                 }
                 pump_free(mem_block_);
@@ -92,7 +92,7 @@ namespace toolkit {
             } while (true);
 
             // Construct element object
-            new ((element_type *)mem_block_ + __count_to_index(cur_write_index)) element_type(data);
+            new ((element_type*)mem_block_ + __count_to_index(cur_write_index)) element_type(data);
 
             while (!max_read_index_.compare_exchange_weak(cur_write_index,
                                                           cur_write_index + 1,
@@ -121,7 +121,7 @@ namespace toolkit {
                                                         std::memory_order_acquire,
                                                         std::memory_order_relaxed)) {
                     // Copy element.
-                    element_type& elem = *((element_type*)mem_block_ + array_read_index);
+                    element_type &elem = *((element_type*)mem_block_ + array_read_index);
                     data = elem;
 
                     // Deconstruct element.
@@ -253,7 +253,7 @@ namespace toolkit {
             while (node != nullptr) {
                 // Deconstruct element data.
                 if (node->ready.load(std::memory_order_relaxed)) {
-                    ((element_type *)node->data)->~element_type();
+                    ((element_type*)node->data)->~element_type();
                 }
                 // Move to next node.
                 node = node->next;

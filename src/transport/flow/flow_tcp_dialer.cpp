@@ -77,7 +77,7 @@ namespace transport {
                 PUMP_ERR_LOG("flow_tcp_dialer::init: set nodelay failed");
                 return FLOW_ERR_ABORT;
             }
-            if (!net::bind(fd_, (sockaddr *)bind_address.get(), bind_address.len())) {
+            if (!net::bind(fd_, (sockaddr*)bind_address.get(), bind_address.len())) {
                 PUMP_ERR_LOG("flow_tcp_dialer::init: bind failed");
                 return FLOW_ERR_ABORT;
             }
@@ -96,7 +96,7 @@ namespace transport {
             }
 #else
             if (!net::connect(fd_, 
-                              (sockaddr *)remote_address.get(), 
+                              (sockaddr*)remote_address.get(), 
                               remote_address.len())) {
                 PUMP_WARN_LOG("flow_tcp_dialer::post_connect: connect failed");
                 return FLOW_ERR_ABORT;
@@ -124,12 +124,12 @@ namespace transport {
             block_t addr[ADDRESS_MAX_LEN];
 
             addrlen = ADDRESS_MAX_LEN;
-            net::local_address(fd_, (sockaddr *)addr, &addrlen);
-            local_address->set((sockaddr *)addr, addrlen);
+            net::local_address(fd_, (sockaddr*)addr, &addrlen);
+            local_address->set((sockaddr*)addr, addrlen);
 
             addrlen = ADDRESS_MAX_LEN;
-            net::remote_address(fd_, (sockaddr *)addr, &addrlen);
-            remote_address->set((sockaddr *)addr, addrlen);
+            net::remote_address(fd_, (sockaddr*)addr, &addrlen);
+            remote_address->set((sockaddr*)addr, addrlen);
 
             return ec;
         }
@@ -150,12 +150,12 @@ namespace transport {
             block_t addr[ADDRESS_MAX_LEN];
 
             addrlen = ADDRESS_MAX_LEN;
-            net::local_address(fd_, (sockaddr *)addr, &addrlen);
-            local_address->set((sockaddr *)addr, addrlen);
+            net::local_address(fd_, (sockaddr*)addr, &addrlen);
+            local_address->set((sockaddr*)addr, addrlen);
 
             addrlen = ADDRESS_MAX_LEN;
-            net::remote_address(fd_, (sockaddr *)addr, &addrlen);
-            remote_address->set((sockaddr *)addr, addrlen);
+            net::remote_address(fd_, (sockaddr*)addr, &addrlen);
+            remote_address->set((sockaddr*)addr, addrlen);
 
             return ec;
         }

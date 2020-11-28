@@ -343,7 +343,8 @@ namespace transport {
         }
 
         // If old read state is READ_ONCE, then change it to READ_NONE.
-        if (size > 0 && old_state == READ_ONCE &&
+        if (size > 0 && 
+            old_state == READ_ONCE &&
             read_state_.compare_exchange_strong(pending_state, READ_NONE)) {
             return;
         }

@@ -126,7 +126,7 @@ namespace poll {
     void epoll_poller::__poll(int32_t timeout) {
 #if defined(PUMP_HAVE_EPOLL)
         auto count = ::epoll_wait(fd_, 
-                                  (struct epoll_event *)events_, 
+                                  (struct epoll_event*)events_, 
                                   EPOLL_EVENT_SIZE, 
                                   timeout);
         if (count > 0) {
@@ -137,7 +137,7 @@ namespace poll {
 
     void epoll_poller::__dispatch_pending_event(int32_t count) {
 #if defined(PUMP_HAVE_EPOLL)
-        auto events = (epoll_event *)events_;
+        auto events = (epoll_event*)events_;
 
         for (int32_t i = 0; i < count; ++i) {
             auto ev = events + i;

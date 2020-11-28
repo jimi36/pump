@@ -73,7 +73,7 @@ namespace transport {
                 PUMP_ERR_LOG("flow_udp::init: set noblock failed");
                 return FLOW_ERR_ABORT;
             }
-            if (!net::bind(fd_, (sockaddr *)bind_address.get(), bind_address.len())) {
+            if (!net::bind(fd_, (sockaddr*)bind_address.get(), bind_address.len())) {
                 PUMP_ERR_LOG("flow_udp::init: bind failed");
                 return FLOW_ERR_ABORT;
             }

@@ -39,7 +39,7 @@ namespace net {
         void_ptr ptr = nullptr;
         WSAIoctl(fd,
                  SIO_GET_EXTENSION_FUNCTION_POINTER,
-                 (GUID *)id,
+                 (GUID*)id,
                  sizeof(*id),
                  &ptr,
                  sizeof(ptr),

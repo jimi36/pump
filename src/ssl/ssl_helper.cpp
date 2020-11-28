@@ -123,12 +123,12 @@ namespace ssl {
         }
 
         gnutls_datum_t gnutls_cert;
-        gnutls_cert.data = (unsigned char *)cert.data();
-        gnutls_cert.size = (unsigned int)cert.size();
+        gnutls_cert.data = (uint8_t*)cert.data();
+        gnutls_cert.size = (uint32_t)cert.size();
 
         gnutls_datum_t gnutls_key;
-        gnutls_key.data = (unsigned char *)key.data();
-        gnutls_key.size = (unsigned int)key.size();
+        gnutls_key.data = (uint8_t*)key.data();
+        gnutls_key.size = (uint32_t)key.size();
 
         int32_t ret2 = gnutls_certificate_set_x509_key_mem(
             xcred, &gnutls_cert, &gnutls_key, GNUTLS_X509_FMT_PEM);
@@ -154,7 +154,7 @@ namespace ssl {
             return nullptr;
         }
 
-        BIO *cert_bio = BIO_new_mem_buf((void *)cert.c_str(), -1);
+        BIO *cert_bio = BIO_new_mem_buf((void_ptr)cert.c_str(), -1);
         X509 *x509_cert = PEM_read_bio_X509(cert_bio, NULL, NULL, NULL);
         BIO_free(cert_bio);
         if (!x509_cert) {
@@ -164,7 +164,7 @@ namespace ssl {
             return nullptr;
         }
 
-        BIO *key_bio = BIO_new_mem_buf((void *)key.c_str(), -1);
+        BIO *key_bio = BIO_new_mem_buf((void_ptr)key.c_str(), -1);
         EVP_PKEY *evp_key = PEM_read_bio_PrivateKey(key_bio, NULL, 0, NULL);
         BIO_free(key_bio);
         if (!evp_key) {
@@ -202,7 +202,7 @@ namespace ssl {
         }
 #elif defined(PUMP_HAVE_OPENSSL)
         if (xcred) {
-            SSL_CTX_free((SSL_CTX *)xcred);
+            SSL_CTX_free((SSL_CTX*)xcred);
         }
 #endif
     }

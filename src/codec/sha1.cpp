@@ -80,7 +80,7 @@ namespace codec {
          * And the result is written through.  I threw a "const" in, hoping
          * this will cause a diagnostic.
          */
-        CHAR64LONG16 *cblock = (const CHAR64LONG16 *)buffer;
+        CHAR64LONG16 *cblock = (const CHAR64LONG16*)buffer;
 #endif
         /* Copy context->state[] to working vars */
         a = state[0];

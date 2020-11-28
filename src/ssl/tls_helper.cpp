@@ -93,7 +93,7 @@ namespace ssl {
         return session;
 #elif defined(PUMP_HAVE_OPENSSL)
         tls_session_ptr session = object_create<tls_session>();
-        SSL *ssl_ctx = SSL_new((SSL_CTX *)xcred);
+        SSL *ssl_ctx = SSL_new((SSL_CTX*)xcred);
         BIO *rbio = BIO_new(BIO_s_mem());
         BIO *sbio = BIO_new(BIO_s_mem());
 
@@ -134,7 +134,7 @@ namespace ssl {
 #elif defined(PUMP_HAVE_OPENSSL)
         if (session) {
             if (session->ssl_ctx) {
-                SSL_free((SSL *)session->ssl_ctx);
+                SSL_free((SSL*)session->ssl_ctx);
             }
             if (session->net_read_iob) {
                 session->net_read_iob->sub_ref();
@@ -160,22 +160,22 @@ namespace ssl {
 #elif defined(PUMP_HAVE_OPENSSL)
         if (session->net_read_data_size > 0) {
             int32_t bio_size =
-                BIO_write((BIO *)session->read_bio,
+                BIO_write((BIO*)session->read_bio,
                           session->net_read_iob->buffer() + session->net_read_data_pos,
                           session->net_read_data_size);
             session->net_read_data_size -= bio_size;
             session->net_read_data_pos += bio_size;
         }
 
-        int32_t ret = SSL_do_handshake((SSL *)session->ssl_ctx);
-        int32_t ec = SSL_get_error((SSL *)session->ssl_ctx, ret);
+        int32_t ret = SSL_do_handshake((SSL*)session->ssl_ctx);
+        int32_t ec = SSL_get_error((SSL*)session->ssl_ctx, ret);
         if (ec != SSL_ERROR_SSL) {
             BUF_MEM *bptr = nullptr;
-            PUMP_DEBUG_CHECK(BIO_get_mem_ptr((BIO *)session->send_bio, &bptr));
+            PUMP_DEBUG_CHECK(BIO_get_mem_ptr((BIO*)session->send_bio, &bptr));
             if (bptr->length > 0) {
                 PUMP_DEBUG_CHECK(session->net_send_iob->append(bptr->data, (uint32)bptr->length));
             }
-            BIO_read((BIO *)session->send_bio, bptr->data, (int32)bptr->length);
+            BIO_read((BIO*)session->send_bio, bptr->data, (int32)bptr->length);
             if (ec == SSL_ERROR_NONE) {
                 // Handshake compelte.
                 return 0;
@@ -201,19 +201,19 @@ namespace ssl {
             return -1;
         }
 
-        int32_t bio_size = BIO_write((BIO *)session->read_bio,
+        int32_t bio_size = BIO_write((BIO*)session->read_bio,
                                      session->net_read_iob->buffer(),
                                      session->net_read_data_size);
         PUMP_ASSERT(bio_size == session->net_read_data_size);
         session->net_read_data_size -= bio_size;
         session->net_read_data_pos = 0;
 
-        int32_t ret = SSL_read((SSL *)session->ssl_ctx, b, size);
+        int32_t ret = SSL_read((SSL*)session->ssl_ctx, b, size);
         if (PUMP_LIKELY(ret > 0)) {
             return ret;
         }
 
-        if (PUMP_LIKELY(SSL_get_error((SSL *)session->ssl_ctx, ret) != SSL_ERROR_SSL)) {
+        if (PUMP_LIKELY(SSL_get_error((SSL*)session->ssl_ctx, ret) != SSL_ERROR_SSL)) {
             return -1;
         }
 #endif
@@ -224,16 +224,16 @@ namespace ssl {
 #if defined(PUMP_HAVE_GNUTLS)
         return (int32_t)gnutls_write((gnutls_session_t)session->ssl_ctx, b, size);
 #elif defined(PUMP_HAVE_OPENSSL)
-        int32_t ret = SSL_write((SSL *)session->ssl_ctx, b, size);
+        int32_t ret = SSL_write((SSL*)session->ssl_ctx, b, size);
         if (PUMP_LIKELY(ret > 0)) {
             BUF_MEM *bptr = nullptr;
-            PUMP_DEBUG_CHECK(BIO_get_mem_ptr((BIO *)session->send_bio, &bptr));
+            PUMP_DEBUG_CHECK(BIO_get_mem_ptr((BIO*)session->send_bio, &bptr));
             PUMP_DEBUG_CHECK(session->net_send_iob->append(bptr->data, (uint32)bptr->length));
-            BIO_read((BIO *)session->send_bio, bptr->data, (int32)bptr->length);
+            BIO_read((BIO*)session->send_bio, bptr->data, (int32)bptr->length);
             return ret;
         }
 
-        if (PUMP_LIKELY(SSL_get_error((SSL *)session->ssl_ctx, ret) != SSL_ERROR_SSL)) {
+        if (PUMP_LIKELY(SSL_get_error((SSL*)session->ssl_ctx, ret) != SSL_ERROR_SSL)) {
             return -1;
         }
 #endif

@@ -52,10 +52,10 @@ namespace transport {
          * Get address struct
          ********************************************************************************/
         PUMP_INLINE struct sockaddr *get() {
-            return (struct sockaddr *)addr_;
+            return (struct sockaddr*)addr_;
         }
         PUMP_INLINE const struct sockaddr *get() const {
-            return (const struct sockaddr *)addr_;
+            return (const struct sockaddr*)addr_;
         }
 
         /*********************************************************************************

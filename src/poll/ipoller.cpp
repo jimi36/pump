@@ -80,7 +80,7 @@ namespace poll {
             if (GetQueuedCompletionStatus(iocp_,
                                           &transferred,
                                           &completion_key,
-                                          (LPOVERLAPPED *)&task,
+                                          (LPOVERLAPPED*)&task,
                                           1000) == TRUE) {
                 PUMP_ASSERT(task);
  

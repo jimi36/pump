@@ -105,7 +105,7 @@ namespace protocol {
           : ut_(UIR_NONE) {
         }
 
-        uri::uri(const std::string& url) noexcept {
+        uri::uri(const std::string &url) noexcept {
             parse(url);
         }
 

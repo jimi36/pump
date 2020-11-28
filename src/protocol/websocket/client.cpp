@@ -26,8 +26,8 @@ namespace pump {
 namespace protocol {
     namespace websocket {
 
-        client::client(const std::string& url,
-                       const std::map<std::string, std::string>& headers) noexcept
+        client::client(const std::string &url,
+                       const std::map<std::string, std::string> &headers) noexcept
           : started_(false), 
             sv_(nullptr), 
             is_upgraded_(false),

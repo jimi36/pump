@@ -237,7 +237,7 @@ namespace net {
          ********************************************************************************/
         PUMP_INLINE sockaddr *get_remote_address(int32_t *addrlen) {
             *addrlen = un_.ip.addr_len;
-            return (sockaddr *)un_.ip.addr;
+            return (sockaddr*)un_.ip.addr;
         }
 
         /*********************************************************************************

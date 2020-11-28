@@ -44,7 +44,7 @@
 
 template <typename T, typename... ArgTypes>
 PUMP_INLINE T *object_create(ArgTypes... args) {
-    T *p = (T *)pump_malloc(sizeof(T));
+    T *p = (T*)pump_malloc(sizeof(T));
     if (PUMP_UNLIKELY(p == nullptr)) {
         return nullptr;
     }
@@ -53,7 +53,7 @@ PUMP_INLINE T *object_create(ArgTypes... args) {
 
 // Inline object create
 #define INLINE_OBJECT_CREATE(obj, TYPE, args)      \
-    TYPE *obj = (TYPE *)pump_malloc(sizeof(TYPE)); \
+    TYPE *obj = (TYPE*)pump_malloc(sizeof(TYPE)); \
     if (PUMP_UNLIKELY(obj != nullptr)) {           \
         new (obj) TYPE args;                       \
     }

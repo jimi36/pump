@@ -26,7 +26,7 @@ namespace transport {
     }
 
     address::address(const std::string &ip, uint16_t port) {
-        if (net::string_to_address(ip, port, (struct sockaddr *)addr_, &addrlen_)) {
+        if (net::string_to_address(ip, port, (struct sockaddr*)addr_, &addrlen_)) {
             if (addrlen_ == sizeof(struct sockaddr_in6)) {
                 is_v6_ = true;
             } else {
@@ -46,7 +46,7 @@ namespace transport {
     }
 
     bool address::set(const std::string &ip, uint16_t port) {
-        if (net::string_to_address(ip, port, (struct sockaddr *)addr_, &addrlen_)) {
+        if (net::string_to_address(ip, port, (struct sockaddr*)addr_, &addrlen_)) {
             if (addrlen_ == sizeof(struct sockaddr_in6)) {
                 is_v6_ = true;
             } else {
@@ -128,7 +128,8 @@ namespace transport {
     }
 
     bool address::operator==(const address &other) const noexcept {
-        if (is_v6_ == other.is_v6_ && addrlen_ == other.addrlen_ &&
+        if (is_v6_ == other.is_v6_ && 
+            addrlen_ == other.addrlen_ && 
             memcmp(addr_, other.addr_, addrlen_) == 0) {
             return true;
         }

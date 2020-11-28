@@ -154,7 +154,7 @@ namespace net {
                               1,
                               NULL,
                               &flags,
-                              (sockaddr *)task->un_.ip.addr,
+                              (sockaddr*)task->un_.ip.addr,
                               &task->un_.ip.addr_len,
                               &task->ol,
                               NULL) != SOCKET_ERROR ||
@@ -178,7 +178,7 @@ namespace net {
                           1,
                           NULL,
                           0,
-                          (WSAOVERLAPPED *)&task->ol,
+                          (WSAOVERLAPPED*)&task->ol,
                           NULL) != SOCKET_ERROR ||
                 last_errno() == WSA_IO_PENDING) {
                 return true;
