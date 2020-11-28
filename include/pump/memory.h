@@ -20,7 +20,10 @@
 #include "pump/platform.h"
 
 // Import "std::forward"
+// Import "std::weak_ptr"
+// Import "std::shared_ptr"
 #include <memory>
+
 // Import "malloc"
 #include <stdlib.h>
 

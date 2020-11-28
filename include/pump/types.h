@@ -17,11 +17,7 @@
 #ifndef pump_types_h
 #define pump_types_h
 
-#include "pump/platform.h"
-
-// Import "std::weak_ptr"
-// Import "std::shared_ptr"
-#include <memory>
+#include "pump/memory.h"
 
 #if defined(OS_WINDOWS) && defined(PUMP_HAVE_GNUTLS)
 #include <BaseTsd.h>

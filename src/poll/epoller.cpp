@@ -139,7 +139,7 @@ namespace poll {
 #if defined(PUMP_HAVE_EPOLL)
         auto events = (epoll_event *)events_;
 
-        for (int32 i = 0; i < count; ++i) {
+        for (int32_t i = 0; i < count; ++i) {
             auto ev = events + i;
 
             auto tracker = (channel_tracker_ptr)ev->data.ptr;

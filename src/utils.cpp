@@ -70,11 +70,11 @@ std::string gbk_to_utf8(const std::string &in) {
     iconv_t cd = iconv_open("utf-8", "gb2312");
     if (cd != (iconv_t)-1) {
         size_t inlen = in.size();
-        block_ptr psrc = (block_ptr)in.data();
+        block_t *psrc = (block_t*)in.data();
 
         size_t outlen = inlen * 3 + 1;
         out.resize(outlen, 0);
-        block_ptr pdes = (block_ptr)out.data();
+        block_t *pdes = (block_t*)out.data();
 
         iconv(cd, &psrc, &inlen, &pdes, &outlen);
         out.reserve(outlen);
@@ -114,11 +114,11 @@ std::string utf8_to_gbk(const std::string &in) {
     iconv_t cd = iconv_open("gb2312", "utf-8");
     if (cd != (iconv_t)-1) {
         size_t inlen = in.size();
-        block_ptr psrc = (block_ptr)in.c_str();
+        block_t *psrc = (block_t*)in.c_str();
 
         size_t outlen = inlen * 3 + 1;
         out.resize(outlen, 0);
-        block_ptr pdes = (block_ptr)out.c_str();
+        block_t *pdes = (block_t*)out.c_str();
 
         iconv(cd, &psrc, &inlen, &pdes, &outlen);
         out.reserve(outlen);
