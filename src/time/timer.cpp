@@ -20,11 +20,6 @@
 namespace pump {
 namespace time {
 
-    const static int32_t TIMER_INIT = 0;
-    const static int32_t TIMER_STOPPED = 1;
-    const static int32_t TIMER_STARTED = 2;
-    const static int32_t TIMER_PENDING = 3;
-
     timer::timer(uint64_t timeout, const timer_callback &cb, bool repeated) noexcept
       : queue_(nullptr),
         status_(TIMER_INIT),
@@ -34,13 +29,31 @@ namespace time {
         overtime_(0) {
     }
 
+    void timer::handle_timeout() {
+        if (__set_status(TIMER_STARTED, TIMER_PENDING)) {
+            if (cb_) {
+                cb_();
+            }
+
+            if (repeated_) {
+                if (__set_status(TIMER_PENDING, TIMER_STARTED)) {
+                    queue_->add_timer(shared_from_this(), true);
+                }
+            } else {
+                __set_status(TIMER_PENDING, TIMER_STOPPED);
+            }
+        }
+    }
+
     bool timer::__start(timer_queue_ptr queue) {
         if (!__set_status(TIMER_INIT, TIMER_STARTED)) {
             return false;
         }
 
+        // Update timer overtime.
         overtime_ = get_clock_milliseconds() + timeout_;
 
+        // Store timer queue.
         queue_ = queue;
 
         return true;
@@ -51,48 +64,10 @@ namespace time {
             return false;
         }
 
+        // Update timer overtime.
         overtime_ = get_clock_milliseconds() + timeout_;
 
         return true;
-    }
-
-    void timer::stop() {
-        while (true) {
-            if (__set_status(TIMER_INIT, TIMER_INIT)) {
-                return;
-            }
-
-            if (__set_status(TIMER_INIT, TIMER_INIT) ||
-                __set_status(TIMER_STOPPED, TIMER_STOPPED) ||
-                __set_status(TIMER_PENDING, TIMER_STOPPED)) {
-                break;
-            }
-
-            if (__set_status(TIMER_STARTED, TIMER_STOPPED)) {
-                if (PUMP_LIKELY(!!queue_)) {
-                    queue_->delete_timer(this);
-                } else {
-                    break;
-                }
-            }
-        }
-
-        repeated_ = false;
-    }
-
-    void timer::handle_timeout() {
-        if (!__set_status(TIMER_STARTED, TIMER_PENDING)) {
-            return;
-        }
-
-        if (cb_) {
-            cb_();
-        }
-
-        if (repeated_ && queue_ && __set_status(TIMER_PENDING, TIMER_STARTED)) {
-            auto sptr = shared_from_this();
-            queue_->add_timer(sptr, true);
-        }
     }
 
 }  // namespace time

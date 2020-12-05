@@ -19,20 +19,33 @@
 
 #include <map>
 #include <mutex>
+#include <queue>
 #include <thread>
 #include <condition_variable>
 
 #include "pump/debug.h"
 #include "pump/time/timer.h"
+#include "pump/toolkit/freelock.h"
 
 namespace pump {
 namespace time {
+
+    struct timer_context {
+        uint64_t overtime;
+        timer_wptr ptr;
+    };
+
+    struct timer_greater {
+        constexpr bool operator()(const timer_context *left, const timer_context *right) const {
+            return left->overtime > right->overtime;
+        }
+    };
 
     class timer_queue
       : public toolkit::noncopyable {
 
       protected:
-        typedef pump_function<void(timer_wptr &)> timer_pending_callback;
+        typedef pump_function<void(timer_wptr&)> timeout_callback;
 
       public:
           /*********************************************************************************
@@ -46,12 +59,12 @@ namespace time {
         /*********************************************************************************
          * Deconstructor
          ********************************************************************************/
-        ~timer_queue() = default;
+        ~timer_queue();
 
         /*********************************************************************************
          * Start
          ********************************************************************************/
-        bool start(const timer_pending_callback &cb);
+        bool start(const timeout_callback &cb);
 
         /*********************************************************************************
          * Stop
@@ -68,12 +81,14 @@ namespace time {
         /*********************************************************************************
          * Add timer
          ********************************************************************************/
-        bool add_timer(timer_sptr &ptr, bool repeated = false);
+        PUMP_INLINE bool add_timer(timer_sptr &ptr, bool repeated = false) {
+            return add_timer(std::forward<timer_sptr>(ptr), repeated);
+        }
 
         /*********************************************************************************
-         * Delete timer
+         * Add timer
          ********************************************************************************/
-        void delete_timer(timer_ptr ptr);
+        bool add_timer(timer_sptr &&ptr, bool repeated = false);
 
       protected:
         /*********************************************************************************
@@ -86,6 +101,22 @@ namespace time {
          ********************************************************************************/
         void __observe();
 
+        /*********************************************************************************
+         * Create timer context
+         ********************************************************************************/
+        PUMP_INLINE timer_context* __create_timer_context(timer_sptr &ptr) {
+            timer_context *ctx = nullptr;
+            if (free_contexts_.empty()) {
+                ctx = object_create<timer_context>();
+            } else {
+                ctx = free_contexts_.front();
+                free_contexts_.pop();
+            }
+            ctx->overtime = ptr->time();
+            ctx->ptr = ptr;
+            return ctx;
+        }
+
       private:
         /*********************************************************************************
          * Constructor
@@ -95,17 +126,21 @@ namespace time {
       private:
         // Started status
         std::atomic_bool started_;
-        // Pending timer callback
-        timer_pending_callback pending_cb_;
+
+        // Timeout callback
+        timeout_callback cb_;
+
         // Next observer time
         uint64_t next_observe_time_;
+
         // Observer thread
         std::shared_ptr<std::thread> observer_;
-        // Observer condition
-        std::mutex observer_mx_;
-        std::condition_variable observer_cv_;
+
         // Timers
-        std::multimap<uint64_t, timer_wptr> timers_;
+        std::queue<timer_context*> free_contexts_;
+        typedef toolkit::freelock_list_queue<timer_sptr> freelock_queue_type;
+        toolkit::block_freelock_queue<freelock_queue_type> new_timers_;
+        std::priority_queue<timer_context*, std::vector<timer_context*>, timer_greater> timers_;
     };
     DEFINE_ALL_POINTER_TYPE(timer_queue);
 

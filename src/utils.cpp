@@ -44,6 +44,19 @@ uint8_t hexchar_to_decnum(uint8_t c) {
     return 0;
 }
 
+int32_t ceil_to_pow2(int32_t x) {
+    // From http://graphics.stanford.edu/~seander/bithacks.html#RoundUpPowerOf2
+    --x;
+    x |= x >> 1;
+    x |= x >> 2;
+    x |= x >> 4;
+    for (uint32_t i = 1; i < sizeof(int32_t); i <<= 1) {
+        x |= x >> (i << 3);
+    }
+    ++x;
+    return x;
+}
+
 std::string gbk_to_utf8(const std::string &in) {
     std::string out;
 #if !defined(HAVE_ICONV_HEADER)

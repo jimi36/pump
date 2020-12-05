@@ -26,11 +26,21 @@ namespace time {
         next_observe_time_(0) {
     }
 
-    bool timer_queue::start(const timer_pending_callback &cb) {
+    timer_queue::~timer_queue() {
+        /*
+        while (!timers_.empty()) {
+            auto ctx = timers_.top();
+            object_delete(ctx);
+            timers_.pop();
+        }
+        */
+    }
+
+    bool timer_queue::start(const timeout_callback &cb) {
         if (!started_.load()) {
             started_.store(true);
 
-            PUMP_DEBUG_ASSIGN(cb, pending_cb_, cb);
+            PUMP_DEBUG_ASSIGN(cb, cb_, cb);
 
             observer_.reset(
                 object_create<std::thread>(pump_bind(&timer_queue::__observe_thread, this)),
@@ -46,7 +56,7 @@ namespace time {
         }
     }
 
-    bool timer_queue::add_timer(timer_sptr &ptr, bool repeated) {
+    bool timer_queue::add_timer(timer_sptr &&ptr, bool repeated) {
         if (!started_.load()) {
             return false;
         }
@@ -64,47 +74,46 @@ namespace time {
                 break;
         }
 
-        auto overtime = ptr->time();
-
-        std::unique_lock<std::mutex> locker(observer_mx_);
-        timers_.insert(std::make_pair(overtime, ptr));
-        if (next_observe_time_ > overtime) {
-            next_observe_time_ = overtime;
-            observer_cv_.notify_all();
-        }
+        PUMP_DEBUG_CHECK(new_timers_.enqueue(ptr));
 
         return true;
     }
 
-    void timer_queue::delete_timer(timer_ptr ptr) {
-        std::unique_lock<std::mutex> locker(observer_mx_);
-        auto key = ptr->time();
-        auto beg = timers_.lower_bound(key);
-        auto end = timers_.upper_bound(key);
-        while (beg != end) {
-            PUMP_LOCK_WPOINTER(timer, beg->second);
-            if (timer == ptr) {
-                timers_.erase(beg);
-                break;
-            }
-            ++beg;
-        }
-    }
-
     void timer_queue::__observe_thread() {
+        // Timer context
+        timer_context *ctx = nullptr;
+
         // Init next observe time.
         next_observe_time_ = get_clock_milliseconds() + TIMER_DEFAULT_INTERVAL;
 
         while (1) {
-            {
-                std::unique_lock<std::mutex> locker(observer_mx_);
-                auto now = get_clock_milliseconds();
-                if (next_observe_time_ > now) {
-                    observer_cv_.wait_for(
-                        locker, std::chrono::milliseconds(next_observe_time_ - now));
+            // Get now milliseconds
+            uint64_t now = get_clock_milliseconds();
+
+            // Temp timer ptr
+            timer_sptr ptr;
+
+            // Wait unitl next observe time arrived or new timer added.
+            if (next_observe_time_ > now) {
+                if (new_timers_.dequeue(ptr, next_observe_time_ - now)) {
+                    ctx = __create_timer_context(ptr);
+
+                    timers_.push(ctx);
+
+                    if (next_observe_time_ > ctx->overtime) {
+                        next_observe_time_ = ctx->overtime;
+                    }
                 }
-                if (!started_.load() && timers_.empty()) {
-                    return;
+            }
+
+            // Add new timers.
+            while (new_timers_.try_dequeue(ptr)) {
+                ctx = __create_timer_context(ptr);
+
+                timers_.push(ctx);
+
+                if (next_observe_time_ > ctx->overtime) {
+                    next_observe_time_ = ctx->overtime;
                 }
             }
 
@@ -113,22 +122,25 @@ namespace time {
     }
 
     void timer_queue::__observe() {
-        std::unique_lock<std::mutex> locker(observer_mx_);
-
+        timer_context* ctx = nullptr;
         auto now = get_clock_milliseconds();
         next_observe_time_ = now + TIMER_DEFAULT_INTERVAL;
 
-        auto it = timers_.begin();
-        for (; it != timers_.end(); it++) {
-            if (now < it->first) {
-                next_observe_time_ = it->first;
+        //while (!timers_.empty()) {
+        while (timers_.top()) {
+            ctx = timers_.top();
+
+            if (ctx->overtime > now) {
+                next_observe_time_ = ctx->overtime;
                 break;
             }
 
-            pending_cb_(it->second);
-        }
+            cb_(ctx->ptr);
 
-        timers_.erase(timers_.begin(), it);
+            timers_.pop();
+
+            free_contexts_.push(ctx);
+        }
     }
 
 }  // namespace time

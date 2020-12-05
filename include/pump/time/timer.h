@@ -34,6 +34,11 @@ namespace time {
 
     typedef pump_function<void()> timer_callback;
 
+    constexpr static int32_t TIMER_INIT = 0;
+    constexpr static int32_t TIMER_STOPPED = 1;
+    constexpr static int32_t TIMER_STARTED = 2;
+    constexpr static int32_t TIMER_PENDING = 3;
+
     class LIB_PUMP timer
       : public std::enable_shared_from_this<timer> {
 
@@ -59,7 +64,9 @@ namespace time {
         /*********************************************************************************
          * Stop
          ********************************************************************************/
-        void stop();
+        PUMP_INLINE void stop() {
+            __force_set_status(TIMER_STOPPED);
+        }
 
         /*********************************************************************************
          * Handle timeout
@@ -77,7 +84,7 @@ namespace time {
          * Get starting state
          ********************************************************************************/
         PUMP_INLINE bool is_started() const {
-            return status_.load() >= 2;
+            return status_.load() > TIMER_STOPPED;
         }
 
         /*********************************************************************************
@@ -106,15 +113,22 @@ namespace time {
         /*********************************************************************************
          * Set status
          ********************************************************************************/
-        PUMP_INLINE bool __set_status(int32_t o, int32_t n) {
-            return status_.compare_exchange_strong(o, n);
+        PUMP_INLINE bool __set_status(int32_t expected, int32_t desired) {
+            return status_.compare_exchange_strong(expected, desired);
+        }
+
+        /*********************************************************************************
+         * Set status
+         ********************************************************************************/
+        PUMP_INLINE void __force_set_status(int32_t desired) {
+            status_.store(desired);
         }
 
       private:
         // Timer queue
         timer_queue_ptr queue_;
         // Timer status
-        std::atomic_int status_;
+        std::atomic_int32_t status_;
         // Timer callback
         timer_callback cb_;
         // Repeated status
