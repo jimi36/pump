@@ -499,7 +499,7 @@ namespace toolkit {
          ********************************************************************************/
         single_freelock_list_queue(int32_t size)
           : capacity_(0),
-            blk_head_(nullptr), 
+            blk_head_(nullptr),
             blk_tail_(nullptr) {
             // Init element size mask.
             element_size_mask_ = ceil_to_pow2(PerBlockElementCount) - 1;
@@ -565,51 +565,64 @@ namespace toolkit {
         bool push(U &&data) {
             // Get tail block node.
             block_node *blk = blk_tail_.load(std::memory_order_relaxed);
-
-            // Load current tail position.
+            // Get tail element position.
             int32_t tail = blk->tail.load(std::memory_order_relaxed);
+            // Get next tail element position.
             int32_t next_tail = (tail + 1) & element_size_mask_;
 
-            // Moving tail block node flag.
-            bool moving_blk = false;
+            if (PUMP_LIKELY(
+                    next_tail != blk->cache_head ||
+                    next_tail != (blk->cache_head = blk->head.load(std::memory_order_relaxed)))) {
+                std::atomic_thread_fence(std::memory_order_acquire);
 
-            if (next_tail == blk->cache_head && 
-                next_tail == (blk->cache_head = blk->head.load(std::memory_order_relaxed))) {
-                if (blk->next != blk_head_.load(std::memory_order_relaxed)) {
-                    // Move to next block node.
-                    blk = blk->next;
-                    // Update block node cache head.
-                    blk->cache_head = blk->head.load(std::memory_order_relaxed);
-                    // Reload current tail position.
-                    tail = blk->cache_head;
-                    // Get next tail position.
-                    next_tail = (tail + 1) & element_size_mask_;
-                } else {
-                    // Create new block node.
-                    block_node *new_blk = object_create<block_node>();
-                    new_blk->data = (block_t*)pump_malloc(block_data_size);
-                    new_blk->next = blk->next;
-                    blk->next = new_blk;
-                    blk = new_blk;
-                    // Reload current tail position.
-                    tail = 0;
-                    next_tail = 1;
-                    // Update capacity.
-                    capacity_ += PerBlockElementCount;
-                }
-                // Set moving tail block node flag.
-                moving_blk = true;
-            }
+                // Construct element.
+                new (blk->data + tail * element_size) element_type(data);
 
-            // Construct element.
-            new (blk->data + tail * element_size) element_type(data);
+                std::atomic_thread_fence(std::memory_order_release);
+                // Move tail position of block.
+                blk->tail.store(next_tail, std::memory_order_relaxed);
+            } else if (blk->next != blk_head_.load(std::memory_order_relaxed)) {
+                std::atomic_thread_fence(std::memory_order_acquire);
 
-            // Move tail position of block.
-            blk->tail.store(next_tail, std::memory_order_relaxed);
+                // Get next block node.
+                blk = blk->next;
 
-            if (moving_blk) {
+                // Update cache head element position and get tail element position.
+                tail = blk->cache_head = blk->head.load(std::memory_order_relaxed);
+                std::atomic_thread_fence(std::memory_order_acquire);
+
+                // Construct element.
+                new (blk->data + tail * element_size) element_type(data);
+
+                // Get next tail element position.
+                next_tail = (tail + 1) & element_size_mask_;
+
+                std::atomic_thread_fence(std::memory_order_release);
+                // Move tail position of block.
+                blk->tail.store(next_tail, std::memory_order_relaxed);
                 // Move tail block node.
                 blk_tail_.store(blk, std::memory_order_relaxed);
+            } else {
+                // Create new block node.
+                block_node *new_blk = object_create<block_node>();
+                new_blk->data = (block_t*)pump_malloc(block_data_size);
+                new_blk->next = blk->next;
+                blk->next = new_blk;
+                blk = new_blk;
+
+                // Construct element.
+                new (blk->data) element_type(data);
+
+                // Init tail element and cache tail element position.
+                blk->cache_tail = 1;
+                blk->tail.store(1, std::memory_order_relaxed);
+
+                std::atomic_thread_fence(std::memory_order_release);
+                // Move tail block node.
+                blk_tail_.store(blk, std::memory_order_relaxed);
+
+                // Update capacity.
+                capacity_ += PerBlockElementCount;
             }
 
             return true;
@@ -620,38 +633,59 @@ namespace toolkit {
          ********************************************************************************/
         template <typename U>
         bool pop(U &data) {
-            // Current tail block node.
+            // Get tail block node.
             block_node *blk = blk_head_.load(std::memory_order_relaxed);
-
-            // Load current head position.
+            // Get head element position.
             int32_t head = blk->head.load(std::memory_order_relaxed);
 
-            if (head == blk->cache_tail &&
-                head == (blk->cache_tail = blk->tail.load(std::memory_order_relaxed))) {
+            if (PUMP_LIKELY(
+                    head != blk->cache_tail ||
+                    head != (blk->cache_tail = blk->tail.load(std::memory_order_relaxed)))) {
+                std::atomic_thread_fence(std::memory_order_acquire);
 
-                if (blk != blk_tail_.load(std::memory_order_relaxed)) {
-                    if (head == (blk->cache_tail = blk->tail.load(std::memory_order_relaxed))) {
-                        // Move head block node.
-                        blk = blk->next;
-                        // Update block node cache head.
-                        blk->cache_tail = blk->tail.load(std::memory_order_relaxed);
-                        // Relaod current head position.
-                        head = blk->head.load(std::memory_order_relaxed);
-                        // Move tail block node.
-                        blk_head_.store(blk, std::memory_order_relaxed);
-                    }
-                } else {
+                // Load element from block node data.
+                element_type *elem = reinterpret_cast<element_type*>(blk->data + head * element_size);
+                data = std::move(*elem);
+                elem->~element_type();
+
+                // Get next head element position.
+                head = (head + 1) & element_size_mask_;
+
+                std::atomic_thread_fence(std::memory_order_release);
+                // Move head element position.
+                blk->head.store(head, std::memory_order_relaxed);
+            } else {
+                if (PUMP_UNLIKELY(blk == blk_tail_.load(std::memory_order_relaxed))) {
                     return false;
+                } else if (head == (blk->cache_tail = blk->tail.load(std::memory_order_relaxed))) {
+                    std::atomic_thread_fence(std::memory_order_acquire);
+
+                    // Get next block node.
+                    blk = blk->next;
+
+                    std::atomic_thread_fence(std::memory_order_release);
+                    // Move tail block node.
+                    blk_head_.store(blk, std::memory_order_relaxed);
+
+                    // Get head element position.
+                    head = blk->head.load(std::memory_order_relaxed);
+                    // Update cache tail of the block node.
+                    blk->cache_tail = blk->tail.load(std::memory_order_relaxed);
+                    std::atomic_thread_fence(std::memory_order_acquire);
+
+                    // Pop element from block node data.
+                    element_type *elem = reinterpret_cast<element_type*>(blk->data + head * element_size);
+                    data = std::move(*elem);
+                    elem->~element_type();
+
+                    // Get next head element position.
+                    head = (head + 1) & element_size_mask_;
+
+                    std::atomic_thread_fence(std::memory_order_release);
+                    // Move head element position.
+                    blk->head.store(head, std::memory_order_relaxed);
                 }
             }
-
-            // Load element from block node data.
-            element_type *elem = (element_type*)(blk->data + head * element_size);
-            data = std::move(*elem);
-            elem->~element_type();
-
-            // Move head position of block.
-            blk->head.store((head + 1) & element_size_mask_, std::memory_order_relaxed);
 
             return true;
         }
@@ -696,6 +730,7 @@ namespace toolkit {
                 tail->next = object_create<block_node>();
                 tail->next->data = (block_t*)pump_malloc(block_data_size);
                 tail = tail->next;
+
                 // Update capacity.
                 capacity_ += PerBlockElementCount;
             }
