@@ -10,19 +10,6 @@
 
 using namespace pump;
 
-static int32_t ceilToPow2(int32_t x) {
-	// From http://graphics.stanford.edu/~seander/bithacks.html#RoundUpPowerOf2
-	--x;
-	x |= x >> 1;
-	x |= x >> 2;
-	x |= x >> 4;
-	for (int32_t i = 1; i < sizeof(int32_t); i <<= 1) {
-		x |= x >> (i << 3);
-	}
-	++x;
-	return x;
-}
-
 int main(int argc, const char **argv) {
     if (argc < 2) {
         return -1;
@@ -30,9 +17,6 @@ int main(int argc, const char **argv) {
 
     int val;
     int loop = atoi(argv[1]);
-
-    auto x = ceilToPow2(loop);
-    printf("x=%u\n", x);
 
     toolkit::single_freelock_list_queue<int, 256> sq(1024);
 
