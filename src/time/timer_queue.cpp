@@ -126,8 +126,7 @@ namespace time {
         auto now = get_clock_milliseconds();
         next_observe_time_ = now + TIMER_DEFAULT_INTERVAL;
 
-        //while (!timers_.empty()) {
-        while (timers_.top()) {
+        while (!timers_.empty()) {
             ctx = timers_.top();
 
             if (ctx->overtime > now) {

@@ -25,7 +25,9 @@
 
 #include "pump/debug.h"
 #include "pump/time/timer.h"
-#include "pump/toolkit/freelock.h"
+#include "pump/toolkit/mutil_freelock_queue.h"
+#include "pump/toolkit/single_freelock_queue.h"
+#include "pump/toolkit/block_freelock_queue.h"
 
 namespace pump {
 namespace time {
@@ -138,8 +140,8 @@ namespace time {
 
         // Timers
         std::queue<timer_context*> free_contexts_;
-        typedef toolkit::freelock_list_queue<timer_sptr> freelock_queue_type;
-        toolkit::block_freelock_queue<freelock_queue_type> new_timers_;
+        typedef toolkit::mutil_freelock_queue<timer_sptr> timer_impl_queue;
+        toolkit::block_freelock_queue<timer_impl_queue> new_timers_;
         std::priority_queue<timer_context*, std::vector<timer_context*>, timer_greater> timers_;
     };
     DEFINE_ALL_POINTER_TYPE(timer_queue);
