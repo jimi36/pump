@@ -39,11 +39,11 @@ namespace toolkit {
 
         // List element node
         struct list_element_node {
-            list_element_node() : next(this+1), ready(false) {
+            list_element_node() : ready(false), next(this+1) {
             }
-            block_t data[element_size];
-            list_element_node *next;
             std::atomic_bool ready;
+            list_element_node *next;
+            block_t data[element_size];
         };
         // Element node type
         typedef list_element_node element_node;
@@ -217,7 +217,7 @@ namespace toolkit {
             element_node *tail = tail_block_node_->elems + PerBlockElementCount - 1;
 
             // Update list capacity.
-            capacity_.fetch_add(PerBlockElementCount, std::memory_order_release);
+            capacity_.fetch_add(PerBlockElementCount, std::memory_order_relaxed);
 
             for (int32_t i = PerBlockElementCount; i < size; i += PerBlockElementCount) {
                 // Create new element block node.
@@ -231,15 +231,15 @@ namespace toolkit {
                 tail = bnode->elems + PerBlockElementCount - 1;
 
                 // Update list capacity.
-                capacity_.fetch_add(PerBlockElementCount, std::memory_order_release);
+                capacity_.fetch_add(PerBlockElementCount, std::memory_order_relaxed);
             }
 
             // Link tail and head node.
             tail->next = head;
 
             // Store head and tail element node.
-            head_.store(head, std::memory_order_release);
-            tail_.store(tail, std::memory_order_release);
+            head_.store(head, std::memory_order_relaxed);
+            tail_.store(tail, std::memory_order_relaxed);
         }
 
         /*********************************************************************************
@@ -267,7 +267,7 @@ namespace toolkit {
             head->next = bnode->elems + 0;
 
             // Update head node to the next node of current head node.
-            head_.store(head->next, std::memory_order_release);
+            head_.store(head->next, std::memory_order_relaxed);
 
             // Update list capacity.
             capacity_.fetch_add(PerBlockElementCount, std::memory_order_relaxed);
