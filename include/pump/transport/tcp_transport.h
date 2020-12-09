@@ -19,7 +19,7 @@
 
 #include "pump/transport/flow/flow_tcp.h"
 #include "pump/transport/base_transport.h"
-#include "pump/toolkit/mutil_freelock_queue.h"
+#include "pump/toolkit/multi_freelock_queue.h"
 
 namespace pump {
 namespace transport {
@@ -169,7 +169,7 @@ namespace transport {
 
         // When sending data, transport will append buffer to sendlist at first. On
         // triggering send event, transport will send buffer in the sendlist.
-        toolkit::mutil_freelock_queue<toolkit::io_buffer_ptr> sendlist_;
+        toolkit::multi_freelock_queue<toolkit::io_buffer_ptr> sendlist_;
     };
 
 }  // namespace transport

@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef pump_toolkit_mutil_freelock_queue_h
-#define pump_toolkit_mutil_freelock_queue_h
+#ifndef pump_toolkit_multi_freelock_queue_h
+#define pump_toolkit_multi_freelock_queue_h
 
 #include <atomic>
 #include <chrono>
@@ -26,9 +26,9 @@
 
 namespace pump {
 namespace toolkit {
-
+ 
     template <typename T, int PerBlockElementCount = 32>
-    class LIB_PUMP mutil_freelock_queue
+    class LIB_PUMP multi_freelock_queue
       : public noncopyable {
 
       public:
@@ -61,7 +61,7 @@ namespace toolkit {
         /*********************************************************************************
          * Constructor
          ********************************************************************************/
-        mutil_freelock_queue(int32_t size)
+        multi_freelock_queue(int32_t size)
           : tail_block_node_(nullptr),
             capacity_(0),
             head_(nullptr), 
@@ -72,7 +72,7 @@ namespace toolkit {
         /*********************************************************************************
          * Deconstructor
          ********************************************************************************/
-        ~mutil_freelock_queue() {
+        ~multi_freelock_queue() {
             // Get element head node.
             element_node *beg_node = tail_.load(std::memory_order_relaxed)->next;
             // Get next element node of the head element node.

@@ -25,7 +25,7 @@
 
 #include "pump/debug.h"
 #include "pump/time/timer.h"
-#include "pump/toolkit/mutil_freelock_queue.h"
+#include "pump/toolkit/multi_freelock_queue.h"
 #include "pump/toolkit/single_freelock_queue.h"
 #include "pump/toolkit/block_freelock_queue.h"
 
@@ -140,7 +140,7 @@ namespace time {
 
         // Timers
         std::queue<timer_context*> free_contexts_;
-        typedef toolkit::mutil_freelock_queue<timer_sptr> timer_impl_queue;
+        typedef toolkit::multi_freelock_queue<timer_sptr> timer_impl_queue;
         toolkit::block_freelock_queue<timer_impl_queue> new_timers_;
         std::priority_queue<timer_context*, std::vector<timer_context*>, timer_greater> timers_;
     };

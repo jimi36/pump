@@ -324,7 +324,6 @@ namespace toolkit {
         std::atomic<block_node*> blk_tail_;
     };
 
-
 }  // namespace toolkit
 }  // namespace pump
 

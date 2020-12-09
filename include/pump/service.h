@@ -19,7 +19,7 @@
 
 #include "pump/poll/poller.h"
 #include "pump/time/timer_queue.h"
-#include "pump/toolkit/mutil_freelock_queue.h"
+#include "pump/toolkit/multi_freelock_queue.h"
 #include "pump/toolkit/single_freelock_queue.h"
 #include "pump/toolkit/block_freelock_queue.h"
 
@@ -127,7 +127,7 @@ namespace pump {
 
         // Posted task worker
         std::shared_ptr<std::thread> posted_task_worker_;
-        typedef toolkit::mutil_freelock_queue<post_task_type> task_impl_queue;
+        typedef toolkit::multi_freelock_queue<post_task_type> task_impl_queue;
         toolkit::block_freelock_queue<task_impl_queue> posted_tasks_;
 
         // Timout timer worker
