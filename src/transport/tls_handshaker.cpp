@@ -240,12 +240,18 @@ namespace transport {
 #if defined(PUMP_HAVE_IOCP)
             if (flow->post_send() != flow::FLOW_ERR_NO &&
                 __set_status(TRANSPORT_STARTED, TRANSPORT_ERROR)) {
-                __post_channel_event(shared_from_this(), 0);
+                PUMP_ERR_LOG(
+                    "tls_handshaker::__process_handshake: flow post send failed");
+                __handshake_finished();
+                return;
             }
 #else
             if (flow->want_to_send() != flow::FLOW_ERR_NO &&
                 __set_status(TRANSPORT_STARTED, TRANSPORT_ERROR)) {
-                __post_channel_event(shared_from_this(), 0);
+                PUMP_ERR_LOG(
+                    "tls_handshaker::__process_handshake: flow want to send failed");
+                __handshake_finished();
+                return;
             }
 
             tracker->set_event(poll::TRACK_SEND);
@@ -259,12 +265,15 @@ namespace transport {
         if (!flow->is_handshaked()) {
 #if defined(PUMP_HAVE_IOCP)
             if (flow->post_read() != flow::FLOW_ERR_NO &&
-                __set_status(TRANSPORT_STARTED, TRANSPORT_ERROR))
-                __post_channel_event(shared_from_this(), 0);
+                __set_status(TRANSPORT_STARTED, TRANSPORT_ERROR)) {
+                PUMP_ERR_LOG(
+                    "tls_handshaker::__process_handshake: flow post read failed");
+                __handshake_finished();
+                return;
+            }
 #else
             tracker->set_event(poll::TRACK_READ);
 
-            PUMP_ASSERT(tracker->is_started());
             PUMP_DEBUG_CHECK(tracker->set_tracked(true));
 #endif
             return;
