@@ -219,11 +219,12 @@ namespace transport {
         uint32_t pending_state = READ_PENDING;
         uint32_t old_state = read_state_.exchange(pending_state);
 
-        int32_t size = 0;
 #if defined(PUMP_HAVE_IOCP)
-        const block_t *b = flow->read(iocp_task, &size);
+        int32_t size = 0;
+        const block_t *b = iocp_task->get_processed_data(&size);
 #else
-        const block_t *b = flow->read(&size);
+        block_t b[MAX_FLOW_BUFFER_SIZE];
+        int32_t size = flow->read(b, MAX_FLOW_BUFFER_SIZE);
 #endif
         if (PUMP_LIKELY(size > 0)) {
             // Read callback
@@ -244,7 +245,7 @@ namespace transport {
             }
 
 #if defined(PUMP_HAVE_IOCP)
-            if (flow->post_read() == flow::FLOW_ERR_ABORT) {
+            if (flow->post_read(iocp_task) == flow::FLOW_ERR_ABORT) {
                 PUMP_WARN_LOG("tcp_transport::on_read_event: want to read failed");
                 __try_doing_disconnected_process();
             }

@@ -21,42 +21,25 @@ namespace transport {
     namespace flow {
 
         flow_tcp::flow_tcp() noexcept 
-          : read_iob_(nullptr), 
-            send_iob_(nullptr) {
+          : send_iob_(nullptr) {
 #if defined(PUMP_HAVE_IOCP)
-            read_task_ = nullptr;
             send_task_ = nullptr;
 #endif
         }
 
         flow_tcp::~flow_tcp() {
 #if defined(PUMP_HAVE_IOCP)
-            if (read_task_) {
-                read_task_->sub_link();
-            }
             if (send_task_) {
                 send_task_->sub_link();
             }
 #endif
-            if (read_iob_) {
-                read_iob_->sub_ref();
-            }
         }
 
         flow_error flow_tcp::init(poll::channel_sptr &&ch, int32_t fd) {
             PUMP_DEBUG_ASSIGN(ch, ch_, ch);
             PUMP_DEBUG_ASSIGN(fd > 0, fd_, fd);
 
-            read_iob_ = toolkit::io_buffer::create();
-            read_iob_->init_with_size(MAX_FLOW_BUFFER_SIZE);
-
 #if defined(PUMP_HAVE_IOCP)
-            read_task_ = net::new_iocp_task();
-            read_task_->set_fd(fd_);
-            read_task_->set_notifier(ch_);
-            read_task_->set_type(net::IOCP_TASK_READ);
-            read_task_->bind_io_buffer(read_iob_);
-
             send_task_ = net::new_iocp_task();
             send_task_->set_fd(fd_);
             send_task_->set_notifier(ch_);
@@ -66,29 +49,25 @@ namespace transport {
         }
 
 #if defined(PUMP_HAVE_IOCP)
-        flow_error flow_tcp::post_read() {
-            if (!net::post_iocp_read(read_task_)) {
+        flow_error flow_tcp::post_read(net::iocp_task_ptr iocp_task) {
+            if (!iocp_task) {
+                auto iob = toolkit::io_buffer::create();
+                iob->init_with_size(MAX_FLOW_BUFFER_SIZE);
+                iocp_task = net::new_iocp_task();
+                iocp_task->set_fd(fd_);
+                iocp_task->set_notifier(ch_);
+                iocp_task->set_type(net::IOCP_TASK_READ);
+                iocp_task->bind_io_buffer(iob);
+            } else {
+                iocp_task->add_link();
+            }
+            if (!net::post_iocp_read(iocp_task)) {
                 PUMP_WARN_LOG("flow_tcp::want_to_read: post iocp read failed");
                 return FLOW_ERR_ABORT;
             }
             return FLOW_ERR_NO;
         }
 #endif
-
-#if defined(PUMP_HAVE_IOCP)
-        const block_t* flow_tcp::read(net::iocp_task_ptr iocp_task, int32_t *size) {
-            *size = iocp_task->get_processed_size();
-            return read_iob_->buffer();
-        }
-#else
-        const block_t* flow_tcp::read(int32_t *size) {
-            block_t *buf = (block_t*)read_iob_->buffer();
-            *size = net::read(fd_, buf, read_iob_->buffer_size());
-            return buf;
-        }
-#endif
-
-
 
 #if defined(PUMP_HAVE_IOCP)
         flow_error flow_tcp::post_send(toolkit::io_buffer_ptr iob) {

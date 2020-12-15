@@ -116,7 +116,7 @@ namespace transport {
 #endif
         } else {
 #if defined(PUMP_HAVE_IOCP)
-            if (flow_->want_to_read() != flow::FLOW_ERR_NO) {
+            if (flow_->post_read() != flow::FLOW_ERR_NO) {
                 PUMP_WARN_LOG("tls_handshaker::start: flow want_to_send failed");
                 return false;
             }
@@ -258,7 +258,7 @@ namespace transport {
 
         if (!flow->is_handshaked()) {
 #if defined(PUMP_HAVE_IOCP)
-            if (flow->want_to_read() != flow::FLOW_ERR_NO &&
+            if (flow->post_read() != flow::FLOW_ERR_NO &&
                 __set_status(TRANSPORT_STARTED, TRANSPORT_ERROR))
                 __post_channel_event(shared_from_this(), 0);
 #else

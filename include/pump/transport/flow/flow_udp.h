@@ -47,37 +47,30 @@ namespace transport {
 
 #if defined(PUMP_HAVE_IOCP)
             /*********************************************************************************
-             * Begin read task
+             * Post read
              * If using IOCP this post an IOCP task for reading, else do nothing.
              * Return results:
              *     FLOW_ERR_NO    => success
              *     FLOW_ERR_ABORT => error
              ********************************************************************************/
-            flow_error want_to_read();
+            flow_error post_read(net::iocp_task_ptr iocp_task = nullptr);
 #endif
             /*********************************************************************************
              * Read from
              ********************************************************************************/
-#if defined(PUMP_HAVE_IOCP)
-            const block_t* read_from(net::iocp_task_ptr iocp_task,
-                                  int32_t *size,
-                                  address_ptr from_address);
-#else
-            const block_t* read_from(int32_t *size, address_ptr from_address);
+#if !defined(PUMP_HAVE_IOCP)
+            PUMP_INLINE int32_t read_from(block_t *b, int32_t size, address_ptr from_address) {
+                int32_t addrlen = 0;
+                struct sockaddr *addr = from_address->get();
+                size = net::read_from(fd_, b, size, addr, &addrlen);
+                from_address->set((sockaddr*)addr, addrlen);
+                return size;
+            }
 #endif
             /*********************************************************************************
              * Send to
              ********************************************************************************/
             int32_t send(const block_t *b, int32_t size, const address &to_address);
-
-          private:
-            // Read cache
-            toolkit::io_buffer_ptr read_iob_;
-
-#if defined(PUMP_HAVE_IOCP)
-            // Read task for IOCP
-            net::iocp_task_ptr read_task_;
-#endif
         };
         DEFINE_ALL_POINTER_TYPE(flow_udp);
 

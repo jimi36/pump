@@ -53,15 +53,15 @@ namespace transport {
              *     FLOW_ERR_NO    => success
              *     FLOW_ERR_ABORT => error
              ********************************************************************************/
-            flow_error post_read();
+            flow_error post_read(net::iocp_task_ptr iocp_task = nullptr);
 #endif
             /*********************************************************************************
              * Read
              ********************************************************************************/
-#if defined(PUMP_HAVE_IOCP)
-            const block_t* read(net::iocp_task_ptr iocp_task, int32_t *size);
-#else
-            const block_t* read(int32_t *size);
+#if !defined(PUMP_HAVE_IOCP)
+            PUMP_INLINE int32_t read(block_t *b, int32_t size) {
+                return net::read(fd_, b, size);
+            }
 #endif
 
 #if defined(PUMP_HAVE_IOCP)
@@ -103,14 +103,10 @@ namespace transport {
             }
 
           private:
-            // Read buffer
-            toolkit::io_buffer_ptr read_iob_;
             // Send buffer
             toolkit::io_buffer_ptr send_iob_;
 
 #if defined(PUMP_HAVE_IOCP)
-            // IOCP read task
-            net::iocp_task_ptr read_task_;
             // IOCP send task
             net::iocp_task_ptr send_task_;
 #endif

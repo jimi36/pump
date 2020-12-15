@@ -219,7 +219,7 @@ namespace transport {
 
         if (!flow->has_data_to_read()) {
 #if defined(PUMP_HAVE_IOCP)
-            if (flow->want_to_read() == flow::FLOW_ERR_ABORT) {
+            if (flow->post_read() == flow::FLOW_ERR_ABORT) {
                 PUMP_WARN_LOG("tls_transport::on_channel_event: want to read failed");
                 __try_doing_disconnected_process();
             }
@@ -280,7 +280,7 @@ namespace transport {
         }
 
 #if defined(PUMP_HAVE_IOCP)
-        if (flow->want_to_read() == flow::FLOW_ERR_ABORT) {
+        if (flow->post_read() == flow::FLOW_ERR_ABORT) {
             PUMP_WARN_LOG("tls_transport::on_channel_event: want to read failed");
             __try_doing_disconnected_process();
         }
@@ -350,7 +350,7 @@ namespace transport {
         }
 
 #if defined(PUMP_HAVE_IOCP)
-        if (flow->want_to_read() == flow::FLOW_ERR_ABORT) {
+        if (flow->post_read() == flow::FLOW_ERR_ABORT) {
             PUMP_WARN_LOG("tls_transport::on_read_event: want to read failed");
             __try_doing_disconnected_process();
         }
@@ -416,7 +416,7 @@ namespace transport {
         }
 
 #if defined(PUMP_HAVE_IOCP)
-        if (flow_->want_to_read() == flow::FLOW_ERR_ABORT) {
+        if (flow_->post_read() == flow::FLOW_ERR_ABORT) {
             PUMP_ERR_LOG("tls_transport::__async_read: want to read failed");
             return ERROR_FAULT;
         }

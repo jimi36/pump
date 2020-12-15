@@ -126,17 +126,25 @@ namespace transport {
         uint32_t pending_state = READ_PENDING;
         uint32_t old_state = read_state_.exchange(pending_state);
 
-        address addr;
-        int32_t size = 0;
+        address from_addr;
 #if defined(PUMP_HAVE_IOCP)
-        const block_t *b = flow->read_from(iocp_task, &size, &addr);
-#else
-        const block_t *b = flow->read_from(&size, &addr);
-#endif
+        int32_t size = 0;
+        const block_t *b = iocp_task->get_processed_data(&size);
         if (PUMP_LIKELY(size > 0)) {
-            cbs_.read_from_cb(b, size, addr);
+            int32_t addrlen = 0;
+            sockaddr *addr = iocp_task->get_remote_address(&addrlen);
+            from_addr.set(addr, addrlen);
+            // Do read callback.
+            cbs_.read_from_cb(b, size, from_addr);
         }
-
+#else
+        block_t b[MAX_FLOW_BUFFER_SIZE];
+        int32_t size = flow->read_from(b, MAX_FLOW_BUFFER_SIZE, &from_addr);
+        if (PUMP_LIKELY(size > 0)) {
+            // Do read callback.
+            cbs_.read_from_cb(b, size, from_addr);
+        }
+#endif
         // If transport is not in started state, then interrupt this transport.
         if (!__is_status(TRANSPORT_STARTED)) {
             __interrupt_and_trigger_callbacks();
@@ -151,7 +159,7 @@ namespace transport {
         }
 
 #if defined(PUMP_HAVE_IOCP)
-        if (flow->want_to_read() == flow::FLOW_ERR_ABORT) {
+        if (flow->post_read(iocp_task) == flow::FLOW_ERR_ABORT) {
             PUMP_WARN_LOG("udp_transport::on_read_event: flow want_to_read failed");
         }
 #else
@@ -183,7 +191,7 @@ namespace transport {
         }
 
 #if defined(PUMP_HAVE_IOCP)
-        if (flow_->want_to_read() == flow::FLOW_ERR_ABORT) {
+        if (flow_->post_read() == flow::FLOW_ERR_ABORT) {
             PUMP_ERR_LOG("udp_transport::__async_read: flow want_to_read fialed");
             return ERROR_FAULT;
         }

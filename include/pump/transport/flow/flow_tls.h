@@ -72,14 +72,14 @@ namespace transport {
 
 #if defined(PUMP_HAVE_IOCP)
             /*********************************************************************************
-             * Begin read task
+             * Post read
              * If using IOCP this post a IOCP task for reading, else do nothing.
              * Return results:
              *     FLOW_ERR_BUSY  => busy for read
              *     FLOW_ERR_NO    => success
              *     FLOW_ERR_ABORT => error
              ********************************************************************************/
-            flow_error want_to_read();
+            flow_error post_read();
 #endif
             /*********************************************************************************
              * Read from net

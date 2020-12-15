@@ -94,7 +94,7 @@ namespace transport {
         }
 
 #if defined(PUMP_HAVE_IOCP)
-        flow_error flow_tls::want_to_read() {
+        flow_error flow_tls::post_read() {
             if (PUMP_LIKELY(net::post_iocp_read(read_task_))) {
                 return FLOW_ERR_NO;
             }

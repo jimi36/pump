@@ -22,19 +22,10 @@ namespace transport {
 
         const static uint32_t UDP_BUFFER_SIZE = 1024 * 64;
 
-        flow_udp::flow_udp() noexcept
-          : read_iob_(nullptr) {
-#if defined(PUMP_HAVE_IOCP)
-            read_task_ = nullptr;
-#endif
+        flow_udp::flow_udp() noexcept {
         }
 
         flow_udp::~flow_udp() {
-#if defined(PUMP_HAVE_IOCP)
-            if (read_task_) {
-                read_task_->sub_link();
-            }
-#endif
         }
 
         flow_error flow_udp::init(poll::channel_sptr &&ch, const address &bind_address) {
@@ -55,16 +46,6 @@ namespace transport {
                 return FLOW_ERR_ABORT;
             }
 
-            read_iob_ = toolkit::io_buffer::create();
-            read_iob_->init_with_size(UDP_BUFFER_SIZE);
-
-#if defined(PUMP_HAVE_IOCP)
-            read_task_ = net::new_iocp_task();
-            read_task_->set_fd(fd_);
-            read_task_->set_notifier(ch_);
-            read_task_->set_type(net::IOCP_TASK_READ);
-            read_task_->bind_io_buffer(read_iob_);
-#endif
             if (!net::set_reuse(fd_, 1)) {
                 PUMP_ERR_LOG("flow_udp::init: set reuse failed");
                 return FLOW_ERR_ABORT;
@@ -86,40 +67,23 @@ namespace transport {
         }
 
 #if defined(PUMP_HAVE_IOCP)
-        flow_error flow_udp::want_to_read() {
-            PUMP_ASSERT(read_task_);
-            if (!net::post_iocp_read_from(read_task_)) {
-                PUMP_WARN_LOG("flow_udp::want_to_read: post iocp read from failed");
+        flow_error flow_udp::post_read(net::iocp_task_ptr iocp_task) {
+            if (!iocp_task) {
+                auto iob = toolkit::io_buffer::create();
+                iob->init_with_size(MAX_FLOW_BUFFER_SIZE);
+                iocp_task = net::new_iocp_task();
+                iocp_task->set_fd(fd_);
+                iocp_task->set_notifier(ch_);
+                iocp_task->set_type(net::IOCP_TASK_READ);
+                iocp_task->bind_io_buffer(iob);
+            } else {
+                iocp_task->add_link();
+            }
+            if (!net::post_iocp_read_from(iocp_task)) {
+                PUMP_WARN_LOG("flow_udp::post_read: post iocp read from failed");
                 return FLOW_ERR_ABORT;
             }
             return FLOW_ERR_NO;
-        }
-#endif
-
-#if defined(PUMP_HAVE_IOCP)
-        const block_t* flow_udp::read_from(net::iocp_task_ptr iocp_task,
-                                        int32_t *size,
-                                        address_ptr from_address) {
-            const block_t *buf = iocp_task->get_processed_data(size);
-            if (PUMP_LIKELY(*size > 0)) {
-                int32_t addrlen = 0;
-                sockaddr *addr = iocp_task->get_remote_address(&addrlen);
-                from_address->set(addr, addrlen);
-            }
-            return buf;
-        }
-#else
-        const block_t* flow_udp::read_from(int32_t *size, address_ptr from_address) {
-            block_t addr[ADDRESS_MAX_LEN];
-            int32_t addrlen = ADDRESS_MAX_LEN;
-            block_t *buf = (block_t*)read_iob_->buffer();
-            *size = net::read_from(fd_, 
-                                   buf, 
-                                   read_iob_->buffer_size(), 
-                                   (sockaddr*)addr, &addrlen);
-            from_address->set((sockaddr*)addr, addrlen);
-
-            return buf;
         }
 #endif
 
