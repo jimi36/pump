@@ -102,7 +102,8 @@ namespace transport {
              * Check there are data to read or not
              ********************************************************************************/
             PUMP_INLINE bool has_data_to_read() const {
-                return (session_ && session_->net_read_data_size > 0);
+                PUMP_ASSERT(session_);
+                return session_->has_data_pending();
             }
 
             /*********************************************************************************
@@ -149,7 +150,8 @@ namespace transport {
              * Check there are data to send or not
              ********************************************************************************/
             PUMP_INLINE bool has_data_to_send() const {
-                return (session_ && session_->net_send_iob->data_size() > 0);
+                PUMP_ASSERT(session_);
+                return session_->get_net_send_buffer()->data_size() > 0;
             }
 
             /*********************************************************************************

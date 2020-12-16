@@ -61,6 +61,22 @@ namespace ssl {
     };
 #endif
 
+    bool tls_session::has_data_pending() {
+        if (net_read_data_size > 0) {
+            return true;
+        }
+#if defined(PUMP_HAVE_GNUTLS)
+        if (gnutls_record_check_pending((gnutls_session_t)ssl_ctx) == 1) {
+            return true;
+        }
+#elif defined(PUMP_HAVE_OPENSSL)
+        if (SSL_pending((SSL*)ssl_ctx) == 1) {
+            return true;
+        }
+#endif
+        return false;
+    }
+
     tls_session_ptr create_tls_session(
         void_ptr xcred, 
         bool client, 
