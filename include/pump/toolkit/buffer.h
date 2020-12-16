@@ -46,6 +46,9 @@ namespace toolkit {
         PUMP_INLINE const block_t* buffer() const {
             return raw_;
         }
+        PUMP_INLINE block_t* buffer() {
+            return raw_;
+        }
 
         /*********************************************************************************
          * Get buffer raw size

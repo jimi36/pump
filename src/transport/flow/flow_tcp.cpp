@@ -52,7 +52,7 @@ namespace transport {
         flow_error flow_tcp::post_read(net::iocp_task_ptr iocp_task) {
             if (!iocp_task) {
                 auto iob = toolkit::io_buffer::create();
-                iob->init_with_size(MAX_FLOW_BUFFER_SIZE);
+                iob->init_with_size(MAX_TRANSPORT_BUFFER_SIZE);
                 iocp_task = net::new_iocp_task();
                 iocp_task->set_fd(fd_);
                 iocp_task->set_notifier(ch_);

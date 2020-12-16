@@ -223,8 +223,8 @@ namespace transport {
         int32_t size = 0;
         const block_t *b = iocp_task->get_processed_data(&size);
 #else
-        block_t b[MAX_FLOW_BUFFER_SIZE];
-        int32_t size = flow->read(b, MAX_FLOW_BUFFER_SIZE);
+        block_t b[MAX_TRANSPORT_BUFFER_SIZE];
+        int32_t size = flow->read(b, MAX_TRANSPORT_BUFFER_SIZE);
 #endif
         if (PUMP_LIKELY(size > 0)) {
             // Read callback

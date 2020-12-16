@@ -61,25 +61,47 @@ namespace ssl {
         /*********************************************************************************
          * Read from net read buffer.
          ********************************************************************************/
-        uint32 read_from_net_read_buffer(block_ptr b, int32 maxlen) {
+        uint32_t read_from_net_read_buffer(block_t *b, int32_t maxlen) {
             // Get max size to read.
-            int32 size = net_read_data_size > maxlen ? maxlen : net_read_data_size;
+            int32_t size = net_read_data_size > maxlen ? maxlen : net_read_data_size;
             if (size > 0) {
                 // Copy read data to buffer.
                 memcpy(b, net_read_iob->buffer() + net_read_data_pos, size);
                 net_read_data_size -= size;
                 net_read_data_pos += size;
             }
+
             return size;
         }
 
         /*********************************************************************************
          * Send to net send buffer
          ********************************************************************************/
-        void send_to_net_send_buffer(c_block_ptr b, int32 size) {
+        PUMP_INLINE void send_to_net_send_buffer(const block_t *b, int32_t size) {
             net_send_iob->append(b, size);
         }
 #endif
+        /*********************************************************************************
+         * Get net send buffer
+         ********************************************************************************/
+        PUMP_INLINE toolkit::io_buffer_ptr get_net_send_buffer() {
+            return net_send_iob;
+        }
+
+        /*********************************************************************************
+         * Get net read buffer
+         ********************************************************************************/
+        PUMP_INLINE toolkit::io_buffer_ptr get_net_read_buffer() {
+            return net_read_iob;
+        }
+
+        /*********************************************************************************
+         * Reset read data size
+         ********************************************************************************/
+        PUMP_INLINE void reset_read_data_size(int32_t size) {
+            net_read_data_size = size;
+            net_read_data_pos = 0;
+        }
     };
     DEFINE_RAW_POINTER_TYPE(tls_session);
 
@@ -87,7 +109,10 @@ namespace ssl {
      * Create tls session
      * This will create ssl context, net read buffer and net send buffer.
      ********************************************************************************/
-    tls_session_ptr create_tls_session(void_ptr xcred, bool client, int32_t buffer_size);
+    tls_session_ptr create_tls_session(
+        void_ptr xcred, 
+        bool client, 
+        int32_t buffer_size);
 
     /*********************************************************************************
      * Destory tls session

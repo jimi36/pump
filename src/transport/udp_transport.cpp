@@ -138,8 +138,8 @@ namespace transport {
             cbs_.read_from_cb(b, size, from_addr);
         }
 #else
-        block_t b[MAX_FLOW_BUFFER_SIZE];
-        int32_t size = flow->read_from(b, MAX_FLOW_BUFFER_SIZE, &from_addr);
+        block_t b[MAX_TRANSPORT_BUFFER_SIZE];
+        int32_t size = flow->read_from(b, MAX_TRANSPORT_BUFFER_SIZE, &from_addr);
         if (PUMP_LIKELY(size > 0)) {
             // Do read callback.
             cbs_.read_from_cb(b, size, from_addr);

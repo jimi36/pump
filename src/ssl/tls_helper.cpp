@@ -40,7 +40,7 @@ namespace ssl {
                                              void_ptr data,
                                              size_t maxlen) {
             tls_session_ptr s = (tls_session_ptr)ptr;
-            int32_t size = s->read_from_net_read_buffer((block_ptr)data, (int32)maxlen);
+            int32_t size = s->read_from_net_read_buffer((block_t*)data, (int32_t)maxlen);
             if (size == 0) {
                 return -1;
             }
@@ -51,7 +51,7 @@ namespace ssl {
         PUMP_INLINE static ssize_t data_push(gnutls_transport_ptr_t ptr,
                                              c_void_ptr data,
                                              size_t len) {
-            tls_session_ptr(ptr)->send_to_net_send_buffer((c_block_ptr)data, (int32)len);
+            tls_session_ptr(ptr)->send_to_net_send_buffer((const block_t*)data, (int32_t)len);
             return len;
         }
 
@@ -61,7 +61,10 @@ namespace ssl {
     };
 #endif
 
-    tls_session_ptr create_tls_session(void_ptr xcred, bool client, int32_t buffer_size) {
+    tls_session_ptr create_tls_session(
+        void_ptr xcred, 
+        bool client, 
+        int32_t buffer_size) {
 #if defined(PUMP_HAVE_GNUTLS)
         tls_session_ptr session = object_create<tls_session>();
         gnutls_session_t ssl_ctx = nullptr;
@@ -118,33 +121,26 @@ namespace ssl {
     }
 
     void destory_tls_session(tls_session_ptr session) {
+        if (!session) {
+            return;
+        }
+
 #if defined(PUMP_HAVE_GNUTLS)
-        if (session) {
-            if (session->ssl_ctx) {
-                gnutls_deinit((gnutls_session_t)session->ssl_ctx);
-            }
-            if (session->net_read_iob) {
-                session->net_read_iob->sub_ref();
-            }
-            if (session->net_send_iob) {
-                session->net_send_iob->sub_ref();
-            }
-            object_delete(session);
+        if (session->ssl_ctx) {
+            gnutls_deinit((gnutls_session_t)session->ssl_ctx);
         }
 #elif defined(PUMP_HAVE_OPENSSL)
-        if (session) {
-            if (session->ssl_ctx) {
-                SSL_free((SSL*)session->ssl_ctx);
-            }
-            if (session->net_read_iob) {
-                session->net_read_iob->sub_ref();
-            }
-            if (session->net_send_iob) {
-                session->net_send_iob->sub_ref();
-            }
-            object_delete(session);
+        if (session->ssl_ctx) {
+            SSL_free((SSL*)session->ssl_ctx);
         }
 #endif
+        if (session->net_read_iob) {
+            session->net_read_iob->sub_ref();
+        }
+        if (session->net_send_iob) {
+            session->net_send_iob->sub_ref();
+        }
+        object_delete(session);
     }
 
     int32_t tls_handshake(tls_session_ptr session) {
@@ -163,8 +159,9 @@ namespace ssl {
                 BIO_write((BIO*)session->read_bio,
                           session->net_read_iob->buffer() + session->net_read_data_pos,
                           session->net_read_data_size);
-            session->net_read_data_size -= bio_size;
-            session->net_read_data_pos += bio_size;
+            PUMP_ASSERT(bio_size == session->net_read_data_size);
+            session->net_read_data_size = 0;
+            session->net_read_data_pos = 0;
         }
 
         int32_t ret = SSL_do_handshake((SSL*)session->ssl_ctx);
@@ -173,9 +170,9 @@ namespace ssl {
             BUF_MEM *bptr = nullptr;
             PUMP_DEBUG_CHECK(BIO_get_mem_ptr((BIO*)session->send_bio, &bptr));
             if (bptr->length > 0) {
-                PUMP_DEBUG_CHECK(session->net_send_iob->append(bptr->data, (uint32)bptr->length));
+                PUMP_DEBUG_CHECK(session->net_send_iob->append(bptr->data, (uint32_t)bptr->length));
             }
-            BIO_read((BIO*)session->send_bio, bptr->data, (int32)bptr->length);
+            BIO_read((BIO*)session->send_bio, bptr->data, (int32_t)bptr->length);
             if (ec == SSL_ERROR_NONE) {
                 // Handshake compelte.
                 return 0;
@@ -205,7 +202,7 @@ namespace ssl {
                                      session->net_read_iob->buffer(),
                                      session->net_read_data_size);
         PUMP_ASSERT(bio_size == session->net_read_data_size);
-        session->net_read_data_size -= bio_size;
+        session->net_read_data_size = 0;
         session->net_read_data_pos = 0;
 
         int32_t ret = SSL_read((SSL*)session->ssl_ctx, b, size);
@@ -228,8 +225,8 @@ namespace ssl {
         if (PUMP_LIKELY(ret > 0)) {
             BUF_MEM *bptr = nullptr;
             PUMP_DEBUG_CHECK(BIO_get_mem_ptr((BIO*)session->send_bio, &bptr));
-            PUMP_DEBUG_CHECK(session->net_send_iob->append(bptr->data, (uint32)bptr->length));
-            BIO_read((BIO*)session->send_bio, bptr->data, (int32)bptr->length);
+            PUMP_DEBUG_CHECK(session->net_send_iob->append(bptr->data, (uint32_t)bptr->length));
+            BIO_read((BIO*)session->send_bio, bptr->data, (int32_t)bptr->length);
             return ret;
         }
 

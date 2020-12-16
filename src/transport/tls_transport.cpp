@@ -236,29 +236,16 @@ namespace transport {
         uint32_t pending_state = READ_PENDING;
         uint32_t old_state = read_state_.exchange(pending_state);
 
-        int32_t ret = 0;
-        int32_t size = 0;
-        block_t sslb[MAX_FLOW_BUFFER_SIZE];
-        do {
-            ret = flow->read_from_ssl(sslb + size, MAX_FLOW_BUFFER_SIZE - size);
-            if (ret > 0) {
-                size += ret;
-                if (size == MAX_FLOW_BUFFER_SIZE) {
-                    cbs_.read_cb(sslb, size);
-                    size = 0;
-                }
-            } else {
-                break;
-            }
-        } while (flow->has_data_to_read());
+        block_t data[MAX_TRANSPORT_BUFFER_SIZE];
+        int32_t size = flow->read_from_ssl(data, MAX_TRANSPORT_BUFFER_SIZE);
 
         // Read callback
         if (PUMP_LIKELY(size > 0)) {
-            cbs_.read_cb(sslb, size);
+            cbs_.read_cb(data, size);
         }
 
         // Read data from ssl failed
-        if (ret == 0) {
+        if (size == 0) {
             PUMP_WARN_LOG("tls_transport::on_channel_event: read from ssl failed");
             __try_doing_disconnected_process();
             return;
@@ -273,10 +260,9 @@ namespace transport {
         }
 
         // If old read state is READ_ONCE, then change it to READ_NONE.
-        if (size > 0 && old_state == READ_ONCE) {
-            if (read_state_.compare_exchange_strong(pending_state, READ_NONE)) {
-                return;
-            }
+        if (size > 0 && old_state == READ_ONCE &&
+            read_state_.compare_exchange_strong(pending_state, READ_NONE)) {
+            return;
         }
 
 #if defined(PUMP_HAVE_IOCP)
@@ -300,11 +286,10 @@ namespace transport {
         auto flow = flow_.get();
 
 #if defined(PUMP_HAVE_IOCP)
-        auto ret = flow->read_from_net(iocp_task);
+        if (PUMP_UNLIKELY(flow->read_from_net(iocp_task) == flow::FLOW_ERR_ABORT)) {
 #else
-        auto ret = flow->read_from_net();
+        if (PUMP_UNLIKELY(flow->read_from_net() == flow::FLOW_ERR_ABORT)) {
 #endif
-        if (PUMP_UNLIKELY(ret == flow::FLOW_ERR_ABORT)) {
             PUMP_WARN_LOG("tls_transport::on_read_event: read from net failed");
             __try_doing_disconnected_process();
             return;
@@ -314,37 +299,23 @@ namespace transport {
         uint32_t pending_state = READ_PENDING;
         uint32_t old_state = read_state_.exchange(pending_state);
 
-        int32_t rret = 0;
-        int32_t size = 0;
-        block_t sslb[MAX_FLOW_BUFFER_SIZE];
-        do {
-            rret = flow->read_from_ssl(sslb + size, MAX_FLOW_BUFFER_SIZE - size);
-            if (rret > 0) {
-                size += rret;
-                if (size == MAX_FLOW_BUFFER_SIZE) {
-                    cbs_.read_cb(sslb, size);
-                    size = 0;
-                }
-            } else {
-                break;
-            }
-        } while (flow->has_data_to_read());
+        block_t data[MAX_TRANSPORT_BUFFER_SIZE];
+        int32_t size = flow->read_from_ssl(data, MAX_TRANSPORT_BUFFER_SIZE);
 
         // Has data to callback
         if (PUMP_LIKELY(size > 0)) {
-            cbs_.read_cb(sslb, size);
+            cbs_.read_cb(data, size);
         }
 
         // Read data from ssl failed
-        if (rret == 0) {
+        if (size == 0) {
             PUMP_WARN_LOG("tls_transport::on_read_event: read from ssl failed");
             __try_doing_disconnected_process();
             return;
         }
 
         // If old read state is READ_ONCE, then change it to READ_NONE.
-        if (size > 0 && 
-            old_state == READ_ONCE &&
+        if (size > 0 && old_state == READ_ONCE &&
             read_state_.compare_exchange_strong(pending_state, READ_NONE)) {
             return;
         }
