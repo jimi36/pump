@@ -27,7 +27,7 @@
 namespace pump {
 namespace toolkit {
 
-    template <typename T, int PerBlockElementCount = 1024>
+    template <typename T, int PerBlockElementCount = 126>
     class LIB_PUMP single_freelock_queue
       : public noncopyable {
 

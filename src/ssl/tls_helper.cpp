@@ -171,12 +171,11 @@ namespace ssl {
         }
 #elif defined(PUMP_HAVE_OPENSSL)
         if (session->net_read_data_size > 0) {
-            int32_t bio_size =
-                BIO_write((BIO*)session->read_bio,
-                          session->net_read_iob->buffer() + session->net_read_data_pos,
-                          session->net_read_data_size);
+            int32_t bio_size = BIO_write((BIO*)session->read_bio,
+                                         session->net_read_iob->buffer() + session->net_read_data_pos,
+                                         session->net_read_data_size);
             PUMP_ASSERT(bio_size == session->net_read_data_size);
-            session->net_read_data_size = 0;
+            session->net_read_data_size -= bio_size;
             session->net_read_data_pos = 0;
         }
 
@@ -218,7 +217,7 @@ namespace ssl {
                                      session->net_read_iob->buffer(),
                                      session->net_read_data_size);
         PUMP_ASSERT(bio_size == session->net_read_data_size);
-        session->net_read_data_size = 0;
+        session->net_read_data_size -= bio_size;
         session->net_read_data_pos = 0;
 
         int32_t ret = SSL_read((SSL*)session->ssl_ctx, b, size);

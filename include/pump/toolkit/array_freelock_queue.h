@@ -45,12 +45,17 @@ namespace toolkit {
          * Constructor
          ********************************************************************************/
         array_freelock_queue(uint32_t size)
-            : size_(size),
+            : size_(0),
               mem_block_(nullptr),
               write_index_(0),
               max_write_index_(0),
               read_index_(0),
               max_read_index_(0) {
+            // Init element size.
+            size_ = ceil_to_pow2(size);
+            // Init element size mask.
+            element_size_mask_ = size_ - 1;
+            // Create memory block.
             mem_block_ = (block_t*)pump_malloc(size * element_size);
         }
 
@@ -74,7 +79,7 @@ namespace toolkit {
          * Return false if array is full, thread safe.
          ********************************************************************************/
         bool push(const element_type &data) {
-            int32_t cur_write_index = write_index_.load(std::memory_order_relaxed);
+            int32_t cur_write_index = write_index_.load(std::memory_order_acquire);
             do {
                 // Array is full
                 if (__count_to_index(cur_write_index + 1) ==
@@ -88,16 +93,17 @@ namespace toolkit {
                                                          std::memory_order_relaxed)) {
                     break;
                 }
-                cur_write_index = write_index_.load(std::memory_order_acquire);
             } while (true);
 
             // Construct element object
             new ((element_type *)mem_block_ + __count_to_index(cur_write_index)) element_type(data);
 
-            while (!max_read_index_.compare_exchange_weak(cur_write_index,
-                                                          cur_write_index + 1,
-                                                          std::memory_order_relaxed,
+            int32_t index = cur_write_index;
+            while (!max_read_index_.compare_exchange_weak(index,
+                                                          index + 1,
+                                                          std::memory_order_release,
                                                           std::memory_order_relaxed)) {
+                index = cur_write_index;
             }
 
             return true;
@@ -109,8 +115,8 @@ namespace toolkit {
          ********************************************************************************/
         template <typename U>
         bool pop(U &data) {
+            int32_t cur_read_index = read_index_.load(std::memory_order_relaxed);
             do {
-                int32_t cur_read_index = read_index_.load(std::memory_order_relaxed);
                 int32_t array_read_index = __count_to_index(cur_read_index);
                 if (array_read_index == __count_to_index(max_read_index_.load(std::memory_order_acquire))) {
                     return false;
@@ -121,16 +127,17 @@ namespace toolkit {
                                                         std::memory_order_acquire,
                                                         std::memory_order_relaxed)) {
                     // Copy element.
-                    element_type& elem = *((element_type*)mem_block_ + array_read_index);
-                    data = elem;
-
+                    element_type *elem = (element_type*)mem_block_ + array_read_index;
+                    data = std::move(*elem);
                     // Deconstruct element.
-                    elem.~element_type();
+                    elem->~element_type();
 
-                    while (!max_write_index_.compare_exchange_weak(cur_read_index,
-                                                                   cur_read_index + 1,
-                                                                   std::memory_order_relaxed,
+                    int32_t index = cur_read_index;
+                    while (!max_write_index_.compare_exchange_weak(index,
+                                                                   index + 1,
+                                                                   std::memory_order_release,
                                                                    std::memory_order_relaxed)) {
+                        index = cur_read_index;
                     }
 
                     return true;
@@ -174,7 +181,7 @@ namespace toolkit {
          * Count to index
          ********************************************************************************/
         PUMP_INLINE int32_t __count_to_index(int32_t count) const {
-            return (count % size_);
+            return (count & element_size_mask_);
         }
 
       private:
@@ -183,6 +190,9 @@ namespace toolkit {
 
         // Element memory block
         block_t *mem_block_;
+
+        // Element size mask
+        int32_t element_size_mask_;
 
         // Next write index
         std::atomic_int32_t write_index_;

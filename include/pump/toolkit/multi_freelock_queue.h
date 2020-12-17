@@ -27,7 +27,7 @@
 namespace pump {
 namespace toolkit {
  
-    template <typename T, int PerBlockElementCount = 32>
+    template <typename T, int PerBlockElementCount = 126>
     class LIB_PUMP multi_freelock_queue
       : public noncopyable {
 
@@ -39,7 +39,8 @@ namespace toolkit {
 
         // List element node
         struct list_element_node {
-            list_element_node() : ready(false), next(this+1) {
+            list_element_node()
+             : next(this+1) {
             }
             std::atomic_bool ready;
             list_element_node *next;
@@ -50,8 +51,6 @@ namespace toolkit {
 
         // List block node
         struct list_block_node {
-            list_block_node() : next(nullptr) {
-            }
             list_block_node *next;
             element_node elems[PerBlockElementCount];
         };
@@ -109,14 +108,14 @@ namespace toolkit {
          ********************************************************************************/
         template <typename U>
         bool push(U &&data) {
-            element_node *next_write_node = nullptr;
+            // Get current head node as write node.
+            element_node *next_write_node = head_.load(std::memory_order_relaxed);
             do {
-                // Get current head node as write node.
-                next_write_node = head_.load(std::memory_order_relaxed);
-
                 // If current write node is invalid, list is being extended and try again.
                 if (next_write_node == nullptr) {
-                    continue;
+                    if ((next_write_node = head_.load(std::memory_order_relaxed)) == nullptr) {
+                        continue;
+                    }
                 }
 
                 // If next write node is the tail node, list is full and try to extend it.
@@ -133,6 +132,7 @@ namespace toolkit {
                     if (__extend_list(next_write_node)) {
                         break;
                     }
+                    next_write_node = nullptr;
                 }
             } while (true);
 
@@ -153,27 +153,25 @@ namespace toolkit {
          ********************************************************************************/
         template <typename U>
         bool pop(U &data) {
-            element_node *current_tail = nullptr;
-            element_node *next_read_node = nullptr;
-            do {
-                // Get current tail node.
-                current_tail = tail_.load(std::memory_order_relaxed);
-                // Get next read node.
-                next_read_node = current_tail->next;
+            // Get current tail node.
+            element_node *current_tail = tail_.load(std::memory_order_relaxed);
+            // Get next read node.
+            element_node *next_read_node = current_tail->next;
 
+            do {
                 // Check next read node is ready or not.
-                if (!next_read_node->ready.load(std::memory_order_acquire)) {
+                if (!next_read_node->ready.load(std::memory_order_consume)) {
                     return false;
                 }
 
                 // Update tail node to next node.
                 if (tail_.compare_exchange_strong(current_tail,
                                                   next_read_node,
-                                                  std::memory_order_acquire,
-                                                  std::memory_order_relaxed)) {
+                                                  std::memory_order_release,
+                                                  std::memory_order_acquire)) {
                     break;
                 }
-            } while (true);
+            } while ((next_read_node = current_tail->next));
 
             // Copy and destory node data.
             element_type *elem = (element_type*)next_read_node->data;
@@ -246,8 +244,6 @@ namespace toolkit {
          * Extend list
          ********************************************************************************/
         bool __extend_list(element_node *head) {
-            // Empty element node.
-            //element_node *empty_node = nullptr;
             // Lock the current head element node.
             if (!head_.compare_exchange_strong(head,
                                                nullptr,
@@ -263,8 +259,8 @@ namespace toolkit {
             tail_block_node_ = bnode;
 
             // Append new element nodes to circle element node list.
-            (bnode->elems + PerBlockElementCount - 1)->next = head->next;
-            head->next = bnode->elems + 0;
+            bnode->elems[PerBlockElementCount-1].next = head->next;
+            head->next = bnode->elems;
 
             // Update head node to the next node of current head node.
             head_.store(head->next, std::memory_order_relaxed);

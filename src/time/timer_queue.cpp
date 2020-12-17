@@ -19,7 +19,7 @@
 namespace pump {
 namespace time {
 
-    const static uint64_t TIMER_DEFAULT_INTERVAL = 1000;
+    const static uint64_t TIMER_DEFAULT_INTERVAL = 100;
 
     timer_queue::timer_queue() noexcept
       : started_(false), 
@@ -27,13 +27,16 @@ namespace time {
     }
 
     timer_queue::~timer_queue() {
-        /*
+        while (!free_contexts_.empty()) {
+            auto ctx = free_contexts_.front();
+            object_delete(ctx);
+            timers_.pop();
+        }
         while (!timers_.empty()) {
             auto ctx = timers_.top();
             object_delete(ctx);
             timers_.pop();
         }
-        */
     }
 
     bool timer_queue::start(const timeout_callback &cb) {
@@ -95,7 +98,7 @@ namespace time {
 
             // Wait unitl next observe time arrived or new timer added.
             if (next_observe_time_ > now) {
-                if (new_timers_.dequeue(ptr, next_observe_time_ - now)) {
+                if (new_timers_.dequeue(ptr, (next_observe_time_ - now) * 1000)) {
                     ctx = __create_timer_context(ptr);
 
                     timers_.push(ctx);

@@ -29,14 +29,14 @@ namespace time {
 
     uint64_t get_clock_microsecond() {
         return std::chrono::time_point_cast<std::chrono::microseconds>(
-                   std::chrono::steady_clock::now())
+                   std::chrono::system_clock::now())
             .time_since_epoch()
             .count();
     }
 
     uint64_t get_clock_milliseconds() {
         return std::chrono::time_point_cast<std::chrono::milliseconds>(
-                   std::chrono::steady_clock::now())
+                   std::chrono::system_clock::now())
             .time_since_epoch()
             .count();
     }
