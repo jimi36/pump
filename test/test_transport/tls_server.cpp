@@ -90,7 +90,7 @@ class my_tls_acceptor : public std::enable_shared_from_this<my_tls_acceptor> {
                    (double)it->second->read_size / 1024 / 1024);
             printf("tls transport %d disconnected all read pocket %d\n",
                    transp->get_fd(),
-                   (int32_t)it->second->read_size / 4096);
+                   (int32_t)(it->second->read_size / 4096));
             delete it->second;
             transports_.erase(it);
         }

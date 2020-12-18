@@ -140,8 +140,8 @@ namespace time {
 
         // Timers
         std::queue<timer_context*> free_contexts_;
-        typedef toolkit::multi_freelock_queue<timer_sptr> timer_impl_queue;
-        toolkit::block_freelock_queue<timer_impl_queue> new_timers_;
+        typedef toolkit::multi_freelock_queue<timer_sptr> timer_queue_type;
+        toolkit::block_freelock_queue<timer_queue_type> new_timers_;
         std::priority_queue<timer_context*, std::vector<timer_context*>, timer_greater> timers_;
     };
     DEFINE_ALL_POINTER_TYPE(timer_queue);

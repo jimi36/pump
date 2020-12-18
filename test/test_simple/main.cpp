@@ -159,7 +159,7 @@ int test2(int loop) {
         }
     }
     auto end = time::get_clock_milliseconds();
-    printf("freelock_list_queue pop use %dms\n", int(end - beg));
+    printf("multi_freelock_queue pop use %dms\n", int(end - beg));
 
     t1.join();
     t2.join();
@@ -207,7 +207,7 @@ int test2(int loop) {
 
 
     std::mutex mx;
-    std::priority_queue<int> pq;
+    std::queue<int> pq;
 
     std::thread t5([&]() {
         int loop2 = loop / 2;
@@ -218,7 +218,7 @@ int test2(int loop) {
             mx.unlock();
         }
         auto end = time::get_clock_milliseconds();
-        printf("priority_queue push use %dms\n", int(end - beg));
+        printf("std_queue push use %dms\n", int(end - beg));
         });
 
     std::thread t6([&]() {
@@ -229,7 +229,7 @@ int test2(int loop) {
             mx.unlock();
         }
         auto end = time::get_clock_milliseconds();
-        printf("priority_queue push use %dms\n", int(end - beg));
+        printf("std_queue push use %dms\n", int(end - beg));
         });
 
     beg = time::get_clock_milliseconds();
@@ -237,7 +237,7 @@ int test2(int loop) {
         mx.lock();
         if (!pq.empty()) {
             
-            val = pq.top();
+            val = pq.front();
             pq.pop();
             
             i++;
@@ -245,7 +245,7 @@ int test2(int loop) {
         mx.unlock();
     }
     end = time::get_clock_milliseconds();
-    printf("priority_queue pop use %dms\n", int(end - beg));
+    printf("std_queue pop use %dms\n", int(end - beg));
 
     t5.join();
     t6.join();
