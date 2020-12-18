@@ -25,6 +25,7 @@
 #include "pump/toolkit/features.h"
 
 #if defined(OS_WINDOWS)
+/*
 // Avoid including windows.h in a header; we only need a handful of
 // items, so we'll redeclare them here (this is relatively safe since
 // the API generally has to remain stable between Windows versions).
@@ -44,6 +45,7 @@ __declspec(dllimport) int __stdcall ReleaseSemaphore(void *hSemaphore,
                                                      long lReleaseCount,
                                                      long *lpPreviousCount);
 }
+*/
 #elif defined(OS_LINUX)
 #include <semaphore.h>
 #endif
@@ -242,13 +244,15 @@ namespace toolkit {
          * Wait with spinning and timeout
          ********************************************************************************/
         bool __wait_with_spinning(int64_t timeout_usecs = -1) {
-            int64_t old_count = count_.load(std::memory_order_relaxed);
+            int64_t old_count;
             // Is there a better way to set the initial spin count?
             // If we lower it to 1000, testBenaphore becomes 15x slower on my Core
             // i7-5930K Windows PC, as threads start hitting the kernel semaphore.
-            int32_t spin = 1000;
-            while (--spin >= 0 && old_count > 0) {
-                if (count_.compare_exchange_strong(old_count,
+            int32_t spin = 10000;
+            while (--spin >= 0) {
+                old_count = count_.load(std::memory_order_relaxed);
+                if ((old_count > 0) &&
+                    count_.compare_exchange_strong(old_count,
                                                    old_count - 1,
                                                    std::memory_order_acquire,
                                                    std::memory_order_relaxed)) {

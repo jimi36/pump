@@ -27,7 +27,29 @@
 namespace pump {
 namespace toolkit {
 
-    template <typename T, int PerBlockElementCount = 126>
+    // Single block node
+    struct single_block_node {
+        single_block_node() 
+         :  next(nullptr), 
+            data(nullptr), 
+            head(0), 
+            cache_tail(0),
+            tail(0),
+            cache_head(0) {
+        }
+        single_block_node *next;
+        block_t *data;
+            
+        block_t padding1_[64];
+        std::atomic_int32_t head;
+        int32_t cache_tail;
+
+        block_t padding2_[64];
+        std::atomic_int32_t tail;
+        int32_t cache_head;
+    };
+
+    template <typename T, int32_t PerBlockElementCount = 128>
     class LIB_PUMP single_freelock_queue
       : public noncopyable {
 
@@ -36,30 +58,8 @@ namespace toolkit {
         typedef T element_type;
         // Element size
         constexpr static int32_t element_size = sizeof(element_type);
-        // Block data size
-        constexpr static int32_t block_data_size = element_size * PerBlockElementCount;
-
-        // Block node
-        struct block_node {
-            block_node() 
-              : next(nullptr), 
-                data(nullptr), 
-                head(0), 
-                cache_tail(0),
-                tail(0),
-                cache_head(0) {
-            }
-            block_node *next;
-            block_t *data;
-            
-            block_t padding1_[64];
-            std::atomic_int32_t head;
-            int32_t cache_tail;
-
-            block_t padding2_[64];
-            std::atomic_int32_t tail;
-            int32_t cache_head;
-        };
+        // Block node type
+        typedef single_block_node block_node;
 
       public:
         /*********************************************************************************
@@ -67,12 +67,15 @@ namespace toolkit {
          ********************************************************************************/
         single_freelock_queue(int32_t size)
           : capacity_(0),
+            block_element_size_(PerBlockElementCount),
             blk_head_(nullptr),
             blk_tail_(nullptr) {
-            // Init element size mask.
-            element_size_mask_ = ceil_to_pow2(PerBlockElementCount) - 1;
+            // Init block element size.
+            block_element_size_ = ceil_to_pow2(block_element_size_);
+            // Init block element size mask.
+            block_element_size_mask_ = block_element_size_ - 1;
             // Calculate init block count.
-            int32_t blk_count = size / (PerBlockElementCount - 1) + 1;
+            int32_t blk_count = size / (block_element_size_ - 1) + 1;
             if (blk_count < 3) {
                 blk_count = 3;
             }
@@ -99,7 +102,7 @@ namespace toolkit {
                     element_type *elem = (element_type*)(head_blk->data + head * element_size);
                     elem->~element_type();
                     // Move next element position
-                    head = (head + 1) & element_size_mask_;
+                    head = (head + 1) & block_element_size_mask_;
                 }
 
                 if (head_blk != tail_blk) {
@@ -136,7 +139,7 @@ namespace toolkit {
             // Get tail element position
             int32_t tail = blk->tail.load(std::memory_order_relaxed);
             // Get next tail element position
-            int32_t next_tail = (tail + 1) & element_size_mask_;
+            int32_t next_tail = (tail + 1) & block_element_size_mask_;
 
             if (next_tail != blk->cache_head ||
                 next_tail != (blk->cache_head = blk->head.load(std::memory_order_relaxed))) {
@@ -162,7 +165,7 @@ namespace toolkit {
                 new (blk->data + tail * element_size) element_type(data);
 
                 // Get next tail element position
-                next_tail = (tail + 1) & element_size_mask_;
+                next_tail = (tail + 1) & block_element_size_mask_;
 
                 std::atomic_thread_fence(std::memory_order_release);
                 // Move tail position of block
@@ -172,7 +175,7 @@ namespace toolkit {
             } else {
                 // Create new block node
                 block_node *new_blk = object_create<block_node>();
-                new_blk->data = (block_t*)pump_malloc(block_data_size);
+                new_blk->data = (block_t*)pump_malloc(block_element_size_ * element_size);
                 new_blk->next = blk->next;
                 blk->next = new_blk;
                 blk = new_blk;
@@ -189,7 +192,7 @@ namespace toolkit {
                 blk_tail_.store(blk, std::memory_order_relaxed);
 
                 // Update capacity
-                capacity_ += PerBlockElementCount;
+                capacity_ += block_element_size_;
             }
 
             return true;
@@ -215,7 +218,7 @@ namespace toolkit {
                 elem->~element_type();
 
                 // Get next head element position
-                head = (head + 1) & element_size_mask_;
+                head = (head + 1) & block_element_size_mask_;
 
                 std::atomic_thread_fence(std::memory_order_release);
                 // Move head element position
@@ -247,7 +250,7 @@ namespace toolkit {
                 elem->~element_type();
 
                 // Get next head element position
-                head = (head + 1) & element_size_mask_;
+                head = (head + 1) & block_element_size_mask_;
 
                 std::atomic_thread_fence(std::memory_order_release);
                 // Move head element position
@@ -287,20 +290,20 @@ namespace toolkit {
         void __init_list(int32_t blk_count) {
             // Create first block node
             block_node *head = object_create<block_node>();
-            head->data = (block_t*)pump_malloc(block_data_size);
+            head->data = (block_t*)pump_malloc(block_element_size_ * element_size);
             block_node *tail = head;
             // Update capacity
-            capacity_ += PerBlockElementCount;
+            capacity_ += block_element_size_;
 
             // Create left block nodes
             for (int32_t i = 1; i < blk_count; i++) {
                 // Create block node.
                 tail->next = object_create<block_node>();
-                tail->next->data = (block_t*)pump_malloc(block_data_size);
+                tail->next->data = (block_t*)pump_malloc(block_element_size_ * element_size);
                 tail = tail->next;
 
                 // Update capacity
-                capacity_ += PerBlockElementCount;
+                capacity_ += block_element_size_;
             }
 
             // Link tail and head block nodes
@@ -314,8 +317,10 @@ namespace toolkit {
       private:
         // Capacity
         int32_t capacity_;
-        // Element size mask
-        int32_t element_size_mask_;
+        // Block element size
+        int32_t block_element_size_;
+        // Block element size mask
+        int32_t block_element_size_mask_;
         // Head block node
         block_t padding1_[64];
         std::atomic<block_node*> blk_head_;

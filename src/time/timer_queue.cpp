@@ -64,17 +64,8 @@ namespace time {
             return false;
         }
 
-        switch (repeated) {
-            case false:
-                if (PUMP_UNLIKELY(!ptr->__start(this))) {
-                    return false;
-                }
-                break;
-            case true:
-                if (PUMP_UNLIKELY(!ptr->__restart())) {
-                    return false;
-                }
-                break;
+        if (!repeated && !ptr->__start(this)) {
+            return false;
         }
 
         PUMP_DEBUG_CHECK(new_timers_.enqueue(ptr));
@@ -90,34 +81,29 @@ namespace time {
         next_observe_time_ = get_clock_milliseconds() + TIMER_DEFAULT_INTERVAL;
 
         while (1) {
+            // New timer ptr
+            timer_sptr new_timer;
             // Get now milliseconds
             uint64_t now = get_clock_milliseconds();
 
-            // Temp timer ptr
-            timer_sptr ptr;
-
             // Wait unitl next observe time arrived or new timer added.
             if (next_observe_time_ > now) {
-                if (new_timers_.dequeue(ptr, (next_observe_time_ - now) * 1000)) {
-                    ctx = __create_timer_context(ptr);
-
-                    timers_.push(ctx);
-
+                if (new_timers_.dequeue(new_timer, (next_observe_time_ - now) * 1000)) {
+                    ctx = __create_timer_context(new_timer);
                     if (next_observe_time_ > ctx->overtime) {
                         next_observe_time_ = ctx->overtime;
                     }
+                    timers_.push(ctx);
                 }
             }
 
             // Add new timers.
-            while (new_timers_.try_dequeue(ptr)) {
-                ctx = __create_timer_context(ptr);
-
-                timers_.push(ctx);
-
+            while (new_timers_.try_dequeue(new_timer)) {
+                ctx = __create_timer_context(new_timer);
                 if (next_observe_time_ > ctx->overtime) {
                     next_observe_time_ = ctx->overtime;
                 }
+                timers_.push(ctx);
             }
 
             __observe();
@@ -125,22 +111,29 @@ namespace time {
     }
 
     void timer_queue::__observe() {
-        timer_context* ctx = nullptr;
-        auto now = get_clock_milliseconds();
+        // Pending timer context.
+        timer_context *ctx = nullptr;
+        // Get now time ms.
+        uint64_t now = get_clock_milliseconds();
+        // Init next observe time.
         next_observe_time_ = now + TIMER_DEFAULT_INTERVAL;
 
         while (!timers_.empty()) {
-            ctx = timers_.top();
+            // Get top timer context.
+            PUMP_DEBUG_CHECK(ctx = timers_.top());
 
-            if (ctx->overtime > now) {
+            if (PUMP_UNLIKELY(ctx->overtime > now)) {
                 next_observe_time_ = ctx->overtime;
                 break;
             }
 
+            // Callback pending timer.
             cb_(ctx->ptr);
 
+            // Pop top timer context.
             timers_.pop();
 
+            // Save timer context.
             free_contexts_.push(ctx);
         }
     }

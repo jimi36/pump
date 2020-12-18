@@ -182,11 +182,11 @@ namespace pump {
 
     void service::__start_timeout_timer_worker() {
         auto func = [&]() {
+            time::timer_wptr wptr;
             while (running_) {
-                time::timer_wptr wptr;
                 if (timeout_timers_.dequeue(wptr, std::chrono::seconds(1))) {
                     PUMP_LOCK_WPOINTER(timer, wptr);
-                    if (timer) {
+                    if (PUMP_LIKELY(timer)) {
                         timer->handle_timeout();
                     }
                 }

@@ -31,12 +31,14 @@ namespace time {
 
     void timer::handle_timeout() {
         if (__set_status(TIMER_STARTED, TIMER_PENDING)) {
-            if (cb_) {
-                cb_();
-            }
 
-            if (repeated_) {
+            cb_();
+
+            if (PUMP_LIKELY(repeated_)) {
                 if (__set_status(TIMER_PENDING, TIMER_STARTED)) {
+                    // Update timer overtime.
+                    overtime_ = get_clock_milliseconds() + timeout_;
+                    // Add to timer queue
                     queue_->add_timer(shared_from_this(), true);
                 }
             } else {
@@ -55,17 +57,6 @@ namespace time {
 
         // Store timer queue.
         queue_ = queue;
-
-        return true;
-    }
-
-    bool timer::__restart() {
-        if (!is_started()) {
-            return false;
-        }
-
-        // Update timer overtime.
-        overtime_ = get_clock_milliseconds() + timeout_;
 
         return true;
     }

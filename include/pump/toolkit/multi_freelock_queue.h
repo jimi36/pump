@@ -27,7 +27,7 @@
 namespace pump {
 namespace toolkit {
  
-    template <typename T, int PerBlockElementCount = 126>
+    template <typename T, int32_t PerBlockElementCount = 128>
     class LIB_PUMP multi_freelock_queue
       : public noncopyable {
 
@@ -37,32 +37,29 @@ namespace toolkit {
         // Element type size
         constexpr static int32_t element_size = sizeof(element_type);
 
-        // List element node
-        struct list_element_node {
-            list_element_node()
+        // Element node
+        struct element_node {
+            element_node()
              : next(this+1) {
             }
             std::atomic_bool ready;
-            list_element_node *next;
+            element_node *next;
             block_t data[element_size];
         };
-        // Element node type
-        typedef list_element_node element_node;
 
-        // List block node
-        struct list_block_node {
-            list_block_node *next;
+        // Block node
+        struct block_node {
+            block_node *next;
             element_node elems[PerBlockElementCount];
         };
-        typedef list_block_node block_node;
 
       public:
         /*********************************************************************************
          * Constructor
          ********************************************************************************/
         multi_freelock_queue(int32_t size)
-          : tail_block_node_(nullptr),
-            capacity_(0),
+          : capacity_(0),
+            tail_block_node_(nullptr),
             head_(nullptr), 
             tail_(nullptr) {
             __init_list(size);
@@ -272,10 +269,10 @@ namespace toolkit {
         }
 
       private:
-        // Tail block node
-        block_node *tail_block_node_;
         // Element capacity
         std::atomic_int32_t capacity_;
+        // Tail block node
+        block_node *tail_block_node_;
         // Head element node
         block_t padding1_[64];
         std::atomic<element_node*> head_;
