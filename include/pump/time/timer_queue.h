@@ -111,10 +111,12 @@ namespace time {
         // Observer thread
         std::shared_ptr<std::thread> observer_;
 
-        // Timers
+        // New timers
         typedef toolkit::multi_freelock_queue<timer_sptr> timer_impl_queue;
         toolkit::block_freelock_queue<timer_impl_queue> new_timers_;
+        // Observe Timers
         std::multimap<uint64_t, timer_wptr> timers_;
+
     };
     DEFINE_ALL_POINTER_TYPE(timer_queue);
 

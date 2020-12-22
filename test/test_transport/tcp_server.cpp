@@ -84,7 +84,7 @@ class my_tcp_acceptor : public std::enable_shared_from_this<my_tcp_acceptor> {
             printf("tcp transport disconnected all read size %fMB\n",
                    (double)it->second->all_read_size / 1024 / 1024);
             printf("tcp transport disconnected all read pocket %d\n",
-                   (int32_t)it->second->all_read_size / 4096);
+                   (int32_t)(it->second->all_read_size / 4096));
             delete it->second;
             transports_.erase(it);
         }

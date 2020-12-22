@@ -186,7 +186,7 @@ namespace pump {
             while (running_) {
                 if (timeout_timers_.dequeue(wptr, std::chrono::seconds(1))) {
                     PUMP_LOCK_WPOINTER(timer, wptr);
-                    if (PUMP_LIKELY(timer)) {
+                    if (PUMP_LIKELY(!!timer)) {
                         timer->handle_timeout();
                     }
                 }
