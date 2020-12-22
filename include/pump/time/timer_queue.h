@@ -32,17 +32,6 @@
 namespace pump {
 namespace time {
 
-    struct timer_context {
-        uint64_t overtime;
-        timer_wptr ptr;
-    };
-
-    struct timer_greater {
-        constexpr bool operator()(const timer_context *left, const timer_context *right) const {
-            return left->overtime > right->overtime;
-        }
-    };
-
     class timer_queue
       : public toolkit::noncopyable {
 
@@ -103,22 +92,6 @@ namespace time {
          ********************************************************************************/
         void __observe();
 
-        /*********************************************************************************
-         * Create timer context
-         ********************************************************************************/
-        PUMP_INLINE timer_context* __create_timer_context(timer_sptr &ptr) {
-            timer_context *ctx = nullptr;
-            if (free_contexts_.empty()) {
-                ctx = object_create<timer_context>();
-            } else {
-                ctx = free_contexts_.front();
-                free_contexts_.pop();
-            }
-            ctx->overtime = ptr->time();
-            ctx->ptr = ptr;
-            return ctx;
-        }
-
       private:
         /*********************************************************************************
          * Constructor
@@ -139,10 +112,9 @@ namespace time {
         std::shared_ptr<std::thread> observer_;
 
         // Timers
-        std::queue<timer_context*> free_contexts_;
         typedef toolkit::multi_freelock_queue<timer_sptr> timer_impl_queue;
         toolkit::block_freelock_queue<timer_impl_queue> new_timers_;
-        std::priority_queue<timer_context*, std::vector<timer_context*>, timer_greater> timers_;
+        std::multimap<uint64_t, timer_wptr> timers_;
     };
     DEFINE_ALL_POINTER_TYPE(timer_queue);
 

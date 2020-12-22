@@ -27,16 +27,6 @@ namespace time {
     }
 
     timer_queue::~timer_queue() {
-        while (!free_contexts_.empty()) {
-            auto ctx = free_contexts_.front();
-            object_delete(ctx);
-            timers_.pop();
-        }
-        while (!timers_.empty()) {
-            auto ctx = timers_.top();
-            object_delete(ctx);
-            timers_.pop();
-        }
     }
 
     bool timer_queue::start(const timeout_callback &cb) {
@@ -74,36 +64,35 @@ namespace time {
     }
 
     void timer_queue::__observe_thread() {
-        // Timer context
-        timer_context *ctx = nullptr;
-
         // Init next observe time.
         next_observe_time_ = get_clock_milliseconds() + TIMER_DEFAULT_INTERVAL;
 
         while (1) {
-            // New timer ptr
+            // New timer
             timer_sptr new_timer;
+            // New timer overtime
+            uint64_t new_timer_overtime;
             // Get now milliseconds
             uint64_t now = get_clock_milliseconds();
 
             // Wait unitl next observe time arrived or new timer added.
             if (next_observe_time_ > now) {
                 if (new_timers_.dequeue(new_timer, (next_observe_time_ - now) * 1000)) {
-                    ctx = __create_timer_context(new_timer);
-                    if (next_observe_time_ > ctx->overtime) {
-                        next_observe_time_ = ctx->overtime;
+                    new_timer_overtime = new_timer->time();
+                    if (next_observe_time_ > new_timer_overtime) {
+                        next_observe_time_ = new_timer_overtime;
                     }
-                    timers_.push(ctx);
+                    timers_.insert(std::make_pair(new_timer_overtime, new_timer));
                 }
             }
 
-            // Add new timers.
+            // Try to add new timers.
             while (new_timers_.try_dequeue(new_timer)) {
-                ctx = __create_timer_context(new_timer);
-                if (next_observe_time_ > ctx->overtime) {
-                    next_observe_time_ = ctx->overtime;
+                new_timer_overtime = new_timer->time();
+                if (next_observe_time_ > new_timer_overtime) {
+                    next_observe_time_ = new_timer_overtime;
                 }
-                timers_.push(ctx);
+                timers_.insert(std::make_pair(new_timer_overtime, new_timer));
             }
 
             __observe();
@@ -111,30 +100,25 @@ namespace time {
     }
 
     void timer_queue::__observe() {
-        // Pending timer context.
-        timer_context *ctx = nullptr;
         // Get now time ms.
         uint64_t now = get_clock_milliseconds();
         // Init next observe time.
         next_observe_time_ = now + TIMER_DEFAULT_INTERVAL;
 
-        while (!timers_.empty()) {
-            // Get top timer context.
-            PUMP_DEBUG_CHECK(ctx = timers_.top());
-
-            if (PUMP_UNLIKELY(ctx->overtime > now)) {
-                next_observe_time_ = ctx->overtime;
+        auto beg = timers_.begin();
+        auto end = timers_.end();
+        auto it = beg;
+        while (it != end) {
+            if (PUMP_UNLIKELY(it->first > now)) {
+                next_observe_time_ = it->first;
                 break;
             }
+            // Pending timer callback.
+            cb_((it++)->second);
+        }
 
-            // Callback pending timer.
-            cb_(ctx->ptr);
-
-            // Pop top timer context.
-            timers_.pop();
-
-            // Save timer context.
-            free_contexts_.push(ctx);
+        if (beg != it) {
+            timers_.erase(beg, it);
         }
     }
 
