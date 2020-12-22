@@ -64,14 +64,14 @@ namespace time {
     }
 
     void timer_queue::__observe_thread() {
+        // New timer overtime
+        uint64_t new_timer_overtime = 0;
         // Init next observe time.
         next_observe_time_ = get_clock_milliseconds() + TIMER_DEFAULT_INTERVAL;
 
         while (1) {
             // New timer
             timer_sptr new_timer;
-            // New timer overtime
-            uint64_t new_timer_overtime;
             // Get now milliseconds
             uint64_t now = get_clock_milliseconds();
 
@@ -100,25 +100,26 @@ namespace time {
     }
 
     void timer_queue::__observe() {
-        // Get now time ms.
+        // Get now time.
         uint64_t now = get_clock_milliseconds();
-        // Init next observe time.
-        next_observe_time_ = now + TIMER_DEFAULT_INTERVAL;
 
+        // Callback pending timers.  
         auto beg = timers_.begin();
-        auto end = timers_.end();
-        auto it = beg;
-        while (it != end) {
-            if (PUMP_UNLIKELY(it->first > now)) {
-                next_observe_time_ = it->first;
-                break;
-            }
-            // Pending timer callback.
+        auto end = timers_.upper_bound(now);
+        for (auto it = beg; it != end;) {
             cb_((it++)->second);
         }
 
-        if (beg != it) {
-            timers_.erase(beg, it);
+        // Set next observe time.
+        if (end != timers_.end()) {
+            next_observe_time_ = end->first;
+        } else {
+            next_observe_time_ = now + TIMER_DEFAULT_INTERVAL;
+        }
+
+        // Remove pending timers.  
+        if (beg != end) {
+            timers_.erase(beg, end);
         }
     }
 

@@ -157,7 +157,7 @@ namespace pump {
     }
 
     bool service::start_timer(time::timer_sptr &tr) {
-        PUMP_LOCK_SPOINTER(queue, tqueue_);
+        auto queue = tqueue_;
         if (PUMP_LIKELY(!!queue)) {
             return queue->add_timer(tr);
         }
@@ -169,8 +169,8 @@ namespace pump {
 
     void service::__start_posted_task_worker() {
         auto func = [&]() {
+            post_task_type task;
             while (running_) {
-                post_task_type task;
                 if (posted_tasks_.dequeue(task, std::chrono::seconds(1))) {
                     task();
                 }
@@ -185,9 +185,9 @@ namespace pump {
             time::timer_wptr wptr;
             while (running_) {
                 if (timeout_timers_.dequeue(wptr, std::chrono::seconds(1))) {
-                    PUMP_LOCK_WPOINTER(timer, wptr);
-                    if (PUMP_LIKELY(!!timer)) {
-                        timer->handle_timeout();
+                    auto ptr = wptr.lock();
+                    if (PUMP_LIKELY(!!ptr)) {
+                        ptr->handle_timeout();
                     }
                 }
             }
