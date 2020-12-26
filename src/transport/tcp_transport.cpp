@@ -23,7 +23,8 @@ namespace transport {
       : base_transport(TCP_TRANSPORT, nullptr, -1),
         last_send_iob_size_(0),
         last_send_iob_(nullptr),
-        sendlist_(64) {
+        pending_send_cnt_(0),
+        sendlist_(32) {
     }
 
     tcp_transport::~tcp_transport() {
@@ -40,9 +41,9 @@ namespace transport {
         poll::channel::__set_fd(fd);
     }
 
-    transport_error tcp_transport::start(service_ptr sv,
-                                         int32_t max_pending_send_size,
-                                         const transport_callbacks &cbs) {
+    transport_error tcp_transport::start(
+        service_ptr sv,
+        const transport_callbacks &cbs) {
         if (flow_) {
             PUMP_ERR_LOG("tcp_transport::start: flow exists");
             return ERROR_INVALID;
@@ -63,19 +64,15 @@ namespace transport {
             return ERROR_INVALID;
         }
 
-        // Callbacks
+        // Set callbacks
         cbs_ = cbs;
 
-        // Service
+        // Set service
         __set_service(sv);
 
         if (!__open_transport_flow()) {
             PUMP_ERR_LOG("tcp_transport::start: open flow failed");
             return ERROR_FAULT;
-        }
-
-        if (max_pending_send_size > 0) {
-            max_pending_send_size_ = max_pending_send_size;
         }
 
         __set_status(TRANSPORT_STARTING, TRANSPORT_STARTED);
@@ -89,7 +86,11 @@ namespace transport {
             // tracker event callback will be triggered, we can trigger stopped
             // callabck at there.
             if (__set_status(TRANSPORT_STARTED, TRANSPORT_STOPPING)) {
+                // Wait pending send count reduce to zero.
+                while (pending_send_cnt_.load(std::memory_order_relaxed) != 0);
+                // Shutdown transport flow.
                 __shutdown_transport_flow();
+                // If there is data to send, waiting sending finished.
                 if (pending_send_size_.load(std::memory_order_acquire) == 0) {
                     __post_channel_event(shared_from_this(), 0);
                 }
@@ -128,7 +129,7 @@ namespace transport {
     }
 
     transport_error tcp_transport::read_for_once() {
-        while (__is_status(TRANSPORT_STARTED, std::memory_order_relaxed)) {
+        while (__is_status(TRANSPORT_STARTED)) {
             transport_error err = __async_read(READ_ONCE);
             if (err != ERROR_AGAIN) {
                 return err;
@@ -138,7 +139,7 @@ namespace transport {
     }
 
     transport_error tcp_transport::read_for_loop() {
-        while (__is_status(TRANSPORT_STARTED, std::memory_order_relaxed)) {
+        while (__is_status(TRANSPORT_STARTED)) {
             transport_error err = __async_read(READ_LOOP);
             if (err != ERROR_AGAIN) {
                 return err;
@@ -153,15 +154,14 @@ namespace transport {
             return ERROR_INVALID;
         }
 
-        if (PUMP_UNLIKELY(!__is_status(TRANSPORT_STARTED, std::memory_order_relaxed))) {
-            PUMP_ERR_LOG("tcp_transport::send: transport not started");
-            return ERROR_UNSTART;
-        }
+        // Add pending send count.
+        pending_send_cnt_.fetch_add(1);
 
-        if (PUMP_UNLIKELY(max_pending_send_size_ > 0 &&
-                          pending_send_size_.load(std::memory_order_acquire) >= max_pending_send_size_)) {
-            PUMP_WARN_LOG("tcp_transport::send: send buffer list full");
-            return ERROR_AGAIN;
+        auto ec = ERROR_OK;
+        if (PUMP_UNLIKELY(!__is_status(TRANSPORT_STARTED))) {
+            PUMP_ERR_LOG("tcp_transport::send: transport not started");
+            ec = ERROR_UNSTART;
+            goto end;
         }
 
         auto iob = toolkit::io_buffer::create();
@@ -170,15 +170,21 @@ namespace transport {
             if (iob) {
                 iob->sub_ref();
             }
-            return ERROR_AGAIN;
+            ec = ERROR_FAULT;
+            goto end;
         }
 
         if (!__async_send(iob)) {
             PUMP_WARN_LOG("tcp_transport::send: async send failed");
-            return ERROR_FAULT;
+            ec = ERROR_FAULT;
+            goto end;
         }
 
-        return ERROR_OK;
+    end:
+        // Resuce pending send count.
+        pending_send_cnt_.fetch_sub(1);
+
+        return ec;
     }
 
     transport_error tcp_transport::send(toolkit::io_buffer_ptr iob) {
@@ -187,23 +193,27 @@ namespace transport {
             return ERROR_INVALID;
         }
 
-        if (PUMP_UNLIKELY(!__is_status(TRANSPORT_STARTED, std::memory_order_relaxed))) {
+        // Add pending send count.
+        pending_send_cnt_.fetch_add(1);
+
+        auto ec = ERROR_OK;
+        if (PUMP_UNLIKELY(!__is_status(TRANSPORT_STARTED))) {
             PUMP_ERR_LOG("tcp_transport::send: transport not started");
-            return ERROR_UNSTART;
+            ec = ERROR_UNSTART;
+            goto end;
         }
 
-        if (PUMP_UNLIKELY(max_pending_send_size_ > 0 &&
-                          pending_send_size_.load(std::memory_order_acquire) >= max_pending_send_size_)) {
-            PUMP_WARN_LOG("tcp_transport::send: send buffer list full");
-            return ERROR_AGAIN;
-        }
+        iob->add_ref();
 
         if (!__async_send(iob)) {
             PUMP_WARN_LOG("tcp_transport::send: async send failed");
-            // User and transport will sub the io buffer refences, so add refences for that.
-            iob->add_ref();
-            return ERROR_FAULT;
+            ec = ERROR_FAULT;
+            goto end;
         }
+        
+    end:
+        // Resuce pending send count.
+        pending_send_cnt_.fetch_sub(1);
 
         return ERROR_OK;
     }
@@ -281,13 +291,12 @@ namespace transport {
             return;
         }
 
-        // Free last send io buffer.
+        // Free last send buffer.
         last_send_iob_->sub_ref();
         last_send_iob_ = nullptr;
 
         // If there are more buffers to send, we should send next one immediately.
-        if (pending_send_size_.fetch_sub(last_send_iob_size_, 
-                                         std::memory_order_release) > last_send_iob_size_) {
+        if (pending_send_size_.fetch_sub(last_send_iob_size_) > last_send_iob_size_) {
             if (!__send_once(flow, nullptr, false)) {
                 PUMP_DEBUG_LOG("tcp_transport::on_send_event: send once failed");
                 __try_doing_disconnected_process();
@@ -336,12 +345,8 @@ namespace transport {
     }
 
     bool tcp_transport::__async_send(toolkit::io_buffer_ptr iob) {
-        // Insert buffer to sendlist.
-        //PUMP_DEBUG_CHECK(sendlist_.push(iob));
-
         // If there are no more buffers, we should try to get next send chance.
-        if (pending_send_size_.fetch_add(iob->data_size(), 
-                                         std::memory_order_release) > 0) {
+        if (pending_send_size_.fetch_add(iob->data_size()) > 0) {
             PUMP_DEBUG_CHECK(sendlist_.push(iob));
             return true;
         }
@@ -388,10 +393,11 @@ namespace transport {
         }
 
         if (PUMP_LIKELY(ret == flow::FLOW_ERR_NO)) {
+            // Free last send buffer.
             last_send_iob_->sub_ref();
             last_send_iob_ = nullptr;
-            if (pending_send_size_.fetch_sub(last_send_iob_size_, 
-                                             std::memory_order_release) == last_send_iob_size_) {
+            // Reduce pending send size.
+            if (pending_send_size_.fetch_sub(last_send_iob_size_) == last_send_iob_size_) {
                 return true;
             }
         }

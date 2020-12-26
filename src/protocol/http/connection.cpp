@@ -57,7 +57,7 @@ namespace protocol {
             tcbs.read_cb = pump_bind(&connection::on_read, wptr, _1, _2);
             tcbs.stopped_cb = pump_bind(&connection::on_stopped, wptr);
             tcbs.disconnected_cb = pump_bind(&connection::on_disconnected, wptr);
-            if (transp_->start(sv, 0, tcbs) != transport::ERROR_OK) {
+            if (transp_->start(sv, tcbs) != transport::ERROR_OK) {
                 return false;
             }
 

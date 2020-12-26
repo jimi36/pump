@@ -116,24 +116,22 @@ namespace transport {
          * Get started status
          ********************************************************************************/
         PUMP_INLINE bool is_started() const {
-            return __is_status(TRANSPORT_STARTED, std::memory_order_relaxed);
+            return __is_status(TRANSPORT_STARTED);
         }
 
       protected:
         /*********************************************************************************
          * Set channel status
          ********************************************************************************/
-        PUMP_INLINE bool __set_status(uint32_t o, uint32_t n) {
-            return transport_state_.compare_exchange_strong(o, n);
+        PUMP_INLINE bool __set_status(uint32_t expected, uint32_t desired) {
+            return transport_state_.compare_exchange_strong(expected, desired);
         }
 
         /*********************************************************************************
          * Check transport is in status
          ********************************************************************************/
-        PUMP_INLINE bool __is_status(
-            uint32_t status,
-            const std::memory_order order = std::memory_order_acquire) const {
-            return transport_state_.load(order) == status;
+        PUMP_INLINE bool __is_status(uint32_t status) const {
+            return transport_state_.load(std::memory_order_acquire) == status;
         }
 
         /*********************************************************************************
@@ -161,7 +159,6 @@ namespace transport {
         base_transport(transport_type type, service_ptr sv, int32_t fd)
             : base_channel(type, sv, fd),
               read_state_(READ_NONE),
-              max_pending_send_size_(-1),
               pending_send_size_(0) {
         }
 
@@ -178,9 +175,9 @@ namespace transport {
         /*********************************************************************************
          * Start
          ********************************************************************************/
-        virtual transport_error start(service_ptr sv,
-                                      int32_t max_pending_send_size,
-                                      const transport_callbacks &cbs) = 0;
+        virtual transport_error start(
+            service_ptr sv,
+            const transport_callbacks &cbs) = 0;
 
         /*********************************************************************************
          * Stop
@@ -235,20 +232,6 @@ namespace transport {
          ********************************************************************************/
         int32_t get_pending_send_size() const {
             return pending_send_size_;
-        }
-
-        /*********************************************************************************
-         * Get max pending send buffer size
-         ********************************************************************************/
-        int32_t get_max_pending_send_size() const {
-            return max_pending_send_size_;
-        }
-
-        /*********************************************************************************
-         * Set max pending send buffer size
-         ********************************************************************************/
-        void set_max_pending_send_size(int32_t max_size) {
-            max_pending_send_size_ = max_size;
         }
 
         /*********************************************************************************
@@ -315,7 +298,6 @@ namespace transport {
         std::atomic_uint read_state_;
 
         // Pending send buffer size
-        int32_t max_pending_send_size_;
         std::atomic_int32_t pending_send_size_;
 
         // Transport callbacks

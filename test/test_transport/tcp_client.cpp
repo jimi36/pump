@@ -47,7 +47,7 @@ class my_tcp_dialer : public std::enable_shared_from_this<my_tcp_dialer> {
             pump_bind(&my_tcp_dialer::on_disconnected_callback, this, transp.get());
 
         transport_ = std::static_pointer_cast<pump::tcp_transport>(transp);
-        if (transport_->start(sv, 4096 * 1024, cbs) != 0)
+        if (transport_->start(sv, cbs) != 0)
             return;
 
         printf("tcp client dialed fd=%d\n", transp->get_fd());

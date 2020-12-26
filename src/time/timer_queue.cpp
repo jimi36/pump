@@ -64,8 +64,6 @@ namespace time {
     }
 
     void timer_queue::__observe_thread() {
-        // New timer overtime
-        uint64_t new_timer_overtime = 0;
         // Init next observe time.
         next_observe_time_ = get_clock_milliseconds() + TIMER_DEFAULT_INTERVAL;
 
@@ -78,21 +76,13 @@ namespace time {
             // Wait unitl next observe time arrived or new timer added.
             if (next_observe_time_ > now) {
                 if (new_timers_.dequeue(new_timer, (next_observe_time_ - now) * 1000)) {
-                    new_timer_overtime = new_timer->time();
-                    if (next_observe_time_ > new_timer_overtime) {
-                        next_observe_time_ = new_timer_overtime;
-                    }
-                    timers_.insert(std::make_pair(new_timer_overtime, new_timer));
+                    timers_.insert(std::make_pair(new_timer->time(), new_timer));
                 }
             }
 
             // Try to add new timers.
             while (new_timers_.try_dequeue(new_timer)) {
-                new_timer_overtime = new_timer->time();
-                if (next_observe_time_ > new_timer_overtime) {
-                    next_observe_time_ = new_timer_overtime;
-                }
-                timers_.insert(std::make_pair(new_timer_overtime, new_timer));
+                timers_.insert(std::make_pair(new_timer->time(), new_timer));
             }
 
             __observe();
@@ -100,26 +90,35 @@ namespace time {
     }
 
     void timer_queue::__observe() {
-        // Get now time.
+        // Get current time.
         uint64_t now = get_clock_milliseconds();
 
-        // Callback pending timers.  
         auto beg = timers_.begin();
-        auto end = timers_.upper_bound(now);
-        for (auto it = beg; it != end;) {
-            cb_((it++)->second);
+        auto end = timers_.end();
+        if (beg == end) {
+            next_observe_time_ = now + TIMER_DEFAULT_INTERVAL;
+            return;
+        } else if (beg->first > now) {
+            next_observe_time_ = beg->first;
+            return;
         }
 
-        // Set next observe time.
-        if (end != timers_.end()) {
-            next_observe_time_ = end->first;
+        // Callback pending timers.  
+        auto pending_end = timers_.upper_bound(now);
+        for (auto it = beg; it != pending_end; ++it) {
+            cb_(it->second);
+        }
+
+        // Update next observe time.
+        if (pending_end != end) {
+            next_observe_time_ = pending_end->first;
         } else {
             next_observe_time_ = now + TIMER_DEFAULT_INTERVAL;
         }
 
-        // Remove pending timers.  
-        if (beg != end) {
-            timers_.erase(beg, end);
+        // Remove pending timers.
+        if (beg != pending_end) {
+            timers_.erase(beg, pending_end);
         }
     }
 

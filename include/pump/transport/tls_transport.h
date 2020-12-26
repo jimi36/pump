@@ -55,9 +55,9 @@ namespace transport {
         /*********************************************************************************
          * Start tls transport
          ********************************************************************************/
-        virtual transport_error start(service_ptr sv,
-                                      int32_t max_pending_send_size,
-                                      const transport_callbacks &cbs) override;
+        virtual transport_error start(
+            service_ptr sv,
+            const transport_callbacks &cbs) override;
 
         /*********************************************************************************
          * Stop
@@ -170,9 +170,11 @@ namespace transport {
         volatile int32_t last_send_iob_size_;
         volatile toolkit::io_buffer_ptr last_send_iob_;
 
-        // When sending data, transport will append buffer to sendlist at first. On
-        // triggering send event, transport will send buffer in the sendlist.
-        toolkit::multi_freelock_queue<toolkit::io_buffer_ptr> sendlist_;
+        // Pending send count
+        std::atomic_int32_t pending_send_cnt_;
+
+        // Send buffer list
+        toolkit::multi_freelock_queue<toolkit::io_buffer_ptr, 8> sendlist_;
     };
 
 }  // namespace transport

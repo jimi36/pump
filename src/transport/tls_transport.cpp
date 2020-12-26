@@ -23,7 +23,8 @@ namespace transport {
       : base_transport(TLS_TRANSPORT, nullptr, -1),
         last_send_iob_size_(0),
         last_send_iob_(nullptr),
-        sendlist_(1024) {
+        pending_send_cnt_(0),
+        sendlist_(32) {
     }
 
     tls_transport::~tls_transport() {
@@ -46,9 +47,9 @@ namespace transport {
         poll::channel::__set_fd(flow->get_fd());
     }
 
-    transport_error tls_transport::start(service_ptr sv,
-                                         int32_t max_pending_send_size,
-                                         const transport_callbacks &cbs) {
+    transport_error tls_transport::start(
+        service_ptr sv,
+        const transport_callbacks &cbs) {
         if (!flow_) {
             PUMP_ERR_LOG("tls_transport::start: flow invalid");
             return ERROR_INVALID;
@@ -69,15 +70,11 @@ namespace transport {
             return ERROR_INVALID;
         }
 
-        // Callbacks
+        // Set callbacks
         cbs_ = cbs;
 
-        // Service
+        // Set service
         __set_service(sv);
-
-        if (max_pending_send_size > 0) {
-            max_pending_send_size_ = max_pending_send_size;
-        }
 
         __set_status(TRANSPORT_STARTING, TRANSPORT_STARTED);
 
@@ -90,7 +87,11 @@ namespace transport {
             // tracker event callback will be triggered, we can trigger stopped
             // callabck at there.
             if (__set_status(TRANSPORT_STARTED, TRANSPORT_STOPPING)) {
+                // Wait pending send count reduce to zero.
+                while (pending_send_cnt_.load(std::memory_order_relaxed) != 0);
+                // Shutdown transport flow.
                 __shutdown_transport_flow();
+                // If there is data to send, waiting sending finished.
                 if (pending_send_size_.load(std::memory_order_acquire) == 0) {
                     __post_channel_event(shared_from_this(), 0);
                 }
@@ -129,7 +130,7 @@ namespace transport {
     }
 
     transport_error tls_transport::read_for_once() {
-        while (__is_status(TRANSPORT_STARTED, std::memory_order_relaxed)) {
+        while (__is_status(TRANSPORT_STARTED)) {
             transport_error err = __async_read(READ_ONCE);
             if (err != ERROR_AGAIN) {
                 return err;
@@ -139,7 +140,7 @@ namespace transport {
     }
 
     transport_error tls_transport::read_for_loop() {
-        while (__is_status(TRANSPORT_STARTED, std::memory_order_relaxed)) {
+        while (__is_status(TRANSPORT_STARTED)) {
             transport_error err = __async_read(READ_LOOP);
             if (err != ERROR_AGAIN) {
                 return err;
@@ -154,15 +155,14 @@ namespace transport {
             return ERROR_INVALID;
         }
 
-        if (PUMP_UNLIKELY(!__is_status(TRANSPORT_STARTED, std::memory_order_relaxed))) {
-            PUMP_ERR_LOG("tls_transport::send: transport not started");
-            return ERROR_UNSTART;
-        }
+        // Add pending send count.
+        pending_send_cnt_.fetch_add(1);
 
-        if (PUMP_UNLIKELY(max_pending_send_size_ > 0 &&
-                          pending_send_size_.load(std::memory_order_acquire) >= max_pending_send_size_)) {
-            PUMP_WARN_LOG("tls_transport::send: send buffer list full");
-            return ERROR_AGAIN;
+        auto ec = ERROR_OK;
+        if (PUMP_UNLIKELY(!__is_status(TRANSPORT_STARTED))) {
+            PUMP_ERR_LOG("tls_transport::send: transport not started");
+            ec = ERROR_UNSTART;
+            goto end;
         }
 
         auto iob = toolkit::io_buffer::create();
@@ -171,15 +171,21 @@ namespace transport {
             if (!iob) {
                 iob->sub_ref();
             }
-            return ERROR_AGAIN;
+            ec = ERROR_AGAIN;
+            goto end;
         }
 
         if (!__async_send(iob)) {
             PUMP_WARN_LOG("tls_transport::send: async send failed");
-            return ERROR_FAULT;
+            ec = ERROR_FAULT;
+            goto end;
         }
 
-        return ERROR_OK;
+    end:
+        // Resuce pending send count.
+        pending_send_cnt_.fetch_sub(1);
+
+        return ec;
     }
 
     transport_error tls_transport::send(toolkit::io_buffer_ptr iob) {
@@ -188,25 +194,30 @@ namespace transport {
             return ERROR_INVALID;
         }
 
-        if (PUMP_UNLIKELY(!__is_status(TRANSPORT_STARTED, std::memory_order_relaxed))) {
+        // Add pending send count.
+        pending_send_cnt_.fetch_add(1);
+
+        auto ec = ERROR_OK;
+        if (PUMP_UNLIKELY(!__is_status(TRANSPORT_STARTED))) {
             PUMP_ERR_LOG("tls_transport::send: not started");
-            return ERROR_UNSTART;
+            ec = ERROR_UNSTART;
+            goto end;
         }
 
-        if (PUMP_UNLIKELY(max_pending_send_size_ > 0 &&
-                          pending_send_size_.load(std::memory_order_acquire) >= max_pending_send_size_)) {
-            PUMP_WARN_LOG("tls_transport::send: send buffer list full");
-            return ERROR_AGAIN;
-        }
+        iob->add_ref();
 
         if (!__async_send(iob)) {
             PUMP_WARN_LOG("tcp_transport::send: async send failed");
             // User and transport will sub the io buffer refences, so add refences for that.
-            iob->add_ref();
-            return ERROR_FAULT;
+            ec = ERROR_FAULT;
+            goto end;
         }
 
-        return ERROR_OK;
+    end:
+        // Resuce pending send count.
+        pending_send_cnt_.fetch_sub(1);
+
+        return ec;
     }
 
     void tls_transport::on_channel_event(int32_t ev) {

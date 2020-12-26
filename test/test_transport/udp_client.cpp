@@ -52,7 +52,7 @@ void start_udp_client(const std::string &ip, uint16_t port) {
     cbs.stopped_cb = pump_bind(&my_udp_client::on_stopped_callback,
                                udp_client.get(), transport.get());
 
-    if (transport->start(sv, 0, cbs) != 0) {
+    if (transport->start(sv, cbs) != 0) {
         printf("udp client start error\n");
         return;
     }

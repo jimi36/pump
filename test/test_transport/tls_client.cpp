@@ -33,7 +33,7 @@ class my_tls_dialer : public std::enable_shared_from_this<my_tls_dialer> {
         cbs.disconnected_cb =
             pump_bind(&my_tls_dialer::on_disconnected_callback, this, transp.get());
 
-        if (transport_->start(sv, 0, cbs) != 0)
+        if (transport_->start(sv, cbs) != 0)
             return;
 
         transport_->read_for_loop();
@@ -75,7 +75,7 @@ class my_tls_dialer : public std::enable_shared_from_this<my_tls_dialer> {
         read_size_ += size;
         read_pocket_size_ += size;
 
-        while (read_pocket_size_ >= send_pocket_size) {
+        if (read_pocket_size_ >= send_pocket_size) {
             read_pocket_size_ -= send_pocket_size;
             send_data();
         }

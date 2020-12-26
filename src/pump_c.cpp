@@ -370,7 +370,7 @@ int pump_c_transport_start(pump_c_service sv,
     impl_cbs.read_from_cb = pump_bind(on_transport_read_from, impl_transp, _1, _2, _3);
     impl_cbs.stopped_cb = pump_bind(on_transport_stopped, impl_transp);
     impl_cbs.disconnected_cb = pump_bind(on_transport_disconnected, impl_transp);
-    if (impl_transp->transp->start(impl_sv->sv, 0, impl_cbs) != 0) {
+    if (impl_transp->transp->start(impl_sv->sv, impl_cbs) != 0) {
         return -1;
     }
 

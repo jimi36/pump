@@ -24,9 +24,9 @@ namespace transport {
         local_address_ = bind_address;
     }
 
-    transport_error udp_transport::start(service_ptr sv,
-                                         int32_t max_pending_send_size,
-                                         const transport_callbacks &cbs) {
+    transport_error udp_transport::start(
+        service_ptr sv,
+        const transport_callbacks &cbs) {
         if (!sv) {
             PUMP_ERR_LOG("udp_transport::start: service invalid");
             return ERROR_INVALID;
@@ -42,10 +42,10 @@ namespace transport {
             return ERROR_INVALID;
         }
 
-        // Callbacks
+        // Set callbacks
         cbs_ = cbs;
 
-        // Service
+        // Set service
         __set_service(sv);
 
         toolkit::defer cleanup([&]() {
@@ -76,7 +76,7 @@ namespace transport {
     }
 
     transport_error udp_transport::read_for_once() {
-        while (__is_status(TRANSPORT_STARTED, std::memory_order_relaxed)) {
+        while (__is_status(TRANSPORT_STARTED)) {
             transport_error err = __async_read(READ_ONCE);
             if (err != ERROR_AGAIN) {
                 return err;
@@ -86,7 +86,7 @@ namespace transport {
     }
 
     transport_error udp_transport::read_for_loop() {
-        while (__is_status(TRANSPORT_STARTED, std::memory_order_relaxed)) {
+        while (__is_status(TRANSPORT_STARTED)) {
             transport_error err = __async_read(READ_LOOP);
             if (err != ERROR_AGAIN) {
                 return err;
@@ -103,7 +103,7 @@ namespace transport {
             return ERROR_INVALID;
         }
 
-        if (PUMP_UNLIKELY(!__is_status(TRANSPORT_STARTED, std::memory_order_relaxed))) {
+        if (PUMP_UNLIKELY(!__is_status(TRANSPORT_STARTED))) {
             PUMP_ERR_LOG("udp_transport::send: not statred");
             return ERROR_UNSTART;
         }

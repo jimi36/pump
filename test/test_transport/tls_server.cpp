@@ -42,7 +42,7 @@ class my_tls_acceptor : public std::enable_shared_from_this<my_tls_acceptor> {
         cbs.disconnected_cb =
             pump_bind(&my_tls_acceptor::on_disconnected_callback, this, transp.get());
 
-        if (transport->start(sv, 0, cbs) == 0) {
+        if (transport->start(sv, cbs) == 0) {
             std::lock_guard<std::mutex> lock(mx_);
             printf("server tls transport accepted %d\n", transp->get_fd());
             transports_[transp.get()] = tctx;
