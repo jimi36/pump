@@ -48,6 +48,10 @@
 #include <strings.h>
 #endif
 
+#if defined(OS_LINUX)
+#include <unistd.h>
+#endif
+
 #if defined(OS_WINDOWS) && defined(pump_EXPORTS)
 #define LIB_PUMP __declspec(dllexport)
 #else
@@ -101,10 +105,18 @@
 #define pump_strncasecmp strncasecmp
 #endif
 
+#if defined(OS_WINDOWS)
+#define pump_sleep Sleep
+#else
+#define pump_sleep sleep
+#endif
+
 #if defined(WITH_SWTCHTOTHREAD)
 #define pump_sched_yield SwitchToThread
 #elif defined(WITH_SCHEDYIELD)
 #define pump_sched_yield sched_yield
+#elif defined(WITH_SCHEDSLEEP)
+#define pump_sched_yield() pump_sleep(0)
 #endif
 
 #endif
