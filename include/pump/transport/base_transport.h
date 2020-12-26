@@ -231,7 +231,7 @@ namespace transport {
          * Get pending send buffer size
          ********************************************************************************/
         int32_t get_pending_send_size() const {
-            return pending_send_size_;
+            return pending_send_size_.load(std::memory_order_relaxed);
         }
 
         /*********************************************************************************

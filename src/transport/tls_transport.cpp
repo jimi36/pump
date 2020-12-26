@@ -155,17 +155,19 @@ namespace transport {
             return ERROR_INVALID;
         }
 
+        auto ec = ERROR_OK;
+        toolkit::io_buffer *iob = nullptr;
+
         // Add pending send count.
         pending_send_cnt_.fetch_add(1);
 
-        auto ec = ERROR_OK;
         if (PUMP_UNLIKELY(!__is_status(TRANSPORT_STARTED))) {
             PUMP_ERR_LOG("tls_transport::send: transport not started");
             ec = ERROR_UNSTART;
             goto end;
         }
 
-        auto iob = toolkit::io_buffer::create();
+        iob = toolkit::io_buffer::create();
         if (PUMP_UNLIKELY(!iob || !iob->append(b, size))) {
             PUMP_WARN_LOG("tls_transport::send: new buffer failed");
             if (!iob) {
@@ -194,10 +196,11 @@ namespace transport {
             return ERROR_INVALID;
         }
 
+        auto ec = ERROR_OK;
+
         // Add pending send count.
         pending_send_cnt_.fetch_add(1);
 
-        auto ec = ERROR_OK;
         if (PUMP_UNLIKELY(!__is_status(TRANSPORT_STARTED))) {
             PUMP_ERR_LOG("tls_transport::send: not started");
             ec = ERROR_UNSTART;
@@ -208,7 +211,6 @@ namespace transport {
 
         if (!__async_send(iob)) {
             PUMP_WARN_LOG("tcp_transport::send: async send failed");
-            // User and transport will sub the io buffer refences, so add refences for that.
             ec = ERROR_FAULT;
             goto end;
         }
