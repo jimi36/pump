@@ -152,7 +152,7 @@ namespace transport {
             return ERROR_INVALID;
         }
 
-        auto ec = ERROR_OK;
+        int32_t ec = ERROR_OK;
         toolkit::io_buffer *iob = nullptr;
 
         // Add pending send count.
@@ -193,7 +193,7 @@ namespace transport {
             return ERROR_INVALID;
         }
 
-        auto ec = ERROR_OK;
+        int32_t ec = ERROR_OK;
 
         // Add pending send count.
         pending_send_cnt_.fetch_add(1);
