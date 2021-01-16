@@ -44,7 +44,7 @@ namespace pump {
 typedef void (*sighandler_t)(int32_t);
 static bool setup_signal(int32_t sig, sighandler_t hdl) {
     if (signal(sig, NULL) != 0) {
-        PUMP_WARN_LOG("pump::setup_signal: signal failed sig=%d", sig);
+        PUMP_WARN_LOG("setup_signal: signal failed sig=%d", sig);
         return false;
     }
 
@@ -58,7 +58,7 @@ bool init() {
     WORD wVersionRequested;
     wVersionRequested = MAKEWORD(2, 2);
     if (::WSAStartup(wVersionRequested, &wsaData) == SOCKET_ERROR) {
-        PUMP_WARN_LOG("pump::init: WSAStartup failed");
+        PUMP_WARN_LOG("init: WSAStartup failed");
         return false;
     }
 #endif
@@ -69,7 +69,7 @@ bool init() {
 
 #if defined(PUMP_HAVE_GNUTLS)
     if (gnutls_global_init() != 0) {
-        PUMP_WARN_LOG("pump::init: gnutls_global_init failed");
+        PUMP_WARN_LOG("init: gnutls_global_init failed");
         return false;
     }
     gnutls_global_set_log_level(0);

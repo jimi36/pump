@@ -44,7 +44,7 @@ namespace net {
             return true;
         }
 #endif
-        PUMP_WARN_LOG("net::set_noblock: with ec=%d", last_errno());
+        PUMP_DEBUG_LOG("net: set_noblock failed %d", last_errno());
         return false;
     }
 
@@ -56,7 +56,7 @@ namespace net {
             return true;
         }
 
-        PUMP_WARN_LOG("net::set_linger: with ec=%d", last_errno());
+        PUMP_DEBUG_LOG("net: set_linger failed %d", last_errno());
         return false;
     }
 
@@ -65,7 +65,7 @@ namespace net {
             return true;
         }
 
-        PUMP_WARN_LOG("net::set_read_bs: with ec=%d", last_errno());
+        PUMP_DEBUG_LOG("net: set_read_bs failed %d", last_errno());
         return false;
     }
 
@@ -74,15 +74,14 @@ namespace net {
             return true;
         }
 
-        PUMP_WARN_LOG("net::set_send_bs: with ec=%d", last_errno());
+        PUMP_DEBUG_LOG("net: set_send_bs failed %d", last_errno());
         return false;
     }
 
     bool set_keeplive(int32_t fd, int32_t keeplive, int32_t interval) {
         int32_t on = 1;
         if (setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, (const block_t*)&on, sizeof(on)) == -1) {
-            PUMP_WARN_LOG(
-                "net::set_keeplive: setsockopt SO_KEEPALIVE with ec=%d", last_errno());
+            PUMP_DEBUG_LOG("net: set_keeplive failed %d", last_errno());
             return false;
         }
 
@@ -101,8 +100,7 @@ namespace net {
                      &bytes,
                      nullptr,
                      nullptr) == -1) {
-            PUMP_ERR_LOG(
-                "net::set_keeplive: WSAIoctl SIO_KEEPALIVE_VALS with ec=%d", last_errno());
+            PUMP_DEBUG_LOG("net: set_keeplive failed %d", last_errno());
             return false;
         }
 #else
@@ -110,8 +108,7 @@ namespace net {
         if (setsockopt(fd, SOL_TCP, TCP_KEEPIDLE, &keeplive, sizeof(keeplive)) == -1 ||
             setsockopt(fd, SOL_TCP, TCP_KEEPINTVL, &interval, sizeof(interval)) == -1 ||
             setsockopt(fd, SOL_TCP, TCP_KEEPCNT, &count, sizeof(count)) == -1) {
-            PUMP_WARN_LOG(
-                "net::set_keeplive: setsockopt TCP_KEEPINTVL with ec=%d", last_errno());
+            PUMP_DEBUG_LOG("net: set_keeplive failed %d", last_errno());
             return false;
         }
 #endif
@@ -123,7 +120,7 @@ namespace net {
             return true;
         }
 
-        PUMP_WARN_LOG("net::set_reuse: with ec=%d", last_errno());
+        PUMP_DEBUG_LOG("net: set_reuse failed %d", last_errno());
         return false;
     }
 
@@ -132,7 +129,7 @@ namespace net {
             return true;
         }
 
-        PUMP_ERR_LOG("net::set_nodelay: with ec=%d", last_errno());
+        PUMP_DEBUG_LOG("net: set_nodelay failed %d", last_errno());
         return false;
     }
 
@@ -142,7 +139,7 @@ namespace net {
             return true;
         }
 
-        PUMP_WARN_LOG("net::update_connect_context: with ec=%d", last_errno());
+        PUMP_DEBUG_LOG("net: update_connect_context failed %d", last_errno());
         return false;
 #else
         return true;
@@ -163,7 +160,7 @@ namespace net {
                      nullptr,
                      nullptr) == SOCKET_ERROR &&
             last_errno() != WSAEWOULDBLOCK) {
-            PUMP_WARN_LOG("net::set_udp_conn_reset: with ec=%d", last_errno());
+            PUMP_DEBUG_LOG("net: set_udp_conn_reset failed %d", last_errno());
             return false;
         }
 #endif
@@ -175,7 +172,7 @@ namespace net {
             return true;
         }
 
-        PUMP_WARN_LOG("net::bind: with ec=%d", last_errno());
+        PUMP_DEBUG_LOG("net: bind failed %d", last_errno());
         return false;
     }
 
@@ -184,14 +181,14 @@ namespace net {
             return true;
         }
 
-        PUMP_WARN_LOG("net::listen: with ec=%d", last_errno());
+        PUMP_DEBUG_LOG("net: listen failed %d", last_errno());
         return false;
     }
 
     int32_t accept(int32_t fd, struct sockaddr *addr, int32_t *addrlen) {
         int32_t client = (int32_t)::accept(fd, addr, (socklen_t*)addrlen);
         if (client < 0) {
-            PUMP_WARN_LOG("net::accept: with ec=%d", last_errno());
+            PUMP_DEBUG_LOG("net: accept failed %d", last_errno());
         }
         return client;
     }
@@ -202,7 +199,7 @@ namespace net {
             if (ec != LANE_EALREADY && 
                 ec != LANE_EWOULDBLOCK && 
                 ec != LANE_EINPROGRESS) {
-                PUMP_WARN_LOG("net::connect: with ec=%d", ec);
+                PUMP_DEBUG_LOG("net: connect failed %d", ec);
                 return false;
             }
         }
@@ -323,7 +320,8 @@ namespace net {
             return true;
         }
 
-        PUMP_WARN_LOG("net::local_address: with ec=%d", last_errno());
+        PUMP_DEBUG_LOG("net: local_address failed %d", last_errno());
+
         return false;
     }
 
@@ -332,7 +330,8 @@ namespace net {
             return true;
         }
 
-        PUMP_WARN_LOG("net::remote_address: with ec=%d", last_errno());
+        PUMP_DEBUG_LOG("net: remote_address failed %d", last_errno());
+
         return false;
     }
 
@@ -352,7 +351,8 @@ namespace net {
             }
         }
 
-        PUMP_WARN_LOG("net::address_to_string");
+        PUMP_DEBUG_LOG("net: address_to_string failed");
+
         return "";
     }
 
@@ -394,7 +394,8 @@ namespace net {
             freeaddrinfo(res);
         }
 
-        PUMP_WARN_LOG("net::string_to_address: address=%s:%d", ip.c_str(), port);
+        PUMP_DEBUG_LOG("net: string_to_address failed");
+
         return false;
     }
 

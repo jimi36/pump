@@ -52,13 +52,13 @@ namespace transport {
 #if defined(PUMP_HAVE_IOCP)
             fd_ = net::create_iocp_socket(domain, SOCK_STREAM, net::get_iocp_handler());
             if (fd_ == -1) {
-                PUMP_ERR_LOG("flow_tcp_acceptor::init: create iocp socket failed");
+                PUMP_DEBUG_LOG("flow_tcp_acceptor: init failed for creating iocp socket failed");
                 return FLOW_ERR_ABORT;
             }
 
             extra_fns_ = net::new_iocp_extra_function(fd_);
             if (!extra_fns_) {
-                PUMP_ERR_LOG("flow_tcp_acceptor::init: new iocp function failed");
+                PUMP_DEBUG_LOG("flow_tcp_acceptor: init failed for newing iocp function failed");
                 return FLOW_ERR_ABORT;
             }
 
@@ -70,28 +70,28 @@ namespace transport {
 #else
             fd_ = net::create_socket(domain, SOCK_STREAM);
             if (fd_ == -1) {
-                PUMP_ERR_LOG("flow_tcp_acceptor::init: create socket failed");
+                PUMP_DEBUG_LOG("flow_tcp_acceptor: init failed for creating socket failed");
                 return FLOW_ERR_ABORT;
             }
 #endif
             if (!net::set_reuse(fd_, 1)) {
-                PUMP_ERR_LOG("flow_tcp_acceptor::init: set reuse failed");
+                PUMP_DEBUG_LOG("flow_tcp_acceptor: init failed for setting socket reuse failed");
                 return FLOW_ERR_ABORT;
             }
             if (!net::set_noblock(fd_, 1)) {
-                PUMP_ERR_LOG("flow_tcp_acceptor::init: set noblock failed");
+                PUMP_DEBUG_LOG("flow_tcp_acceptor: init failed for setting socket noblock failed");
                 return FLOW_ERR_ABORT;
             }
             if (!net::set_nodelay(fd_, 1)) {
-                PUMP_ERR_LOG("flow_tcp_acceptor::init: set nodelay failed");
+                PUMP_DEBUG_LOG("flow_tcp_acceptor: init failed for setting socket nodelay failed");
                 return FLOW_ERR_ABORT;
             }
             if (!net::bind(fd_, (sockaddr*)listen_address.get(), listen_address.len())) {
-                PUMP_ERR_LOG("flow_tcp_acceptor::init: bind failed");
+                PUMP_DEBUG_LOG("flow_tcp_acceptor: init failed for binding socket address failed");
                 return FLOW_ERR_ABORT;
             }
             if (!net::listen(fd_)) {
-                PUMP_ERR_LOG("flow_tcp_acceptor::init: listen failed");
+                PUMP_DEBUG_LOG("flow_tcp_acceptor: init failed for listening failed");
                 return FLOW_ERR_ABORT;
             }
 
@@ -101,16 +101,15 @@ namespace transport {
 #if defined(PUMP_HAVE_IOCP)
         int32_t flow_tcp_acceptor::post_accept() {
             int32_t domain = is_ipv6_ ? AF_INET6 : AF_INET;
-            int32_t client =
-                net::create_iocp_socket(domain, SOCK_STREAM, net::get_iocp_handler());
+            int32_t client = net::create_iocp_socket(domain, SOCK_STREAM, net::get_iocp_handler());
             if (client == -1) {
-                PUMP_WARN_LOG("flow_tcp_acceptor::post_accept: create iocp socket failed");
+                PUMP_DEBUG_LOG("flow_tcp_acceptor: post accept task failed for creating iocp socket failed");
                 return FLOW_ERR_ABORT;
             }
 
             accept_task_->set_client_fd(client);
             if (!net::post_iocp_accept(extra_fns_, accept_task_)) {
-                PUMP_WARN_LOG("flow_tcp_acceptor::post_accept: post iocp accept failed");
+                PUMP_DEBUG_LOG("flow_tcp_acceptor: post accept failed for posting iocp accept task failed");
                 net::close(client);
                 return FLOW_ERR_ABORT;
             }
@@ -123,7 +122,7 @@ namespace transport {
                                           address_ptr remote_address) {
             int32_t client_fd = iocp_task->get_client_fd();
             if (iocp_task->get_errcode() != 0 || client_fd == -1) {
-                PUMP_WARN_LOG("flow_tcp_acceptor::accept: accept failed");
+                PUMP_DEBUG_LOG("flow_tcp_acceptor: accept failed %d", iocp_task->get_errcode());
                 net::close(client_fd);
                 return -1;
             }
@@ -132,10 +131,8 @@ namespace transport {
             sockaddr *remote = nullptr;
             int32_t llen = sizeof(sockaddr_in);
             int32_t rlen = sizeof(sockaddr_in);
-            if (!net::get_iocp_client_address(
-                    extra_fns_, iocp_task, &local, &llen, &remote, &rlen)) {
-                PUMP_WARN_LOG(
-                    "flow_tcp_acceptor::accept: get iocp accepted address falied");
+            if (!net::get_iocp_client_address(extra_fns_, iocp_task, &local, &llen, &remote, &rlen)) {
+                PUMP_DEBUG_LOG("flow_tcp_acceptor: accept failed for getting iocp accepted address falied");
                 net::close(client_fd);
                 return -1;
             }
@@ -145,7 +142,7 @@ namespace transport {
             iocp_task->set_client_fd(0);
             if (!net::set_noblock(client_fd, 1) || 
                 !net::set_nodelay(client_fd, 1)) {
-                PUMP_WARN_LOG("flow_tcp_acceptor::accept: set noblock or nodelay fialed");
+                PUMP_DEBUG_LOG("flow_tcp_acceptor: accept failed for setting socket noblock or nodelay fialed");
                 net::close(client_fd);
                 return -1;
             }
@@ -158,7 +155,7 @@ namespace transport {
             int32_t addrlen = ADDRESS_MAX_LEN;
             int32_t client_fd = net::accept(fd_, (struct sockaddr*)iob_->buffer(), &addrlen);
             if (client_fd == -1) {
-                PUMP_WARN_LOG("flow_tcp_acceptor::accept: accept fialed");
+                PUMP_DEBUG_LOG("flow_tcp_acceptor: accept failed");
                 return -1;
             }
             
@@ -168,8 +165,9 @@ namespace transport {
             net::local_address(client_fd, (sockaddr*)iob_->buffer(), &addrlen);
             local_address->set((sockaddr*)iob_->buffer(), addrlen);
 
-            if (!net::set_noblock(client_fd, 1) || !net::set_nodelay(client_fd, 1)) {
-                PUMP_WARN_LOG("flow_tcp_acceptor::accept: set noblock nodelay fialed");
+            if (!net::set_noblock(client_fd, 1) || 
+                !net::set_nodelay(client_fd, 1)) {
+                PUMP_DEBUG_LOG("flow_tcp_acceptor: accept failed for setting socket noblock or nodelay fialed");
                 net::close(client_fd);
                 return -1;
             }

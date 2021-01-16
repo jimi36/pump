@@ -62,7 +62,7 @@ namespace transport {
                 iocp_task->add_link();
             }
             if (!net::post_iocp_read(iocp_task)) {
-                PUMP_WARN_LOG("flow_tcp::want_to_read: post iocp read failed");
+                PUMP_DEBUG_LOG("flow_tcp: post read task failed for posting iocp read task failed");
                 return FLOW_ERR_ABORT;
             }
             return FLOW_ERR_NO;
@@ -76,6 +76,9 @@ namespace transport {
             if (net::post_iocp_send(send_task_)) {
                 return FLOW_ERR_NO;
             }
+
+            PUMP_DEBUG_LOG("flow_tcp: post send task failed for posting iocp send task failed");
+
             return FLOW_ERR_ABORT;
         }
 
@@ -91,7 +94,10 @@ namespace transport {
                 if (net::post_iocp_send(send_task_)) {
                     return FLOW_ERR_AGAIN;
                 }
+
+                PUMP_DEBUG_LOG("flow_tcp: send failed for posting iocp send task failed");
             }
+
             return FLOW_ERR_ABORT;
         }
 #else
@@ -104,10 +110,11 @@ namespace transport {
                     return FLOW_ERR_NO;
                 }
                 return FLOW_ERR_AGAIN;
-            }
-            else if (size < 0) {
+            } else if (size < 0) {
                 return FLOW_ERR_AGAIN;
             }
+
+            PUMP_DEBUG_LOG("flow_tcp: want to send failed %d", size);
 
             return FLOW_ERR_ABORT;
         }
@@ -131,6 +138,8 @@ namespace transport {
             } else if (size < 0) {
                 return FLOW_ERR_AGAIN;
             }
+
+            PUMP_DEBUG_LOG("flow_tcp: send failed %d", size);
 
             return FLOW_ERR_ABORT;
         }

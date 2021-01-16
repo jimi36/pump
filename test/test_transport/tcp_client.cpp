@@ -174,8 +174,8 @@ class time_report {
             /*
             if (b->second->all_read_size_ >= 100 * 1024 * 1024 &&
                 b->second->transport_->is_started()) {
-                b->second->transport_->force_stop();
-                start_once_dialer();
+                b->second->transport_->stop();
+                //start_once_dialer();
             }
             */
         }

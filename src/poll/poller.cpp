@@ -62,12 +62,12 @@ namespace poll {
 #if !defined(PUMP_HAVE_IOCP)
     bool poller::add_channel_tracker(channel_tracker_sptr &tracker) {
         if (!started_.load(std::memory_order_relaxed)) {
-            PUMP_WARN_LOG("poller::add_channel_tracker: poller not started");
+            PUMP_DEBUG_LOG("poller: add channel tracker failed for poller not started");
             return false;
         }
 
         if (!tracker->set_tracked(true)) {
-            PUMP_WARN_LOG("poller::add_channel_tracker: tracker already tracked");
+            PUMP_DEBUG_LOG("poller: add channel tracker failed for tracker already tracked");
             PUMP_ASSERT(false);
             return false;
         }
@@ -99,12 +99,12 @@ namespace poll {
 
     bool poller::resume_channel_tracker(channel_tracker_ptr tracker) {
         if (!tracker->is_started()) {
-            PUMP_WARN_LOG("poller::resume_channel_tracker: tracker not started");
+            PUMP_DEBUG_LOG("poller: resume channel tracker failed for tracker not started");
             return false;
         }
 
         if (!tracker->set_tracked(true)) {
-            PUMP_WARN_LOG("poller::add_channel_tracker: tracker already tracked");
+            PUMP_DEBUG_LOG("poller: resume channel tracker failed for tracker already tracked");
             return false;
         }
 
@@ -114,7 +114,7 @@ namespace poll {
 
     bool poller::push_channel_event(channel_sptr &c, int32_t event) {
         if (!started_.load()) {
-            PUMP_WARN_LOG("poller::push_channel_event: poller not started");
+            PUMP_DEBUG_LOG("poller: push channel event failed for poller not started");
             return false;
         }
 
@@ -154,8 +154,7 @@ namespace poll {
 
                 PUMP_LOCK_SPOINTER(ch, tracker->get_channel());
                 if (!ch) {
-                    PUMP_WARN_LOG(
-                        "poller::__handle_channel_tracker_events: channel invalid");
+                    PUMP_DEBUG_LOG("poller: remove trakcer for invalid channel");
                     trackers_.erase(tracker);
                     break;
                 }

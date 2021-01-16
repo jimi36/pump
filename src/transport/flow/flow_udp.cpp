@@ -40,24 +40,24 @@ namespace transport {
             fd_ = net::create_socket(domain, SOCK_DGRAM);
 #endif
             if (fd_ == -1) {
-                PUMP_ERR_LOG("flow_udp::init: create socket failed");
+                PUMP_DEBUG_LOG("flow_udp: init failed for creating socket failed");
                 return FLOW_ERR_ABORT;
             }
 
             if (!net::set_reuse(fd_, 1)) {
-                PUMP_ERR_LOG("flow_udp::init: set reuse failed");
+                PUMP_DEBUG_LOG("flow_udp: init failed for setting socket reuse failed");
                 return FLOW_ERR_ABORT;
             }
             if (!net::set_noblock(fd_, 1)) {
-                PUMP_ERR_LOG("flow_udp::init: set noblock failed");
+                PUMP_DEBUG_LOG("flow_udp: init failed for setting socket noblock failed");
                 return FLOW_ERR_ABORT;
             }
             if (!net::bind(fd_, (sockaddr*)bind_address.get(), bind_address.len())) {
-                PUMP_ERR_LOG("flow_udp::init: bind failed");
+                PUMP_DEBUG_LOG("flow_udp: init failed for socket bind address failed");
                 return FLOW_ERR_ABORT;
             }
             if (!net::set_udp_conn_reset(fd_, false)) {
-                PUMP_ERR_LOG("flow_udp::init: set udp conn reset failed");
+                PUMP_DEBUG_LOG("flow_udp: init failed for setting socket conn reset failed");
                 return FLOW_ERR_ABORT;
             }
 
@@ -78,7 +78,7 @@ namespace transport {
                 iocp_task->add_link();
             }
             if (!net::post_iocp_read_from(iocp_task)) {
-                PUMP_WARN_LOG("flow_udp::post_read: post iocp read from failed");
+                PUMP_DEBUG_LOG("flow_udp: post read task failed");
                 return FLOW_ERR_ABORT;
             }
             return FLOW_ERR_NO;

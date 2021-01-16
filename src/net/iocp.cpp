@@ -37,17 +37,18 @@ namespace net {
 
         if (fd == SOCKET_ERROR ||
             CreateIoCompletionPort((HANDLE)fd, iocp, 0, 0) == NULL) {
-            PUMP_WARN_LOG("create_iocp_socket error: ec=%d", last_errno());
+            PUMP_DEBUG_LOG("net: create_iocp_socket failed %d", last_errno());
             close(fd);
             return -1;
         }
+
         return fd;
     }
 
     bool post_iocp_accept(void_ptr ex_fns, iocp_task_ptr task) {
         auto accept_ex = (LPFN_ACCEPTEX)get_iocp_accpet_fn(ex_fns);
         if (!accept_ex) {
-            PUMP_WARN_LOG("net::post_iocp_accept: accept_ex invalid");
+            PUMP_DEBUG_LOG("net: post_iocp_accept failed for invalid accept_ex function");
             return false;
         }
 
@@ -69,7 +70,7 @@ namespace net {
         }
         task->sub_link();
 
-        PUMP_WARN_LOG("net::post_iocp_accept: accept_ex failed with ec=%d", last_errno());
+        PUMP_DEBUG_LOG("net: post_iocp_accept failed %d", last_errno());
 
         return false;
     }
@@ -82,7 +83,7 @@ namespace net {
                                  int32_t *rlen) {
         auto get_addrs = (LPFN_GETACCEPTEXSOCKADDRS)get_accept_addrs_fn(ex_fns);
         if (!get_addrs) {
-            PUMP_WARN_LOG("net::get_iocp_accepted_address: get_addrs invalid");
+            PUMP_DEBUG_LOG("net: get_iocp_accepted_address failed with invalid get_addrs function");
             return false;
         }
 
@@ -94,8 +95,7 @@ namespace net {
                        SO_UPDATE_ACCEPT_CONTEXT,
                        (block_t*)&fd,
                        sizeof(fd)) == SOCKET_ERROR) {
-            PUMP_WARN_LOG(
-                "net::get_iocp_accepted_address: setsockopt failed with ec=%d", last_errno());
+            PUMP_DEBUG_LOG("net: get_iocp_accepted_address failed %d", last_errno());
             return false;
         }
         return true;
@@ -107,7 +107,7 @@ namespace net {
                            int32_t addrlen) {
         auto connect_ex = (LPFN_CONNECTEX)get_iocp_connect_fn(ex_fns);
         if (!connect_ex) {
-            PUMP_WARN_LOG("net::post_iocp_connect: connect_ex invalid");
+            PUMP_DEBUG_LOG("net: post_iocp_connect fialed with invalid connect_ex function");
             return false;
         }
 
@@ -123,7 +123,7 @@ namespace net {
         }
         task->sub_link();
 
-        PUMP_WARN_LOG("net::post_iocp_connect: ec=%d", last_errno());
+        PUMP_DEBUG_LOG("net: post_iocp_connect failed %d", last_errno());
 
         return false;
     }
@@ -139,7 +139,7 @@ namespace net {
         }
         task->sub_link();
 
-        PUMP_WARN_LOG("net::post_iocp_read: WSARecv failed with ec=%d", last_errno());
+        PUMP_DEBUG_LOG("net: post_iocp_read failed %d", last_errno());
 
         return false;
     }
@@ -164,8 +164,7 @@ namespace net {
         }
         task->sub_link();
 
-        PUMP_WARN_LOG(
-            "net::post_iocp_read_from: WSARecvFrom failed with ec=%d", last_errno());
+        PUMP_DEBUG_LOG("net: post_iocp_read_from failed %d", last_errno());
 
         return false;
     }
@@ -186,8 +185,7 @@ namespace net {
         }
         task->sub_link();
 
-        PUMP_WARN_LOG(
-            "net::post_iocp_read_from: WSARecvFrom failed with ec=%d", last_errno());
+        PUMP_DEBUG_LOG("net: post_iocp_read_from failed %d", last_errno());
 
         return false;
     }

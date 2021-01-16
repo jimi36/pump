@@ -60,23 +60,13 @@ int32_t ceil_to_pow2(int32_t x) {
 std::string gbk_to_utf8(const std::string &in) {
     std::string out;
 #if !defined(HAVE_ICONV_HEADER)
-    std::wstring wstr(MultiByteToWideChar(CP_ACP, 0, in.c_str(), -1, NULL, 0) - 1,
-                      wchar_t(0));
-    MultiByteToWideChar(
-        CP_ACP, 0, in.c_str(), -1, (wchar_t*)wstr.data(), (int32_t)wstr.size());
+    std::wstring wstr(
+        MultiByteToWideChar(CP_ACP, 0, in.c_str(), -1, NULL, 0) - 1, wchar_t(0));
+    MultiByteToWideChar(CP_ACP, 0, in.c_str(), -1, (wchar_t*)wstr.data(), (int32_t)wstr.size());
 
     std::string str(
-        WideCharToMultiByte(CP_UTF8, 0, (wchar_t*)wstr.data(), -1, NULL, 0, NULL, NULL) -
-            1,
-        char(0));
-    WideCharToMultiByte(CP_UTF8,
-                        0,
-                        (wchar_t*)wstr.data(),
-                        -1,
-                        (char*)str.data(),
-                        (int32_t)str.size(),
-                        NULL,
-                        NULL);
+        WideCharToMultiByte(CP_UTF8, 0, (wchar_t*)wstr.data(), -1, NULL, 0, NULL, NULL) - 1, char(0));
+    WideCharToMultiByte(CP_UTF8,0, (wchar_t*)wstr.data(), -1, (char*)str.data(), (int32_t)str.size(), NULL, NULL);
 
     out.append(str.data(), str.size());
 #else
@@ -102,25 +92,13 @@ std::string gbk_to_utf8(const std::string &in) {
 std::string utf8_to_gbk(const std::string &in) {
     std::string out;
 #if !defined(HAVE_ICONV_HEADER)
-    std::wstring wstr(MultiByteToWideChar(CP_UTF8, 0, in.c_str(), -1, NULL, 0),
-                      wchar_t(0));
-    MultiByteToWideChar(CP_UTF8,
-                        0,
-                        (LPCSTR)in.c_str(),
-                        -1,
-                        (wchar_t*)wstr.data(),
-                        (int32_t)wstr.size() - 1);
+    std::wstring wstr(
+        MultiByteToWideChar(CP_UTF8, 0, in.c_str(), -1, NULL, 0),wchar_t(0));
+    MultiByteToWideChar(CP_UTF8, 0, (LPCSTR)in.c_str(), -1, (wchar_t*)wstr.data(), (int32_t)wstr.size() - 1);
 
-    std::string str(WideCharToMultiByte(CP_ACP, 0, wstr.data(), -1, NULL, 0, NULL, NULL),
-                    0);
-    WideCharToMultiByte(CP_ACP,
-                        0,
-                        wstr.data(),
-                        -1,
-                        (char*)str.data(),
-                        (int32_t)str.size() - 1,
-                        NULL,
-                        NULL);
+    std::string str(
+        WideCharToMultiByte(CP_ACP, 0, wstr.data(), -1, NULL, 0, NULL, NULL), 0);
+    WideCharToMultiByte(CP_ACP, 0, wstr.data(), -1, (char*)str.data(), (int32_t)str.size() - 1, NULL, NULL);
 
     out.append(str.data(), str.size() - 1);
 #else

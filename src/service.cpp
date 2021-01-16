@@ -56,7 +56,7 @@ namespace pump {
 
     bool service::start() {
         if (running_) {
-            PUMP_ERR_LOG("pump::service::start: had started");
+            PUMP_WARN_LOG("service: start failed for having started");
             return false;
         }
 
@@ -162,7 +162,7 @@ namespace pump {
             return queue->add_timer(tr);
         }
 
-        PUMP_ERR_LOG("pump::service::start_timer: timer queue invalid");
+        PUMP_WARN_LOG("service: start timer failed with invalid timer queue");
 
         return false;
     }

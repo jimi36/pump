@@ -99,7 +99,8 @@ namespace transport {
                 return FLOW_ERR_NO;
             }
 
-            PUMP_WARN_LOG("flow_tls::want_to_read: failed");
+            PUMP_DEBUG_LOG("flow_tls: post read task failed for posting iocp send task");
+
             return FLOW_ERR_ABORT;
         }
 #endif
@@ -112,7 +113,8 @@ namespace transport {
                 return FLOW_ERR_NO;
             }
 
-            PUMP_WARN_LOG("flow_tls::read_from_net: failed");
+            PUMP_DEBUG_LOG("flow_tls: read from net failed %d", size);
+
             return FLOW_ERR_ABORT;
         }
 #else
@@ -126,7 +128,8 @@ namespace transport {
                 return FLOW_ERR_AGAIN;
             }
 
-            PUMP_WARN_LOG("flow_tls::read_from_net: failed");
+            PUMP_DEBUG_LOG("flow_tls: read from net failed %d", size);
+
             return FLOW_ERR_ABORT;
         }
 #endif
@@ -139,7 +142,8 @@ namespace transport {
                 return -1;
             }
 
-            PUMP_WARN_LOG("flow_tls::read_from_net: failed %d", ret);
+            PUMP_DEBUG_LOG("flow_tls: read from net failed %d", ret);
+
             return 0;
         }
 
@@ -164,6 +168,9 @@ namespace transport {
             if (net::post_iocp_send(send_task_)) {
                 return FLOW_ERR_NO;
             }
+
+            PUMP_DEBUG_LOG("flow_tls: post send task failed for posting iocp send task failed");
+
             return FLOW_ERR_ABORT;
         }
 
@@ -178,7 +185,7 @@ namespace transport {
                 if (send_iob->shift(size) > 0) {
                     send_task_->update_io_buffer();
                     if (!net::post_iocp_send(send_task_)) {
-                        PUMP_WARN_LOG("flow_tls::send_to_net: post iocp send failed");
+                        PUMP_DEBUG_LOG("flow_tls: send to net failed for posting iocp send task failed");
                         return FLOW_ERR_ABORT;
                     }
                     return FLOW_ERR_AGAIN;
@@ -190,7 +197,8 @@ namespace transport {
                 return FLOW_ERR_NO;
             }
 
-            PUMP_WARN_LOG("flow_tls::send_to_net: failed");
+            PUMP_DEBUG_LOG("flow_tls: send to net failed");
+
             return FLOW_ERR_ABORT;
         }
 #else
@@ -213,7 +221,8 @@ namespace transport {
                 return FLOW_ERR_AGAIN;
             }
 
-            PUMP_WARN_LOG("flow_tls::want_to_send: failed");
+            PUMP_DEBUG_LOG("flow_tls: want to send failed");
+
             return FLOW_ERR_ABORT;
         }
 
@@ -240,7 +249,8 @@ namespace transport {
                 return FLOW_ERR_AGAIN;
             }
 
-            PUMP_WARN_LOG("flow_tls::send_to_net: failed");
+            PUMP_DEBUG_LOG("flow_tls: send to net failed");
+
             return FLOW_ERR_ABORT;
         }
 #endif

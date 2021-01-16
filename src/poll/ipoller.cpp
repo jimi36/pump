@@ -32,7 +32,7 @@ namespace poll {
     bool iocp_poller::start() {
 #if defined(PUMP_HAVE_IOCP)
         if (started_.load()) {
-            PUMP_ERR_LOG("net::iocp_poller::start: already started");
+            PUMP_ERR_LOG("iocp_poller: start failed for having started");
             return false;
         }
 
@@ -49,7 +49,7 @@ namespace poll {
 
         return true;
 #else
-        PUMP_ERR_LOG("net::iocp_poller::start: not support");
+        PUMP_ERR_LOG("iocp_poller: start failed for not support");
         return false;
 #endif
     }
@@ -86,8 +86,7 @@ namespace poll {
  
                 PUMP_LOCK_SPOINTER(notifier, task->get_notifier());
                 if (!notifier) {
-                    PUMP_WARN_LOG(
-                        "iocp_poller::__work_thread: task channel notifier invalid");
+                    PUMP_DEBUG_LOG("iocp_poller: invalid task channel notifier");
                     task->sub_link();
                     continue;
                 }
@@ -113,8 +112,6 @@ namespace poll {
 
                 PUMP_LOCK_SPOINTER(notifier, task->get_notifier());
                 if (!notifier) {
-                    PUMP_DEBUG_LOG(
-                        "iocp_poller::__work_thread: task channel notifier invalid");
                     task->sub_link();
                     continue;
                 }
