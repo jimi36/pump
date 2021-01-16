@@ -43,7 +43,7 @@ namespace transport {
              *     FLOW_ERR_NO    => success
              *     FLOW_ERR_ABORT => error
              ********************************************************************************/
-            flow_error init(poll::channel_sptr &&ch, const address &bind_address);
+            int32_t init(poll::channel_sptr &&ch, const address &bind_address);
 
 #if defined(PUMP_HAVE_IOCP)
             /*********************************************************************************
@@ -53,7 +53,7 @@ namespace transport {
              *     FLOW_ERR_NO    => success
              *     FLOW_ERR_ABORT => error
              ********************************************************************************/
-            flow_error post_read(net::iocp_task_ptr iocp_task = nullptr);
+            int32_t post_read(net::iocp_task_ptr iocp_task = nullptr);
 #endif
             /*********************************************************************************
              * Read from
@@ -69,6 +69,7 @@ namespace transport {
 #endif
             /*********************************************************************************
              * Send to
+             * Return sent size.
              ********************************************************************************/
             int32_t send(const block_t *b, int32_t size, const address &to_address);
         };

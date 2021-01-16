@@ -35,8 +35,8 @@ namespace transport {
 #endif
         }
 
-        flow_error flow_tcp_dialer::init(poll::channel_sptr &&ch,
-                                         const address &bind_address) {
+        int32_t flow_tcp_dialer::init(poll::channel_sptr &&ch,
+                                      const address &bind_address) {
             PUMP_DEBUG_ASSIGN(ch, ch_, ch);
 
             is_ipv6_ = bind_address.is_ipv6();
@@ -85,7 +85,7 @@ namespace transport {
             return FLOW_ERR_NO;
         }
 
-        flow_error flow_tcp_dialer::post_connect(const address &remote_address) {
+        int32_t flow_tcp_dialer::post_connect(const address &remote_address) {
 #if defined(PUMP_HAVE_IOCP)
             if (!net::post_iocp_connect(extra_fns_, 
                                         dial_task_, 

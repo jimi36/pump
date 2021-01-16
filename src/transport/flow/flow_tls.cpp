@@ -41,14 +41,14 @@ namespace transport {
 #endif
         }
 
-        flow_error flow_tls::init(poll::channel_sptr &ch,
-                                  int32_t fd,
-                                  void_ptr xcred,
-                                  bool client) {
+        int32_t flow_tls::init(poll::channel_sptr &ch,
+                               int32_t fd,
+                               void_ptr xcred,
+                               bool client) {
             PUMP_DEBUG_ASSIGN(ch, ch_, ch);
             PUMP_DEBUG_ASSIGN(fd > 0, fd_, fd);
 
-            session_ = ssl::create_tls_session(xcred, client, MAX_TRANSPORT_BUFFER_SIZE);
+            session_ = ssl::create_tls_session(xcred, client, MAX_TCP_BUFFER_SIZE);
             if (!session_) {
                 return FLOW_ERR_ABORT;
             }
@@ -77,7 +77,7 @@ namespace transport {
 #endif
         }
 
-        flow_error flow_tls::handshake() {
+        int32_t flow_tls::handshake() {
             if (is_handshaked_) {
                 return FLOW_ERR_NO;
             }
@@ -94,7 +94,7 @@ namespace transport {
         }
 
 #if defined(PUMP_HAVE_IOCP)
-        flow_error flow_tls::post_read() {
+        int32_t flow_tls::post_read() {
             if (PUMP_LIKELY(net::post_iocp_read(read_task_))) {
                 return FLOW_ERR_NO;
             }
@@ -105,7 +105,7 @@ namespace transport {
 #endif
 
 #if defined(PUMP_HAVE_IOCP)
-        flow_error flow_tls::read_from_net(net::iocp_task_ptr iocp_task) {
+        int32_t flow_tls::read_from_net(net::iocp_task_ptr iocp_task) {
             int32_t size = iocp_task->get_processed_size();
             if (PUMP_LIKELY(size > 0)) {
                 session_->reset_read_data_size(size);
@@ -116,7 +116,7 @@ namespace transport {
             return FLOW_ERR_ABORT;
         }
 #else
-        flow_error flow_tls::read_from_net() {
+        int32_t flow_tls::read_from_net() {
             toolkit::io_buffer *read_iob = session_->get_net_read_buffer();
             int32_t size = net::read(fd_, read_iob->buffer(), read_iob->buffer_size());
             if (PUMP_LIKELY(size > 0)) {
@@ -143,7 +143,7 @@ namespace transport {
             return 0;
         }
 
-        flow_error flow_tls::send_to_ssl(toolkit::io_buffer_ptr iob) {
+        int32_t flow_tls::send_to_ssl(toolkit::io_buffer_ptr iob) {
             PUMP_ASSERT(iob && iob->data_size() > 0);
             do {
                 int32_t size = ssl::tls_send(session_, iob->data(), iob->data_size());
@@ -159,7 +159,7 @@ namespace transport {
         }
 
 #if defined(PUMP_HAVE_IOCP)
-        flow_error flow_tls::post_send() {
+        int32_t flow_tls::post_send() {
             send_task_->update_io_buffer();
             if (net::post_iocp_send(send_task_)) {
                 return FLOW_ERR_NO;
@@ -167,7 +167,7 @@ namespace transport {
             return FLOW_ERR_ABORT;
         }
 
-        flow_error flow_tls::send_to_net(net::iocp_task_ptr iocp_task) {
+        int32_t flow_tls::send_to_net(net::iocp_task_ptr iocp_task) {
             // net send buffer must has data when using iocp
             toolkit::io_buffer *send_iob = session_->get_net_send_buffer();
             PUMP_ASSERT(send_iob->data_size() > 0);
@@ -194,7 +194,7 @@ namespace transport {
             return FLOW_ERR_ABORT;
         }
 #else
-        flow_error flow_tls::want_to_send() {
+        int32_t flow_tls::want_to_send() {
             toolkit::io_buffer *send_iob = session_->get_net_send_buffer();
             int32_t size = net::send(fd_, send_iob->buffer(), send_iob->data_size());
             if (PUMP_LIKELY(size > 0)) {
@@ -217,7 +217,7 @@ namespace transport {
             return FLOW_ERR_ABORT;
         }
 
-        flow_error flow_tls::send_to_net() {
+        int32_t flow_tls::send_to_net() {
             toolkit::io_buffer *send_iob = session_->get_net_send_buffer();
             uint32_t data_size = send_iob->data_size();
             if (data_size == 0) {

@@ -55,9 +55,7 @@ namespace transport {
         /*********************************************************************************
          * Start tls transport
          ********************************************************************************/
-        virtual transport_error start(
-            service_ptr sv,
-            const transport_callbacks &cbs) override;
+        virtual int32_t start(service_ptr sv, const transport_callbacks &cbs) override;
 
         /*********************************************************************************
          * Stop
@@ -73,23 +71,23 @@ namespace transport {
         /*********************************************************************************
          * Read for once
          ********************************************************************************/
-        virtual transport_error read_for_once();
+        virtual int32_t read_for_once();
 
         /*********************************************************************************
          * Read for loop
          ********************************************************************************/
-        virtual transport_error read_for_loop();
+        virtual int32_t read_for_loop();
 
         /*********************************************************************************
          * Send
          ********************************************************************************/
-        virtual transport_error send(const block_t *b, int32_t size) override;
+        virtual int32_t send(const block_t *b, int32_t size) override;
 
         /*********************************************************************************
          * Send io buffer
          * The ownership of io buffer will be transferred.
          ********************************************************************************/
-        virtual transport_error send(toolkit::io_buffer_ptr iob) override;
+        virtual int32_t send(toolkit::io_buffer_ptr iob) override;
 
       protected:
         /*********************************************************************************
@@ -140,7 +138,7 @@ namespace transport {
         /*********************************************************************************
          * Async read
          ********************************************************************************/
-        transport_error __async_read(uint32_t state);
+        int32_t __async_read(int32_t state);
 
         /*********************************************************************************
          * Async send

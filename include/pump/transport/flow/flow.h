@@ -28,16 +28,15 @@ namespace pump {
 namespace transport {
     namespace flow {
 
-        #define MAX_TRANSPORT_BUFFER_SIZE 4096
+        #define MAX_TCP_BUFFER_SIZE 4096 // 4KB
+        #define MAX_UDP_BUFFER_SIZE 65536 // 64KB
 
-        enum flow_error {
-            FLOW_ERR_NO = 0,
-            FLOW_ERR_ABORT,
-            FLOW_ERR_BUSY,
-            FLOW_ERR_AGAIN,
-            FLOW_ERR_NO_DATA,
-            FLOW_ERR_COUNT
-        };
+        const int32_t FLOW_ERR_NO = 0;
+        const int32_t FLOW_ERR_ABORT = 1;
+        const int32_t FLOW_ERR_BUSY = 2;
+        const int32_t FLOW_ERR_AGAIN = 3;
+        const int32_t FLOW_ERR_NO_DATA = 4;
+        const int32_t FLOW_ERR_COUNT = 5;
 
         class flow_base 
           : public toolkit::noncopyable {

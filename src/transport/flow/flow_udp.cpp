@@ -20,15 +20,13 @@ namespace pump {
 namespace transport {
     namespace flow {
 
-        const static uint32_t UDP_BUFFER_SIZE = 1024 * 64;
-
         flow_udp::flow_udp() noexcept {
         }
 
         flow_udp::~flow_udp() {
         }
 
-        flow_error flow_udp::init(poll::channel_sptr &&ch, const address &bind_address) {
+        int32_t flow_udp::init(poll::channel_sptr &&ch, const address &bind_address) {
             PUMP_DEBUG_ASSIGN(ch, ch_, ch);
 
             int32_t domain = AF_INET;
@@ -67,10 +65,10 @@ namespace transport {
         }
 
 #if defined(PUMP_HAVE_IOCP)
-        flow_error flow_udp::post_read(net::iocp_task_ptr iocp_task) {
+        int32_t flow_udp::post_read(net::iocp_task_ptr iocp_task) {
             if (!iocp_task) {
                 auto iob = toolkit::io_buffer::create();
-                iob->init_with_size(MAX_TRANSPORT_BUFFER_SIZE);
+                iob->init_with_size(MAX_UDP_BUFFER_SIZE);
                 iocp_task = net::new_iocp_task();
                 iocp_task->set_fd(fd_);
                 iocp_task->set_notifier(ch_);
@@ -90,8 +88,8 @@ namespace transport {
         int32_t flow_udp::send(const block_t *b, int32_t size, const address &to_address) {
             return net::send_to(fd_, 
                                 b, 
-                                size,
-                                (struct sockaddr*)to_address.get(),
+                                size, 
+                                (struct sockaddr*)to_address.get(), 
                                 to_address.len());
         }
 

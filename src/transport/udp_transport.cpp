@@ -24,9 +24,7 @@ namespace transport {
         local_address_ = bind_address;
     }
 
-    transport_error udp_transport::start(
-        service_ptr sv,
-        const transport_callbacks &cbs) {
+    int32_t udp_transport::start(service_ptr sv, const transport_callbacks &cbs) {
         if (!sv) {
             PUMP_ERR_LOG("udp_transport: start failed with invalid service");
             return ERROR_INVALID;
@@ -75,9 +73,9 @@ namespace transport {
         }
     }
 
-    transport_error udp_transport::read_for_once() {
+    int32_t udp_transport::read_for_once() {
         while (__is_status(TRANSPORT_STARTED)) {
-            transport_error err = __async_read(READ_ONCE);
+            int32_t err = __async_read(READ_ONCE);
             if (err != ERROR_AGAIN) {
                 return err;
             }
@@ -85,9 +83,9 @@ namespace transport {
         return ERROR_UNSTART;
     }
 
-    transport_error udp_transport::read_for_loop() {
+    int32_t udp_transport::read_for_loop() {
         while (__is_status(TRANSPORT_STARTED)) {
-            transport_error err = __async_read(READ_LOOP);
+            int32_t err = __async_read(READ_LOOP);
             if (err != ERROR_AGAIN) {
                 return err;
             }
@@ -95,9 +93,9 @@ namespace transport {
         return ERROR_UNSTART;
     }
 
-    transport_error udp_transport::send(const block_t *b,
-                                        int32_t size,
-                                        const address &address) {
+    int32_t udp_transport::send(const block_t *b,
+                                int32_t size,
+                                const address &address) {
         if (!b || size == 0) {
             PUMP_ERR_LOG("udp_transport: send failed with invalid buffer");
             return ERROR_INVALID;
@@ -127,8 +125,8 @@ namespace transport {
         int32_t size = 0;
         const block_t *b = iocp_task->get_processed_data(&size);
 #else
-        block_t b[MAX_TRANSPORT_BUFFER_SIZE];
-        int32_t size = flow->read_from(b, MAX_TRANSPORT_BUFFER_SIZE, &from_addr);
+        block_t b[MAX_UDP_BUFFER_SIZE];
+        int32_t size = flow->read_from(b, MAX_UDP_BUFFER_SIZE, &from_addr);
 #endif
         if (PUMP_LIKELY(size > 0)) {
 #if defined(PUMP_HAVE_IOCP)
@@ -138,16 +136,16 @@ namespace transport {
 #endif
             // If read state is READ_ONCE, change it to READ_PENDING.
             // If read state is READ_LOOP, last state will be seted to READ_LOOP.
-            uint32_t last_state = (uint32_t)READ_ONCE;
-            read_state_.compare_exchange_strong(last_state, (uint32_t)READ_PENDING);
+            int32_t last_state = READ_ONCE;
+            read_state_.compare_exchange_strong(last_state, READ_PENDING);
 
             // Do read callback.
             cbs_.read_from_cb(b, size, from_addr);
 
             // If last read state is READ_ONCE, try to change read state to READ_NONE.
-            if (last_state == (uint32_t)READ_ONCE) {
-                last_state = (uint32_t)READ_PENDING;
-                if (read_state_.compare_exchange_strong(last_state, (uint32_t)READ_NONE)) {
+            if (last_state == READ_ONCE) {
+                last_state = READ_PENDING;
+                if (read_state_.compare_exchange_strong(last_state, READ_NONE)) {
                     return;
                 }
             }
@@ -183,11 +181,11 @@ namespace transport {
         return true;
     }
 
-    transport_error udp_transport::__async_read(uint32_t state) {
-        uint32_t current_state = __change_read_state(state);
-        if (current_state >= (uint32_t)READ_PENDING) {
+    int32_t udp_transport::__async_read(int32_t state) {
+        int32_t current_state = __change_read_state(state);
+        if (current_state >= READ_PENDING) {
             return ERROR_OK;
-        } else if (current_state == (uint32_t)READ_INVALID) {
+        } else if (current_state == READ_INVALID) {
             return ERROR_AGAIN;
         }
 

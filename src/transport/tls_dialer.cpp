@@ -31,7 +31,7 @@ namespace transport {
         xcred_ = ssl::create_tls_client_certificate();
     }
 
-    transport_error tls_dialer::start(service_ptr sv, const dialer_callbacks &cbs) {
+    int32_t tls_dialer::start(service_ptr sv, const dialer_callbacks &cbs) {
         if (!xcred_) {
             PUMP_ERR_LOG("tls_dialer: start failed with invalid certificate");
             return ERROR_INVALID;

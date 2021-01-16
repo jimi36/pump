@@ -43,7 +43,7 @@ namespace transport {
              *     FLOW_ERR_NO    => success
              *     FLOW_ERR_ABORT => error
              ********************************************************************************/
-            flow_error init(poll::channel_sptr &&ch, const address &listen_address);
+            int32_t init(poll::channel_sptr &&ch, const address &listen_address);
 
 #if defined(PUMP_HAVE_IOCP)
             /*********************************************************************************
@@ -53,15 +53,15 @@ namespace transport {
              *     FLOW_ERR_NO    => success
              *     FLOW_ERR_ABORT => error
              ********************************************************************************/
-            flow_error post_accept();
+            int32_t post_accept();
 #endif
             /*********************************************************************************
              * Accept
              ********************************************************************************/
 #if defined(PUMP_HAVE_IOCP)
             int32_t accept(net::iocp_task_ptr iocp_task,
-                         address_ptr local_address,
-                         address_ptr remote_address);
+                           address_ptr local_address,
+                           address_ptr remote_address);
 #else
             int32_t accept(address_ptr local_address, address_ptr remote_address);
 #endif

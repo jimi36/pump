@@ -47,9 +47,7 @@ namespace transport {
         poll::channel::__set_fd(flow->get_fd());
     }
 
-    transport_error tls_transport::start(
-        service_ptr sv,
-        const transport_callbacks &cbs) {
+    int32_t tls_transport::start(service_ptr sv, const transport_callbacks &cbs) {
         if (!flow_) {
             PUMP_ERR_LOG("tls_transport: start failed with invalid flow");
             return ERROR_INVALID;
@@ -129,9 +127,9 @@ namespace transport {
         }
     }
 
-    transport_error tls_transport::read_for_once() {
+    int32_t tls_transport::read_for_once() {
         while (__is_status(TRANSPORT_STARTED)) {
-            transport_error err = __async_read(READ_ONCE);
+            int32_t err = __async_read(READ_ONCE);
             if (err != ERROR_AGAIN) {
                 return err;
             }
@@ -139,9 +137,9 @@ namespace transport {
         return ERROR_UNSTART;
     }
 
-    transport_error tls_transport::read_for_loop() {
+    int32_t tls_transport::read_for_loop() {
         while (__is_status(TRANSPORT_STARTED)) {
-            transport_error err = __async_read(READ_LOOP);
+            int32_t err = __async_read(READ_LOOP);
             if (err != ERROR_AGAIN) {
                 return err;
             }
@@ -149,23 +147,25 @@ namespace transport {
         return ERROR_UNSTART;
     }
 
-    transport_error tls_transport::send(const block_t *b, int32_t size) {
+    int32_t tls_transport::send(const block_t *b, int32_t size) {
         if (!b || size == 0) {
             PUMP_ERR_LOG("tls_transport: send failed with invalid buffer");
             return ERROR_INVALID;
         }
 
+        auto ec = ERROR_OK;
+        toolkit::io_buffer *iob = nullptr;
+
         // Add pending send count.
         pending_send_cnt_.fetch_add(1);
 
-        auto ec = ERROR_OK;
         if (PUMP_UNLIKELY(!__is_status(TRANSPORT_STARTED))) {
             PUMP_ERR_LOG("tls_transport: send failed for transport not started");
             ec = ERROR_UNSTART;
             goto end;
         }
 
-        auto iob = toolkit::io_buffer::create();
+        iob = toolkit::io_buffer::create();
         if (PUMP_UNLIKELY(!iob || !iob->append(b, size))) {
             PUMP_WARN_LOG("tls_transport: send failed for creating io buffer failed");
             if (!iob) {
@@ -188,16 +188,17 @@ namespace transport {
         return ec;
     }
 
-    transport_error tls_transport::send(toolkit::io_buffer_ptr iob) {
+    int32_t tls_transport::send(toolkit::io_buffer_ptr iob) {
         if (!iob || iob->data_size() == 0) {
             PUMP_ERR_LOG("tls_transport: send failed with invalid io buffer");
             return ERROR_INVALID;
         }
 
+        auto ec = ERROR_OK;
+
         // Add pending send count.
         pending_send_cnt_.fetch_add(1);
 
-        auto ec = ERROR_OK;
         if (PUMP_UNLIKELY(!__is_status(TRANSPORT_STARTED))) {
             PUMP_ERR_LOG("tls_transport: send failed for transport no started");
             ec = ERROR_UNSTART;
@@ -208,7 +209,6 @@ namespace transport {
 
         if (!__async_send(iob)) {
             PUMP_WARN_LOG("tcp_transport: send failed for async sending failed");
-            // User and transport will sub the io buffer refences, so add refences for that.
             ec = ERROR_FAULT;
             goto end;
         }
@@ -243,8 +243,12 @@ namespace transport {
             return;
         }
 
-        block_t data[MAX_TRANSPORT_BUFFER_SIZE];
-        int32_t size = flow->read_from_ssl(data, MAX_TRANSPORT_BUFFER_SIZE);
+        int32_t size = 0;
+        block_t data[MAX_TCP_BUFFER_SIZE];
+        int32_t last_state = (uint32_t)READ_NONE;
+
+    read_loop:
+        size = flow->read_from_ssl(data, MAX_TCP_BUFFER_SIZE);
         if (PUMP_UNLIKELY(size == 0)) {
             PUMP_WARN_LOG("tls_transport: handle channel event  failed for reading from ssl failed");
             __try_doing_disconnected_process();
@@ -255,18 +259,20 @@ namespace transport {
         if (PUMP_LIKELY(size > 0)) {
             // If read state is READ_ONCE, change it to READ_PENDING.
             // If read state is READ_LOOP, last state will be seted to READ_LOOP.
-            uint32_t last_state = (uint32_t)READ_ONCE;
-            read_state_.compare_exchange_strong(last_state, (uint32_t)READ_PENDING);
+            last_state = READ_ONCE;
+            read_state_.compare_exchange_strong(last_state, READ_PENDING);
 
             cbs_.read_cb(data, size);
 
             // If last read state is READ_ONCE, try to change read state to READ_NONE.
-            if (last_state == (uint32_t)READ_ONCE) {
-                last_state = (uint32_t)READ_PENDING;
-                if (read_state_.compare_exchange_strong(last_state, (uint32_t)READ_NONE)) {
+            if (last_state == READ_ONCE) {
+                last_state = READ_PENDING;
+                if (read_state_.compare_exchange_strong(last_state, READ_NONE)) {
                     return;
                 }
             }
+
+            goto read_loop;
         }
 
         // If transport is not in started state, try to interrupt the transport.
@@ -307,10 +313,12 @@ namespace transport {
             return;
         }
 
-        block_t data[MAX_TRANSPORT_BUFFER_SIZE];
-        int32_t size = flow->read_from_ssl(data, MAX_TRANSPORT_BUFFER_SIZE);
+        int32_t size = 0;
+        block_t data[MAX_TCP_BUFFER_SIZE];
+        int32_t last_state = (uint32_t)READ_NONE;
 
-        // Read data from ssl failed
+    read_loop:
+        size = flow->read_from_ssl(data, MAX_TCP_BUFFER_SIZE);
         if (PUMP_UNLIKELY(size == 0)) {
             PUMP_WARN_LOG("tls_transport: handle read event failed for flow read from ssl failed");
             __try_doing_disconnected_process();
@@ -320,18 +328,20 @@ namespace transport {
         if (PUMP_LIKELY(size > 0)) {
             // If read state is READ_ONCE, change it to READ_PENDING.
             // If read state is READ_LOOP, last state will be seted to READ_LOOP.
-            uint32_t last_state = (uint32_t)READ_ONCE;
-            read_state_.compare_exchange_strong(last_state, (uint32_t)READ_PENDING);
+            last_state = READ_ONCE;
+            read_state_.compare_exchange_strong(last_state, READ_PENDING);
 
             cbs_.read_cb(data, size);
 
             // If last read state is READ_ONCE, try to change read state to READ_NONE.
-            if (last_state == (uint32_t)READ_ONCE) {
-                last_state = (uint32_t)READ_PENDING;
-                if (read_state_.compare_exchange_strong(last_state, (uint32_t)READ_NONE)) {
+            if (last_state == READ_ONCE) {
+                last_state = READ_PENDING;
+                if (read_state_.compare_exchange_strong(last_state, READ_NONE)) {
                     return;
                 }
             }
+
+            goto read_loop;
         }
 
         // If transport is not in started state, try to interrupt the transport.
@@ -394,11 +404,11 @@ namespace transport {
         }
     }
 
-    transport_error tls_transport::__async_read(uint32_t state) {
-        uint32_t current_state = __change_read_state(state);
-        if (current_state >= (uint32_t)READ_PENDING) {
+    int32_t tls_transport::__async_read(int32_t state) {
+        int32_t current_state = __change_read_state(state);
+        if (current_state >= READ_PENDING) {
             return ERROR_OK;
-        } else if (current_state == (uint32_t)READ_INVALID) {
+        } else if (current_state == READ_INVALID) {
             return ERROR_AGAIN;
         }
 

@@ -33,58 +33,49 @@ namespace transport {
     /*********************************************************************************
      * Transport type
      ********************************************************************************/
-    enum transport_type {
-        UDP_TRANSPORT = 0,
-        TCP_ACCEPTOR,
-        TCP_DIALER,
-        TCP_TRANSPORT,
-        TLS_ACCEPTOR,
-        TLS_DIALER,
-        TLS_HANDSHAKER,
-        TLS_TRANSPORT
-    };
+    const int32_t UDP_TRANSPORT = 0;
+    const int32_t TCP_ACCEPTOR = 1;
+    const int32_t TCP_DIALER = 2;
+    const int32_t TCP_TRANSPORT = 3;
+    const int32_t TLS_ACCEPTOR = 4;
+    const int32_t TLS_DIALER = 5;
+    const int32_t TLS_HANDSHAKER = 6;
+    const int32_t TLS_TRANSPORT = 7;
 
     /*********************************************************************************
      * Transport state
      ********************************************************************************/
-    enum transport_state {
-        TRANSPORT_INITED = 0,
-        TRANSPORT_STARTING,
-        TRANSPORT_STARTED,
-        TRANSPORT_STOPPING,
-        TRANSPORT_STOPPED,
-        TRANSPORT_DISCONNECTING,
-        TRANSPORT_DISCONNECTED,
-        TRANSPORT_TIMEOUTING,
-        TRANSPORT_TIMEOUTED,
-        TRANSPORT_HANDSHAKING,
-        TRANSPORT_FINISHED,
-        TRANSPORT_ERROR
-    };
+    const int32_t TRANSPORT_INITED = 0;
+    const int32_t TRANSPORT_STARTING = 1;
+    const int32_t TRANSPORT_STARTED = 2;
+    const int32_t TRANSPORT_STOPPING = 3;
+    const int32_t TRANSPORT_STOPPED = 4;
+    const int32_t TRANSPORT_DISCONNECTING = 5;
+    const int32_t TRANSPORT_DISCONNECTED = 6;
+    const int32_t TRANSPORT_TIMEOUTING = 7;
+    const int32_t TRANSPORT_TIMEOUTED = 8;
+    const int32_t TRANSPORT_HANDSHAKING = 9;
+    const int32_t TRANSPORT_FINISHED = 10;
+    const int32_t TRANSPORT_ERROR = 11;
 
     /*********************************************************************************
      * Transport read state
      ********************************************************************************/
-    enum transport_read_state {
-        READ_NONE = 0,
-        READ_INVALID,
-        READ_PENDING,
-        READ_ONCE,
-        READ_LOOP
-        
-    };
+    const int32_t READ_NONE = 0;
+    const int32_t READ_INVALID = 1;
+    const int32_t READ_PENDING = 2;
+    const int32_t READ_ONCE = 3;
+    const int32_t READ_LOOP = 4;
 
     /*********************************************************************************
      * Transport error
      ********************************************************************************/
-    enum transport_error {
-        ERROR_OK = 0,
-        ERROR_UNSTART,
-        ERROR_INVALID,
-        ERROR_DISABLE,
-        ERROR_AGAIN,
-        ERROR_FAULT
-    };
+    const int32_t ERROR_OK = 0;
+    const int32_t ERROR_UNSTART = 1;
+    const int32_t ERROR_INVALID = 2;
+    const int32_t ERROR_DISABLE = 3;
+    const int32_t ERROR_AGAIN = 4;
+    const int32_t ERROR_FAULT = 5;
 
     class LIB_PUMP base_channel
       : public service_getter,
@@ -94,7 +85,7 @@ namespace transport {
         /*********************************************************************************
          * Constructor
          ********************************************************************************/
-        base_channel(transport_type type, service_ptr sv, int32_t fd) noexcept
+        base_channel(int32_t type, service_ptr sv, int32_t fd) noexcept
             : service_getter(sv),
               poll::channel(fd),
               type_(type),
@@ -109,7 +100,7 @@ namespace transport {
         /*********************************************************************************
          * Get transport type
          ********************************************************************************/
-        PUMP_INLINE transport_type get_type() const {
+        PUMP_INLINE int32_t get_type() const {
             return type_;
         }
 
@@ -124,14 +115,14 @@ namespace transport {
         /*********************************************************************************
          * Set channel status
          ********************************************************************************/
-        PUMP_INLINE bool __set_status(uint32_t expected, uint32_t desired) {
+        PUMP_INLINE bool __set_status(int32_t expected, int32_t desired) {
             return transport_state_.compare_exchange_strong(expected, desired);
         }
 
         /*********************************************************************************
          * Check transport is in status
          ********************************************************************************/
-        PUMP_INLINE bool __is_status(uint32_t status) const {
+        PUMP_INLINE bool __is_status(int32_t status) const {
             return transport_state_.load(std::memory_order_acquire) == status;
         }
 
@@ -147,9 +138,9 @@ namespace transport {
 
       protected:
         // Transport type
-        transport_type type_;
+        int32_t type_;
         // Transport state
-        std::atomic_uint transport_state_;
+        std::atomic_int32_t transport_state_;
     };
 
     class LIB_PUMP base_transport : public base_channel {
@@ -157,7 +148,7 @@ namespace transport {
         /*********************************************************************************
          * Constructor
          ********************************************************************************/
-        base_transport(transport_type type, service_ptr sv, int32_t fd)
+        base_transport(int32_t type, service_ptr sv, int32_t fd)
             : base_channel(type, sv, fd),
               read_state_(READ_NONE),
               pending_send_size_(0) {
@@ -176,9 +167,7 @@ namespace transport {
         /*********************************************************************************
          * Start
          ********************************************************************************/
-        virtual transport_error start(
-            service_ptr sv,
-            const transport_callbacks &cbs) = 0;
+        virtual int32_t start(service_ptr sv, const transport_callbacks &cbs) = 0;
 
         /*********************************************************************************
          * Stop
@@ -193,21 +182,21 @@ namespace transport {
         /*********************************************************************************
          * Read for once
          ********************************************************************************/
-        virtual transport_error read_for_once() {
+        virtual int32_t read_for_once() {
             return ERROR_DISABLE;
         }
 
         /*********************************************************************************
          * Read for loop
          ********************************************************************************/
-        virtual transport_error read_for_loop() {
+        virtual int32_t read_for_loop() {
             return ERROR_DISABLE;
         }
 
         /*********************************************************************************
          * Send
          ********************************************************************************/
-        virtual transport_error send(const block_t *b, int32_t size) {
+        virtual int32_t send(const block_t *b, int32_t size) {
             return ERROR_DISABLE;
         }
 
@@ -215,16 +204,16 @@ namespace transport {
          * Send io buffer
          * The ownership of io buffer will be transferred.
          ********************************************************************************/
-        virtual transport_error send(toolkit::io_buffer_ptr iob) {
+        virtual int32_t send(toolkit::io_buffer_ptr iob) {
             return ERROR_DISABLE;
         }
 
         /*********************************************************************************
          * Send
          ********************************************************************************/
-        virtual transport_error send(const block_t *b,
-                                     int32_t size,
-                                     const address &address) {
+        virtual int32_t send(const block_t *b,
+                             int32_t size,
+                             const address &address) {
             return ERROR_DISABLE;
         }
 
@@ -232,7 +221,7 @@ namespace transport {
          * Get pending send buffer size
          ********************************************************************************/
         int32_t get_pending_send_size() const {
-            return pending_send_size_;
+            return pending_send_size_.load(std::memory_order_relaxed);
         }
 
         /*********************************************************************************
@@ -264,7 +253,7 @@ namespace transport {
         /*********************************************************************************
          * Chane read state
          ********************************************************************************/
-        uint32_t __change_read_state(uint32_t state);
+        int32_t __change_read_state(int32_t state);
 
         /*********************************************************************************
          * Interrupt and trigger callbacks
@@ -296,7 +285,7 @@ namespace transport {
         poll::channel_tracker_sptr s_tracker_;
 #endif
         // Transport read state
-        std::atomic_uint32_t read_state_;
+        std::atomic_int32_t read_state_;
 
         // Pending send buffer size
         std::atomic_int32_t pending_send_size_;

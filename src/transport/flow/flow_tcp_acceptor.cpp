@@ -39,8 +39,8 @@ namespace transport {
             }
         }
 
-        flow_error flow_tcp_acceptor::init(poll::channel_sptr &&ch,
-                                           const address &listen_address) {
+        int32_t flow_tcp_acceptor::init(poll::channel_sptr &&ch,
+                                        const address &listen_address) {
             PUMP_DEBUG_ASSIGN(ch, ch_, ch);
 
             is_ipv6_ = listen_address.is_ipv6();
@@ -99,7 +99,7 @@ namespace transport {
         }
 
 #if defined(PUMP_HAVE_IOCP)
-        flow_error flow_tcp_acceptor::post_accept() {
+        int32_t flow_tcp_acceptor::post_accept() {
             int32_t domain = is_ipv6_ ? AF_INET6 : AF_INET;
             int32_t client =
                 net::create_iocp_socket(domain, SOCK_STREAM, net::get_iocp_handler());
@@ -119,8 +119,8 @@ namespace transport {
         }
 
         int32_t flow_tcp_acceptor::accept(net::iocp_task_ptr iocp_task,
-                                        address_ptr local_address,
-                                        address_ptr remote_address) {
+                                          address_ptr local_address,
+                                          address_ptr remote_address) {
             int32_t client_fd = iocp_task->get_client_fd();
             if (iocp_task->get_errcode() != 0 || client_fd == -1) {
                 PUMP_WARN_LOG("flow_tcp_acceptor::accept: accept failed");
@@ -156,8 +156,7 @@ namespace transport {
         int32_t flow_tcp_acceptor::accept(address_ptr local_address,
                                         address_ptr remote_address) {
             int32_t addrlen = ADDRESS_MAX_LEN;
-            int32_t client_fd =
-                net::accept(fd_, (struct sockaddr*)iob_->buffer(), &addrlen);
+            int32_t client_fd = net::accept(fd_, (struct sockaddr*)iob_->buffer(), &addrlen);
             if (client_fd == -1) {
                 PUMP_WARN_LOG("flow_tcp_acceptor::accept: accept fialed");
                 return -1;

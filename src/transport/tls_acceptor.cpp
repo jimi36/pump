@@ -40,7 +40,7 @@ namespace transport {
         ssl::destory_tls_certificate(xcred_);
     }
 
-    transport_error tls_acceptor::start(service_ptr sv, const acceptor_callbacks &cbs) {
+    int32_t tls_acceptor::start(service_ptr sv, const acceptor_callbacks &cbs) {
         if (!xcred_) {
             PUMP_ERR_LOG("tls_acceptor: start failed with invalid certificate");
             return ERROR_INVALID;

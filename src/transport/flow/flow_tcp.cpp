@@ -35,7 +35,7 @@ namespace transport {
 #endif
         }
 
-        flow_error flow_tcp::init(poll::channel_sptr &&ch, int32_t fd) {
+        int32_t flow_tcp::init(poll::channel_sptr &&ch, int32_t fd) {
             PUMP_DEBUG_ASSIGN(ch, ch_, ch);
             PUMP_DEBUG_ASSIGN(fd > 0, fd_, fd);
 
@@ -49,10 +49,10 @@ namespace transport {
         }
 
 #if defined(PUMP_HAVE_IOCP)
-        flow_error flow_tcp::post_read(net::iocp_task_ptr iocp_task) {
+        int32_t flow_tcp::post_read(net::iocp_task_ptr iocp_task) {
             if (!iocp_task) {
                 auto iob = toolkit::io_buffer::create();
-                iob->init_with_size(MAX_TRANSPORT_BUFFER_SIZE);
+                iob->init_with_size(MAX_TCP_BUFFER_SIZE);
                 iocp_task = net::new_iocp_task();
                 iocp_task->set_fd(fd_);
                 iocp_task->set_notifier(ch_);
@@ -70,7 +70,7 @@ namespace transport {
 #endif
 
 #if defined(PUMP_HAVE_IOCP)
-        flow_error flow_tcp::post_send(toolkit::io_buffer_ptr iob) {
+        int32_t flow_tcp::post_send(toolkit::io_buffer_ptr iob) {
             PUMP_DEBUG_ASSIGN(iob, send_iob_, iob);
             send_task_->bind_io_buffer(send_iob_);
             if (net::post_iocp_send(send_task_)) {
@@ -79,7 +79,7 @@ namespace transport {
             return FLOW_ERR_ABORT;
         }
 
-        flow_error flow_tcp::send(net::iocp_task_ptr iocp_task) {
+        int32_t flow_tcp::send(net::iocp_task_ptr iocp_task) {
             int32_t size = iocp_task->get_processed_size();
             if (size > 0) {
                 if (PUMP_LIKELY(send_iob_->shift(size) == 0)) {
@@ -95,7 +95,7 @@ namespace transport {
             return FLOW_ERR_ABORT;
         }
 #else
-        flow_error flow_tcp::want_to_send(toolkit::io_buffer_ptr iob) {
+        int32_t flow_tcp::want_to_send(toolkit::io_buffer_ptr iob) {
             PUMP_DEBUG_ASSIGN(iob, send_iob_, iob);
             int32_t size = net::send(fd_, send_iob_->data(), send_iob_->data_size());
             if (PUMP_LIKELY(size > 0)) {
@@ -112,7 +112,7 @@ namespace transport {
             return FLOW_ERR_ABORT;
         }
 
-        flow_error flow_tcp::send() {
+        int32_t flow_tcp::send() {
             if (!send_iob_) {
                 return FLOW_ERR_NO_DATA;
             }

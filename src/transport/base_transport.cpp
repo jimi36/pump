@@ -23,9 +23,9 @@ namespace transport {
         __interrupt_and_trigger_callbacks();
     }
 
-    uint32_t base_transport::__change_read_state(uint32_t state) {
-        uint32_t current_state = read_state_.load();
-        if (current_state >= (uint32_t)READ_PENDING) {
+    int32_t base_transport::__change_read_state(int32_t state) {
+        int32_t current_state = read_state_.load();
+        if (current_state >= READ_PENDING) {
             if (!read_state_.compare_exchange_strong(current_state, state)) {
                 return READ_INVALID;
             }
@@ -68,7 +68,7 @@ namespace transport {
                 PUMP_WARN_LOG("base_transport: start read tracker failed");
                 return false;
             }
-            PUMP_DENUG_LOG("base_transport: start read tracker done");
+            PUMP_DEBUG_LOG("base_transport: start read tracker done");
         } else {
             if (!get_service()->resume_channel_tracker(tracker, READ_POLLER)) {
                 PUMP_WARN_LOG("base_transport: resume read tracker failed");
@@ -88,7 +88,7 @@ namespace transport {
                 PUMP_WARN_LOG("base_transport: start send tracker failed");
                 return false;
             }
-            PUMP_DENUG_LOG("base_transport: start send tracker done");
+            PUMP_DEBUG_LOG("base_transport: start send tracker done");
         } else {
             if (!get_service()->resume_channel_tracker(tracker, WRITE_POLLER)) {
                 PUMP_WARN_LOG("base_transport: resume send tracker failed");

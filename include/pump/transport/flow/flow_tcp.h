@@ -43,7 +43,7 @@ namespace transport {
              *     FLOW_ERR_NO    => success
              *     FLOW_ERR_ABORT => error
              ********************************************************************************/
-            flow_error init(poll::channel_sptr &&ch, int32_t fd);
+            int32_t init(poll::channel_sptr &&ch, int32_t fd);
 
 #if defined(PUMP_HAVE_IOCP)
             /*********************************************************************************
@@ -53,7 +53,7 @@ namespace transport {
              *     FLOW_ERR_NO    => success
              *     FLOW_ERR_ABORT => error
              ********************************************************************************/
-            flow_error post_read(net::iocp_task_ptr iocp_task = nullptr);
+            int32_t post_read(net::iocp_task_ptr iocp_task = nullptr);
 #endif
             /*********************************************************************************
              * Read
@@ -71,7 +71,7 @@ namespace transport {
              *     FLOW_ERR_NO    => success
              *     FLOW_ERR_ABORT => error
              ********************************************************************************/
-            flow_error post_send(toolkit::io_buffer_ptr iob);
+            int32_t post_send(toolkit::io_buffer_ptr iob);
 #else
              /*********************************************************************************
               * Want to send
@@ -80,7 +80,7 @@ namespace transport {
               *      FLOW_ERR_NO    => success
               *      FLOW_ERR_ABORT => error
               ********************************************************************************/
-            flow_error want_to_send(toolkit::io_buffer_ptr iob);
+            int32_t want_to_send(toolkit::io_buffer_ptr iob);
 #endif
             /*********************************************************************************
              * Send
@@ -91,9 +91,9 @@ namespace transport {
              *     FLOW_ERR_ABORT   => error
              ********************************************************************************/
 #if defined(PUMP_HAVE_IOCP)
-            flow_error send(net::iocp_task_ptr iocp_task);
+            int32_t send(net::iocp_task_ptr iocp_task);
 #else
-            flow_error send();
+            int32_t send();
 #endif
             /*********************************************************************************
              * Check there are data to send or not

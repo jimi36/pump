@@ -56,7 +56,7 @@ namespace transport {
 
         get_service()->remove_channel_tracker(tracker_locker, READ_POLLER);
 
-        PUMP_DENUG_LOG("base_acceptor: stop tracker done");
+        PUMP_DEBUG_LOG("base_acceptor: stop tracker done");
     }
 #endif
 

@@ -26,7 +26,7 @@ namespace transport {
       : base_dialer(TCP_DIALER, local_address, remote_address, timeout) {
     }
 
-    transport_error tcp_dialer::start(service_ptr sv, const dialer_callbacks &cbs) {
+    int32_t tcp_dialer::start(service_ptr sv, const dialer_callbacks &cbs) {
         if (!sv) {
             PUMP_ERR_LOG("tcp_dialer: start failed with invalid service");
             return ERROR_INVALID;

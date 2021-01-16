@@ -48,9 +48,7 @@ namespace transport {
          * Start
          * max_pending_send_size is ignore on udp transport.
          ********************************************************************************/
-        virtual transport_error start(
-            service_ptr sv,
-            const transport_callbacks &cbs) override;
+        virtual int32_t start(service_ptr sv, const transport_callbacks &cbs) override;
 
         /*********************************************************************************
          * Stop
@@ -67,19 +65,19 @@ namespace transport {
         /*********************************************************************************
          * Read for once
          ********************************************************************************/
-        virtual transport_error read_for_once();
+        virtual int32_t read_for_once();
 
         /*********************************************************************************
          * Read for loop
          ********************************************************************************/
-        virtual transport_error read_for_loop();
+        virtual int32_t read_for_loop();
 
         /*********************************************************************************
          * Send
          ********************************************************************************/
-        virtual transport_error send(const block_t *b,
-                                     int32_t size,
-                                     const address &address) override;
+        virtual int32_t send(const block_t *b,
+                             int32_t size,
+                             const address &address) override;
 
       protected:
         /*********************************************************************************
@@ -122,7 +120,7 @@ namespace transport {
         /*********************************************************************************
          * Async read
          ********************************************************************************/
-        transport_error __async_read(uint32_t state);
+        int32_t __async_read(int32_t state);
 
       private:
         // Udp flow

@@ -52,10 +52,10 @@ namespace transport {
              *     FLOW_ERR_NO    => success
              *     FLOW_ERR_ABORT => error
              ********************************************************************************/
-            flow_error init(poll::channel_sptr &ch,
-                            int32_t fd,
-                            void_ptr xcred,
-                            bool client);
+            int32_t init(poll::channel_sptr &ch,
+                         int32_t fd,
+                         void_ptr xcred,
+                         bool client);
 
             /*********************************************************************************
              * Rebind channel
@@ -68,7 +68,7 @@ namespace transport {
              *     FLOW_ERR_NO    => handshake success, no mean finished completely
              *     FLOW_ERR_ABORT => handshake error
              ********************************************************************************/
-            flow_error handshake();
+            int32_t handshake();
 
 #if defined(PUMP_HAVE_IOCP)
             /*********************************************************************************
@@ -79,7 +79,7 @@ namespace transport {
              *     FLOW_ERR_NO    => success
              *     FLOW_ERR_ABORT => error
              ********************************************************************************/
-            flow_error post_read();
+            int32_t post_read();
 #endif
             /*********************************************************************************
              * Read from net
@@ -89,9 +89,9 @@ namespace transport {
              *     FLOW_ERR_ABORT => error
              ********************************************************************************/
 #if defined(PUMP_HAVE_IOCP)
-            flow_error read_from_net(net::iocp_task_ptr iocp_task);
+            int32_t read_from_net(net::iocp_task_ptr iocp_task);
 #else
-            flow_error read_from_net();
+            int32_t read_from_net();
 #endif
             /*********************************************************************************
              * Read from ssl
@@ -112,7 +112,7 @@ namespace transport {
              *     FLOW_ERR_NO      => success
              *     FLOW_ERR_ABORT   => error
              ********************************************************************************/
-            flow_error send_to_ssl(toolkit::io_buffer_ptr iob);
+            int32_t send_to_ssl(toolkit::io_buffer_ptr iob);
 
 #if defined(PUMP_HAVE_IOCP)
             /*********************************************************************************
@@ -121,7 +121,7 @@ namespace transport {
              *     FLOW_ERR_NO      => success
              *     FLOW_ERR_ABORT   => error
              ********************************************************************************/
-            flow_error post_send();
+            int32_t post_send();
 #else
             /*********************************************************************************
              * Want to send
@@ -131,7 +131,7 @@ namespace transport {
              *     FLOW_ERR_NO_DATA => no
              *     FLOW_ERR_ABORT   => error
              ********************************************************************************/
-            flow_error want_to_send();
+            int32_t want_to_send();
 #endif
             /*********************************************************************************
              * Send to net
@@ -142,9 +142,9 @@ namespace transport {
              *     FLOW_ERR_ABORT   => error
              ********************************************************************************/
 #if defined(PUMP_HAVE_IOCP)
-            flow_error send_to_net(net::iocp_task_ptr iocp_task);
+            int32_t send_to_net(net::iocp_task_ptr iocp_task);
 #else
-            flow_error send_to_net();
+            int32_t send_to_net();
 #endif
             /*********************************************************************************
              * Check there are data to send or not
