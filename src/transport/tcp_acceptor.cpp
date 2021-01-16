@@ -26,17 +26,17 @@ namespace transport {
 
     transport_error tcp_acceptor::start(service_ptr sv, const acceptor_callbacks &cbs) {
         if (!sv) {
-            PUMP_ERR_LOG("tcp_acceptor::start: service invalid");
+            PUMP_ERR_LOG("tcp_acceptor: start failed with invalid service");
             return ERROR_INVALID;
         }
 
         if (!cbs.accepted_cb || !cbs.stopped_cb) {
-            PUMP_ERR_LOG("tcp_acceptor::start: callbacks invalid");
+            PUMP_ERR_LOG("tcp_acceptor: start failed with invalid callbacks");
             return ERROR_INVALID;
         }
 
         if (!__set_status(TRANSPORT_INITED, TRANSPORT_STARTING)) {
-            PUMP_ERR_LOG("tcp_acceptor::start: acceptor has started");
+            PUMP_ERR_LOG("tcp_acceptor: start failed with wrong status");
             return ERROR_INVALID;
         }
 
@@ -55,18 +55,18 @@ namespace transport {
         });
 
         if (!__open_accept_flow()) {
-            PUMP_ERR_LOG("tcp_acceptor::start: open accept flow failed");
+            PUMP_ERR_LOG("tcp_acceptor: start failed for opening flow failed");
             return ERROR_FAULT;
         }
 
 #if defined(PUMP_HAVE_IOCP)
         if (flow_->post_accept() != flow::FLOW_ERR_NO) {
-            PUMP_ERR_LOG("tcp_acceptor::start: want to accept failed");
+            PUMP_ERR_LOG("tcp_acceptor: start failed for flow post accept task failed");
             return ERROR_FAULT;
         }
 #else
         if (!__start_accept_tracker(shared_from_this())) {
-            PUMP_ERR_LOG("tcp_acceptor::start: start tracker failed");
+            PUMP_ERR_LOG("tcp_acceptor: start failed for starting tracker failed");
             return ERROR_FAULT;
         }
 #endif
@@ -109,7 +109,7 @@ namespace transport {
         if (__is_status(TRANSPORT_STARTING) || __is_status(TRANSPORT_STARTED)) {
 #if defined(PUMP_HAVE_IOCP)
             if (flow->post_accept() != flow::FLOW_ERR_NO) {
-                PUMP_ERR_LOG("tcp_acceptor::on_read_event: want to accept failed");
+                PUMP_ERR_LOG("tcp_acceptor: handle read event failed for flow post accept task failed");
             }
 #else
             PUMP_DEBUG_CHECK(tracker_->set_tracked(true));
@@ -129,7 +129,7 @@ namespace transport {
         flow_.reset(object_create<flow::flow_tcp_acceptor>(),
                     object_delete<flow::flow_tcp_acceptor>);
         if (flow_->init(shared_from_this(), listen_address_) != flow::FLOW_ERR_NO) {
-            PUMP_ERR_LOG("tcp_acceptor::__open_flow: flow init failed");
+            PUMP_WARN_LOG("tcp_acceptor: open flow failed for flow init failed");
             return false;
         }
 

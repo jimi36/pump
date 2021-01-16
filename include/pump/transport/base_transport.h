@@ -68,9 +68,10 @@ namespace transport {
     enum transport_read_state {
         READ_NONE = 0,
         READ_INVALID,
+        READ_PENDING,
         READ_ONCE,
-        READ_LOOP,
-        READ_PENDING
+        READ_LOOP
+        
     };
 
     /*********************************************************************************
@@ -295,7 +296,7 @@ namespace transport {
         poll::channel_tracker_sptr s_tracker_;
 #endif
         // Transport read state
-        std::atomic_uint read_state_;
+        std::atomic_uint32_t read_state_;
 
         // Pending send buffer size
         std::atomic_int32_t pending_send_size_;

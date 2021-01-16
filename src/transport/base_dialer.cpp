@@ -26,27 +26,30 @@ namespace transport {
 #if !defined(PUMP_HAVE_IOCP)
     bool base_dialer::__start_dial_tracker(poll::channel_sptr &&ch) {
         if (tracker_) {
-            PUMP_WARN_LOG("base_dialer::__start_dial_tracker: tracker exists");
             return false;
         }
 
         tracker_.reset(object_create<poll::channel_tracker>(ch, poll::TRACK_SEND),
                        object_delete<poll::channel_tracker>);
         if (!get_service()->add_channel_tracker(tracker_, WRITE_POLLER)) {
-            PUMP_WARN_LOG("base_dialer::__start_dial_tracker: add tracker failed");
+            PUMP_WARN_LOG("base_dialer: start tracker failed");
             return false;
         }
+
+        PUMP_DEBUG_LOG("base_dialer: start tracker done");
 
         return true;
     }
 
     void base_dialer::__stop_dial_tracker() {
-        PUMP_LOCK_SPOINTER(tracker, tracker_);
-        if (!tracker) {
-            PUMP_WARN_LOG("base_dialer::__stop_dial_tracker: tracker no exists");
+        auto tracker_locker = tracker_;
+        if (!tracker_locker) {
             return;
         }
+
         get_service()->remove_channel_tracker(tracker_locker, WRITE_POLLER);
+
+        PUMP_DEBUG_LOG("base_dialer: stop tracker done");
     }
 #endif
 

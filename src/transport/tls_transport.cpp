@@ -51,22 +51,22 @@ namespace transport {
         service_ptr sv,
         const transport_callbacks &cbs) {
         if (!flow_) {
-            PUMP_ERR_LOG("tls_transport::start: flow invalid");
+            PUMP_ERR_LOG("tls_transport: start failed with invalid flow");
             return ERROR_INVALID;
         }
 
         if (!sv) {
-            PUMP_ERR_LOG("tls_transport::start: service invalid");
+            PUMP_ERR_LOG("tls_transport: start failed with invalid service");
             return ERROR_INVALID;
         }
 
         if (!cbs.read_cb || !cbs.disconnected_cb || !cbs.stopped_cb) {
-            PUMP_ERR_LOG("tls_transport::start: callbacks invalid");
+            PUMP_ERR_LOG("tls_transport: start failed with invalid callbacks");
             return ERROR_INVALID;
         }
 
         if (!__set_status(TRANSPORT_INITED, TRANSPORT_STARTING)) {
-            PUMP_ERR_LOG("tls_transport::start: has started");
+            PUMP_ERR_LOG("tls_transport: start failed with wrong status");
             return ERROR_INVALID;
         }
 
@@ -151,7 +151,7 @@ namespace transport {
 
     transport_error tls_transport::send(const block_t *b, int32_t size) {
         if (!b || size == 0) {
-            PUMP_ERR_LOG("tls_transport::send: buffer invalid");
+            PUMP_ERR_LOG("tls_transport: send failed with invalid buffer");
             return ERROR_INVALID;
         }
 
@@ -160,14 +160,14 @@ namespace transport {
 
         auto ec = ERROR_OK;
         if (PUMP_UNLIKELY(!__is_status(TRANSPORT_STARTED))) {
-            PUMP_ERR_LOG("tls_transport::send: transport not started");
+            PUMP_ERR_LOG("tls_transport: send failed for transport not started");
             ec = ERROR_UNSTART;
             goto end;
         }
 
         auto iob = toolkit::io_buffer::create();
         if (PUMP_UNLIKELY(!iob || !iob->append(b, size))) {
-            PUMP_WARN_LOG("tls_transport::send: new buffer failed");
+            PUMP_WARN_LOG("tls_transport: send failed for creating io buffer failed");
             if (!iob) {
                 iob->sub_ref();
             }
@@ -176,7 +176,7 @@ namespace transport {
         }
 
         if (!__async_send(iob)) {
-            PUMP_WARN_LOG("tls_transport::send: async send failed");
+            PUMP_WARN_LOG("tls_transport: send failed for async sending failed");
             ec = ERROR_FAULT;
             goto end;
         }
@@ -190,7 +190,7 @@ namespace transport {
 
     transport_error tls_transport::send(toolkit::io_buffer_ptr iob) {
         if (!iob || iob->data_size() == 0) {
-            PUMP_ERR_LOG("tls_transport::send: io buffer invalid ");
+            PUMP_ERR_LOG("tls_transport: send failed with invalid io buffer");
             return ERROR_INVALID;
         }
 
@@ -199,7 +199,7 @@ namespace transport {
 
         auto ec = ERROR_OK;
         if (PUMP_UNLIKELY(!__is_status(TRANSPORT_STARTED))) {
-            PUMP_ERR_LOG("tls_transport::send: not started");
+            PUMP_ERR_LOG("tls_transport: send failed for transport no started");
             ec = ERROR_UNSTART;
             goto end;
         }
@@ -207,7 +207,7 @@ namespace transport {
         iob->add_ref();
 
         if (!__async_send(iob)) {
-            PUMP_WARN_LOG("tcp_transport::send: async send failed");
+            PUMP_WARN_LOG("tcp_transport: send failed for async sending failed");
             // User and transport will sub the io buffer refences, so add refences for that.
             ec = ERROR_FAULT;
             goto end;
@@ -231,59 +231,60 @@ namespace transport {
         if (!flow->has_data_to_read()) {
 #if defined(PUMP_HAVE_IOCP)
             if (flow->post_read() == flow::FLOW_ERR_ABORT) {
-                PUMP_WARN_LOG("tls_transport::on_channel_event: want to read failed");
+                PUMP_WARN_LOG("tls_transport: handle channel event failed for flow post read task failed");
                 __try_doing_disconnected_process();
             }
 #else
             if (!__start_read_tracker(shared_from_this())) {
-                PUMP_WARN_LOG("tls_transport::on_channel_event: start tracker failed");
+                PUMP_WARN_LOG("tls_transport: handle channel event failed for starting read tracker failed");
                 __try_doing_disconnected_process();
             }
 #endif
             return;
         }
 
-        // Get and change read state to READ_PENDING.
-        uint32_t pending_state = READ_PENDING;
-        uint32_t old_state = read_state_.exchange(pending_state);
-
         block_t data[MAX_TRANSPORT_BUFFER_SIZE];
         int32_t size = flow->read_from_ssl(data, MAX_TRANSPORT_BUFFER_SIZE);
-
-        // Read callback
-        if (PUMP_LIKELY(size > 0)) {
-            cbs_.read_cb(data, size);
-        }
-
-        // Read data from ssl failed
-        if (size == 0) {
-            PUMP_WARN_LOG("tls_transport::on_channel_event: read from ssl failed");
+        if (PUMP_UNLIKELY(size == 0)) {
+            PUMP_WARN_LOG("tls_transport: handle channel event  failed for reading from ssl failed");
             __try_doing_disconnected_process();
             return;
         }
 
-        // If transport is not in started state and no buffer waiting send, then
-        // interrupt this transport.
-        if (!__is_status(TRANSPORT_STARTED) &&
-            pending_send_size_.load(std::memory_order_acquire) <= 0) {
-            __interrupt_and_trigger_callbacks();
-            return;
+        // Read callback
+        if (PUMP_LIKELY(size > 0)) {
+            // If read state is READ_ONCE, change it to READ_PENDING.
+            // If read state is READ_LOOP, last state will be seted to READ_LOOP.
+            uint32_t last_state = (uint32_t)READ_ONCE;
+            read_state_.compare_exchange_strong(last_state, (uint32_t)READ_PENDING);
+
+            cbs_.read_cb(data, size);
+
+            // If last read state is READ_ONCE, try to change read state to READ_NONE.
+            if (last_state == (uint32_t)READ_ONCE) {
+                last_state = (uint32_t)READ_PENDING;
+                if (read_state_.compare_exchange_strong(last_state, (uint32_t)READ_NONE)) {
+                    return;
+                }
+            }
         }
 
-        // If old read state is READ_ONCE, then change it to READ_NONE.
-        if (size > 0 && old_state == READ_ONCE &&
-            read_state_.compare_exchange_strong(pending_state, READ_NONE)) {
+        // If transport is not in started state, try to interrupt the transport.
+        if (!__is_status(TRANSPORT_STARTED)) {
+            if (pending_send_size_.load(std::memory_order_acquire) <= 0) {
+                __interrupt_and_trigger_callbacks();
+            }
             return;
         }
 
 #if defined(PUMP_HAVE_IOCP)
         if (flow->post_read() == flow::FLOW_ERR_ABORT) {
-            PUMP_WARN_LOG("tls_transport::on_channel_event: want to read failed");
+            PUMP_WARN_LOG("tls_transport: handle channel event failed for flow post read task failed");
             __try_doing_disconnected_process();
         }
 #else
         if (!__start_read_tracker(shared_from_this())) {
-            PUMP_WARN_LOG("tls_transport::on_channel_event: start tracker failed");
+            PUMP_WARN_LOG("tls_transport: handle channel event failed for starting read tracker failed");
             __try_doing_disconnected_process();
         }
 #endif
@@ -301,39 +302,49 @@ namespace transport {
 #else
         if (PUMP_UNLIKELY(flow->read_from_net() == flow::FLOW_ERR_ABORT)) {
 #endif
-            PUMP_WARN_LOG("tls_transport::on_read_event: read from net failed");
+            PUMP_WARN_LOG("tls_transport: handle read event failed for flow read from net failed");
             __try_doing_disconnected_process();
             return;
         }
-
-        // Get old read state and change read state to READ_PENDING.
-        uint32_t pending_state = READ_PENDING;
-        uint32_t old_state = read_state_.exchange(pending_state);
 
         block_t data[MAX_TRANSPORT_BUFFER_SIZE];
         int32_t size = flow->read_from_ssl(data, MAX_TRANSPORT_BUFFER_SIZE);
 
-        // Has data to callback
-        if (PUMP_LIKELY(size > 0)) {
-            cbs_.read_cb(data, size);
-        }
-
         // Read data from ssl failed
-        if (size == 0) {
-            PUMP_WARN_LOG("tls_transport::on_read_event: read from ssl failed");
+        if (PUMP_UNLIKELY(size == 0)) {
+            PUMP_WARN_LOG("tls_transport: handle read event failed for flow read from ssl failed");
             __try_doing_disconnected_process();
             return;
         }
 
-        // If old read state is READ_ONCE, then change it to READ_NONE.
-        if (size > 0 && old_state == READ_ONCE &&
-            read_state_.compare_exchange_strong(pending_state, READ_NONE)) {
+        if (PUMP_LIKELY(size > 0)) {
+            // If read state is READ_ONCE, change it to READ_PENDING.
+            // If read state is READ_LOOP, last state will be seted to READ_LOOP.
+            uint32_t last_state = (uint32_t)READ_ONCE;
+            read_state_.compare_exchange_strong(last_state, (uint32_t)READ_PENDING);
+
+            cbs_.read_cb(data, size);
+
+            // If last read state is READ_ONCE, try to change read state to READ_NONE.
+            if (last_state == (uint32_t)READ_ONCE) {
+                last_state = (uint32_t)READ_PENDING;
+                if (read_state_.compare_exchange_strong(last_state, (uint32_t)READ_NONE)) {
+                    return;
+                }
+            }
+        }
+
+        // If transport is not in started state, try to interrupt the transport.
+        if (!__is_status(TRANSPORT_STARTED)) {
+            if (pending_send_size_.load(std::memory_order_acquire) == 0) {
+                __interrupt_and_trigger_callbacks();
+            }
             return;
         }
 
 #if defined(PUMP_HAVE_IOCP)
         if (flow->post_read() == flow::FLOW_ERR_ABORT) {
-            PUMP_WARN_LOG("tls_transport::on_read_event: want to read failed");
+            PUMP_WARN_LOG("tls_transport: handle read event failed for flow post read task failed");
             __try_doing_disconnected_process();
         }
 #else
@@ -359,7 +370,7 @@ namespace transport {
 #endif
             return;
         } else if (ret == flow::FLOW_ERR_ABORT) {
-            PUMP_WARN_LOG("tls_transport::on_send_event: send to net failed");
+            PUMP_WARN_LOG("tls_transport: handle send event failed for flow send to net failed");
             __try_doing_disconnected_process();
             return;
         }
@@ -369,27 +380,26 @@ namespace transport {
         last_send_iob_ = nullptr;
 
         // If there are more buffers to send, we should send next one immediately.
-        if (pending_send_size_.fetch_sub(last_send_iob_size_, 
-                                         std::memory_order_release) > last_send_iob_size_) {
+        if (pending_send_size_.fetch_sub(last_send_iob_size_) > last_send_iob_size_) {
             if (!__send_once(flow, false)) {
-                PUMP_DEBUG_LOG("tls_transport::on_send_event: send once failed");
+                PUMP_DEBUG_LOG("tls_transport: handle send event failed for sending once failed");
                 __try_doing_disconnected_process();
             }
             return;
         }
 
         if (__is_status(TRANSPORT_STOPPING)) {
-            PUMP_DEBUG_LOG("tls_transport::on_send_event: interrupt and callback");
+            PUMP_DEBUG_LOG("tls_transport: handle send event failed for transport had being stopped");
             __interrupt_and_trigger_callbacks();
         }
     }
 
     transport_error tls_transport::__async_read(uint32_t state) {
-        uint32_t old_state = __change_read_state(state);
-        if (old_state == READ_INVALID) {
-            return ERROR_AGAIN;
-        } else if (old_state >= READ_ONCE) {
+        uint32_t current_state = __change_read_state(state);
+        if (current_state >= (uint32_t)READ_PENDING) {
             return ERROR_OK;
+        } else if (current_state == (uint32_t)READ_INVALID) {
+            return ERROR_AGAIN;
         }
 
         if (flow_->has_data_to_read()) {
@@ -399,12 +409,12 @@ namespace transport {
 
 #if defined(PUMP_HAVE_IOCP)
         if (flow_->post_read() == flow::FLOW_ERR_ABORT) {
-            PUMP_ERR_LOG("tls_transport::__async_read: want to read failed");
+            PUMP_ERR_LOG("tls_transport: async read failed for flow post read task failed");
             return ERROR_FAULT;
         }
 #else
         if (!__start_read_tracker(shared_from_this())) {
-            PUMP_ERR_LOG("tls_transport::__async_read: start tracker failed");
+            PUMP_ERR_LOG("tls_transport: async read failed for starting read tracker failed");
             return ERROR_FAULT;
         }
 #endif
@@ -414,12 +424,10 @@ namespace transport {
 
     bool tls_transport::__async_send(toolkit::io_buffer_ptr iob) {
         // Insert buffer to sendlist.
-        // PUMP_DEBUG_CHECK(sendlist_.enqueue(iob));
         PUMP_DEBUG_CHECK(sendlist_.push(iob));
 
         // If there are no more buffers, we should try to get next send chance.
-        if (pending_send_size_.fetch_add(iob->data_size(), 
-                                         std::memory_order_release) > 0) {
+        if (pending_send_size_.fetch_add(iob->data_size()) > 0) {
             return true;
         }
 
@@ -443,19 +451,19 @@ namespace transport {
         last_send_iob_size_ = last_send_iob_->data_size();
 
         if (flow->send_to_ssl(last_send_iob_) == flow::FLOW_ERR_ABORT) {
-            PUMP_ERR_LOG("tls_transport::__send_once: send to ssl failed");
+            PUMP_ERR_LOG("tls_transport: send once failed for flow send to ssl failed");
             return false;
         }
 
 #if defined(PUMP_HAVE_IOCP)
         if (flow->post_send() == flow::FLOW_ERR_ABORT) {
-            PUMP_ERR_LOG("tls_transport::__send_once: post send task failed");
+            PUMP_ERR_LOG("tls_transport: send once failed for flow post send task failed");
             return false;
         }
 #else
         auto ret = flow->want_to_send();
         if (ret == flow::FLOW_ERR_ABORT) {
-            PUMP_ERR_LOG("tls_transport::__send_once: want to send failed");
+            PUMP_ERR_LOG("tls_transport: send once failed for flow want to send failed");
             return false;
         }
 
@@ -474,7 +482,7 @@ namespace transport {
         }
 
         if (!__start_send_tracker(shared_from_this())) {
-            PUMP_ERR_LOG("tls_transport::__send_once: start tracker failed");
+            PUMP_ERR_LOG("tls_transport: send once failed for starting send tracker failed");
             return false;
         }
 #endif
