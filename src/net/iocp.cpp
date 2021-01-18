@@ -25,6 +25,18 @@ namespace pump {
 namespace net {
 
 #if defined(PUMP_HAVE_IOCP)
+
+    union win_socket {
+        HANDLE  h;
+        int32_t i;
+    };
+
+    PUMP_INLINE win_socket new_win_socket() {
+        win_socket fd; 
+        fd.h = 0;
+        return fd;
+    }
+
     net::iocp_handler g_iocp = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 0);
 
     net::iocp_handler get_iocp_handler() {
@@ -32,17 +44,17 @@ namespace net {
     }
 
     int32_t create_iocp_socket(int32_t domain, int32_t type, iocp_handler iocp) {
-        int32_t fd =
-            (int32_t)::WSASocket(domain, type, IPPROTO_IP, NULL, 0, WSA_FLAG_OVERLAPPED);
+        win_socket fd = new_win_socket();
+        fd.i = (int32_t)::WSASocket(domain, type, IPPROTO_IP, NULL, 0, WSA_FLAG_OVERLAPPED);
 
-        if (fd == SOCKET_ERROR ||
-            CreateIoCompletionPort((HANDLE)fd, iocp, 0, 0) == NULL) {
+        if (fd.i == SOCKET_ERROR ||
+            CreateIoCompletionPort(fd.h, iocp, 0, 0) == NULL) {
             PUMP_DEBUG_LOG("net: create_iocp_socket failed %d", last_errno());
-            close(fd);
+            close(fd.i);
             return -1;
         }
 
-        return fd;
+        return fd.i;
     }
 
     bool post_iocp_accept(void_ptr ex_fns, iocp_task_ptr task) {
@@ -87,14 +99,15 @@ namespace net {
             return false;
         }
 
-        HANDLE fd = (HANDLE)task->fd_;
+        win_socket fd = new_win_socket();
+        fd.i = task->fd_;
         DWORD addrlen = sizeof(sockaddr_in) + 16;
         get_addrs(task->buf_.buf, 0, addrlen, addrlen, local, llen, remote, rlen);
         if (setsockopt(task->un_.client_fd,
                        SOL_SOCKET,
                        SO_UPDATE_ACCEPT_CONTEXT,
-                       (block_t*)&fd,
-                       sizeof(fd)) == SOCKET_ERROR) {
+                       (block_t*)&fd.h,
+                       sizeof(fd.h)) == SOCKET_ERROR) {
             PUMP_DEBUG_LOG("net: get_iocp_accepted_address failed %d", last_errno());
             return false;
         }

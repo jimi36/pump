@@ -59,9 +59,9 @@ namespace protocol {
              ********************************************************************************/
             pocket(int32_t pkt) noexcept
                 : pkt_(pkt),
-                  parse_status_(PARSE_NONE),
                   version_(VERSION_UNKNOWN),
-                  body_(nullptr) {
+                  body_(nullptr),
+                  parse_status_(PARSE_NONE) {
             }
 
             /*********************************************************************************
