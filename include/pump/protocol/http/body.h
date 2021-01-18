@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef pump_protocol_http_content_h
-#define pump_protocol_http_content_h
+#ifndef pump_protocol_http_body_h
+#define pump_protocol_http_body_h
 
 #include "pump/protocol/http/utils.h"
 
@@ -23,18 +23,18 @@ namespace pump {
 namespace protocol {
     namespace http {
 
-        class LIB_PUMP content {
+        class LIB_PUMP body {
 
           public:
             /*********************************************************************************
              * Constructor
              ********************************************************************************/
-            content() noexcept;
+             body() noexcept;
 
             /*********************************************************************************
              * Deconstructor
              ********************************************************************************/
-            ~content() = default;
+            ~body() = default;
 
             /*********************************************************************************
              * Set chunked mode
@@ -68,11 +68,11 @@ namespace protocol {
             }
 
             /*********************************************************************************
-             * Set content length to parse
+             * Set body length to parse
              * If chunked mode is set, content length will be ignore.
              ********************************************************************************/
             PUMP_INLINE void set_length_to_parse(int32_t len) {
-                length_ = len;
+                content_length_ = len;
             }
 
             /*********************************************************************************
@@ -84,29 +84,31 @@ namespace protocol {
 
           private:
             /*********************************************************************************
-             * Parse content by content length
+             * Parse body by content length mode
              ********************************************************************************/
             int32_t __parse_by_length(const block_t *b, int32_t size);
 
             /*********************************************************************************
-             * Parse content by chunk mode
+             * Parse body by chunk mode
              ********************************************************************************/
             int32_t __parse_by_chunk(const block_t *b, int32_t size);
 
           private:
             // Parse finished mark
             bool parse_finished_;
-            // Chunk mode mark
+
+            // Body data
+            std::string data_;
+
+            // Chunk mode flag
             bool is_chunked_;
             // Next chunk size for chunk mode
             int32_t next_chunk_size_;
-            // Content data
-            std::string data_;
-            // Content length
-            // If chunk mode is set, this will be ignore.
-            int32_t length_;
+   
+            // Content length for content length mode
+            int32_t content_length_;
         };
-        DEFINE_ALL_POINTER_TYPE(content);
+        DEFINE_ALL_POINTER_TYPE(body);
 
     }  // namespace http
 }  // namespace protocol

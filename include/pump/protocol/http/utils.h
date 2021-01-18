@@ -29,6 +29,9 @@ namespace protocol {
         #define HTTP_CR_LEN 2
 
         #define HTTP_LINE_MAX_LEN 2048
+        #define HTTP_LINE_MIN_LEN HTTP_CR_LEN
+
+        #define HTTP_HEAD_VALUE_MAX_LEN (HTTP_LINE_MAX_LEN - 5)
 
         /*********************************************************************************
          * Find http line end position

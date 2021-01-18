@@ -39,56 +39,56 @@ namespace protocol {
             ~header() = default;
 
             /*********************************************************************************
-             * Parse
-             * This parse http header and return parsed size. If this return -1, it means
-             * parsed error.
-             ********************************************************************************/
-            int32_t parse(const block_t *b, int32_t size);
-
-            /*********************************************************************************
-             * Serialize
-             * This will serialize http header and end CR(\r\n), then return serialized
-             *size.
-             ********************************************************************************/
-            int32_t serialize(std::string &buf) const;
-
-            /*********************************************************************************
-             * Set http header
+             * Set http head
              * If the header field with the name has existed, the value will append to the
              * existed value.
              ********************************************************************************/
-            void set(const std::string &name, int32_t value);
-            void set(const std::string &name, const std::string &value);
+            void set_head(const std::string &name, int32_t value);
+            void set_head(const std::string &name, const std::string &value);
 
             /*********************************************************************************
              * Set http header
              * If the header field has existed, the field vaule will be replace.
              ********************************************************************************/
-            void set_unique(const std::string &name, int32_t value);
-            void set_unique(const std::string &name, const std::string &value);
+            void set_unique_head(const std::string &name, int32_t value);
+            void set_unique_head(const std::string &name, const std::string &value);
 
             /*********************************************************************************
              * Get http header
              ********************************************************************************/
-            bool get(const std::string &name, int32_t &value) const;
-            bool get(const std::string &name, std::string &value) const;
-            bool get(const std::string &name, std::vector<std::string> &values) const;
+            bool get_head(const std::string &name, int32_t &value) const;
+            bool get_head(const std::string &name, std::string &value) const;
+            bool get_head(const std::string &name, std::vector<std::string> &values) const;
 
             /*********************************************************************************
              * Check header field existed or not
              ********************************************************************************/
-            bool has(const std::string &name) const;
+            bool has_head(const std::string &name) const;
+
+          protected:
+            /*********************************************************************************
+             * Parse heads
+             * This parse http header and return parsed size. If this return -1, it means
+             * parsed error.
+             ********************************************************************************/
+            int32_t __parse_header(const block_t *b, int32_t size);
 
             /*********************************************************************************
              * Check parse is finished or not
              ********************************************************************************/
-            PUMP_INLINE bool is_parse_finished() const {
-                return parse_finished_;
+            PUMP_INLINE bool __is_header_parsed() const {
+                return header_parsed_;
             }
 
+            /*********************************************************************************
+             * Serialize heads
+             * This will serialize http header and end CR(\r\n), then return serialized size.
+             ********************************************************************************/
+            int32_t __serialize_header(std::string &buf) const;
+
           private:
-            // Parse state
-            bool parse_finished_;
+            // Http head parse finished flag
+            bool header_parsed_;
             // Http header map
             std::map<std::string, std::vector<std::string> > headers_;
         };

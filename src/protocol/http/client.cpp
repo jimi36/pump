@@ -60,6 +60,8 @@ namespace protocol {
             std::chrono::seconds timeout = std::chrono::seconds(5);
             if (resp_cond_.wait_for(lock, timeout) != std::cv_status::timeout) {
                 resp = std::move(resp_);
+            } else {
+                __destroy_connection();
             }
 
             wait_for_response_ = false;
@@ -112,14 +114,14 @@ namespace protocol {
         }
 
         void client::on_response(client_wptr wptr, connection_ptr conn, pocket_sptr &&pk) {
-            PUMP_LOCK_WPOINTER(cli, wptr);
+            client_sptr cli =  wptr.lock();
             if (cli) {
                 cli->__notify_response(conn, std::static_pointer_cast<response>(pk));
             }
         }
 
         void client::on_error(client_wptr wptr, connection_ptr conn, const std::string &msg) {
-            PUMP_LOCK_WPOINTER(cli, wptr);
+            client_sptr cli = wptr.lock();
             if (cli) {
                 cli->__notify_response(conn, response_sptr());
             }

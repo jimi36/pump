@@ -22,7 +22,8 @@ namespace protocol {
     namespace http {
 
         const block_t* find_http_line_end(const block_t *src, int32_t len) {
-            if (len < HTTP_CR_LEN) {
+            len = min(len, HTTP_LINE_MAX_LEN);
+            if (len < HTTP_LINE_MIN_LEN) {
                 return nullptr;
             }
 

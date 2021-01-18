@@ -265,13 +265,11 @@ namespace transport {
         }
 
         dialer_callbacks cbs;
-        cbs.dialed_cb =
-            pump_bind(&tls_sync_dialer::on_dialed, shared_from_this(), _1, _2);
+        cbs.dialed_cb = pump_bind(&tls_sync_dialer::on_dialed, shared_from_this(), _1, _2);
         cbs.timeouted_cb = pump_bind(&tls_sync_dialer::on_timeouted, shared_from_this());
         cbs.stopped_cb = pump_bind(&tls_sync_dialer::on_stopped);
 
-        dialer_ = tls_dialer::create(
-            local_address, remote_address, connect_timeout, handshake_timeout);
+        dialer_ = tls_dialer::create(local_address, remote_address, connect_timeout, handshake_timeout);
         if (dialer_->start(sv, cbs) != ERROR_OK) {
             return base_transport_sptr();
         }
@@ -282,21 +280,17 @@ namespace transport {
     void tls_sync_dialer::on_dialed(tls_sync_dialer_wptr wptr,
                                     base_transport_sptr &transp,
                                     bool succ) {
-        PUMP_LOCK_WPOINTER(dialer, wptr);
-        if (!dialer) {
-            return;
+        tls_sync_dialer_sptr dialer = wptr.lock();
+        if (dialer) {
+            dialer->dial_promise_.set_value(transp);
         }
-
-        dialer->dial_promise_.set_value(transp);
     }
 
     void tls_sync_dialer::on_timeouted(tls_sync_dialer_wptr wptr) {
-        PUMP_LOCK_WPOINTER(dialer, wptr);
-        if (!dialer) {
-            return;
+        tls_sync_dialer_sptr dialer = wptr.lock();
+        if (dialer) {
+            dialer->dial_promise_.set_value(base_transport_sptr());
         }
-
-        dialer->dial_promise_.set_value(base_transport_sptr());
     }
 
     void tls_sync_dialer::on_stopped() {

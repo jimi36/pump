@@ -14,28 +14,28 @@
  * limitations under the License.
  */
 
-#include "pump/protocol/http/content.h"
+#include "pump/protocol/http/body.h"
 
 namespace pump {
 namespace protocol {
     namespace http {
 
-        content::content() noexcept
+        body::body() noexcept
           : parse_finished_(false),
             is_chunked_(false),
             next_chunk_size_(0),
-            length_(0) {
+            content_length_(0) {
         }
 
-        void content::append(const block_t *b, int32_t size) {
+        void body::append(const block_t *b, int32_t size) {
             data_.append(b, size);
         }
 
-        void content::append(const std::string &data) {
+        void body::append(const std::string &data) {
             data_.append(data);
         }
 
-        int32_t content::serialize(std::string &buf) const {
+        int32_t body::serialize(std::string &buf) const {
             if (is_chunked_) {
                 int32_t size = 0;
                 block_t tmp[32] = {0};
@@ -56,7 +56,7 @@ namespace protocol {
             }
         }
 
-        int32_t content::parse(const block_t *b, int32_t size) {
+        int32_t body::parse(const block_t *b, int32_t size) {
             if (is_chunked_) {
                 return __parse_by_chunk(b, size);
             } else {
@@ -64,27 +64,26 @@ namespace protocol {
             }
         }
 
-        int32_t content::__parse_by_length(const block_t *b, int32_t size) {
-            int32_t want_parse_size = length_ - (int32_t)data_.size();
+        int32_t body::__parse_by_length(const block_t *b, int32_t size) {
+            int32_t want_parse_size = content_length_ - (int32_t)data_.size();
             if (want_parse_size > size) {
                 want_parse_size = size;
             }
             data_.append(b, want_parse_size);
 
-            if ((int32_t)data_.size() == length_) {
+            if ((int32_t)data_.size() == content_length_) {
                 parse_finished_ = true;
             }
 
             return want_parse_size;
         }
 
-        int32_t content::__parse_by_chunk(const block_t *b, int32_t size) {
+        int32_t body::__parse_by_chunk(const block_t *b, int32_t size) {
             const block_t *pos = b;
 
             while (1) {
                 const block_t *chunk_pos = pos;
-                const block_t *line_end =
-                    find_http_line_end(chunk_pos, size - int32_t(chunk_pos - b));
+                const block_t *line_end = find_http_line_end(chunk_pos, size - int32_t(chunk_pos - b));
                 if (!line_end) {
                     break;
                 }
@@ -92,8 +91,7 @@ namespace protocol {
                 line_end -= HTTP_CR_LEN;
                 int32_t next_chunk_size = 0;
                 while (chunk_pos != line_end) {
-                    next_chunk_size =
-                        next_chunk_size * 16 + hexchar_to_decnum(*(chunk_pos++));
+                    next_chunk_size = next_chunk_size * 16 + hexchar_to_decnum(*(chunk_pos++));
                 }
                 chunk_pos += HTTP_CR_LEN;
 

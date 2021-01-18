@@ -19,6 +19,7 @@
 
 #include "pump/toolkit/features.h"
 #include "pump/protocol/http/request.h"
+#include "pump/protocol/http/response.h"
 #include "pump/protocol/http/connection.h"
 
 namespace pump {

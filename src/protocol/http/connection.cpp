@@ -87,9 +87,9 @@ namespace protocol {
             return transp_->send(data.c_str(), (int32_t)data.size()) == transport::ERROR_OK;
         }
 
-        bool connection::send(c_content_ptr ct) {
+        bool connection::send(c_body_ptr b) {
             std::string data;
-            ct->serialize(data);
+            b->serialize(data);
             return transp_->send(data.c_str(), (int32_t)data.size()) == transport::ERROR_OK;
         }
 

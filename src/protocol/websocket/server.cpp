@@ -162,17 +162,15 @@ namespace protocol {
                 return false;
             }
 
-            auto header = req->get_header();
-
             std::string upgrade;
-            if (!header->get("Upgrade", upgrade) || upgrade != "websocket") {
+            if (!req->get_head("Upgrade", upgrade) || upgrade != "websocket") {
                 send_http_error_response(
                     conn, 400, "Upgrade header is not found or invalid");
                 return false;
             }
 
             std::vector<std::string> connection;
-            if (!header->get("Connection", connection) ||
+            if (!req->get_head("Connection", connection) ||
                 std::find(connection.begin(), connection.end(), "Upgrade") == connection.end()) {
                 send_http_error_response(
                     conn, 400, "Connection header is not found or invalid");
@@ -180,14 +178,14 @@ namespace protocol {
             }
 
             std::string sec_version;
-            if (!header->get("Sec-WebSocket-Version", sec_version) || sec_version != "13") {
+            if (!req->get_head("Sec-WebSocket-Version", sec_version) || sec_version != "13") {
                 send_http_error_response(
                     conn, 400, "Sec-WebSocket-Version header is not found or invalid");
                 return false;
             }
 
             std::string sec_key;
-            if (!header->get("Sec-WebSocket-Key", sec_key)) {
+            if (!req->get_head("Sec-WebSocket-Key", sec_key)) {
                 send_http_error_response(
                     conn, 400, "Sec-WebSocket-Key header is not found or invalid");
                 return false;
@@ -203,16 +201,14 @@ namespace protocol {
             http::response resp;
             resp.set_status_code(101);
             resp.set_http_version(version);
-
-            http::header_ptr resp_header = resp.get_header();
-            resp_header->set("Upgrade", "websocket");
-            resp_header->set("Connection", "Upgrade");
-            resp_header->set("Sec-WebSocket-Accept", compute_sec_accept_key(sec_key));
+            resp.set_head("Upgrade", "websocket");
+            resp.set_head("Connection", "Upgrade");
+            resp.set_head("Sec-WebSocket-Accept", compute_sec_accept_key(sec_key));
 
             std::vector<std::string> protocs;
-            header->get("Sec-WebSocket-Protocol", protocs);
+            req->get_head("Sec-WebSocket-Protocol", protocs);
             for (int32_t i = 0; i < (int32_t)protocs.size(); i++) {
-                resp_header->set("Sec-WebSocket-Protocol", protocs[i]);
+                resp.set_head("Sec-WebSocket-Protocol", protocs[i]);
             }
 
             std::string data;

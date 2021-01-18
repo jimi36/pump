@@ -18,45 +18,50 @@
 #define pump_protocol_http_pocket_h
 
 #include "pump/protocol/http/uri.h"
+#include "pump/protocol/http/body.h"
 #include "pump/protocol/http/header.h"
-#include "pump/protocol/http/content.h"
 
 namespace pump {
 namespace protocol {
     namespace http {
 
-        enum pocket_type { 
-            PK_UNKNOWN = 0, 
-            PK_REQUEST, PK_RESPONSE
-        };
+        /*********************************************************************************
+         * Http Pocket type
+         ********************************************************************************/
+        const int32_t PK_UNKNOWN = 0;
+        const int32_t PK_REQUEST = 1;
+        const int32_t PK_RESPONSE = 2;
 
-        enum protocol_version { 
-            VERSION_UNKNOWN = 0, 
-            VERSION_10, 
-            VERSION_11, 
-            VERSION_20
-        };
+        /*********************************************************************************
+         * Http version
+         ********************************************************************************/
+        const int32_t VERSION_UNKNOWN = 0;
+        const int32_t VERSION_10 = 1;
+        const int32_t VERSION_11 = 2;
+        const int32_t VERSION_20 = 3;
 
-        enum pocket_parse_status {
-            PARSE_NONE = 0,
-            PARSE_LINE,
-            PARSE_HEADER,
-            PARSE_CONTENT,
-            PARSE_FINISHED,
-            PARSE_FAILED
-        };
+        /*********************************************************************************
+         * Http pocket parse status
+         ********************************************************************************/
+        const int32_t PARSE_NONE = 0;
+        const int32_t PARSE_LINE = 1;
+        const int32_t PARSE_HEADER = 2;
+        const int32_t PARSE_CONTENT = 3;
+        const int32_t PARSE_FINISHED = 4;
+        const int32_t PARSE_FAILED = 5;
 
-        class LIB_PUMP pocket {
+        class LIB_PUMP pocket
+          : public header {
 
           public:
             /*********************************************************************************
              * Constructor
              ********************************************************************************/
-            pocket(pocket_type pt) noexcept
-                : pt_(pt),
+            pocket(int32_t pkt) noexcept
+                : pkt_(pkt),
                   parse_status_(PARSE_NONE),
                   version_(VERSION_UNKNOWN),
-                  ct_(nullptr) {
+                  body_(nullptr) {
             }
 
             /*********************************************************************************
@@ -67,8 +72,8 @@ namespace protocol {
             /*********************************************************************************
              * Get pocket type
              ********************************************************************************/
-            PUMP_INLINE pocket_type get_type() const {
-                return pt_;
+            PUMP_INLINE int32_t get_type() const {
+                return pkt_;
             }
 
             /*********************************************************************************
@@ -85,40 +90,30 @@ namespace protocol {
             virtual int32_t serialize(std::string &buffer) const = 0;
 
             /*********************************************************************************
-             * Get http header
-             ********************************************************************************/
-            PUMP_INLINE const header_ptr get_header() const {
-                return (const header_ptr)&header_;
-            }
-            PUMP_INLINE header_ptr get_header() {
-                return &header_;
-            }
-
-            /*********************************************************************************
              * Set http content
              ********************************************************************************/
-            PUMP_INLINE void set_content(content_sptr &content) {
-                ct_ = content;
+            PUMP_INLINE void set_body(body_sptr &b) {
+                body_ = b;
             }
 
             /*********************************************************************************
              * Get http content
              ********************************************************************************/
-            PUMP_INLINE const content_sptr get_content() const {
-                return ct_;
+            PUMP_INLINE const body_sptr get_content() const {
+                return body_;
             }
 
             /*********************************************************************************
              * Set http version
              ********************************************************************************/
-            PUMP_INLINE void set_http_version(protocol_version version) {
+            PUMP_INLINE void set_http_version(int32_t version) {
                 version_ = version;
             }
 
             /*********************************************************************************
              * Get http version
              ********************************************************************************/
-            PUMP_INLINE protocol_version get_http_version() const {
+            PUMP_INLINE int32_t get_http_version() const {
                 return version_;
             }
 
@@ -144,16 +139,17 @@ namespace protocol {
             }
 
           protected:
-            // Pocket type
-            pocket_type pt_;
-            // Parse status
-            pocket_parse_status parse_status_;
+            // Http pocket type
+            int32_t pkt_;
+
             // Http version
-            protocol_version version_;
-            // Http header
-            header header_;
-            // Http content
-            content_sptr ct_;
+            int32_t version_;
+
+            // Http body
+            body_sptr body_;
+
+            // Parse status
+            int32_t parse_status_;
         };
         DEFINE_ALL_POINTER_TYPE(pocket);
 

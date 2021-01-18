@@ -68,12 +68,12 @@ namespace protocol {
             resp.set_status_code(status_code);
 
             if (!reason.empty()) {
-                resp.get_header()->set("Content-Length", (int32_t)reason.size());
+                resp.set_head("Content-Length", (int32_t)reason.size());
 
-                http::content_sptr ct(new http::content);
-                ct->append(reason);
+                http::body_sptr hb(new http::body);
+                hb->append(reason);
 
-                resp.set_content(ct);
+                resp.set_body(hb);
             }
 
             std::string data;

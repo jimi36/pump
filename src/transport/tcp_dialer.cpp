@@ -201,21 +201,17 @@ namespace transport {
     void tcp_sync_dialer::on_dialed(tcp_sync_dialer_wptr wptr,
                                     base_transport_sptr &transp,
                                     bool succ) {
-        PUMP_LOCK_WPOINTER(dialer, wptr);
-        if (!dialer) {
-            return;
+        tcp_sync_dialer_sptr dialer = wptr.lock();
+        if (dialer) {
+            dialer->dial_promise_.set_value(transp);
         }
-
-        dialer->dial_promise_.set_value(transp);
     }
 
     void tcp_sync_dialer::on_timeouted(tcp_sync_dialer_wptr wptr) {
-        PUMP_LOCK_WPOINTER(dialer, wptr);
-        if (!dialer) {
-            return;
+        tcp_sync_dialer_sptr dialer = wptr.lock();
+        if (dialer) {
+            dialer->dial_promise_.set_value(base_transport_sptr());
         }
-
-        dialer->dial_promise_.set_value(base_transport_sptr());
     }
 
     void tcp_sync_dialer::on_stopped() {

@@ -17,11 +17,7 @@
 #ifndef pump_protocol_http_request_h
 #define pump_protocol_http_request_h
 
-#include "pump/protocol/http/header.h"
 #include "pump/protocol/http/pocket.h"
-#include "pump/protocol/http/content.h"
-#include "pump/protocol/http/response.h"
-#include "pump/protocol/http/connection.h"
 
 namespace pump {
 namespace protocol {

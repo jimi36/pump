@@ -17,6 +17,9 @@
 #ifndef pump_protocol_websocket_connection_h
 #define pump_protocol_websocket_connection_h
 
+#include "pump/service.h"
+#include "pump/transport/base_transport.h"
+
 #include "pump/protocol/http/request.h"
 #include "pump/protocol/http/response.h"
 #include "pump/protocol/websocket/frame.h"

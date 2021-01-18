@@ -177,18 +177,17 @@ namespace protocol {
             upgrade_req_.reset(new http::request(upgrade_url_));
             upgrade_req_->set_http_version(http::VERSION_11);
             upgrade_req_->set_method(http::METHOD_GET);
-            auto u = upgrade_req_->get_uri();
-            auto header = upgrade_req_->get_header();
             for (auto &h : upgrade_req_headers_) {
-                header->set(h.first, h.second);
+                upgrade_req_->set_head(h.first, h.second);
             }
-            if (!header->has("Host")) {
-                header->set_unique("Host", u->get_host());
+            auto u = upgrade_req_->get_uri();
+            if (!upgrade_req_->has_head("Host")) {
+                upgrade_req_->set_unique_head("Host", u->get_host());
             }
-            header->set_unique("Connection", "Upgrade");
-            header->set_unique("Upgrade", "websocket");
-            header->set_unique("Sec-WebSocket-Version", "13");
-            header->set_unique("Sec-WebSocket-Key", compute_sec_key());
+            upgrade_req_->set_unique_head("Connection", "Upgrade");
+            upgrade_req_->set_unique_head("Upgrade", "websocket");
+            upgrade_req_->set_unique_head("Sec-WebSocket-Version", "13");
+            upgrade_req_->set_unique_head("Sec-WebSocket-Key", compute_sec_key());
 
             // Init bind address
             transport::address bind_address("0.0.0.0", 0);
@@ -220,22 +219,20 @@ namespace protocol {
                 return false;
             }
 
-            auto header = resp->get_header();
-
             std::string upgrade;
-            if (!header->get("Upgrade", upgrade) || upgrade != "websocket") {
+            if (!resp->get_head("Upgrade", upgrade) || upgrade != "websocket") {
                 return false;
             }
 
             std::vector<std::string> connection;
-            if (!header->get("Connection", connection) ||
+            if (!resp->get_head("Connection", connection) ||
                 std::find(connection.begin(), connection.end(), "Upgrade") ==
                     connection.end()) {
                 return false;
             }
 
             std::string sec_accept;
-            if (!header->get("Sec-WebSocket-Accept", sec_accept)) {
+            if (!resp->get_head("Sec-WebSocket-Accept", sec_accept)) {
                 return false;
             }
 

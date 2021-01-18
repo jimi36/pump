@@ -68,7 +68,7 @@ namespace protocol {
             }
 
             if (parse_status_ == PARSE_HEADER) {
-                parse_size = header_.parse(pos, size);
+                parse_size = __parse_header(pos, size);
                 if (parse_size < 0) {
                     return parse_size;
                 } else if (parse_size == 0) {
@@ -78,39 +78,43 @@ namespace protocol {
                 pos += parse_size;
                 size -= parse_size;
 
-                if (header_.is_parse_finished()) {
+                if (__is_header_parsed()) {
                     parse_status_ = PARSE_CONTENT;
 
                     std::string host;
-                    if (header_.get("Host", host)) {
+                    if (get_head("Host", host)) {
                         uri_.set_host(host);
                     }
                 }
             }
 
             if (parse_status_ == PARSE_CONTENT) {
-                content_ptr ct = ct_.get();
-                if (!ct) {
-                    int32_t ct_length = 0;
-                    if (header_.get("Content-Length", ct_length) && ct_length > 0) {
-                        ct = new content();
-                        ct->set_length_to_parse(ct_length);
-                        ct_.reset(ct);
+                body_ptr body_ptr = body_.get();
+                if (!body_ptr) {
+                    int32_t content_length = 0;
+                    if (get_head("Content-Length", content_length)) {
+                        if (content_length > 0) {
+                            body_ptr = new body();
+                            body_.reset(body_ptr);
+                            body_ptr->set_length_to_parse(content_length);
+                        } else {
+                            parse_status_ = PARSE_FINISHED;
+                        }       
                     } else {
                         std::string transfer_encoding;
-                        if (header_.get("Transfer-Encoding", transfer_encoding) &&
+                        if (get_head("Transfer-Encoding", transfer_encoding) &&
                             transfer_encoding == "chunked") {
-                            ct = new content();
-                            ct->set_chunked();
-                            ct_.reset(ct);
+                            body_ptr = new body();
+                            body_.reset(body_ptr);
+                            body_ptr->set_chunked();
                         } else {
                             parse_status_ = PARSE_FINISHED;
                         }
                     }
                 }
 
-                if (ct) {
-                    parse_size = ct->parse(pos, size);
+                if (body_ptr) {
+                    parse_size = body_ptr->parse(pos, size);
                     if (parse_size < 0) {
                         return parse_size;
                     } else if (parse_size == 0) {
@@ -120,7 +124,7 @@ namespace protocol {
                     pos += parse_size;
                     size -= parse_size;
 
-                    if (ct->is_parse_finished()) {
+                    if (body_ptr->is_parse_finished()) {
                         parse_status_ = PARSE_FINISHED;
                     }
                 }
@@ -138,14 +142,14 @@ namespace protocol {
             }
             serialize_size += size;
 
-            size = header_.serialize(buffer);
+            size = __serialize_header(buffer);
             if (size < 0) {
                 return -1;
             }
             serialize_size += size;
 
-            if (ct_) {
-                size = ct_->serialize(buffer);
+            if (body_) {
+                size = body_->serialize(buffer);
                 if (size < 0) {
                     return -1;
                 }
