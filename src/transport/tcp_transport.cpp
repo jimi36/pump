@@ -325,9 +325,11 @@ namespace transport {
 #if !defined(PUMP_HAVE_IOCP)
                 PUMP_DEBUG_CHECK(__resume_send_tracker());
 #endif
+                return;
             case ERROR_FAULT:
                 PUMP_DEBUG_LOG("tcp_transport: handle send event failed for sending once failed");
                 __try_doing_disconnected_process();
+                return;
             }
         }
 
