@@ -112,7 +112,7 @@ namespace transport {
                 PUMP_ERR_LOG("tcp_acceptor: handle read event failed for flow post accept task failed");
             }
 #else
-            PUMP_DEBUG_CHECK(tracker_->set_tracked(true));
+            PUMP_DEBUG_CHECK(__resume_accept_tracker());
 #endif
             return;
         }

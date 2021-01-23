@@ -12,10 +12,10 @@ void start_http_client(pump::service_ptr sv, const std::vector<std::string> &url
         req->set_url(urls[ii]);
         req->set_method(http::METHOD_GET);
         req->set_http_version(http::VERSION_11);
-        req->get_header()->set("Host", req->get_uri()->get_host());
-        req->get_header()->set("User-Agent", "PostmanRuntime/7.24.0");
-        req->get_header()->set("Accept", "*/*");
-        req->get_header()->set("Connection", "keep-alive");
+        req->set_head("Host", req->get_uri()->get_host());
+        req->set_head("User-Agent", "PostmanRuntime/7.24.0");
+        req->set_head("Accept", "*/*");
+        req->set_head("Connection", "keep-alive");
 
         int succ = 0;
         auto beg = pump::time::get_clock_milliseconds();

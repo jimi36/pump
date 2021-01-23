@@ -91,17 +91,13 @@ namespace poll {
                     continue;
                 }
 
-                int32_t event = IO_EVENT_NONE;
                 int32_t task_type = task->get_type();
                 if (task_type & net::IOCP_READ_MASKS) {
-                    event = IO_EVENT_READ;
-                } else if (task_type & net::IOCP_SEND_MASKS) {
-                    event = IO_EVENT_SEND;
-                }
-
-                if (event != IO_EVENT_NONE) {
                     task->set_processed_size(transferred);
-                    channel_ptr(notifier)->handle_io_event(event, task);
+                    channel_ptr(notifier)->handle_io_event(IO_EVENT_READ, task);
+                } else if (task_type & net::IOCP_SEND_MASKS) {
+                    task->set_processed_size(transferred);
+                    channel_ptr(notifier)->handle_io_event(IO_EVENT_SEND, task);
                 } else {
                     channel_ptr(notifier)->handle_channel_event(int32_t(completion_key));
                 }

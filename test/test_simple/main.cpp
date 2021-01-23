@@ -258,6 +258,11 @@ int main(int argc, const char **argv) {
         return -1;
     }
 
+    char* s = "123456";
+    std::string str;
+    str.assign(s, s + 1);
+    printf("%s\n", str.c_str());
+
     int loop = atoi(argv[1]);
 
     test2(loop);

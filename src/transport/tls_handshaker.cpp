@@ -251,9 +251,7 @@ namespace transport {
             }
 
             tracker->set_event(poll::TRACK_SEND);
-
-            PUMP_ASSERT(tracker->is_started());
-            PUMP_DEBUG_CHECK(tracker->set_tracked(true));
+            PUMP_DEBUG_CHECK(tracker->get_poller()->resume_channel_tracker(tracker));
 #endif
             return;
         }
@@ -268,8 +266,7 @@ namespace transport {
             }
 #else
             tracker->set_event(poll::TRACK_READ);
-
-            PUMP_DEBUG_CHECK(tracker->set_tracked(true));
+            PUMP_DEBUG_CHECK(tracker->get_poller()->resume_channel_tracker(tracker));
 #endif
             return;
         }

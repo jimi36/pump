@@ -29,7 +29,7 @@ namespace transport {
     namespace flow {
 
         #define MAX_TCP_BUFFER_SIZE 4096 // 4KB
-        #define MAX_UDP_BUFFER_SIZE 65536 // 64KB
+        #define MAX_UDP_BUFFER_SIZE 8192 // 8KB
 
         const int32_t FLOW_ERR_NO = 0;
         const int32_t FLOW_ERR_ABORT = 1;

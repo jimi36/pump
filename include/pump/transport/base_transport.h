@@ -143,7 +143,10 @@ namespace transport {
         std::atomic_int32_t transport_state_;
     };
 
-    class LIB_PUMP base_transport : public base_channel {
+    class LIB_PUMP base_transport : 
+        public base_channel, 
+        public std::enable_shared_from_this<base_transport> {
+
       public:
         /*********************************************************************************
          * Constructor
@@ -158,10 +161,6 @@ namespace transport {
          * Deconstructor
          ********************************************************************************/
         virtual ~base_transport() {
-#if !defined(PUMP_HAVE_IOCP)
-            __stop_read_tracker();
-            __stop_send_tracker();
-#endif
         }
 
         /*********************************************************************************
@@ -220,21 +219,21 @@ namespace transport {
         /*********************************************************************************
          * Get pending send buffer size
          ********************************************************************************/
-        int32_t get_pending_send_size() const {
+        PUMP_INLINE int32_t get_pending_send_size() const {
             return pending_send_size_.load(std::memory_order_relaxed);
         }
 
         /*********************************************************************************
          * Get local address
          ********************************************************************************/
-        const address &get_local_address() const {
+        PUMP_INLINE const address &get_local_address() const {
             return local_address_;
         }
 
         /*********************************************************************************
          * Get remote address
          ********************************************************************************/
-        const address &get_remote_address() const {
+        PUMP_INLINE const address &get_remote_address() const {
             return remote_address_;
         }
 
@@ -262,16 +261,76 @@ namespace transport {
 
 #if !defined(PUMP_HAVE_IOCP)
         /*********************************************************************************
-         * Start all trackers
+         * Start trackers
          ********************************************************************************/
-        bool __start_read_tracker(poll::channel_sptr &&ch);
-        bool __start_send_tracker(poll::channel_sptr &&ch);
+        bool __start_read_tracker() {
+            auto tracker = r_tracker_.get();
+            if (PUMP_UNLIKELY(!tracker)) {
+                tracker = object_create<poll::channel_tracker>(
+                    shared_from_this(), poll::TRACK_READ);
+                r_tracker_.reset(tracker, object_delete<poll::channel_tracker>);
+                if (!get_service()->add_channel_tracker(r_tracker_, READ_POLLER)) {
+                    PUMP_WARN_LOG("base_transport: start read tracker failed");
+                    return false;
+                }
+                PUMP_DEBUG_LOG("base_transport: start read tracker");
+            } else {
+                if (!tracker->get_poller()->resume_channel_tracker(tracker)) {
+                    PUMP_WARN_LOG("base_transport: resume read tracker failed");
+                    return false;
+                }
+            }
+            return true;
+        }
+        bool __start_send_tracker() {
+            auto tracker = s_tracker_.get();
+            if (PUMP_UNLIKELY(!tracker)) {
+                tracker = object_create<poll::channel_tracker>(
+                    shared_from_this(), poll::TRACK_SEND);
+                s_tracker_.reset(tracker, object_delete<poll::channel_tracker>);
+                if (!get_service()->add_channel_tracker(s_tracker_, WRITE_POLLER)) {
+                    PUMP_WARN_LOG("base_transport: start send tracker failed");
+                    return false;
+                }
+                PUMP_DEBUG_LOG("base_transport: start send tracker");
+            } else {
+                if (!tracker->get_poller()->resume_channel_tracker(tracker)) {
+                    PUMP_WARN_LOG("base_transport: resume send tracker failed");
+                    return false;
+                }
+            }
+            return true;
+        }
 
         /*********************************************************************************
          * Stop tracker
          ********************************************************************************/
-        void __stop_read_tracker();
-        void __stop_send_tracker();
+        PUMP_INLINE void __stop_read_tracker() {
+            if (r_tracker_) {
+                PUMP_DEBUG_LOG("base_transport: stop read tracker");
+                get_service()->remove_channel_tracker(r_tracker_, READ_POLLER);
+            }
+        }
+        PUMP_INLINE void __stop_send_tracker() {
+            if (s_tracker_) {
+                PUMP_DEBUG_LOG("base_transport: stop send tracker");
+                get_service()->remove_channel_tracker(s_tracker_, WRITE_POLLER);
+            }
+        }
+
+        /*********************************************************************************
+         * Resume trackers
+         ********************************************************************************/
+        PUMP_INLINE bool __resume_read_tracker() {
+            PUMP_ASSERT(r_tracker_);
+            auto tracker = r_tracker_.get();
+            return tracker->get_poller()->resume_channel_tracker(tracker);
+        }
+        PUMP_INLINE bool __resume_send_tracker() {
+            PUMP_ASSERT(s_tracker_);
+            auto tracker = s_tracker_.get();
+            return tracker->get_poller()->resume_channel_tracker(tracker);
+        }
 #endif
       protected:
         // Local address

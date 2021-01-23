@@ -6,14 +6,14 @@ void on_new_request(http::connection_wptr &wconn, http::request_sptr &&req) {
     http::response res;
     res.set_status_code(200);
     res.set_http_version(http::VERSION_11);
-    res.get_header()->set("Content-Type", "text/html; charset=utf-8");
-    res.get_header()->set("Content-Length", (int32_t)data.size());
+    res.set_head("Content-Type", "text/html; charset=utf-8");
+    res.set_head("Content-Length", (int32_t)data.size());
     // res.get_header()->set("Transfer-Encoding", "chunked");
     // conn->send(&res);
 
-    http::content_sptr content(new http::content);
+    http::body_sptr content(new http::body);
     content->append(data.c_str(), (int32_t)data.size());
-    res.set_content(content);
+    res.set_body(content);
 
     auto conn = wconn.lock();
     conn->send(&res);

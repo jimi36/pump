@@ -3,6 +3,7 @@
 static int count = 1;
 static int send_loop = 1;
 static int send_pocket_size = 1024 * 4;
+static int send_pocket_count = 1024 * 100;
 
 class my_tcp_dialer;
 
@@ -24,6 +25,7 @@ class my_tcp_dialer : public std::enable_shared_from_this<my_tcp_dialer> {
         all_read_size_ = 0;
         last_report_time_ = 0;
         send_data_.resize(send_pocket_size);
+        left_send_pocket_count_ = send_pocket_count;
     }
 
     virtual ~my_tcp_dialer() {
@@ -106,7 +108,7 @@ class my_tcp_dialer : public std::enable_shared_from_this<my_tcp_dialer> {
         if (my_dialers.erase(this) != 1) {
             printf("erase dialer error\n");
         }
-        // start_once_dialer();
+        start_once_dialer();
         dial_mx.unlock();
     }
 
@@ -115,6 +117,12 @@ class my_tcp_dialer : public std::enable_shared_from_this<my_tcp_dialer> {
     }
 
     inline bool send_data() {
+        if (left_send_pocket_count_ == 0) {
+            transport_->stop();
+            return false;
+        } else if (left_send_pocket_count_ > 0) {
+            left_send_pocket_count_--;
+        }
         if (transport_->send(send_data_.data(), (int32_t)send_data_.size()) != 0) {
             printf("send error\n");
             return false;
@@ -127,6 +135,9 @@ class my_tcp_dialer : public std::enable_shared_from_this<my_tcp_dialer> {
     volatile int32_t read_size_;
     volatile int32_t read_pocket_size_;
     volatile int32_t all_read_size_;
+
+    volatile int32_t left_send_pocket_count_;
+
     int64_t last_report_time_;
 
     std::string send_data_;
@@ -187,9 +198,11 @@ class time_report {
     }
 };
 
-void start_tcp_client(const std::string &ip, uint16_t port) {
+void start_tcp_client(const std::string &ip, uint16_t port, int32_t conn_count) {
     server_ip = ip;
     server_port = port;
+
+    count = conn_count;
 
     sv = new service;
     sv->start();

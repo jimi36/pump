@@ -160,8 +160,7 @@ namespace poll {
         // Channel trackers
         std::map<channel_tracker_ptr, channel_tracker_sptr> trackers_;
     };
-
-    DEFINE_ALL_POINTER_TYPE(poller);
+    DEFINE_SMART_POINTER_TYPE(poller);
 
 }  // namespace poll
 }  // namespace pump

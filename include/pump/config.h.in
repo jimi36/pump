@@ -28,7 +28,7 @@
 
 #define @pump_WITH_WINSOCK@
 #if defined(WITH_WINSOCK)
-    #define PUMP_HAVE_WINSOCK
+#define PUMP_HAVE_WINSOCK
 #endif
 
 #define @pump_WITH_IOCP@

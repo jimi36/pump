@@ -24,6 +24,13 @@ namespace transport {
         local_address_ = bind_address;
     }
 
+    udp_transport::~udp_transport() {
+#if !defined(PUMP_HAVE_IOCP)
+        __stop_read_tracker();
+        __stop_send_tracker();
+#endif
+    }
+
     int32_t udp_transport::start(service_ptr sv, const transport_callbacks &cbs) {
         if (!sv) {
             PUMP_ERR_LOG("udp_transport: start failed with invalid service");
@@ -162,7 +169,7 @@ namespace transport {
             PUMP_WARN_LOG("udp_transport: handle read event failed for flow post read task failed");
         }
 #else
-        PUMP_DEBUG_CHECK(r_tracker_->set_tracked(true));
+        PUMP_DEBUG_CHECK(__resume_read_tracker());
 #endif
     }
 
@@ -195,7 +202,7 @@ namespace transport {
             return ERROR_FAULT;
         }
 #else
-        if (!__start_read_tracker(shared_from_this())) {
+        if (!__start_read_tracker()) {
             PUMP_ERR_LOG("udp_transport: async read failed for starting read tracker fialed");
             return ERROR_FAULT;
         }

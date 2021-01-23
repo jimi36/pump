@@ -28,8 +28,7 @@ namespace transport {
     DEFINE_ALL_POINTER_TYPE(tcp_transport);
 
     class LIB_PUMP tcp_transport
-      : public base_transport,
-        public std::enable_shared_from_this<tcp_transport> {
+      : public base_transport {
 
       public:
         /*********************************************************************************
@@ -144,7 +143,7 @@ namespace transport {
         /*********************************************************************************
          * Send once
          ********************************************************************************/
-        bool __send_once(flow::flow_tcp_ptr flow, bool resume);
+        int32_t __send_once(flow::flow_tcp_ptr flow);
 
         /*********************************************************************************
          * Try doing dissconnected process
@@ -155,6 +154,14 @@ namespace transport {
          * Clear sendlist
          ********************************************************************************/
         void __clear_sendlist();
+
+        /*********************************************************************************
+         * Reset last sent io buffer
+         ********************************************************************************/
+        PUMP_INLINE void __reset_last_sent_iobuffer() {
+            last_send_iob_->sub_ref();
+            last_send_iob_ = nullptr;
+        }
 
       private:
         // Transport flow

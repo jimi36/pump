@@ -34,16 +34,6 @@ namespace poll {
     const int32_t IO_EVENT_SEND = 0x02;   // send event
     const int32_t IO_EVENT_ERROR = 0x04;  // error event
 
-    /*********************************************************************************
-     * Channel opt type
-     ********************************************************************************/
-    enum channel_opt_type {
-        CH_OPT_NONE = 0x00,
-        CH_OPT_APPEND = 0x01,
-        CH_OPT_UPDATE = 0x02,
-        CH_OPT_DELETE = 0x03
-    };
-
     class LIB_PUMP channel
       : public toolkit::noncopyable {
 
@@ -158,6 +148,13 @@ namespace poll {
     const int32_t TRACKER_EVENT_DEL = 0;
     const int32_t TRACKER_EVENT_ADD = 1;
 
+    const int8_t TRACKER_STATE_STOP = 0x00;
+    const int8_t TRACKER_STATE_TRACK = 0x01;
+    const int8_t TRACKER_STATE_UNTRACK = 0x02;
+
+    class poller;
+    DEFINE_RAW_POINTER_TYPE(poller);
+
     class channel_tracker
       : public toolkit::noncopyable {
 
@@ -166,50 +163,97 @@ namespace poll {
          * Constructor
          ********************************************************************************/
         channel_tracker(channel_sptr &ch, int32_t ev) noexcept
-            : started_(false), 
-              tracked_(false), 
+            : state_(TRACKER_STATE_STOP),
               event_(ev), 
               fd_(ch->get_fd()), 
-              ch_(ch) {
+              ch_(ch),
+              pr_(nullptr) {
         }
         channel_tracker(channel_sptr &&ch, int32_t ev) noexcept
-            : started_(false), 
-              tracked_(false), 
+            : state_(TRACKER_STATE_STOP),
               event_(ev), 
               fd_(ch->get_fd()), 
-              ch_(ch) {
+              ch_(ch), 
+              pr_(nullptr) {
         }
 
         /*********************************************************************************
-         * Mark started
+         * Start
          ********************************************************************************/
-        PUMP_INLINE bool mark_started(bool started) {
-            bool expected = !started;
-            return started_.compare_exchange_strong(
-                expected, started, std::memory_order_acquire, std::memory_order_relaxed);
+        PUMP_INLINE bool start() {
+            if (PUMP_UNLIKELY(state_ != TRACKER_STATE_STOP)) {
+                return false;
+            }
+            state_ = TRACKER_STATE_TRACK;
+            return true;
+        }
+
+        /*********************************************************************************
+         * Stop
+         ********************************************************************************/
+        PUMP_INLINE bool stop() {
+            if (PUMP_UNLIKELY(state_ == TRACKER_STATE_STOP)) {
+                return false;
+            }
+            state_ = TRACKER_STATE_STOP;
+            return true;
         }
 
         /*********************************************************************************
          * Get tracked status
          ********************************************************************************/
         PUMP_INLINE bool is_started() const {
-            return started_.load(std::memory_order_acquire);
+            return state_ != TRACKER_STATE_STOP;
         }
 
         /*********************************************************************************
-         * Set tracked state
+         * Track
          ********************************************************************************/
-        PUMP_INLINE bool set_tracked(bool tracked) {
-            bool expected = !tracked;
-            return tracked_.compare_exchange_strong(
-                expected, tracked, std::memory_order_acquire, std::memory_order_relaxed);
+        PUMP_INLINE bool track() {
+            if (PUMP_UNLIKELY(state_ != TRACKER_STATE_UNTRACK)) {
+                return false;
+            }
+            state_ = TRACKER_STATE_TRACK;
+            return true;
+        }
+
+        /*********************************************************************************
+         * untrack
+         ********************************************************************************/
+        PUMP_INLINE bool untrack() {
+            if (PUMP_UNLIKELY(state_ != TRACKER_STATE_TRACK)) {
+                return false;
+            }
+            state_ = TRACKER_STATE_UNTRACK;
+            return true;
         }
 
         /*********************************************************************************
          * Get tracked status
          ********************************************************************************/
         PUMP_INLINE bool is_tracked() const {
-            return tracked_.load(std::memory_order_acquire);
+            return state_ == TRACKER_STATE_TRACK;
+        }
+
+        /*********************************************************************************
+         * Set track event
+         ********************************************************************************/
+        PUMP_INLINE void set_event(int32_t ev) {
+            event_ = ev;
+        }
+
+        /*********************************************************************************
+         * Get track event
+         ********************************************************************************/
+        PUMP_INLINE int32_t get_event() const {
+            return event_;
+        }
+
+        /*********************************************************************************
+         * Get fd
+         ********************************************************************************/
+        PUMP_INLINE int32_t get_fd() const {
+            return fd_;
         }
 
         /*********************************************************************************
@@ -228,37 +272,30 @@ namespace poll {
         }
 
         /*********************************************************************************
-         * Get fd
+         * Set poller
          ********************************************************************************/
-        PUMP_INLINE int32_t get_fd() const {
-            return fd_;
+        PUMP_INLINE void set_poller(poller_ptr pr) {
+            pr_ = pr;
         }
 
         /*********************************************************************************
-         * Set track event
+         * Get poller
          ********************************************************************************/
-        PUMP_INLINE void set_event(int32_t ev) {
-            event_ = ev;
-        }
-
-        /*********************************************************************************
-         * Get track event
-         ********************************************************************************/
-        PUMP_INLINE int32_t get_event() const {
-            return event_;
+        PUMP_INLINE poller_ptr get_poller() {
+            return pr_;
         }
 
       private:
-        // Added to poller state
-        std::atomic_bool started_;
-        // Tracked state
-        std::atomic_bool tracked_;
+        // State
+        int8_t state_;
         // Track event
         int32_t event_;
         // Track fd
         int32_t fd_;
         // Channel
         channel_wptr ch_;
+        // Poller
+        poller_ptr pr_;
     };
     DEFINE_ALL_POINTER_TYPE(channel_tracker);
 

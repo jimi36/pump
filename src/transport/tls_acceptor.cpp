@@ -150,17 +150,13 @@ namespace transport {
 
         if (__is_status(TRANSPORT_STARTING) || __is_status(TRANSPORT_STARTED)) {
 #if defined(PUMP_HAVE_IOCP)
-            if (flow->post_accept() == flow::FLOW_ERR_NO) {
-                return;
+            if (flow->post_accept() != flow::FLOW_ERR_NO) {
+                PUMP_DEBUG_LOG("tls_acceptor: handle read event failed for flow post accept task failed");
             }
-            PUMP_DEBUG_LOG("tls_acceptor: handle read event failed for flow post accept task failed");
 #else
-            if (tracker_->set_tracked(true)) {
-                return;
-            }
-
-            PUMP_DEBUG_LOG("tls_acceptor: handle read eventfailed for setting tracker status failed");
+            PUMP_DEBUG_CHECK(__resume_accept_tracker());
 #endif
+            return;
         }
 
         __stop_all_handshakers();

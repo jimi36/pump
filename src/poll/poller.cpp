@@ -66,14 +66,9 @@ namespace poll {
             return false;
         }
 
-        if (!tracker->set_tracked(true)) {
-            PUMP_DEBUG_LOG("poller: add channel tracker failed for tracker already tracked");
-            PUMP_ASSERT(false);
-            return false;
-        }
+        PUMP_DEBUG_CHECK(tracker->start());
 
-        // Mark tracker started
-        PUMP_DEBUG_CHECK(tracker->mark_started(true));
+        tracker->set_poller(this);
 
         // Create tracker event
         auto tev = object_create<channel_tracker_event>(tracker, TRACKER_EVENT_ADD);
@@ -86,8 +81,10 @@ namespace poll {
     }
 
     void poller::remove_channel_tracker(channel_tracker_sptr &tracker) {
-        // Mark tracker no started
-        if (tracker->mark_started(false)) {
+        if (tracker->stop()) {
+            // Remove channel tracker
+            PUMP_DEBUG_CHECK(__remove_channel_tracker(tracker.get()));
+
             // Create tracker event
             auto tev = object_create<channel_tracker_event>(tracker, TRACKER_EVENT_DEL);
             PUMP_DEBUG_CHECK(tevents_.push(tev));
@@ -98,12 +95,7 @@ namespace poll {
     }
 
     bool poller::resume_channel_tracker(channel_tracker_ptr tracker) {
-        if (!tracker->is_started()) {
-            PUMP_DEBUG_LOG("poller: resume channel tracker failed for tracker not started");
-            return false;
-        }
-
-        if (!tracker->set_tracked(true)) {
+        if (!tracker->track()) {
             PUMP_DEBUG_LOG("poller: resume channel tracker failed for tracker already tracked");
             return false;
         }
@@ -154,7 +146,7 @@ namespace poll {
 
                 PUMP_LOCK_SPOINTER(ch, tracker->get_channel());
                 if (!ch) {
-                    PUMP_DEBUG_LOG("poller: remove trakcer for invalid channel");
+                    PUMP_DEBUG_LOG("poller: remove trakcer for invalid channel fd=%d", tracker->get_fd());
                     trackers_.erase(tracker);
                     break;
                 }
@@ -166,8 +158,6 @@ namespace poll {
                     trackers_[tracker] = ev->tracker;
                     PUMP_DEBUG_CHECK(__add_channel_tracker(tracker));
                 } else if (ev->event == TRACKER_EVENT_DEL) {
-                    // Remove channel tracker 
-                    __remove_channel_tracker(tracker);
                     // Delete from tracker list
                     trackers_.erase(tracker);
                 }

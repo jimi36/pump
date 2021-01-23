@@ -28,8 +28,7 @@ namespace transport {
     DEFINE_ALL_POINTER_TYPE(tls_transport);
 
     class LIB_PUMP tls_transport
-      : public base_transport,
-        public std::enable_shared_from_this<tls_transport> {
+      : public base_transport {
 
       public:
         /*********************************************************************************
@@ -148,7 +147,7 @@ namespace transport {
         /*********************************************************************************
          * Send once
          ********************************************************************************/
-        bool __send_once(flow::flow_tls_ptr flow, bool resume);
+        int32_t __send_once(flow::flow_tls_ptr flow);
 
         /*********************************************************************************
          * Try doing transport dissconnected process
@@ -159,6 +158,14 @@ namespace transport {
          * Clear send pockets
          ********************************************************************************/
         void __clear_send_pockets();
+
+        /*********************************************************************************
+         * Reset last sent io buffer
+         ********************************************************************************/
+        PUMP_INLINE void __reset_last_sent_iobuffer() {
+            last_send_iob_->sub_ref();
+            last_send_iob_ = nullptr;
+        }
 
       private:
         // TLS flow

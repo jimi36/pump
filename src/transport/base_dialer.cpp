@@ -36,7 +36,7 @@ namespace transport {
             return false;
         }
 
-        PUMP_DEBUG_LOG("base_dialer: start tracker done");
+        PUMP_DEBUG_LOG("base_dialer: start tracker");
 
         return true;
     }
@@ -49,7 +49,7 @@ namespace transport {
 
         get_service()->remove_channel_tracker(tracker_locker, WRITE_POLLER);
 
-        PUMP_DEBUG_LOG("base_dialer: stop tracker done");
+        PUMP_DEBUG_LOG("base_dialer: stop tracker");
     }
 #endif
 

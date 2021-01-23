@@ -76,13 +76,10 @@ namespace poll {
 
     void select_poller::__dispatch_pending_event(const fd_set *rfds, const fd_set *wfds) {
         auto beg = trackers_.begin();
-        channel_tracker_ptr tracker = nullptr;
-
         while (beg != trackers_.end()) {
-            tracker = beg->second.get();
-
-            // If channel already not existed, channel tracker should be removed.
-            PUMP_LOCK_SPOINTER(ch, tracker->get_channel());
+            // If channel is invalid, channel tracker should be removed.
+            auto tracker = beg->second.get();
+            auto ch = tracker->get_channel();
             if (PUMP_UNLIKELY(!ch)) {
                 PUMP_DEBUG_LOG("select_poller: remove tracker for invalid channel");
                 trackers_.erase(beg++);
@@ -91,17 +88,12 @@ namespace poll {
 
 #if defined(PUMP_HAVE_SELECT)
             int32_t fd = tracker->get_fd();
-            int32_t listen_event = tracker->get_event();
-            if (listen_event & IO_EVENT_READ) {
-                if (FD_ISSET(fd, rfds)) {
-                    PUMP_DEBUG_CHECK(tracker->set_tracked(false));
-                    ch->handle_io_event(IO_EVENT_READ);
-                }
-            } else {
-                if (FD_ISSET(fd, wfds)) {
-                    PUMP_DEBUG_CHECK(tracker->set_tracked(false));
-                    ch->handle_io_event(IO_EVENT_SEND);
-                }
+            if (FD_ISSET(fd, rfds)) {
+                PUMP_DEBUG_CHECK(tracker->untrack());
+                ch->handle_io_event(IO_EVENT_READ);
+            } else if (FD_ISSET(fd, wfds)) {
+                PUMP_DEBUG_CHECK(tracker->untrack());
+                ch->handle_io_event(IO_EVENT_SEND);
             }
 #endif
             beg++;

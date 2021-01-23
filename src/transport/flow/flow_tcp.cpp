@@ -87,7 +87,7 @@ namespace transport {
             if (size > 0) {
                 if (PUMP_LIKELY(send_iob_->shift(size) == 0)) {
                     send_task_->unbind_io_buffer();
-                    return FLOW_ERR_NO_DATA;
+                    return FLOW_ERR_NO;
                 }
 
                 send_task_->update_io_buffer();

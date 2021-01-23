@@ -98,7 +98,7 @@ namespace poll {
         }
 
         PUMP_DEBUG_LOG(
-            "epoll_poller: resume channel tracker failed for epoll_ctl failed %d", net::last_errno());
+            "epoll_poller: resume channel tracker failed %d", net::last_errno());
 #else
         PUMP_ERR_LOG("epoll_poller: resume channel tracker failed for not support");
 #endif
@@ -114,7 +114,7 @@ namespace poll {
         }
 
         PUMP_WARN_LOG(
-            "epoll_poller::__remove_channel_tracker: ec=%d", net::last_errno());
+           "epoll_poller: remove channel tracker failed %d", net::last_errno());
         */
 
         return true;
@@ -138,27 +138,19 @@ namespace poll {
 
     void epoll_poller::__dispatch_pending_event(int32_t count) {
 #if defined(PUMP_HAVE_EPOLL)
-        auto events = (epoll_event*)events_;
-
-        for (int32_t i = 0; i < count; ++i) {
-            auto ev = events + i;
-
+        auto ev = (epoll_event*)events_;
+        for (int32_t i = 0; i < count; ++i, ++ev) {
+            // If channel is invalid, channel tracker should be removed.
             auto tracker = (channel_tracker_ptr)ev->data.ptr;
-
-            // If channel already not existed, channel tracker should be removed.
-            PUMP_LOCK_SPOINTER(ch, tracker->get_channel());
+            auto ch = tracker->get_channel();
             if (PUMP_UNLIKELY(!ch)) {
                 trackers_.erase(tracker);
                 continue;
             }
 
-            tracker->set_tracked(false);
+            tracker->untrack();
 
             ch->handle_io_event(tracker->get_event());
-
-            if (tracker->is_tracked()) {
-                __resume_channel_tracker(tracker);
-            }
         }
 #endif
     }

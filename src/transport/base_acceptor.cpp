@@ -43,9 +43,18 @@ namespace transport {
             return false;
         }
 
-        PUMP_DEBUG_LOG("base_acceptor: start tracker done");
+        PUMP_DEBUG_LOG("base_acceptor: start tracker");
 
         return true;
+    }
+
+    bool base_acceptor::__resume_accept_tracker() {
+        auto tracker = tracker_.get();
+        PUMP_ASSERT(tracker);
+        auto poller = tracker_->get_poller();
+        PUMP_ASSERT(poller);
+
+        return poller->resume_channel_tracker(tracker);
     }
 
     void base_acceptor::__stop_accept_tracker() {
@@ -56,7 +65,7 @@ namespace transport {
 
         get_service()->remove_channel_tracker(tracker_locker, READ_POLLER);
 
-        PUMP_DEBUG_LOG("base_acceptor: stop tracker done");
+        PUMP_DEBUG_LOG("base_acceptor: stop tracker");
     }
 #endif
 

@@ -14,6 +14,11 @@ int main(int argc, const char **argv) {
     std::string ip = argv[3];
     uint16_t port = atoi(argv[4]);
 
+    int32_t conn_count = 1;
+    if (argc > 5) {
+        conn_count = atoi(argv[5]);
+    }
+
     if (tag == "tcp") {
         printf("start tcp test\n");
 
@@ -22,7 +27,7 @@ int main(int argc, const char **argv) {
         });
 
         std::thread client([=]() {
-            if (tp == "c") start_tcp_client(ip, port);
+            if (tp == "c") start_tcp_client(ip, port, conn_count);
         });
 
         server.join();
