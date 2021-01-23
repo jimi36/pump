@@ -41,7 +41,7 @@ namespace poll {
         fd_ = ::epoll_create1(0);
         if (fd_ <= 0) {
             PUMP_ERR_LOG(
-                "epoll_poller: epoll_create1 failed with ec=%d", net::last_errno());
+                "epoll_poller: epoll_create1 failed %d", net::last_errno());
         }
 
         events_ = pump_malloc(sizeof(struct epoll_event) * EPOLL_EVENT_SIZE);
@@ -75,7 +75,7 @@ namespace poll {
         }
 
         PUMP_DEBUG_LOG(
-            "epoll_poller: add channel tracker failed for epoll_ctl failed %d", net::last_errno());
+            "epoll_poller: add channel tracker failed %d", net::last_errno());
 #else
         PUMP_ERR_LOG("epoll_poller: add channel tracker failed for not support");
 #endif
@@ -107,15 +107,12 @@ namespace poll {
 
     bool epoll_poller::__remove_channel_tracker(channel_tracker_ptr tracker) {
 #if defined(PUMP_HAVE_EPOLL)
-        /*
         epoll_event ev;
-        if (epoll_ctl(fd_, EPOLL_CTL_DEL, tracker->get_fd(), &ev) == 0) {
-            return true;
+        if (epoll_ctl(fd_, EPOLL_CTL_DEL, tracker->get_fd(), &ev) != 0) {
+            PUMP_WARN_LOG(
+                "epoll_poller: remove channel tracker failed %d", net::last_errno());
+            return false;
         }
-
-        PUMP_WARN_LOG(
-           "epoll_poller: remove channel tracker failed %d", net::last_errno());
-        */
 
         return true;
 #else

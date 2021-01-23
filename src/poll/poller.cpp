@@ -83,7 +83,7 @@ namespace poll {
     void poller::remove_channel_tracker(channel_tracker_sptr &tracker) {
         if (tracker->stop()) {
             // Remove channel tracker
-            PUMP_DEBUG_CHECK(__remove_channel_tracker(tracker.get()));
+            __remove_channel_tracker(tracker.get());
 
             // Create tracker event
             auto tev = object_create<channel_tracker_event>(tracker, TRACKER_EVENT_DEL);

@@ -3,7 +3,7 @@
 static int count = 1;
 static int send_loop = 1;
 static int send_pocket_size = 1024 * 4;
-static int send_pocket_count = 1024 * 100;
+static int send_pocket_count = -1; //1024 * 100;
 
 class my_tcp_dialer;
 

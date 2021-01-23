@@ -153,12 +153,12 @@ namespace transport {
     void tls_handshaker::on_read_event() {
 #endif
         auto flow = flow_.get();
-
+        auto ret = flow->read_from_net(
 #if defined(PUMP_HAVE_IOCP)
-        if (flow->read_from_net(iocp_task) == flow::FLOW_ERR_ABORT) {
-#else
-        if (flow->read_from_net() == flow::FLOW_ERR_ABORT) {
+            iocp_task
 #endif
+        );
+        if (ret == flow::FLOW_ERR_ABORT) {
             if (__set_status(TRANSPORT_STARTED, TRANSPORT_DISCONNECTING)) {
                 __handshake_finished();
             }
@@ -173,12 +173,11 @@ namespace transport {
     void tls_handshaker::on_send_event() {
 #endif
         auto flow = flow_.get();
-
+        auto ret = flow->send_to_net(
 #if defined(PUMP_HAVE_IOCP)
-        auto ret = flow->send_to_net(iocp_task);
-#else
-        auto ret = flow->send_to_net();
+            iocp_task
 #endif
+        );
         if (ret == flow::FLOW_ERR_ABORT) {
             if (__set_status(TRANSPORT_STARTED, TRANSPORT_DISCONNECTING)) {
                 __handshake_finished();
@@ -251,6 +250,7 @@ namespace transport {
             }
 
             tracker->set_event(poll::TRACK_SEND);
+
             PUMP_DEBUG_CHECK(tracker->get_poller()->resume_channel_tracker(tracker));
 #endif
             return;
@@ -266,6 +266,7 @@ namespace transport {
             }
 #else
             tracker->set_event(poll::TRACK_READ);
+
             PUMP_DEBUG_CHECK(tracker->get_poller()->resume_channel_tracker(tracker));
 #endif
             return;
@@ -277,12 +278,12 @@ namespace transport {
     }
 
     bool tls_handshaker::__start_handshake_timer(int64_t timeout) {
-        if (timeout <= 0)
+        if (timeout <= 0) {
             return true;
+        }
 
         PUMP_ASSERT(!timer_);
-        time::timer_callback cb =
-            pump_bind(&tls_handshaker::on_timeout, shared_from_this());
+        time::timer_callback cb = pump_bind(&tls_handshaker::on_timeout, shared_from_this());
         timer_ = time::timer::create(timeout, cb);
 
         return get_service()->start_timer(timer_);
@@ -296,21 +297,16 @@ namespace transport {
 
 #if !defined(PUMP_HAVE_IOCP)
     void tls_handshaker::__start_handshake_tracker() {
-        PUMP_LOCK_SPOINTER(tracker, tracker_);
-        if (!tracker) {
-            PUMP_WARN_LOG("tls_handshaker: start handshake tracker failed for tracker no exists");
-            return;
+        PUMP_ASSERT(tracker_);
+        if (!tracker_->get_poller()->resume_channel_tracker(tracker_.get())) {
+            PUMP_WARN_LOG("tls_handshaker: start handshake tracker failed for poller resume tracker");
         }
-        PUMP_DEBUG_CHECK(get_service()->resume_channel_tracker(tracker, WRITE_POLLER));
     }
 
     void tls_handshaker::__stop_handshake_tracker() {
-        PUMP_LOCK_SPOINTER(tracker, tracker_);
-        if (!tracker) {
-            PUMP_WARN_LOG("tls_handshaker: stop handshake tracker failed for tracker no exists");
-            return;
+        if (tracker_) {
+            tracker_->get_poller()->remove_channel_tracker(tracker_);
         }
-        get_service()->remove_channel_tracker(tracker_locker, WRITE_POLLER);
     }
 #endif
 
