@@ -228,41 +228,33 @@ namespace transport {
 #else
     void tcp_transport::on_read_event() {
 #endif
-        auto flow = flow_.get();
+
 #if defined(PUMP_HAVE_IOCP)
         int32_t size = 0;
         const block_t *b = iocp_task->get_processed_data(&size);
 #else
         block_t b[MAX_TCP_BUFFER_SIZE];
-        int32_t size = flow->read(b, MAX_TCP_BUFFER_SIZE);
+        int32_t size = flow_->read(b, sizeof(b));
 #endif
-        if (PUMP_UNLIKELY(size <= 0)) {
+        if (PUMP_LIKELY(size > 0)) {
+            // If read state is READ_ONCE, change it to READ_PENDING.
+            // If read state is READ_LOOP, last state will be seted to READ_LOOP.
+            int32_t last_state = READ_ONCE;
+            read_state_.compare_exchange_strong(last_state, READ_PENDING);
+
+            // Read callback
+            cbs_.read_cb(b, size);
+
+            // If last read state is READ_ONCE, try to change read state to READ_NONE.
+            if (last_state == READ_ONCE) {
+                last_state = READ_PENDING;
+                if (read_state_.compare_exchange_strong(last_state, READ_NONE)) {
+                    return;
+                }
+            }
+        } else if (size == 0) {
             PUMP_DEBUG_LOG("tcp_transport: handle read event failed flow read failed");
             __try_doing_disconnected_process();
-            return;
-        }
-
-        // If read state is READ_ONCE, change it to READ_PENDING.
-        // If read state is READ_LOOP, last state will be seted to READ_LOOP.
-        int32_t last_state = READ_ONCE;
-        read_state_.compare_exchange_strong(last_state, READ_PENDING);
-
-        // Read callback
-        cbs_.read_cb(b, size);
-
-        // If last read state is READ_ONCE, try to change read state to READ_NONE.
-        if (last_state == READ_ONCE) {
-            last_state = READ_PENDING;
-            if (read_state_.compare_exchange_strong(last_state, READ_NONE)) {
-                return;
-            }
-        }
-
-        // If transport is not in started state, try to interrupt the transport.
-        if (!__is_status(TRANSPORT_STARTED)) {
-            if (pending_send_size_.load(std::memory_order_acquire) == 0) {
-                __interrupt_and_trigger_callbacks();
-            }
             return;
         }
 
@@ -272,7 +264,10 @@ namespace transport {
             __try_doing_disconnected_process();
         }
 #else
-        PUMP_DEBUG_CHECK(__resume_read_tracker());
+        if (!__resume_read_tracker()) {
+            PUMP_DEBUG_LOG("tcp_transport: handle channel event failed for resuming read tracker failed");
+            __try_doing_disconnected_process();
+        }
 #endif
     }
 
@@ -281,58 +276,52 @@ namespace transport {
 #else
     void tcp_transport::on_send_event() {
 #endif
-        auto flow = flow_.get();
-
-        bool to_send_next_buffer = (last_send_iob_ == nullptr);
+        int32_t ret;
 
         // Continue to send last buffer.
-        if (!to_send_next_buffer) {
-            auto ret = flow->send(
+        if (PUMP_LIKELY(last_send_iob_ != nullptr)) {
+            ret = flow_->send(
 #if defined(PUMP_HAVE_IOCP)
                 iocp_task
 #endif
             );
-            switch (ret) {
-            case flow::FLOW_ERR_AGAIN:
-#if !defined(PUMP_HAVE_IOCP)
-                PUMP_DEBUG_CHECK(__resume_send_tracker());
-#endif
-                return;
-            case flow::FLOW_ERR_ABORT:
-                PUMP_DEBUG_LOG("tcp_transport: handle send event failed for flow send failed");
-                __try_doing_disconnected_process();
-                return;
-            case flow::FLOW_ERR_NO:
+            if (ret == flow::FLOW_ERR_NO) {
                 // Reset last sent buffer.
                 __reset_last_sent_iobuffer();
                 // Reduce pending send size.
                 if (pending_send_size_.fetch_sub(last_send_iob_size_) > last_send_iob_size_) {
-                    to_send_next_buffer = true;
+                    goto send_next;
                 }
-                break;
-            case flow::FLOW_ERR_NO_DATA:
-                to_send_next_buffer = true;
-                break;
-            }
-        }
-
-        // Send next buffer.
-        if (to_send_next_buffer) {
-            switch (__send_once(flow)) {
-            case ERROR_OK:
-                break;
-            case ERROR_AGAIN:
+                goto end;   
+            } else if (ret == flow::FLOW_ERR_AGAIN) {
 #if !defined(PUMP_HAVE_IOCP)
                 PUMP_DEBUG_CHECK(__resume_send_tracker());
 #endif
                 return;
-            case ERROR_FAULT:
-                PUMP_DEBUG_LOG("tcp_transport: handle send event failed for sending once failed");
+            } else {
+                PUMP_DEBUG_LOG("tcp_transport: handle send event failed for flow send failed");
                 __try_doing_disconnected_process();
                 return;
             }
         }
+ 
+      send_next :
+        // Send next buffer.
+        ret = __send_once();
+        if (ret == ERROR_OK) {
+            goto end;
+        } else if (ret == ERROR_AGAIN) {
+#if !defined(PUMP_HAVE_IOCP)
+            PUMP_DEBUG_CHECK(__resume_send_tracker());
+#endif
+            return;
+        } else {
+            PUMP_DEBUG_LOG("tcp_transport: handle send event failed for sending once failed");
+            __try_doing_disconnected_process();
+            return;
+        }
 
+      end:
         if (__is_status(TRANSPORT_STOPPING)) {
             __interrupt_and_trigger_callbacks();
         }
@@ -373,7 +362,7 @@ namespace transport {
     }
 
     bool tcp_transport::__async_send(toolkit::io_buffer_ptr iob) {
-        // Insert buffer to sendlist.
+        // Push buffer to sendlist.
         PUMP_DEBUG_CHECK(sendlist_.push(iob));
 
         // If there are no more buffers, we should try to get next send chance.
@@ -381,53 +370,58 @@ namespace transport {
             return true;
         }
 
-        auto ret = __send_once(flow_.get());
-        if (ret == ERROR_FAULT) {
-            PUMP_DEBUG_LOG("tcp_transport: async send failed for sending once failed");
-            if (__set_status(TRANSPORT_STARTED, TRANSPORT_STOPPING)) {
-                __post_channel_event(shared_from_this(), 0);
-            }
-            return false;
-        } 
-#if !defined(PUMP_HAVE_IOCP)
-        else if (ret == ERROR_AGAIN) {
+        auto ret = __send_once();
+        if (PUMP_LIKELY(ret == ERROR_OK)) {
+            return true;
+        } else if (ret == ERROR_AGAIN) {
+#if !defined(PUMP_HAVE_IOCP)     
             if (!__start_send_tracker()) {
                 PUMP_DEBUG_LOG("tcp_transport: send once failed for starting send tracker failed");
                 return false;
             }
-        }
 #endif
-        return true;
+            return true;
+        }
+        
+        if (__set_status(TRANSPORT_STARTED, TRANSPORT_DISCONNECTING)) {
+            __post_channel_event(shared_from_this(), 0);
+        }
+
+        PUMP_DEBUG_LOG("tcp_transport: async send failed for sending once failed");
+
+        return false;
     }
 
-    int32_t tcp_transport::__send_once(flow::flow_tcp_ptr flow) {
+    int32_t tcp_transport::__send_once() {
         PUMP_ASSERT(!last_send_iob_);
-        // Get a buffer from sendlist to send.
+        // Pop next buffer from sendlist to send.
         PUMP_DEBUG_CHECK(sendlist_.pop(last_send_iob_));
         // Save last send buffer data size.
         last_send_iob_size_ = last_send_iob_->data_size();
 
         // Try to send the buffer.
 #if defined(PUMP_HAVE_IOCP)
-        if (flow->post_send(last_send_iob_) == flow::FLOW_ERR_ABORT) {
+        if (flow_->post_send(last_send_iob_) == flow::FLOW_ERR_ABORT) {
             PUMP_DEBUG_LOG("tcp_transport: send once failed for flow post send task failed");
             return ERROR_FAULT;
         }
+        return ERROR_AGAIN;
 #else
-        auto ret = flow->want_to_send(last_send_iob_);
-        if (ret == flow::FLOW_ERR_ABORT) {
-            PUMP_DEBUG_LOG("tcp_transport: send once faled for flow want to send failed");
-            return ERROR_FAULT;
-        } else if (ret == flow::FLOW_ERR_NO) {
+        auto ret = flow_->want_to_send(last_send_iob_);
+        if (PUMP_LIKELY(ret == flow::FLOW_ERR_NO)) {
             // Reset last sent buffer.
             __reset_last_sent_iobuffer();
             // Reduce pending send size.
-            if (pending_send_size_.fetch_sub(last_send_iob_size_) == last_send_iob_size_) {
-                return ERROR_OK;
+            if (pending_send_size_.fetch_sub(last_send_iob_size_) > last_send_iob_size_) {
+                return ERROR_AGAIN;
             }
+            return ERROR_OK;
+        } else if (ret == flow::FLOW_ERR_AGAIN) {
+            return ERROR_AGAIN;
         }
+        PUMP_DEBUG_LOG("tcp_transport: send once faled for flow want to send failed");
+        return ERROR_FAULT;
 #endif
-        return ERROR_AGAIN;
     }
 
     void tcp_transport::__try_doing_disconnected_process() {

@@ -45,7 +45,6 @@ class my_tcp_acceptor : public std::enable_shared_from_this<my_tcp_acceptor> {
 
         if (transport->start(sv, cbs) == 0) {
             std::lock_guard<std::mutex> lock(mx_);
-            printf("tcp transport server accepted %d\n", transp->get_fd());
             transports_[transp.get()] = tctx;
         }
 

@@ -49,16 +49,11 @@ class my_tcp_dialer : public std::enable_shared_from_this<my_tcp_dialer> {
             pump_bind(&my_tcp_dialer::on_disconnected_callback, this, transp.get());
 
         transport_ = std::static_pointer_cast<pump::tcp_transport>(transp);
-        if (transport_->start(sv, cbs) != 0)
+        if (transport_->start(sv, cbs) != 0) {
             return;
-
-        printf("tcp client dialed fd=%d\n", transp->get_fd());
+        }
 
         transport_->read_for_loop();
-
-        for (int i = 0; i < send_loop; i++) {
-            send_data();
-        }
     }
 
     /*********************************************************************************
@@ -171,6 +166,18 @@ void start_once_dialer() {
     my_dialers[my_dialer.get()] = my_dialer;
 }
 
+void start_send_buffer() {
+    dial_mx.lock();
+
+    for (auto b = my_dialers.begin(); b != my_dialers.end(); b++) {
+        for (int i = 0; i < send_loop; i++) {
+            b->second->send_data();
+        }
+    }
+
+    dial_mx.unlock();
+}
+
 class time_report {
   public:
     static void on_timer_timeout() {
@@ -212,6 +219,10 @@ void start_tcp_client(const std::string &ip, uint16_t port, int32_t conn_count) 
         start_once_dialer();
     }
     dial_mx.unlock();
+
+    std::this_thread::sleep_for(std::chrono::seconds(5));
+
+    start_send_buffer();
 
     time::timer_callback cb = pump_bind(&time_report::on_timer_timeout);
     time::timer_sptr t = time::timer::create(1000 * 1, cb, true);

@@ -42,7 +42,7 @@ int main(int argc, const char **argv) {
         });
 
         std::thread client([=]() {
-            if (tp == "c") start_tls_client(ip, port);
+            if (tp == "c") start_tls_client(ip, port, conn_count);
         });
 
         server.join();

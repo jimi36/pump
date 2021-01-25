@@ -43,7 +43,7 @@ namespace poll {
                                   tev_cnt_.load(std::memory_order_acquire) > 0) {
                                   __poll(0);
                               } else {
-                                  __poll(5);
+                                  __poll(3);
                               }
                           }
                       }),
@@ -61,7 +61,7 @@ namespace poll {
 
 #if !defined(PUMP_HAVE_IOCP)
     bool poller::add_channel_tracker(channel_tracker_sptr &tracker) {
-        if (!started_.load(std::memory_order_relaxed)) {
+        if (PUMP_UNLIKELY(!started_.load(std::memory_order_relaxed))) {
             PUMP_DEBUG_LOG("poller: add channel tracker failed for poller not started");
             return false;
         }
@@ -93,19 +93,10 @@ namespace poll {
             tev_cnt_.fetch_add(1, std::memory_order_release);
         }
     }
-
-    bool poller::resume_channel_tracker(channel_tracker_ptr tracker) {
-        if (!tracker->track()) {
-            PUMP_DEBUG_LOG("poller: resume channel tracker failed for tracker already tracked");
-            return false;
-        }
-
-        return __resume_channel_tracker(tracker);
-    }
 #endif
 
     bool poller::push_channel_event(channel_sptr &c, int32_t event) {
-        if (!started_.load()) {
+        if (PUMP_UNLIKELY(!started_.load())) {
             PUMP_DEBUG_LOG("poller: push channel event failed for poller not started");
             return false;
         }

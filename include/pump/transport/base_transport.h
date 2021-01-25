@@ -226,14 +226,14 @@ namespace transport {
         /*********************************************************************************
          * Get local address
          ********************************************************************************/
-        PUMP_INLINE const address &get_local_address() const {
+        PUMP_INLINE const address& get_local_address() const {
             return local_address_;
         }
 
         /*********************************************************************************
          * Get remote address
          ********************************************************************************/
-        PUMP_INLINE const address &get_remote_address() const {
+        PUMP_INLINE const address& get_remote_address() const {
             return remote_address_;
         }
 
@@ -263,7 +263,7 @@ namespace transport {
         /*********************************************************************************
          * Start trackers
          ********************************************************************************/
-        bool __start_read_tracker() {
+        PUMP_INLINE bool __start_read_tracker() {
             auto tracker = r_tracker_.get();
             if (PUMP_UNLIKELY(!tracker)) {
                 tracker = object_create<poll::channel_tracker>(
@@ -282,7 +282,7 @@ namespace transport {
             }
             return true;
         }
-        bool __start_send_tracker() {
+        PUMP_INLINE bool __start_send_tracker() {
             auto tracker = s_tracker_.get();
             if (PUMP_UNLIKELY(!tracker)) {
                 tracker = object_create<poll::channel_tracker>(

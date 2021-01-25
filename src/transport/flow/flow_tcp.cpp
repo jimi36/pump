@@ -120,21 +120,16 @@ namespace transport {
         }
 
         int32_t flow_tcp::send() {
-            if (!send_iob_) {
-                return FLOW_ERR_NO_DATA;
-            }
-
+            PUMP_ASSERT(send_iob_);
+            PUMP_ASSERT(send_iob_->data_size() > 0);
             int32_t data_size = (int32_t)send_iob_->data_size();
-            if (data_size == 0) {
-                return FLOW_ERR_NO_DATA;
-            }
-
             int32_t size = net::send(fd_, send_iob_->data(), data_size);
             if (PUMP_LIKELY(size > 0)) {
-                if (PUMP_LIKELY(send_iob_->shift(size) > 0)) {
-                    return FLOW_ERR_AGAIN;
+                if (PUMP_LIKELY(send_iob_->shift(size) == 0)) {
+                    send_iob_ = nullptr;
+                    return FLOW_ERR_NO;
                 }
-                return FLOW_ERR_NO;
+                return FLOW_ERR_AGAIN;
             } else if (size < 0) {
                 return FLOW_ERR_AGAIN;
             }

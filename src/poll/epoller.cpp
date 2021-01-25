@@ -61,16 +61,16 @@ namespace poll {
 
     bool epoll_poller::__add_channel_tracker(channel_tracker_ptr tracker) {
 #if defined(PUMP_HAVE_EPOLL)
-        auto listen_event = tracker->get_event();
-
-        struct epoll_event ev;
-        ev.data.ptr = tracker;
-        ev.events = EPOLLONESHOT;
-        ev.events |= (listen_event & IO_EVENT_READ) ? EL_READ_EVENT : 0;
-        ev.events |= (listen_event & IO_EVENT_SEND) ? EL_SEND_EVENT : 0;
-
-        if (epoll_ctl(fd_, EPOLL_CTL_ADD, tracker->get_fd(), &ev) == 0 ||
-            epoll_ctl(fd_, EPOLL_CTL_MOD, tracker->get_fd(), &ev) == 0) {
+        auto ev = tracker->get_event();
+        auto epoll_ev = tracker->get_epoll_event();
+        epoll_ev->data.ptr = tracker;
+        if (ev & IO_EVENT_READ) {
+            epoll_ev->events = EPOLLONESHOT | EL_READ_EVENT;
+        } else if (ev & IO_EVENT_SEND) {
+            epoll_ev->events = EPOLLONESHOT | EL_SEND_EVENT;
+        }
+        if (epoll_ctl(fd_, EPOLL_CTL_ADD, tracker->get_fd(), epoll_ev) == 0 ||
+            epoll_ctl(fd_, EPOLL_CTL_MOD, tracker->get_fd(), epoll_ev) == 0) {
             return true;
         }
 
@@ -84,16 +84,16 @@ namespace poll {
 
     bool epoll_poller::__resume_channel_tracker(channel_tracker_ptr tracker) {
 #if defined(PUMP_HAVE_EPOLL)
-        auto listen_event = tracker->get_event();
-
-        struct epoll_event ev;
-        ev.data.ptr = tracker;
-        ev.events = EPOLLONESHOT;
-        ev.events |= (listen_event & IO_EVENT_READ) ? EL_READ_EVENT : 0;
-        ev.events |= (listen_event & IO_EVENT_SEND) ? EL_SEND_EVENT : 0;
-
-        if (epoll_ctl(fd_, EPOLL_CTL_MOD, tracker->get_fd(), &ev) == 0 ||
-            epoll_ctl(fd_, EPOLL_CTL_ADD, tracker->get_fd(), &ev) == 0) {
+        auto ev = tracker->get_event();
+        auto epoll_ev = tracker->get_epoll_event();
+        epoll_ev->data.ptr = tracker;
+        if (ev & IO_EVENT_READ) {
+            epoll_ev->events = EPOLLONESHOT | EL_READ_EVENT;
+        } else if (ev & IO_EVENT_SEND) {
+            epoll_ev->events = EPOLLONESHOT | EL_SEND_EVENT;
+        }
+        if (epoll_ctl(fd_, EPOLL_CTL_MOD, tracker->get_fd(), epoll_ev) == 0 ||
+            epoll_ctl(fd_, EPOLL_CTL_ADD, tracker->get_fd(), epoll_ev) == 0) {
             return true;
         }
 
@@ -107,8 +107,8 @@ namespace poll {
 
     bool epoll_poller::__remove_channel_tracker(channel_tracker_ptr tracker) {
 #if defined(PUMP_HAVE_EPOLL)
-        epoll_event ev;
-        if (epoll_ctl(fd_, EPOLL_CTL_DEL, tracker->get_fd(), &ev) != 0) {
+        auto epoll_ev = tracker->get_epoll_event();
+        if (epoll_ctl(fd_, EPOLL_CTL_DEL, tracker->get_fd(), epoll_ev) != 0) {
             PUMP_WARN_LOG(
                 "epoll_poller: remove channel tracker failed %d", net::last_errno());
             return false;
@@ -135,10 +135,12 @@ namespace poll {
 
     void epoll_poller::__dispatch_pending_event(int32_t count) {
 #if defined(PUMP_HAVE_EPOLL)
-        auto ev = (epoll_event*)events_;
-        for (int32_t i = 0; i < count; ++i, ++ev) {
-            // If channel is invalid, channel tracker should be removed.
-            auto tracker = (channel_tracker_ptr)ev->data.ptr;
+        channel_tracker_ptr tracker;
+        auto ev_beg = (epoll_event*)events_;
+        auto ev_end = (epoll_event*)events_ + count;
+        for (auto ev = ev_beg; ev != ev_end; ++ev) {
+            // If channel is invalid, tracker should be removed.
+            tracker = (channel_tracker_ptr)ev->data.ptr;
             auto ch = tracker->get_channel();
             if (PUMP_UNLIKELY(!ch)) {
                 trackers_.erase(tracker);

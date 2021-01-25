@@ -131,9 +131,11 @@ class tls_time_report {
     }
 };
 
-void start_tls_client(const std::string &ip, uint16_t port) {
+void start_tls_client(const std::string &ip, uint16_t port, int32_t conn_count) {
     sv = new service;
     sv->start();
+
+    count = conn_count;
 
     for (int i = 0; i < count; i++) {
         address bind_address("0.0.0.0", 0);
@@ -162,8 +164,6 @@ void start_tls_client(const std::string &ip, uint16_t port) {
     time::timer_callback cb = pump_bind(&tls_time_report::on_timer_timeout);
     time::timer_sptr t = time::timer::create(1000, cb, true);
     sv->start_timer(t);
-
-    std::this_thread::sleep_for(std::chrono::seconds(3));
 
     sv->wait_stopped();
 }

@@ -19,6 +19,10 @@
 
 #include <atomic>
 
+#if defined(PUMP_HAVE_EPOLL)
+#include <sys/epoll.h>
+#endif
+
 #include "pump/types.h"
 #include "pump/net/iocp.h"
 #include "pump/toolkit/features.h"
@@ -74,7 +78,7 @@ namespace poll {
          * Handle io event
          ********************************************************************************/
 #if defined(PUMP_HAVE_IOCP)
-        PUMP_INLINE void handle_io_event(uint32_t ev, net::iocp_task_ptr iocp_task) {
+        PUMP_INLINE void handle_io_event(int32_t ev, net::iocp_task_ptr iocp_task) {
             if (ev & IO_EVENT_READ) {
                 on_read_event(iocp_task);
             } else if (ev & IO_EVENT_SEND) {
@@ -82,7 +86,7 @@ namespace poll {
             }
         }
 #else
-        PUMP_INLINE void handle_io_event(uint32_t ev) {
+        PUMP_INLINE void handle_io_event(int32_t ev) {
             if (ev & IO_EVENT_READ) {
                 on_read_event();
             } else if (ev & IO_EVENT_SEND) {
@@ -148,9 +152,9 @@ namespace poll {
     const int32_t TRACKER_EVENT_DEL = 0;
     const int32_t TRACKER_EVENT_ADD = 1;
 
-    const int8_t TRACKER_STATE_STOP = 0x00;
-    const int8_t TRACKER_STATE_TRACK = 0x01;
-    const int8_t TRACKER_STATE_UNTRACK = 0x02;
+    const int32_t TRACKER_STATE_STOP = 0x00;
+    const int32_t TRACKER_STATE_TRACK = 0x01;
+    const int32_t TRACKER_STATE_UNTRACK = 0x02;
 
     class poller;
     DEFINE_RAW_POINTER_TYPE(poller);
@@ -181,22 +185,22 @@ namespace poll {
          * Start
          ********************************************************************************/
         PUMP_INLINE bool start() {
-            if (PUMP_UNLIKELY(state_ != TRACKER_STATE_STOP)) {
-                return false;
+            if (PUMP_UNLIKELY(state_ == TRACKER_STATE_STOP)) {
+                state_ = TRACKER_STATE_TRACK;
+                return true;
             }
-            state_ = TRACKER_STATE_TRACK;
-            return true;
+            return false;
         }
 
         /*********************************************************************************
          * Stop
          ********************************************************************************/
         PUMP_INLINE bool stop() {
-            if (PUMP_UNLIKELY(state_ == TRACKER_STATE_STOP)) {
-                return false;
+            if (PUMP_LIKELY(state_ != TRACKER_STATE_STOP)) {
+                state_ = TRACKER_STATE_STOP;
+                return true;
             }
-            state_ = TRACKER_STATE_STOP;
-            return true;
+            return false;
         }
 
         /*********************************************************************************
@@ -210,22 +214,20 @@ namespace poll {
          * Track
          ********************************************************************************/
         PUMP_INLINE bool track() {
-            if (PUMP_UNLIKELY(state_ != TRACKER_STATE_UNTRACK)) {
-                return false;
+            if (PUMP_LIKELY(state_ == TRACKER_STATE_UNTRACK)) {
+                state_ = TRACKER_STATE_TRACK;
+                return true;
             }
-            state_ = TRACKER_STATE_TRACK;
-            return true;
+            return false;
         }
 
         /*********************************************************************************
          * untrack
          ********************************************************************************/
-        PUMP_INLINE bool untrack() {
-            if (PUMP_UNLIKELY(state_ != TRACKER_STATE_TRACK)) {
-                return false;
+        PUMP_INLINE void untrack() {
+            if (PUMP_LIKELY(state_ == TRACKER_STATE_TRACK)) {
+                state_ = TRACKER_STATE_UNTRACK;
             }
-            state_ = TRACKER_STATE_UNTRACK;
-            return true;
         }
 
         /*********************************************************************************
@@ -249,6 +251,14 @@ namespace poll {
             return event_;
         }
 
+#if defined(PUMP_HAVE_EPOLL)
+        /*********************************************************************************
+         * Get epoll event
+         ********************************************************************************/
+        PUMP_INLINE struct epoll_event* get_epoll_event() {
+            return &epoll_ev_;
+        }
+#endif
         /*********************************************************************************
          * Get fd
          ********************************************************************************/
@@ -267,8 +277,8 @@ namespace poll {
         /*********************************************************************************
          * Get channel
          ********************************************************************************/
-        PUMP_INLINE channel_sptr get_channel() const {
-            return ch_.lock();
+        PUMP_INLINE channel_sptr get_channel() {
+            return std::move(ch_.lock());
         }
 
         /*********************************************************************************
@@ -287,7 +297,7 @@ namespace poll {
 
       private:
         // State
-        int8_t state_;
+        volatile int32_t state_;
         // Track event
         int32_t event_;
         // Track fd
@@ -296,6 +306,9 @@ namespace poll {
         channel_wptr ch_;
         // Poller
         poller_ptr pr_;
+#if defined(PUMP_HAVE_EPOLL)
+        struct epoll_event epoll_ev_;
+#endif
     };
     DEFINE_ALL_POINTER_TYPE(channel_tracker);
 

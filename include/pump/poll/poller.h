@@ -83,19 +83,25 @@ namespace poll {
         /*********************************************************************************
          * Add channel tracker
          ********************************************************************************/
-        virtual bool add_channel_tracker(channel_tracker_sptr &tracker);
+        bool add_channel_tracker(channel_tracker_sptr &tracker);
 
         /*********************************************************************************
          * Remove channel tracker
          ********************************************************************************/
-        virtual void remove_channel_tracker(channel_tracker_sptr &tracker);
+        void remove_channel_tracker(channel_tracker_sptr &tracker);
 
         /*********************************************************************************
-         * Awake channel tracker
+         * Resume channel tracker
          ********************************************************************************/
-        virtual bool resume_channel_tracker(channel_tracker_ptr tracker);
+        PUMP_INLINE bool resume_channel_tracker(channel_tracker_ptr tracker) {
+            if (PUMP_UNLIKELY(!tracker->track())) {
+                PUMP_DEBUG_LOG(
+                    "poller: resume channel tracker failed for tracker already tracked");
+                return false;
+            }
+            return __resume_channel_tracker(tracker);
+        }
 #endif
-
         /*********************************************************************************
          * Push channel event
          ********************************************************************************/

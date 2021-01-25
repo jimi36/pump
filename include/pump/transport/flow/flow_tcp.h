@@ -54,11 +54,10 @@ namespace transport {
              *     FLOW_ERR_ABORT => error
              ********************************************************************************/
             int32_t post_read(net::iocp_task_ptr iocp_task = nullptr);
-#endif
+#else
             /*********************************************************************************
              * Read
              ********************************************************************************/
-#if !defined(PUMP_HAVE_IOCP)
             PUMP_INLINE int32_t read(block_t *b, int32_t size) {
                 return net::read(fd_, b, size);
             }
