@@ -94,12 +94,12 @@ namespace poll {
          * Resume channel tracker
          ********************************************************************************/
         PUMP_INLINE bool resume_channel_tracker(channel_tracker_ptr tracker) {
-            if (PUMP_UNLIKELY(!tracker->track())) {
-                PUMP_DEBUG_LOG(
-                    "poller: resume channel tracker failed for tracker already tracked");
-                return false;
+            if (PUMP_LIKELY(tracker->track())) {
+                return __resume_channel_tracker(tracker);
             }
-            return __resume_channel_tracker(tracker);
+            PUMP_DEBUG_LOG(
+                "poller: resume channel tracker failed for tracker already tracked");
+            return false;
         }
 #endif
         /*********************************************************************************
@@ -109,17 +109,17 @@ namespace poll {
 
       protected:
         /*********************************************************************************
-         * Add channel tracker for derived class
+         * Install channel tracker for derived class
          ********************************************************************************/
-        virtual bool __add_channel_tracker(channel_tracker_ptr tracker) {
-            return true;
+        virtual bool __install_channel_tracker(channel_tracker_ptr tracker) {
+            return false;
         }
 
         /*********************************************************************************
-         * Remove append channel for derived class
+         * Uninstall append channel for derived class
          ********************************************************************************/
-        virtual bool __remove_channel_tracker(channel_tracker_ptr tracker) {
-            return true;
+        virtual bool __uninstall_channel_tracker(channel_tracker_ptr tracker) {
+            return false;
         }
 
 
@@ -127,7 +127,7 @@ namespace poll {
          * Awake channel tracker for derived class
          ********************************************************************************/
         virtual bool __resume_channel_tracker(channel_tracker_ptr tracker) {
-            return true;
+            return false;
         }
 
         /*********************************************************************************

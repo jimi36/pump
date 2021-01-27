@@ -66,13 +66,19 @@ namespace poll {
             return false;
         }
 
-        PUMP_DEBUG_CHECK(tracker->start());
-
         tracker->set_poller(this);
 
+        PUMP_DEBUG_CHECK(tracker->start());
+
+        // Install channel tracker
+        PUMP_DEBUG_CHECK(__install_channel_tracker(tracker.get()));
+
+        // Set channel tracker installed.
+        PUMP_DEBUG_CHECK(!tracker->set_installed(true));
+
         // Create tracker event
-        auto tev = object_create<channel_tracker_event>(tracker, TRACKER_EVENT_ADD);
-        PUMP_DEBUG_CHECK(tevents_.push(tev));
+        PUMP_DEBUG_CHECK(
+            tevents_.push(object_create<channel_tracker_event>(tracker, TRACKER_EVENT_ADD)));
 
         // Add pending trakcer event count
         tev_cnt_.fetch_add(1, std::memory_order_release);
@@ -81,17 +87,28 @@ namespace poll {
     }
 
     void poller::remove_channel_tracker(channel_tracker_sptr &tracker) {
-        if (tracker->stop()) {
-            // Remove channel tracker
-            __remove_channel_tracker(tracker.get());
-
-            // Create tracker event
-            auto tev = object_create<channel_tracker_event>(tracker, TRACKER_EVENT_DEL);
-            PUMP_DEBUG_CHECK(tevents_.push(tev));
-
-            // Add pending trakcer event count
-            tev_cnt_.fetch_add(1, std::memory_order_release);
+        if (PUMP_UNLIKELY(!started_.load(std::memory_order_relaxed))) {
+            PUMP_DEBUG_LOG("poller: remove channel tracker failed for poller not started");
+            return;
         }
+
+        if (PUMP_UNLIKELY(!tracker->stop())) {
+            PUMP_DEBUG_LOG("poller: remove channel tracker failed for tracker not started");
+            return;
+        }
+
+        // Wait channel tracker installed.
+        while(!tracker->installed());
+
+        // Uninstall channel tracker
+        __uninstall_channel_tracker(tracker.get());
+
+        // Create tracker event
+        PUMP_DEBUG_CHECK(
+            tevents_.push(object_create<channel_tracker_event>(tracker, TRACKER_EVENT_DEL)));
+
+        // Add pending trakcer event count
+        tev_cnt_.fetch_add(1, std::memory_order_release);
     }
 #endif
 
@@ -135,19 +152,16 @@ namespace poll {
             do {
                 auto tracker = ev->tracker.get();
 
-                PUMP_LOCK_SPOINTER(ch, tracker->get_channel());
-                if (!ch) {
-                    PUMP_DEBUG_LOG("poller: remove trakcer for invalid channel fd=%d", tracker->get_fd());
-                    trackers_.erase(tracker);
-                    break;
-                }
+                //PUMP_LOCK_SPOINTER(ch, tracker->get_channel());
+                //if (!ch) {
+                //    PUMP_DEBUG_LOG("poller: remove trakcer for invalid channel fd=%d", tracker->get_fd());
+                //    trackers_.erase(tracker);
+                //    break;
+                //}
 
                 if (ev->event == TRACKER_EVENT_ADD) {
-                    // Must be tracked
-                    PUMP_ASSERT(tracker->is_tracked());
                     // Apeend to tracker list
                     trackers_[tracker] = ev->tracker;
-                    PUMP_DEBUG_CHECK(__add_channel_tracker(tracker));
                 } else if (ev->event == TRACKER_EVENT_DEL) {
                     // Delete from tracker list
                     trackers_.erase(tracker);

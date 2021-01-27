@@ -37,7 +37,7 @@ namespace transport {
             return ERROR_INVALID;
         }
 
-        if (!__set_status(TRANSPORT_INITED, TRANSPORT_STARTING)) {
+        if (!__set_state(TRANSPORT_INITED, TRANSPORT_STARTING)) {
             PUMP_ERR_LOG("tcp_dialer: start failed with wrong status");
             return ERROR_INVALID;
         }
@@ -54,7 +54,7 @@ namespace transport {
 #endif
             __close_dial_flow();
             __stop_dial_timer();
-            __set_status(TRANSPORT_STARTING, TRANSPORT_ERROR);
+            __set_state(TRANSPORT_STARTING, TRANSPORT_ERROR);
         });
 
         if (!__open_dial_flow()) {
@@ -79,7 +79,7 @@ namespace transport {
             return ERROR_FAULT;
         }
 #endif
-        __set_status(TRANSPORT_STARTING, TRANSPORT_STARTED);
+        __set_state(TRANSPORT_STARTING, TRANSPORT_STARTED);
 
         cleanup.clear();
 
@@ -88,7 +88,7 @@ namespace transport {
 
     void tcp_dialer::stop() {
         // When stopping done, tracker event will trigger stopped callback.
-        if (__set_status(TRANSPORT_STARTED, TRANSPORT_STOPPING)) {
+        if (__set_state(TRANSPORT_STARTED, TRANSPORT_STOPPING)) {
             __stop_dial_timer();
             __close_dial_flow();
             __post_channel_event(shared_from_this(), 0);
@@ -98,7 +98,7 @@ namespace transport {
         // If in timeouting status at the moment, it means that dialer is timeout
         // but hasn't triggered tracker event callback yet. So we just set it to
         // stopping status, then tracker event will trigger stopped callabck.
-        if (__set_status(TRANSPORT_TIMEOUTING, TRANSPORT_STOPPING)) {
+        if (__set_state(TRANSPORT_TIMEOUTING, TRANSPORT_STOPPING)) {
             return;
         }
     }
@@ -123,8 +123,8 @@ namespace transport {
         bool success = (flow->connect(&local_address, &remote_address) == 0);
 #endif
         auto next_status = success ? TRANSPORT_FINISHED : TRANSPORT_ERROR;
-        if (!__set_status(TRANSPORT_STARTING, next_status) &&
-            !__set_status(TRANSPORT_STARTED, next_status)) {
+        if (!__set_state(TRANSPORT_STARTING, next_status) &&
+            !__set_state(TRANSPORT_STARTED, next_status)) {
             PUMP_WARN_LOG("tcp_dialer: handle send event failed for dialer had stopped or timeouted");
             __close_dial_flow();
             __trigger_interrupt_callbacks();
@@ -150,7 +150,7 @@ namespace transport {
             return;
         }
 
-        if (dialer->__set_status(TRANSPORT_STARTED, TRANSPORT_TIMEOUTING)) {
+        if (dialer->__set_state(TRANSPORT_STARTED, TRANSPORT_TIMEOUTING)) {
             PUMP_DEBUG_LOG("tcp_dialer: handle dialing timeouted");
 #if defined(PUMP_HAVE_IOCP)
             dialer->__close_dial_flow();

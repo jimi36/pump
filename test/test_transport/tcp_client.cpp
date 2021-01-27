@@ -220,7 +220,7 @@ void start_tcp_client(const std::string &ip, uint16_t port, int32_t conn_count) 
     }
     dial_mx.unlock();
 
-    std::this_thread::sleep_for(std::chrono::seconds(5));
+    std::this_thread::sleep_for(std::chrono::seconds(3));
 
     start_send_buffer();
 

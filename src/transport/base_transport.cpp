@@ -41,14 +41,14 @@ namespace transport {
     }
 
     void base_transport::__interrupt_and_trigger_callbacks() {
-        if (__set_status(TRANSPORT_DISCONNECTING, TRANSPORT_DISCONNECTED)) {
+        if (__set_state(TRANSPORT_DISCONNECTING, TRANSPORT_DISCONNECTED)) {
 #if !defined(PUMP_HAVE_IOCP)
             __stop_read_tracker();
             __stop_send_tracker();
 #endif
             __close_transport_flow();
             cbs_.disconnected_cb();
-        } else if (__set_status(TRANSPORT_STOPPING, TRANSPORT_STOPPED)) {
+        } else if (__set_state(TRANSPORT_STOPPING, TRANSPORT_STOPPED)) {
 #if !defined(PUMP_HAVE_IOCP)
             __stop_read_tracker();
             __stop_send_tracker();

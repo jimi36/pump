@@ -56,7 +56,7 @@ namespace transport {
             return false;
         }
 
-        if (!__set_status(TRANSPORT_INITED, TRANSPORT_STARTING)) {
+        if (!__set_state(TRANSPORT_INITED, TRANSPORT_STARTING)) {
             PUMP_ERR_LOG("tls_handshaker: start failed with wrong status");
             return false;
         }
@@ -68,7 +68,7 @@ namespace transport {
         __set_service(sv);
 
         toolkit::defer cleanup([&]() {
-            __set_status(TRANSPORT_STARTING, TRANSPORT_ERROR);
+            __set_state(TRANSPORT_STARTING, TRANSPORT_ERROR);
             __close_flow();
             __stop_handshake_timer();
         });
@@ -128,7 +128,7 @@ namespace transport {
 #endif
         }
 
-        __set_status(TRANSPORT_STARTING, TRANSPORT_STARTED);
+        __set_state(TRANSPORT_STARTING, TRANSPORT_STARTED);
 
         cleanup.clear();
 
@@ -136,13 +136,13 @@ namespace transport {
     }
 
     void tls_handshaker::stop() {
-        if (__set_status(TRANSPORT_STARTED, TRANSPORT_STOPPING)) {
+        if (__set_state(TRANSPORT_STARTED, TRANSPORT_STOPPING)) {
             __close_flow();
             return;
         }
 
-        if (__set_status(TRANSPORT_DISCONNECTING, TRANSPORT_STOPPING) ||
-            __set_status(TRANSPORT_TIMEOUTING, TRANSPORT_STOPPING)) {
+        if (__set_state(TRANSPORT_DISCONNECTING, TRANSPORT_STOPPING) ||
+            __set_state(TRANSPORT_TIMEOUTING, TRANSPORT_STOPPING)) {
             return;
         }
     }
@@ -159,7 +159,7 @@ namespace transport {
 #endif
         );
         if (ret == flow::FLOW_ERR_ABORT) {
-            if (__set_status(TRANSPORT_STARTED, TRANSPORT_DISCONNECTING)) {
+            if (__set_state(TRANSPORT_STARTED, TRANSPORT_DISCONNECTING)) {
                 __handshake_finished();
             }
         } else {
@@ -179,7 +179,7 @@ namespace transport {
 #endif
         );
         if (ret == flow::FLOW_ERR_ABORT) {
-            if (__set_status(TRANSPORT_STARTED, TRANSPORT_DISCONNECTING)) {
+            if (__set_state(TRANSPORT_STARTED, TRANSPORT_DISCONNECTING)) {
                 __handshake_finished();
             }
             return;
@@ -198,7 +198,7 @@ namespace transport {
             return;
         }
 
-        if (handshaker->__set_status(TRANSPORT_STARTED, TRANSPORT_TIMEOUTING)) {
+        if (handshaker->__set_state(TRANSPORT_STARTED, TRANSPORT_TIMEOUTING)) {
             handshaker->__close_flow();
         }
     }
@@ -222,7 +222,7 @@ namespace transport {
 
     void tls_handshaker::__process_handshake(flow::flow_tls_ptr flow) {
         if (flow->handshake() != flow::FLOW_ERR_NO) {
-            if (__set_status(TRANSPORT_STARTED, TRANSPORT_ERROR)) {
+            if (__set_state(TRANSPORT_STARTED, TRANSPORT_ERROR)) {
                 __handshake_finished();
             }
 
@@ -236,14 +236,14 @@ namespace transport {
         if (flow->has_data_to_send()) {
 #if defined(PUMP_HAVE_IOCP)
             if (flow->post_send() != flow::FLOW_ERR_NO &&
-                __set_status(TRANSPORT_STARTED, TRANSPORT_ERROR)) {
+                __set_state(TRANSPORT_STARTED, TRANSPORT_ERROR)) {
                 PUMP_ERR_LOG("tls_handshaker: process handshake failed for flow post send task failed");
                 __handshake_finished();
                 return;
             }
 #else
             if (flow->want_to_send() != flow::FLOW_ERR_NO &&
-                __set_status(TRANSPORT_STARTED, TRANSPORT_ERROR)) {
+                __set_state(TRANSPORT_STARTED, TRANSPORT_ERROR)) {
                 PUMP_ERR_LOG("tls_handshaker: process handshake failed for flow want to send failed");
                 __handshake_finished();
                 return;
@@ -259,7 +259,7 @@ namespace transport {
         if (!flow->is_handshaked()) {
 #if defined(PUMP_HAVE_IOCP)
             if (flow->post_read() != flow::FLOW_ERR_NO &&
-                __set_status(TRANSPORT_STARTED, TRANSPORT_ERROR)) {
+                __set_state(TRANSPORT_STARTED, TRANSPORT_ERROR)) {
                 PUMP_ERR_LOG("tls_handshaker: process handshake failed for flow post read task failed");
                 __handshake_finished();
                 return;
@@ -272,7 +272,7 @@ namespace transport {
             return;
         }
 
-        if (__set_status(TRANSPORT_STARTED, TRANSPORT_FINISHED)) {
+        if (__set_state(TRANSPORT_STARTED, TRANSPORT_FINISHED)) {
             __handshake_finished();
         }
     }
@@ -317,15 +317,15 @@ namespace transport {
 #if !defined(PUMP_HAVE_IOCP)
         __stop_handshake_tracker();
 #endif
-        if (__is_status(TRANSPORT_FINISHED)) {
+        if (__is_state(TRANSPORT_FINISHED)) {
             cbs_.handshaked_cb(this, true);
-        } else if (__is_status(TRANSPORT_ERROR)) {
+        } else if (__is_state(TRANSPORT_ERROR)) {
             cbs_.handshaked_cb(this, false);
-        } else if (__set_status(TRANSPORT_TIMEOUTING, TRANSPORT_TIMEOUTED)) {
+        } else if (__set_state(TRANSPORT_TIMEOUTING, TRANSPORT_TIMEOUTED)) {
             cbs_.handshaked_cb(this, false);
-        } else if (__set_status(TRANSPORT_DISCONNECTING, TRANSPORT_DISCONNECTED)) {
+        } else if (__set_state(TRANSPORT_DISCONNECTING, TRANSPORT_DISCONNECTED)) {
             cbs_.handshaked_cb(this, false);
-        } else if (__set_status(TRANSPORT_STOPPING, TRANSPORT_STOPPED)) {
+        } else if (__set_state(TRANSPORT_STOPPING, TRANSPORT_STOPPED)) {
             cbs_.stopped_cb(this);
         }
         

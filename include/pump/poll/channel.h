@@ -168,6 +168,7 @@ namespace poll {
          ********************************************************************************/
         channel_tracker(channel_sptr &ch, int32_t ev) noexcept
             : state_(TRACKER_STATE_STOP),
+              installed_(false),
               event_(ev), 
               fd_(ch->get_fd()), 
               ch_(ch),
@@ -175,6 +176,7 @@ namespace poll {
         }
         channel_tracker(channel_sptr &&ch, int32_t ev) noexcept
             : state_(TRACKER_STATE_STOP),
+              installed_(false),
               event_(ev), 
               fd_(ch->get_fd()), 
               ch_(ch), 
@@ -185,56 +187,72 @@ namespace poll {
          * Start
          ********************************************************************************/
         PUMP_INLINE bool start() {
-            if (PUMP_UNLIKELY(state_ == TRACKER_STATE_STOP)) {
-                state_ = TRACKER_STATE_TRACK;
-                return true;
-            }
-            return false;
+            int32_t expected = TRACKER_STATE_STOP;
+            return state_.compare_exchange_strong(
+                expected, 
+                TRACKER_STATE_TRACK,
+                std::memory_order_acquire,
+                std::memory_order_relaxed);
         }
 
         /*********************************************************************************
          * Stop
          ********************************************************************************/
         PUMP_INLINE bool stop() {
-            if (PUMP_LIKELY(state_ != TRACKER_STATE_STOP)) {
-                state_ = TRACKER_STATE_STOP;
-                return true;
-            }
-            return false;
+            return state_.exchange(TRACKER_STATE_STOP, std::memory_order_acquire) == 
+                TRACKER_STATE_STOP;
         }
 
         /*********************************************************************************
          * Get tracked status
          ********************************************************************************/
         PUMP_INLINE bool is_started() const {
-            return state_ != TRACKER_STATE_STOP;
+            return state_.load(std::memory_order_acquire) != TRACKER_STATE_STOP;
         }
 
         /*********************************************************************************
          * Track
          ********************************************************************************/
         PUMP_INLINE bool track() {
-            if (PUMP_LIKELY(state_ == TRACKER_STATE_UNTRACK)) {
-                state_ = TRACKER_STATE_TRACK;
-                return true;
-            }
-            return false;
+            int32_t expected = TRACKER_STATE_UNTRACK;
+            return state_.compare_exchange_strong(
+                expected, 
+                TRACKER_STATE_TRACK,
+                std::memory_order_acquire,
+                std::memory_order_relaxed);
         }
 
         /*********************************************************************************
          * untrack
          ********************************************************************************/
-        PUMP_INLINE void untrack() {
-            if (PUMP_LIKELY(state_ == TRACKER_STATE_TRACK)) {
-                state_ = TRACKER_STATE_UNTRACK;
-            }
+        PUMP_INLINE bool untrack() {
+            int32_t expected = TRACKER_STATE_TRACK;
+            return state_.compare_exchange_strong(
+                expected, 
+                TRACKER_STATE_UNTRACK,
+                std::memory_order_acquire,
+                std::memory_order_relaxed);
         }
 
         /*********************************************************************************
          * Get tracked status
          ********************************************************************************/
         PUMP_INLINE bool is_tracked() const {
-            return state_ == TRACKER_STATE_TRACK;
+            return state_.load(std::memory_order_acquire) == TRACKER_STATE_TRACK;
+        }
+
+        /*********************************************************************************
+         * Set installed state
+         ********************************************************************************/
+        PUMP_INLINE bool set_installed(bool installed) {
+            return installed_.exchange(installed, std::memory_order_acquire);
+        }
+
+        /*********************************************************************************
+         * Check installed state
+         ********************************************************************************/
+        PUMP_INLINE bool installed() {
+            return installed_.load(std::memory_order_relaxed);
         }
 
         /*********************************************************************************
@@ -297,7 +315,9 @@ namespace poll {
 
       private:
         // State
-        volatile int32_t state_;
+        std::atomic_int32_t state_;
+        // Installed state
+        std::atomic_bool installed_;
         // Track event
         int32_t event_;
         // Track fd

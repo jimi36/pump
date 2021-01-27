@@ -24,13 +24,40 @@ namespace poll {
     }
 
     select_poller::select_poller() noexcept {
+#if defined(PUMP_HAVE_SELECT)
         FD_ZERO(&read_fds_);
         FD_ZERO(&write_fds_);
         tv_.tv_sec = 0;
         tv_.tv_usec = 0;
+#endif
+    }
+
+    bool select_poller::__install_channel_tracker(channel_tracker_ptr tracker) {
+#if defined(PUMP_HAVE_SELECT)
+        return true;
+#else
+        return false;
+#endif
+    }
+
+    bool select_poller::__uninstall_channel_tracker(channel_tracker_ptr tracker) {
+#if defined(PUMP_HAVE_SELECT)
+        return true;
+#else
+        return false;
+#endif
+    }
+
+    bool select_poller::__resume_channel_tracker(channel_tracker_ptr tracker) {
+#if defined(PUMP_HAVE_SELECT)
+        return true;
+#else
+        return false;
+#endif
     }
 
     void select_poller::__poll(int32_t timeout) {
+#if defined(PUMP_HAVE_SELECT)
         FD_ZERO(&read_fds_);
         FD_ZERO(&write_fds_);
 
@@ -72,9 +99,11 @@ namespace poll {
         if (count > 0) {
             __dispatch_pending_event(&read_fds_, &write_fds_);
         }
+#endif
     }
 
     void select_poller::__dispatch_pending_event(const fd_set *rfds, const fd_set *wfds) {
+#if defined(PUMP_HAVE_SELECT)
         auto beg = trackers_.begin();
         while (beg != trackers_.end()) {
             // If channel is invalid, channel tracker should be removed.
@@ -86,18 +115,21 @@ namespace poll {
                 continue;
             }
 
-#if defined(PUMP_HAVE_SELECT)
+
             int32_t fd = tracker->get_fd();
             if (FD_ISSET(fd, rfds)) {
-                PUMP_DEBUG_CHECK(tracker->untrack());
-                ch->handle_io_event(IO_EVENT_READ);
+                if (tracker->untrack()) {
+                    ch->handle_io_event(IO_EVENT_READ);
+                }
             } else if (FD_ISSET(fd, wfds)) {
-                PUMP_DEBUG_CHECK(tracker->untrack());
-                ch->handle_io_event(IO_EVENT_SEND);
+                if (tracker->untrack()) {
+                    ch->handle_io_event(IO_EVENT_SEND);
+                }
             }
-#endif
+
             beg++;
         }
+#endif
     }
 
 }  // namespace poll

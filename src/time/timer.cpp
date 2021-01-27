@@ -30,25 +30,25 @@ namespace time {
     }
 
     void timer::handle_timeout() {
-        if (__set_status(TIMER_STARTED, TIMER_PENDING)) {
+        if (__set_state(TIMER_STARTED, TIMER_PENDING)) {
 
             cb_();
 
             if (PUMP_LIKELY(repeated_)) {
-                if (__set_status(TIMER_PENDING, TIMER_STARTED)) {
+                if (__set_state(TIMER_PENDING, TIMER_STARTED)) {
                     // Update timer overtime.
                     overtime_ = get_clock_milliseconds() + timeout_;
                     // Add to timer queue
                     queue_->add_timer(shared_from_this(), true);
                 }
             } else {
-                __set_status(TIMER_PENDING, TIMER_STOPPED);
+                __set_state(TIMER_PENDING, TIMER_STOPPED);
             }
         }
     }
 
     bool timer::__start(timer_queue_ptr queue) {
-        if (!__set_status(TIMER_INIT, TIMER_STARTED)) {
+        if (!__set_state(TIMER_INIT, TIMER_STARTED)) {
             return false;
         }
 

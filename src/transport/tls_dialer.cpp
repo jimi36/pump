@@ -47,7 +47,7 @@ namespace transport {
             return ERROR_INVALID;
         }
 
-        if (!__set_status(TRANSPORT_INITED, TRANSPORT_STARTING)) {
+        if (!__set_state(TRANSPORT_INITED, TRANSPORT_STARTING)) {
             PUMP_ERR_LOG("tls_dialer: start failed with wrong status");
             return ERROR_INVALID;
         }
@@ -64,7 +64,7 @@ namespace transport {
             __stop_dial_tracker();
 #endif
             __close_dial_flow();
-            __set_status(TRANSPORT_STARTING, TRANSPORT_ERROR);
+            __set_state(TRANSPORT_STARTING, TRANSPORT_ERROR);
         });
 
         if (!__open_dial_flow()) {
@@ -88,7 +88,7 @@ namespace transport {
             return ERROR_FAULT;
         }
 #endif
-        __set_status(TRANSPORT_STARTING, TRANSPORT_STARTED);
+        __set_state(TRANSPORT_STARTING, TRANSPORT_STARTED);
 
         cleanup.clear();
 
@@ -97,12 +97,12 @@ namespace transport {
 
     void tls_dialer::stop() {
         // When stopping done, tracker event will trigger stopped callback.
-        if (__set_status(TRANSPORT_STARTED, TRANSPORT_STOPPING)) {
+        if (__set_state(TRANSPORT_STARTED, TRANSPORT_STOPPING)) {
             __stop_dial_timer();
             __close_dial_flow();
             __post_channel_event(shared_from_this(), 0);
             return;
-        } else if (__set_status(TRANSPORT_HANDSHAKING, TRANSPORT_STOPPING)) {
+        } else if (__set_state(TRANSPORT_HANDSHAKING, TRANSPORT_STOPPING)) {
             if(handshaker_) {
                 handshaker_->stop();
             }
@@ -112,7 +112,7 @@ namespace transport {
         // If in timeouting status at the moment, it means that dialer is timeout
         // but hasn't triggered tracker event callback yet. So we just set it to
         // stopping status, then tracker event will trigger stopped callabck.
-        if (__set_status(TRANSPORT_TIMEOUTING, TRANSPORT_STOPPING)) {
+        if (__set_state(TRANSPORT_TIMEOUTING, TRANSPORT_STOPPING)) {
             return;
         }
     }
@@ -136,8 +136,8 @@ namespace transport {
         bool success = (flow->connect(&local_address, &remote_address) == 0);
 #endif
         auto next_status = success ? TRANSPORT_HANDSHAKING : TRANSPORT_ERROR;
-        if (!__set_status(TRANSPORT_STARTING, next_status) &&
-            !__set_status(TRANSPORT_STARTED, next_status)) {
+        if (!__set_state(TRANSPORT_STARTING, next_status) &&
+            !__set_state(TRANSPORT_STARTED, next_status)) {
             PUMP_DEBUG_LOG("tls_dialer: handle send event failed for dialer had stopped or timeout");
             __close_dial_flow();
             __trigger_interrupt_callbacks();
@@ -159,12 +159,12 @@ namespace transport {
             tls_cbs.stopped_cb =
                 pump_bind(&tls_dialer::on_handshake_stopped, shared_from_this(), _1);
             if (handshaker_->start(get_service(), handshake_timeout_, tls_cbs)) {
-                if (!__is_status(TRANSPORT_HANDSHAKING)) {
+                if (!__is_state(TRANSPORT_HANDSHAKING)) {
                     PUMP_DEBUG_LOG("tls_dialer: handle send event failed for dialer had stopped");
                     handshaker_->stop();
                 }
                 return;
-            } else if (__set_status(TRANSPORT_HANDSHAKING, TRANSPORT_ERROR)) {
+            } else if (__set_state(TRANSPORT_HANDSHAKING, TRANSPORT_ERROR)) {
                 PUMP_ERR_LOG(
                     "tls_dialer: handle send event failed for handshaker start failed");
                 handshaker_.reset();
@@ -184,7 +184,7 @@ namespace transport {
             return;
         }
 
-        if (dialer->__set_status(TRANSPORT_STARTED, TRANSPORT_TIMEOUTING)) {
+        if (dialer->__set_state(TRANSPORT_STARTED, TRANSPORT_TIMEOUTING)) {
             PUMP_WARN_LOG("tls_dialer: handle dialing timeout");
 #if defined(PUMP_HAVE_IOCP)
             dialer->__close_dial_flow();
@@ -205,9 +205,9 @@ namespace transport {
             return;
         }
 
-        if (dialer->__set_status(TRANSPORT_STOPPING, TRANSPORT_STOPPED)) {
+        if (dialer->__set_state(TRANSPORT_STOPPING, TRANSPORT_STOPPED)) {
             dialer->cbs_.stopped_cb();
-        } else if (dialer->__set_status(TRANSPORT_HANDSHAKING, TRANSPORT_FINISHED)) {
+        } else if (dialer->__set_state(TRANSPORT_HANDSHAKING, TRANSPORT_FINISHED)) {
             tls_transport_sptr tls_transport;
             if (PUMP_LIKELY(succ)) {
                 auto flow = handshaker->unlock_flow();

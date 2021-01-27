@@ -70,7 +70,7 @@ namespace transport {
 #endif
 
     void base_acceptor::__trigger_interrupt_callbacks() {
-        if (__set_status(TRANSPORT_STOPPING, TRANSPORT_STOPPED)) {
+        if (__set_state(TRANSPORT_STOPPING, TRANSPORT_STOPPED)) {
             cbs_.stopped_cb();
         }
     }

@@ -71,9 +71,9 @@ namespace transport {
     }
 
     void base_dialer::__trigger_interrupt_callbacks() {
-        if (__set_status(TRANSPORT_TIMEOUTING, TRANSPORT_TIMEOUTED)) {
+        if (__set_state(TRANSPORT_TIMEOUTING, TRANSPORT_TIMEOUTED)) {
             cbs_.timeouted_cb();
-        } else if (__set_status(TRANSPORT_STOPPING, TRANSPORT_STOPPED)) {
+        } else if (__set_state(TRANSPORT_STOPPING, TRANSPORT_STOPPED)) {
             cbs_.stopped_cb();
         }
     }

@@ -35,7 +35,7 @@ namespace transport {
             return ERROR_INVALID;
         }
 
-        if (!__set_status(TRANSPORT_INITED, TRANSPORT_STARTING)) {
+        if (!__set_state(TRANSPORT_INITED, TRANSPORT_STARTING)) {
             PUMP_ERR_LOG("tcp_acceptor: start failed with wrong status");
             return ERROR_INVALID;
         }
@@ -51,7 +51,7 @@ namespace transport {
 #if !defined(PUMP_HAVE_IOCP)
             __stop_accept_tracker();
 #endif
-            __set_status(TRANSPORT_STARTING, TRANSPORT_ERROR);
+            __set_state(TRANSPORT_STARTING, TRANSPORT_ERROR);
         });
 
         if (!__open_accept_flow()) {
@@ -70,7 +70,7 @@ namespace transport {
             return ERROR_FAULT;
         }
 #endif
-        __set_status(TRANSPORT_STARTING, TRANSPORT_STARTED);
+        __set_state(TRANSPORT_STARTING, TRANSPORT_STARTED);
 
         cleanup.clear();
 
@@ -79,7 +79,7 @@ namespace transport {
 
     void tcp_acceptor::stop() {
         // When stopping done, tracker event will trigger stopped callabck.
-        if (__set_status(TRANSPORT_STARTED, TRANSPORT_STOPPING)) {
+        if (__set_state(TRANSPORT_STARTED, TRANSPORT_STOPPING)) {
             __close_accept_flow();
             __post_channel_event(shared_from_this(), 0);
         }
@@ -106,7 +106,7 @@ namespace transport {
             cbs_.accepted_cb(transport);
         }
 
-        if (__is_status(TRANSPORT_STARTING) || __is_status(TRANSPORT_STARTED)) {
+        if (__is_state(TRANSPORT_STARTING) || __is_state(TRANSPORT_STARTED)) {
 #if defined(PUMP_HAVE_IOCP)
             if (flow->post_accept() != flow::FLOW_ERR_NO) {
                 PUMP_ERR_LOG("tcp_acceptor: handle read event failed for flow post accept task failed");

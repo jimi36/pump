@@ -38,14 +38,14 @@ namespace poll {
 
       protected:
         /*********************************************************************************
-         * Add channel tracker for derived class
+         * Install channel tracker for derived class
          ********************************************************************************/
-        virtual bool __add_channel_tracker(channel_tracker_ptr tracker) override;
+        virtual bool __install_channel_tracker(channel_tracker_ptr tracker) override;
 
         /*********************************************************************************
-         * Remove append channel for derived class
+         * Uninstall append channel for derived class
          ********************************************************************************/
-        virtual bool __remove_channel_tracker(channel_tracker_ptr tracker) override;
+        virtual bool __uninstall_channel_tracker(channel_tracker_ptr tracker) override;
 
         /*********************************************************************************
          * Awake channel tracker for derived class
@@ -65,7 +65,11 @@ namespace poll {
 
       private:
         int32_t fd_;
+
         void_ptr events_;
+        int32_t max_event_count_;
+
+        std::atomic_int32_t cur_event_count_;
     };
 
     DEFINE_ALL_POINTER_TYPE(epoll_poller);

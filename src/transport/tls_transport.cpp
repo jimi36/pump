@@ -67,7 +67,7 @@ namespace transport {
             return ERROR_INVALID;
         }
 
-        if (!__set_status(TRANSPORT_INITED, TRANSPORT_STARTING)) {
+        if (!__set_state(TRANSPORT_INITED, TRANSPORT_STARTING)) {
             PUMP_ERR_LOG("tls_transport: start failed with wrong status");
             return ERROR_INVALID;
         }
@@ -78,17 +78,17 @@ namespace transport {
         // Set service
         __set_service(sv);
 
-        __set_status(TRANSPORT_STARTING, TRANSPORT_STARTED);
+        __set_state(TRANSPORT_STARTING, TRANSPORT_STARTED);
 
         return ERROR_OK;
     }
 
     void tls_transport::stop() {
-        while (__is_status(TRANSPORT_STARTED)) {
+        while (__is_state(TRANSPORT_STARTED)) {
             // When in started status at the moment, stopping can be done. Then
             // tracker event callback will be triggered, we can trigger stopped
             // callabck at there.
-            if (__set_status(TRANSPORT_STARTED, TRANSPORT_STOPPING)) {
+            if (__set_state(TRANSPORT_STARTED, TRANSPORT_STOPPING)) {
                 // Wait pending send count reduce to zero.
                 while (pending_send_cnt_.load(std::memory_order_relaxed) != 0);
                 // Shutdown transport flow.
@@ -105,17 +105,17 @@ namespace transport {
         // disconnected but hasn't triggered tracker event callback yet. So we just
         // set stopping status to transport, and when tracker event callback
         // triggered, we will trigger stopped callabck at there.
-        if (__set_status(TRANSPORT_DISCONNECTING, TRANSPORT_STOPPING)) {
+        if (__set_state(TRANSPORT_DISCONNECTING, TRANSPORT_STOPPING)) {
             return;
         }
     }
 
     void tls_transport::force_stop() {
-        while (__is_status(TRANSPORT_STARTED)) {
+        while (__is_state(TRANSPORT_STARTED)) {
             // When in started status at the moment, stopping can be done. Then
             // tracker event callback will be triggered, we can trigger stopped
             // callabck at there.
-            if (__set_status(TRANSPORT_STARTED, TRANSPORT_STOPPING)) {
+            if (__set_state(TRANSPORT_STARTED, TRANSPORT_STOPPING)) {
                 __close_transport_flow();
                 __post_channel_event(shared_from_this(), 0);
                 return;
@@ -126,13 +126,13 @@ namespace transport {
         // disconnected but hasn't triggered tracker event callback yet. So we just
         // set stopping status to transport, and when tracker event callback
         // triggered, we will trigger stopped callabck at there.
-        if (__set_status(TRANSPORT_DISCONNECTING, TRANSPORT_STOPPING)) {
+        if (__set_state(TRANSPORT_DISCONNECTING, TRANSPORT_STOPPING)) {
             return;
         }
     }
 
     int32_t tls_transport::read_for_once() {
-        while (__is_status(TRANSPORT_STARTED)) {
+        while (__is_state(TRANSPORT_STARTED)) {
             int32_t err = __async_read(READ_ONCE);
             if (err != ERROR_AGAIN) {
                 return err;
@@ -142,7 +142,7 @@ namespace transport {
     }
 
     int32_t tls_transport::read_for_loop() {
-        while (__is_status(TRANSPORT_STARTED)) {
+        while (__is_state(TRANSPORT_STARTED)) {
             int32_t err = __async_read(READ_LOOP);
             if (err != ERROR_AGAIN) {
                 return err;
@@ -163,7 +163,7 @@ namespace transport {
         // Add pending send count.
         pending_send_cnt_.fetch_add(1);
 
-        if (PUMP_UNLIKELY(!__is_status(TRANSPORT_STARTED))) {
+        if (PUMP_UNLIKELY(!__is_state(TRANSPORT_STARTED))) {
             PUMP_ERR_LOG("tls_transport: send failed for transport not started");
             ec = ERROR_UNSTART;
             goto end;
@@ -203,7 +203,7 @@ namespace transport {
         // Add pending send count.
         pending_send_cnt_.fetch_add(1);
 
-        if (PUMP_UNLIKELY(!__is_status(TRANSPORT_STARTED))) {
+        if (PUMP_UNLIKELY(!__is_state(TRANSPORT_STARTED))) {
             PUMP_ERR_LOG("tls_transport: send failed for transport no started");
             ec = ERROR_UNSTART;
             goto end;
@@ -225,7 +225,8 @@ namespace transport {
     }
 
     void tls_transport::on_channel_event(int32_t ev) {
-        if (!__is_status(TRANSPORT_STARTED)) {
+        // Check transport started state.
+        if (!__is_state(TRANSPORT_STARTED)) {
             __interrupt_and_trigger_callbacks();
             return;
         }
@@ -252,7 +253,7 @@ namespace transport {
 
     read_loop:
         size = flow->read_from_ssl(data, sizeof(data));
-        if (PUMP_LIKELY(size > 0)) {
+        if (PUMP_LIKELY(size != 0)) {
             // If read state is READ_ONCE, change it to READ_PENDING.
             // If read state is READ_LOOP, last state will be seted to READ_LOOP.
             last_state = READ_ONCE;
@@ -269,6 +270,7 @@ namespace transport {
             }
 
             goto read_loop;
+
         } else if (size == 0) {
             PUMP_WARN_LOG("tls_transport: handle channel event  failed for reading from ssl failed");
             __try_doing_disconnected_process();
@@ -294,6 +296,7 @@ namespace transport {
     void tls_transport::on_read_event() {
 #endif
         auto flow = flow_.get();
+
 #if defined(PUMP_HAVE_IOCP)
         if (PUMP_UNLIKELY(flow->read_from_net(iocp_task) == flow::FLOW_ERR_ABORT)) {
 #else
@@ -310,12 +313,6 @@ namespace transport {
 
     read_loop:
         size = flow->read_from_ssl(data, MAX_TCP_BUFFER_SIZE);
-        if (PUMP_UNLIKELY(size == 0)) {
-            PUMP_WARN_LOG("tls_transport: handle read event failed for flow read from ssl failed");
-            __try_doing_disconnected_process();
-            return;
-        }
-
         if (PUMP_LIKELY(size > 0)) {
             // If read state is READ_ONCE, change it to READ_PENDING.
             // If read state is READ_LOOP, last state will be seted to READ_LOOP.
@@ -333,15 +330,23 @@ namespace transport {
             }
 
             goto read_loop;
+
+        } else if (size == 0) {
+            PUMP_WARN_LOG("tls_transport: handle read event failed for flow read from ssl failed");
+            __try_doing_disconnected_process();
+            return;
         }
 
 #if defined(PUMP_HAVE_IOCP)
         if (flow->post_read() == flow::FLOW_ERR_ABORT) {
             PUMP_WARN_LOG("tls_transport: handle read event failed for flow post read task failed");
-            __try_doing_disconnected_process();
+             __try_doing_disconnected_process();
         }
 #else
-        PUMP_DEBUG_CHECK(__resume_read_tracker());
+        if (!__resume_read_tracker()) {
+            PUMP_DEBUG_LOG("tcp_transport: handle read event failed for resuming read tracker failed");
+            __try_doing_disconnected_process();
+        }
 #endif
     }
 
@@ -398,7 +403,7 @@ namespace transport {
         }
 
       end:
-        if (__is_status(TRANSPORT_STOPPING)) {
+        if (__is_state(TRANSPORT_STOPPING)) {
             __interrupt_and_trigger_callbacks();
         }
     }
@@ -452,7 +457,7 @@ namespace transport {
             return true;
         }
         
-        if (__set_status(TRANSPORT_STARTED, TRANSPORT_DISCONNECTING)) {
+        if (__set_state(TRANSPORT_STARTED, TRANSPORT_DISCONNECTING)) {
             __post_channel_event(shared_from_this(), 0);
         }
 
@@ -499,7 +504,7 @@ namespace transport {
 
     void tls_transport::__try_doing_disconnected_process() {
         // Change transport state from TRANSPORT_STARTED to TRANSPORT_DISCONNECTING.
-        __set_status(TRANSPORT_STARTED, TRANSPORT_DISCONNECTING);
+        __set_state(TRANSPORT_STARTED, TRANSPORT_DISCONNECTING);
         // Interrupt tranport
         __interrupt_and_trigger_callbacks();
     }

@@ -42,7 +42,7 @@ namespace transport {
             return ERROR_INVALID;
         }
 
-        if (!__set_status(TRANSPORT_INITED, TRANSPORT_STARTING)) {
+        if (!__set_state(TRANSPORT_INITED, TRANSPORT_STARTING)) {
             PUMP_ERR_LOG("udp_transport: start failed with wrong status");
             return ERROR_INVALID;
         }
@@ -55,7 +55,7 @@ namespace transport {
 
         toolkit::defer cleanup([&]() {
             __close_transport_flow();
-            __set_status(TRANSPORT_STARTING, TRANSPORT_ERROR);
+            __set_state(TRANSPORT_STARTING, TRANSPORT_ERROR);
         });
 
         if (!__open_transport_flow()) {
@@ -63,7 +63,7 @@ namespace transport {
             return ERROR_FAULT;
         }
 
-        __set_status(TRANSPORT_STARTING, TRANSPORT_STARTED);
+        __set_state(TRANSPORT_STARTING, TRANSPORT_STARTED);
 
         cleanup.clear();
 
@@ -71,8 +71,8 @@ namespace transport {
     }
 
     void udp_transport::stop() {
-        while (__is_status(TRANSPORT_STARTED)) {
-            if (__set_status(TRANSPORT_STARTED, TRANSPORT_STOPPING)) {
+        while (__is_state(TRANSPORT_STARTED)) {
+            if (__set_state(TRANSPORT_STARTED, TRANSPORT_STOPPING)) {
                 __shutdown_transport_flow();
                 __post_channel_event(shared_from_this(), 0);
                 return;
@@ -81,7 +81,7 @@ namespace transport {
     }
 
     int32_t udp_transport::read_for_once() {
-        while (__is_status(TRANSPORT_STARTED)) {
+        while (__is_state(TRANSPORT_STARTED)) {
             int32_t err = __async_read(READ_ONCE);
             if (err != ERROR_AGAIN) {
                 return err;
@@ -91,7 +91,7 @@ namespace transport {
     }
 
     int32_t udp_transport::read_for_loop() {
-        while (__is_status(TRANSPORT_STARTED)) {
+        while (__is_state(TRANSPORT_STARTED)) {
             int32_t err = __async_read(READ_LOOP);
             if (err != ERROR_AGAIN) {
                 return err;
@@ -108,7 +108,7 @@ namespace transport {
             return ERROR_INVALID;
         }
 
-        if (PUMP_UNLIKELY(!__is_status(TRANSPORT_STARTED))) {
+        if (PUMP_UNLIKELY(!__is_state(TRANSPORT_STARTED))) {
             PUMP_ERR_LOG("udp_transport: send failed for transport no statred");
             return ERROR_UNSTART;
         }
@@ -159,7 +159,7 @@ namespace transport {
         }
 
         // If transport is not in started state, try to interrupt the transport.
-        if (!__is_status(TRANSPORT_STARTED)) {
+        if (!__is_state(TRANSPORT_STARTED)) {
             __interrupt_and_trigger_callbacks();
             return;
         }

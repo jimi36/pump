@@ -108,21 +108,21 @@ namespace transport {
          * Get started status
          ********************************************************************************/
         PUMP_INLINE bool is_started() const {
-            return __is_status(TRANSPORT_STARTED);
+            return __is_state(TRANSPORT_STARTED);
         }
 
       protected:
         /*********************************************************************************
-         * Set channel status
+         * Set channel state
          ********************************************************************************/
-        PUMP_INLINE bool __set_status(int32_t expected, int32_t desired) {
+        PUMP_INLINE bool __set_state(int32_t expected, int32_t desired) {
             return transport_state_.compare_exchange_strong(expected, desired);
         }
 
         /*********************************************************************************
-         * Check transport is in status
+         * Check transport state
          ********************************************************************************/
-        PUMP_INLINE bool __is_status(int32_t status) const {
+        PUMP_INLINE bool __is_state(int32_t status) const {
             return transport_state_.load(std::memory_order_acquire) == status;
         }
 

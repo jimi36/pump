@@ -56,7 +56,7 @@ namespace transport {
             return ERROR_INVALID;
         }
 
-        if (!__set_status(TRANSPORT_INITED, TRANSPORT_STARTING)) {
+        if (!__set_state(TRANSPORT_INITED, TRANSPORT_STARTING)) {
             PUMP_ERR_LOG("tls_acceptor: start failed with wrong status");
             return ERROR_INVALID;
         }
@@ -72,7 +72,7 @@ namespace transport {
             __stop_accept_tracker();
 #endif
             __close_accept_flow();
-            __set_status(TRANSPORT_STARTING, TRANSPORT_ERROR);
+            __set_state(TRANSPORT_STARTING, TRANSPORT_ERROR);
         });
 
         if (!__open_accept_flow()) {
@@ -91,7 +91,7 @@ namespace transport {
             return ERROR_FAULT;
         }
 #endif
-        __set_status(TRANSPORT_STARTING, TRANSPORT_STARTED);
+        __set_state(TRANSPORT_STARTING, TRANSPORT_STARTED);
 
         cleanup.clear();
 
@@ -100,7 +100,7 @@ namespace transport {
 
     void tls_acceptor::stop() {
         // When stopping done, tracker event will trigger stopped callback.
-        if (__set_status(TRANSPORT_STARTED, TRANSPORT_STOPPING)) {
+        if (__set_state(TRANSPORT_STARTED, TRANSPORT_STOPPING)) {
             __close_accept_flow();
             __post_channel_event(shared_from_this(), 0);
         }
@@ -133,8 +133,8 @@ namespace transport {
                 // acceptor stopped befere here, we shuold stop handshaking.
                 handshaker->init(fd, false, xcred_, local_address, remote_address);
                 if (handshaker->start(get_service(), handshake_timeout_, handshaker_cbs)) {
-                    if (!__is_status(TRANSPORT_STARTING) &&
-                        !__is_status(TRANSPORT_STARTED)) {
+                    if (!__is_state(TRANSPORT_STARTING) &&
+                        !__is_state(TRANSPORT_STARTED)) {
                         PUMP_DEBUG_LOG("tls_acceptor: handle read event failed for acceptor had stopped");
                         handshaker->stop();
                     }
@@ -148,7 +148,7 @@ namespace transport {
             }
         }
 
-        if (__is_status(TRANSPORT_STARTING) || __is_status(TRANSPORT_STARTED)) {
+        if (__is_state(TRANSPORT_STARTING) || __is_state(TRANSPORT_STARTED)) {
 #if defined(PUMP_HAVE_IOCP)
             if (flow->post_accept() != flow::FLOW_ERR_NO) {
                 PUMP_DEBUG_LOG("tls_acceptor: handle read event failed for flow post accept task failed");
@@ -179,7 +179,7 @@ namespace transport {
 
         acceptor->__remove_handshaker(handshaker);
 
-        if (succ && acceptor->__is_status(TRANSPORT_STARTED)) {
+        if (succ && acceptor->__is_state(TRANSPORT_STARTED)) {
             auto flow = handshaker->unlock_flow();
             address local_address = handshaker->get_local_address();
             address remote_address = handshaker->get_remote_address();

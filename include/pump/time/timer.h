@@ -65,7 +65,7 @@ namespace time {
          * Stop
          ********************************************************************************/
         PUMP_INLINE void stop() {
-            __force_set_status(TIMER_STOPPED);
+            __force_set_state(TIMER_STOPPED);
         }
 
         /*********************************************************************************
@@ -106,16 +106,16 @@ namespace time {
         bool __start(timer_queue_ptr queue);
 
         /*********************************************************************************
-         * Set status
+         * Set state
          ********************************************************************************/
-        PUMP_INLINE bool __set_status(int32_t expected, int32_t desired) {
+        PUMP_INLINE bool __set_state(int32_t expected, int32_t desired) {
             return status_.compare_exchange_strong(expected, desired);
         }
 
         /*********************************************************************************
-         * Set status
+         * Set state
          ********************************************************************************/
-        PUMP_INLINE void __force_set_status(int32_t desired) {
+        PUMP_INLINE void __force_set_state(int32_t desired) {
             status_.store(desired);
         }
 

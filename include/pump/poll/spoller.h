@@ -43,6 +43,21 @@ namespace poll {
 
       protected:
         /*********************************************************************************
+         * Install channel tracker for derived class
+         ********************************************************************************/
+        virtual bool __install_channel_tracker(channel_tracker_ptr tracker) override;
+
+        /*********************************************************************************
+         * Uninstall append channel for derived class
+         ********************************************************************************/
+        virtual bool __uninstall_channel_tracker(channel_tracker_ptr tracker) override;
+
+        /*********************************************************************************
+         * Awake channel tracker for derived class
+         ********************************************************************************/
+        virtual bool __resume_channel_tracker(channel_tracker_ptr tracker) override;
+
+        /*********************************************************************************
          * Poll
          ********************************************************************************/
         virtual void __poll(int32_t timeout) override;
