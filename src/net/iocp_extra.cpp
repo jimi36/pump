@@ -34,7 +34,7 @@ namespace net {
     };
     DEFINE_RAW_POINTER_TYPE(iocp_extra_function);
 
-    void_ptr get_extension_function(int32_t fd, const GUID *id) {
+    void_ptr get_extension_function(pump_socket fd, const GUID *id) {
         DWORD bytes = 0;
         void_ptr ptr = nullptr;
         WSAIoctl(fd,
@@ -50,7 +50,7 @@ namespace net {
         return ptr;
     }
 
-    void_ptr new_iocp_extra_function(int32_t fd) {
+    void_ptr new_iocp_extra_function(pump_socket fd) {
         GUID guid_accept_ex = WSAID_ACCEPTEX;
         LPFN_ACCEPTEX accept_ex =
             (LPFN_ACCEPTEX)get_extension_function(fd, &guid_accept_ex);

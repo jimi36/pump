@@ -28,7 +28,7 @@ namespace net {
     /*********************************************************************************
      * New iocp extra function
      ********************************************************************************/
-    void_ptr new_iocp_extra_function(int32_t fd);
+    void_ptr new_iocp_extra_function(pump_socket fd);
 
     /*********************************************************************************
      * Delete iocp extra function

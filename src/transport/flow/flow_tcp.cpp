@@ -35,7 +35,7 @@ namespace transport {
 #endif
         }
 
-        int32_t flow_tcp::init(poll::channel_sptr &&ch, int32_t fd) {
+        int32_t flow_tcp::init(poll::channel_sptr &&ch, pump_socket fd) {
             PUMP_DEBUG_ASSIGN(ch, ch_, ch);
             PUMP_DEBUG_ASSIGN(fd > 0, fd_, fd);
 
@@ -43,7 +43,7 @@ namespace transport {
             send_task_ = net::new_iocp_task();
             send_task_->set_fd(fd_);
             send_task_->set_notifier(ch_);
-            send_task_->set_type(net::IOCP_TASK_SEND);
+            send_task_->set_kind(net::IOCP_TASK_SEND);
 #endif
             return FLOW_ERR_NO;
         }
@@ -56,7 +56,7 @@ namespace transport {
                 iocp_task = net::new_iocp_task();
                 iocp_task->set_fd(fd_);
                 iocp_task->set_notifier(ch_);
-                iocp_task->set_type(net::IOCP_TASK_READ);
+                iocp_task->set_kind(net::IOCP_TASK_READ);
                 iocp_task->bind_io_buffer(iob);
             } else {
                 iocp_task->add_link();

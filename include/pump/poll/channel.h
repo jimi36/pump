@@ -45,7 +45,9 @@ namespace poll {
         /*********************************************************************************
          * Constructor
          ********************************************************************************/
-        explicit channel(int32_t fd) noexcept : ctx_(nullptr), fd_(fd) {
+        explicit channel(pump_socket fd) noexcept
+          : ctx_(nullptr), 
+            fd_(fd) {
         }
 
         /*********************************************************************************
@@ -56,7 +58,7 @@ namespace poll {
         /*********************************************************************************
          * Get channel fd
          ********************************************************************************/
-        PUMP_INLINE int32_t get_fd() const {
+        PUMP_INLINE pump_socket get_fd() const {
             return fd_;
         }
 
@@ -105,7 +107,7 @@ namespace poll {
         /*********************************************************************************
          * Set channel fd
          ********************************************************************************/
-        PUMP_INLINE void __set_fd(int32_t fd) {
+        PUMP_INLINE void __set_fd(pump_socket fd) {
             fd_ = fd;
         }
 
@@ -140,7 +142,7 @@ namespace poll {
         // Channel context
         void_ptr ctx_;
         // Channel fd
-        int32_t fd_;
+        pump_socket fd_;
     };
     DEFINE_ALL_POINTER_TYPE(channel);
 
@@ -280,7 +282,7 @@ namespace poll {
         /*********************************************************************************
          * Get fd
          ********************************************************************************/
-        PUMP_INLINE int32_t get_fd() const {
+        PUMP_INLINE pump_socket get_fd() const {
             return fd_;
         }
 
@@ -321,7 +323,7 @@ namespace poll {
         // Track event
         int32_t event_;
         // Track fd
-        int32_t fd_;
+        pump_socket fd_;
         // Channel
         channel_wptr ch_;
         // Poller

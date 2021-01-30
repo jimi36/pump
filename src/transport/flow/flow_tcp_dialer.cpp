@@ -58,7 +58,7 @@ namespace transport {
             dial_task_ = net::new_iocp_task();
             dial_task_->set_fd(fd_);
             dial_task_->set_notifier(ch_);
-            dial_task_->set_type(net::IOCP_TASK_CONNECT);
+            dial_task_->set_kind(net::IOCP_TASK_CONNECT);
 #else
             if ((fd_ = net::create_socket(domain, SOCK_STREAM)) == -1) {
                 PUMP_DEBUG_LOG("flow_tcp_dialer: init failed for creating socket failed");
@@ -105,8 +105,8 @@ namespace transport {
 
 #if defined(PUMP_HAVE_IOCP)
         int32_t flow_tcp_dialer::connect(net::iocp_task_ptr iocp_task,
-                                       address_ptr local_address,
-                                       address_ptr remote_address) {
+                                         address_ptr local_address,
+                                         address_ptr remote_address) {
             PUMP_ASSERT(iocp_task);
             int32_t ec = iocp_task->get_errcode();
             if (ec != 0) {
@@ -133,7 +133,7 @@ namespace transport {
         }
 #else
         int32_t flow_tcp_dialer::connect(address_ptr local_address,
-                                       address_ptr remote_address) {
+                                         address_ptr remote_address) {
             int32_t ec = net::get_socket_error(fd_);
             if (ec != 0) {
                 return ec;

@@ -47,7 +47,9 @@ namespace transport {
         /*********************************************************************************
          * Init
          ********************************************************************************/
-        void init(int32_t fd, const address &local_address, const address &remote_address);
+        void init(pump_socket fd, 
+                  const address &local_address, 
+                  const address &remote_address);
 
         /*********************************************************************************
          * Start

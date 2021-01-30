@@ -27,7 +27,7 @@ namespace transport {
       : base_channel(TLS_HANDSHAKER, nullptr, -1) {
     }
 
-    void tls_handshaker::init(int32_t fd,
+    void tls_handshaker::init(pump_socket fd,
                               bool client,
                               void_ptr xcred,
                               const address &local_address,
@@ -203,7 +203,7 @@ namespace transport {
         }
     }
 
-    bool tls_handshaker::__open_flow(int32_t fd, void_ptr xcred, bool is_client) {
+    bool tls_handshaker::__open_flow(pump_socket fd, void_ptr xcred, bool is_client) {
         // Setup flow
         PUMP_ASSERT(!flow_);
         flow_.reset(object_create<flow::flow_tls>(), object_delete<flow::flow_tls>);

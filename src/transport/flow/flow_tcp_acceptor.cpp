@@ -65,7 +65,7 @@ namespace transport {
             accept_task_ = net::new_iocp_task();
             accept_task_->set_fd(fd_);
             accept_task_->set_notifier(ch_);
-            accept_task_->set_type(net::IOCP_TASK_ACCEPT);
+            accept_task_->set_kind(net::IOCP_TASK_ACCEPT);
             accept_task_->bind_io_buffer(iob_);
 #else
             fd_ = net::create_socket(domain, SOCK_STREAM);
@@ -101,7 +101,7 @@ namespace transport {
 #if defined(PUMP_HAVE_IOCP)
         int32_t flow_tcp_acceptor::post_accept() {
             int32_t domain = is_ipv6_ ? AF_INET6 : AF_INET;
-            int32_t client = net::create_iocp_socket(domain, SOCK_STREAM, net::get_iocp_handler());
+            pump_socket client = net::create_iocp_socket(domain, SOCK_STREAM, net::get_iocp_handler());
             if (client == -1) {
                 PUMP_DEBUG_LOG("flow_tcp_acceptor: post accept task failed for creating iocp socket failed");
                 return FLOW_ERR_ABORT;
@@ -117,10 +117,10 @@ namespace transport {
             return FLOW_ERR_NO;
         }
 
-        int32_t flow_tcp_acceptor::accept(net::iocp_task_ptr iocp_task,
-                                          address_ptr local_address,
-                                          address_ptr remote_address) {
-            int32_t client_fd = iocp_task->get_client_fd();
+        pump_socket flow_tcp_acceptor::accept(net::iocp_task_ptr iocp_task,
+                                              address_ptr local_address,
+                                              address_ptr remote_address) {
+            pump_socket client_fd = iocp_task->get_client_fd();
             if (iocp_task->get_errcode() != 0 || client_fd == -1) {
                 PUMP_DEBUG_LOG("flow_tcp_acceptor: accept failed %d", iocp_task->get_errcode());
                 net::close(client_fd);
@@ -150,10 +150,10 @@ namespace transport {
             return client_fd;
         }
 #else
-        int32_t flow_tcp_acceptor::accept(address_ptr local_address,
-                                        address_ptr remote_address) {
+        pump_socket flow_tcp_acceptor::accept(address_ptr local_address,
+                                              address_ptr remote_address) {
             int32_t addrlen = ADDRESS_MAX_LEN;
-            int32_t client_fd = net::accept(fd_, (struct sockaddr*)iob_->buffer(), &addrlen);
+            pump_socket client_fd = net::accept(fd_, (struct sockaddr*)iob_->buffer(), &addrlen);
             if (client_fd == -1) {
                 PUMP_DEBUG_LOG("flow_tcp_acceptor: accept failed");
                 return -1;

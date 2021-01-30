@@ -91,11 +91,11 @@ namespace poll {
                     continue;
                 }
 
-                int32_t task_type = task->get_type();
-                if (task_type & net::IOCP_READ_MASKS) {
+                int32_t kind = task->get_kind();
+                if (kind & net::IOCP_READ_MASKS) {
                     task->set_processed_size(transferred);
                     channel_ptr(notifier)->handle_io_event(IO_EVENT_READ, task);
-                } else if (task_type & net::IOCP_SEND_MASKS) {
+                } else if (kind & net::IOCP_SEND_MASKS) {
                     task->set_processed_size(transferred);
                     channel_ptr(notifier)->handle_io_event(IO_EVENT_SEND, task);
                 } else {
@@ -113,10 +113,10 @@ namespace poll {
                 }
 
                 int32_t event = IO_EVENT_NONE;
-                int32_t task_type = task->get_type();
-                if (task_type & net::IOCP_READ_MASKS) {
+                int32_t kind = task->get_kind();
+                if (kind & net::IOCP_READ_MASKS) {
                     event = IO_EVENT_READ;
-                } else if (task_type & net::IOCP_SEND_MASKS) {
+                } else if (kind & net::IOCP_SEND_MASKS) {
                     event = IO_EVENT_SEND;
                 }
 
@@ -135,7 +135,7 @@ namespace poll {
 #if defined(PUMP_HAVE_IOCP)
         auto task = net::new_iocp_task();
         task->set_notifier(c);
-        task->set_type(net::IOCP_TASK_CHANNEL);
+        task->set_kind(net::IOCP_TASK_CHANNEL);
         return PostQueuedCompletionStatus(iocp_, 1, ev, (LPOVERLAPPED)task) == TRUE;
 #else
         return false;

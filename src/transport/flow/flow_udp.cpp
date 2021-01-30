@@ -72,7 +72,7 @@ namespace transport {
                 iocp_task = net::new_iocp_task();
                 iocp_task->set_fd(fd_);
                 iocp_task->set_notifier(ch_);
-                iocp_task->set_type(net::IOCP_TASK_READ);
+                iocp_task->set_kind(net::IOCP_TASK_READ);
                 iocp_task->bind_io_buffer(iob);
             } else {
                 iocp_task->add_link();

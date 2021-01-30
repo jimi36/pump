@@ -26,35 +26,23 @@ namespace net {
 
 #if defined(PUMP_HAVE_IOCP)
 
-    union win_socket {
-        HANDLE  h;
-        int32_t i;
-    };
-
-    PUMP_INLINE win_socket new_win_socket() {
-        win_socket fd; 
-        fd.h = 0;
-        return fd;
-    }
-
     net::iocp_handler g_iocp = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 0);
 
     net::iocp_handler get_iocp_handler() {
         return g_iocp;
     }
 
-    int32_t create_iocp_socket(int32_t domain, int32_t type, iocp_handler iocp) {
-        win_socket fd = new_win_socket();
-        fd.i = (int32_t)::WSASocket(domain, type, IPPROTO_IP, NULL, 0, WSA_FLAG_OVERLAPPED);
+    pump_socket create_iocp_socket(int32_t domain, int32_t type, iocp_handler iocp) {
+        pump_socket fd = ::WSASocket(domain, type, IPPROTO_IP, NULL, 0, WSA_FLAG_OVERLAPPED);
 
-        if (fd.i == SOCKET_ERROR ||
-            CreateIoCompletionPort(fd.h, iocp, 0, 0) == NULL) {
+        if (fd == SOCKET_ERROR ||
+            CreateIoCompletionPort((HANDLE)fd, iocp, 0, 0) == NULL) {
             PUMP_DEBUG_LOG("net: create_iocp_socket failed %d", last_errno());
-            close(fd.i);
+            close(fd);
             return -1;
         }
 
-        return fd.i;
+        return fd;
     }
 
     bool post_iocp_accept(void_ptr ex_fns, iocp_task_ptr task) {
@@ -68,9 +56,9 @@ namespace net {
         {
             DWORD bytes = 0;
             DWORD addrlen = sizeof(sockaddr_in) + 16;
-            if (accept_ex(task->fd_,
+            if (accept_ex(task->fd,
                           task->un_.client_fd,
-                          task->buf_.buf,
+                          task->buf.buf,
                           0,
                           addrlen,
                           addrlen,
@@ -99,15 +87,13 @@ namespace net {
             return false;
         }
 
-        win_socket fd = new_win_socket();
-        fd.i = task->fd_;
         DWORD addrlen = sizeof(sockaddr_in) + 16;
-        get_addrs(task->buf_.buf, 0, addrlen, addrlen, local, llen, remote, rlen);
+        get_addrs(task->buf.buf, 0, addrlen, addrlen, local, llen, remote, rlen);
         if (setsockopt(task->un_.client_fd,
                        SOL_SOCKET,
                        SO_UPDATE_ACCEPT_CONTEXT,
-                       (block_t*)&fd.h,
-                       sizeof(fd.h)) == SOCKET_ERROR) {
+                       (block_t*)&(task->fd),
+                       sizeof(task->fd)) == SOCKET_ERROR) {
             PUMP_DEBUG_LOG("net: get_iocp_accepted_address failed %d", last_errno());
             return false;
         }
@@ -126,8 +112,8 @@ namespace net {
 
         task->add_link();
         {
-            if (connect_ex(task->fd_, addr, addrlen, NULL, 0, NULL, &(task->ol)) == TRUE &&
-                setsockopt(task->fd_, SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT, NULL, 0) == 0) {
+            if (connect_ex(task->fd, addr, addrlen, NULL, 0, NULL, &(task->ol)) == TRUE &&
+                setsockopt(task->fd, SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT, NULL, 0) == 0) {
                 return true;
             }
             if (last_errno() == WSA_IO_PENDING) {
@@ -145,7 +131,7 @@ namespace net {
         task->add_link();
         {
             DWORD flags = 0;
-            if (::WSARecv(task->fd_, &task->buf_, 1, NULL, &flags, &(task->ol), NULL) != SOCKET_ERROR ||
+            if (::WSARecv(task->fd, &task->buf, 1, NULL, &flags, &(task->ol), NULL) != SOCKET_ERROR ||
                 last_errno() == WSA_IO_PENDING) {
                 return true;
             }
@@ -162,8 +148,8 @@ namespace net {
         {
             DWORD flags = 0;
             task->un_.ip.addr_len = sizeof(task->un_.ip.addr);
-            if (::WSARecvFrom(task->fd_,
-                              &task->buf_,
+            if (::WSARecvFrom(task->fd,
+                              &task->buf,
                               1,
                               NULL,
                               &flags,
@@ -185,8 +171,8 @@ namespace net {
     bool post_iocp_send(iocp_task_ptr task) {
         task->add_link();
         {
-            if (::WSASend(task->fd_,
-                          &task->buf_,
+            if (::WSASend(task->fd,
+                          &task->buf,
                           1,
                           NULL,
                           0,

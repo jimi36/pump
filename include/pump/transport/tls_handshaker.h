@@ -55,7 +55,7 @@ namespace transport {
         /*********************************************************************************
          * Init
          ********************************************************************************/
-        void init(int32_t fd,
+        void init(pump_socket fd,
                   bool client,
                   void_ptr xcred,
                   const address &local_address,
@@ -118,7 +118,7 @@ namespace transport {
         /*********************************************************************************
          * Open flow
          ********************************************************************************/
-        bool __open_flow(int32_t fd, void_ptr xcred, bool client);
+        bool __open_flow(pump_socket fd, void_ptr xcred, bool client);
 
         /*********************************************************************************
          * Close flow

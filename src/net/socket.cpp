@@ -21,11 +21,11 @@
 namespace pump {
 namespace net {
 
-    int32_t create_socket(int32_t domain, int32_t type) {
+    pump_socket create_socket(int32_t domain, int32_t type) {
         return (int32_t)::socket(domain, type, 0);
     }
 
-    bool set_noblock(int32_t fd, int32_t noblock) {
+    bool set_noblock(pump_socket fd, int32_t noblock) {
 #if defined(PUMP_HAVE_WINSOCK)
 #if defined(OS_CYGWIN)
         long cmd = 0x8004667e;
@@ -48,7 +48,7 @@ namespace net {
         return false;
     }
 
-    bool set_linger(int32_t fd, uint16_t on, uint16_t linger) {
+    bool set_linger(pump_socket fd, uint16_t on, uint16_t linger) {
         struct linger lgr;
         lgr.l_onoff = on;
         lgr.l_linger = linger;
@@ -60,7 +60,7 @@ namespace net {
         return false;
     }
 
-    bool set_read_bs(int32_t fd, int32_t size) {
+    bool set_read_bs(pump_socket fd, int32_t size) {
         if (setsockopt(fd, SOL_SOCKET, SO_RCVBUF, (const block_t*)&size, sizeof(size)) == 0) {
             return true;
         }
@@ -69,7 +69,7 @@ namespace net {
         return false;
     }
 
-    bool set_send_bs(int32_t fd, int32_t size) {
+    bool set_send_bs(pump_socket fd, int32_t size) {
         if (setsockopt(fd, SOL_SOCKET, SO_SNDBUF, (const block_t*)&size, sizeof(size)) == 0) {
             return true;
         }
@@ -78,7 +78,7 @@ namespace net {
         return false;
     }
 
-    bool set_keeplive(int32_t fd, int32_t keeplive, int32_t interval) {
+    bool set_keeplive(pump_socket fd, int32_t keeplive, int32_t interval) {
         int32_t on = 1;
         if (setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, (const block_t*)&on, sizeof(on)) == -1) {
             PUMP_DEBUG_LOG("net: set_keeplive failed %d", last_errno());
@@ -115,7 +115,7 @@ namespace net {
         return true;
     }
 
-    bool set_reuse(int32_t fd, int32_t reuse) {
+    bool set_reuse(pump_socket fd, int32_t reuse) {
         if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (const block_t*)&reuse, sizeof(reuse)) == 0) {
             return true;
         }
@@ -124,7 +124,7 @@ namespace net {
         return false;
     }
 
-    bool set_nodelay(int32_t fd, int32_t nodelay) {
+    bool set_nodelay(pump_socket fd, int32_t nodelay) {
         if (setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, (const block_t*)&nodelay, sizeof(nodelay)) == 0) {
             return true;
         }
@@ -133,7 +133,7 @@ namespace net {
         return false;
     }
 
-    bool update_connect_context(int32_t fd) {
+    bool update_connect_context(pump_socket fd) {
 #if defined(PUMP_HAVE_WINSOCK)
         if (setsockopt(fd, SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT, nullptr, 0) == 0) {
             return true;
@@ -146,7 +146,7 @@ namespace net {
 #endif
     }
 
-    bool set_udp_conn_reset(int32_t fd, bool enable) {
+    bool set_udp_conn_reset(pump_socket fd, bool enable) {
 #if defined(PUMP_HAVE_WINSOCK)
         DWORD bytes_returned = 0;
         BOOL behavior = enable ? TRUE : FALSE;
@@ -167,7 +167,7 @@ namespace net {
         return true;
     }
 
-    bool bind(int32_t fd, struct sockaddr *addr, int32_t addrlen) {
+    bool bind(pump_socket fd, struct sockaddr *addr, int32_t addrlen) {
         if (::bind(fd, addr, addrlen) == 0) {
             return true;
         }
@@ -176,7 +176,7 @@ namespace net {
         return false;
     }
 
-    bool listen(int32_t fd, int32_t backlog) {
+    bool listen(pump_socket fd, int32_t backlog) {
         if (::listen(fd, backlog) == 0) {
             return true;
         }
@@ -185,15 +185,15 @@ namespace net {
         return false;
     }
 
-    int32_t accept(int32_t fd, struct sockaddr *addr, int32_t *addrlen) {
-        int32_t client = (int32_t)::accept(fd, addr, (socklen_t*)addrlen);
+    pump_socket accept(pump_socket fd, struct sockaddr *addr, int32_t *addrlen) {
+        pump_socket client = ::accept(fd, addr, (socklen_t*)addrlen);
         if (client < 0) {
             PUMP_DEBUG_LOG("net: accept failed %d", last_errno());
         }
         return client;
     }
 
-    bool connect(int32_t fd, struct sockaddr *addr, int32_t addrlen) {
+    bool connect(pump_socket fd, struct sockaddr *addr, int32_t addrlen) {
         if (::connect(fd, addr, addrlen) != 0) {
             int32_t ec = net::last_errno();
             if (ec != LANE_EALREADY && 
@@ -206,7 +206,7 @@ namespace net {
         return true;
     }
 
-    int32_t read(int32_t fd, block_t *b, int32_t size) {
+    int32_t read(pump_socket fd, block_t *b, int32_t size) {
         size = ::recv(fd, b, size, 0);
         if (PUMP_LIKELY(size > 0)) {
             return size;
@@ -222,7 +222,7 @@ namespace net {
         return size;
     }
 
-    int32_t read_from(int32_t fd, 
+    int32_t read_from(pump_socket fd,
                       block_t *b, 
                       int32_t size, 
                       struct sockaddr *addr, 
@@ -240,7 +240,7 @@ namespace net {
         return size;
     }
 
-    int32_t send(int32_t fd, const block_t *b, int32_t size) {
+    int32_t send(pump_socket fd, const block_t *b, int32_t size) {
         size = ::send(fd, b, size, 0);
         if (PUMP_LIKELY(size > 0)) {
             return size;
@@ -256,7 +256,7 @@ namespace net {
         return size;
     }
 
-    int32_t send_to(int32_t fd, 
+    int32_t send_to(pump_socket fd,
                     const block_t *b, 
                     int32_t size, 
                     struct sockaddr *addr, 
@@ -275,19 +275,11 @@ namespace net {
         return size;
     }
 
-    int32_t poll(struct pollfd *pfds, int32_t count, int32_t timeout) {
-#if defined(PUMP_HAVE_WINSOCK)
-        return ::WSAPoll(pfds, count, timeout);
-#else
-        return ::poll(pfds, count, timeout);
-#endif
-    }
-
-    void shutdown(int32_t fd) {
+    void shutdown(pump_socket fd) {
         ::shutdown(fd, 0);
     }
 
-    bool close(int32_t fd) {
+    bool close(pump_socket fd) {
 #if defined(PUMP_HAVE_WINSOCK)
         return (::closesocket(fd) == 0);
 #else
@@ -295,7 +287,7 @@ namespace net {
 #endif
     }
 
-    int32_t get_socket_error(int32_t fd) {
+    int32_t get_socket_error(pump_socket fd) {
         int32_t res = 0;
 #if defined(PUMP_HAVE_WINSOCK)
         int32_t len = sizeof(res);
@@ -315,7 +307,7 @@ namespace net {
 #endif
     }
 
-    bool local_address(int32_t fd, struct sockaddr *addr, int32_t *addrlen) {
+    bool local_address(pump_socket fd, struct sockaddr *addr, int32_t *addrlen) {
         if (getsockname(fd, addr, (socklen_t*)addrlen) == 0) {
             return true;
         }
@@ -325,7 +317,7 @@ namespace net {
         return false;
     }
 
-    bool remote_address(int32_t fd, struct sockaddr *addr, int32_t *addrlen) {
+    bool remote_address(pump_socket fd, struct sockaddr *addr, int32_t *addrlen) {
         if (getpeername(fd, addr, (socklen_t*)addrlen) == 0) {
             return true;
         }

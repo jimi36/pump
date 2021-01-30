@@ -58,7 +58,7 @@ namespace transport {
              * Unbind fd
              * This will return and unbind the fd from the flow.
              ********************************************************************************/
-            int32_t unbind();
+            pump_socket unbind();
 
             /*********************************************************************************
              * Shutdown
@@ -73,7 +73,7 @@ namespace transport {
             /*********************************************************************************
              * Get fd
              ********************************************************************************/
-            PUMP_INLINE int32_t get_fd() const {
+            PUMP_INLINE pump_socket get_fd() const {
                 return fd_;
             }
 
@@ -86,7 +86,7 @@ namespace transport {
 
           protected:
             // Channel fd
-            int32_t fd_;
+            pump_socket fd_;
 
             // Channel
             poll::channel_wptr ch_;

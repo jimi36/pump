@@ -42,25 +42,25 @@ namespace net {
         // IOCP overlapped
         WSAOVERLAPPED ol;
         // IOCP buffer
-        WSABUF buf_;
-        // IOCP task type
-        int32_t type_;
+        WSABUF buf;
+        // IOCP task kind
+        int32_t kind;
         // IOCP processed size
-        DWORD processed_size_;
+        DWORD processed_size;
         // IOCP fd
-        int32_t fd_;
+        pump_socket fd;
         // IOCP error code
-        int32_t errcode_;
+        int32_t ec;
         // Channel notifier
-        std::weak_ptr<void> ch_notifier_;
+        std::weak_ptr<void> notifier;
         // IO buffer
-        toolkit::io_buffer_ptr iob_;
+        toolkit::io_buffer_ptr iob;
         // Ref link count
-        std::atomic_int link_cnt_;
+        std::atomic_int link_cnt;
 
         union {
             // Client fd for accepting
-            int32_t client_fd;
+            pump_socket client_fd;
             // IP address for connecting
             struct {
                 int8_t addr[64];
@@ -69,12 +69,12 @@ namespace net {
         } un_;
 
         iocp_task() noexcept
-            : type_(IOCP_TASK_NONE),
-              processed_size_(0),
-              fd_(-1),
-              errcode_(0),
-              iob_(nullptr),
-              link_cnt_(1) {
+            : kind(IOCP_TASK_NONE),
+              processed_size(0),
+              fd(-1),
+              ec(0),
+              iob(nullptr),
+              link_cnt(1) {
             memset(&ol, 0, sizeof(ol));
             memset(&un_, 0, sizeof(un_));
         }
@@ -83,14 +83,14 @@ namespace net {
          * Add link count
          ********************************************************************************/
         PUMP_INLINE void add_link() {
-            link_cnt_.fetch_add(1);
+            link_cnt.fetch_add(1);
         }
 
         /*********************************************************************************
          * Sub link count
          ********************************************************************************/
         PUMP_INLINE void sub_link() {
-            if (link_cnt_.fetch_sub(1) == 1) {
+            if (link_cnt.fetch_sub(1) == 1) {
                 __release_resource();
                 object_delete(this);
             }
@@ -105,44 +105,44 @@ namespace net {
         }
 
         /*********************************************************************************
-         * Set task type
+         * Set task kind
          ********************************************************************************/
-        PUMP_INLINE void set_type(int32_t tp) {
-            type_ = tp;
+        PUMP_INLINE void set_kind(int32_t kind) {
+            this->kind = kind;
         }
 
         /*********************************************************************************
-         * Get task type
+         * Get task kind
          ********************************************************************************/
-        PUMP_INLINE int32_t get_type() {
-            return type_;
+        PUMP_INLINE int32_t get_kind() {
+            return kind;
         }
 
         /*********************************************************************************
          * Set task fd
          ********************************************************************************/
-        PUMP_INLINE void set_fd(int32_t fd) {
-            fd_ = fd;
+        PUMP_INLINE void set_fd(pump_socket fd) {
+            this->fd = fd;
         }
 
         /*********************************************************************************
          * Get task fd
          ********************************************************************************/
-        PUMP_INLINE int32_t get_fd(void_ptr task) {
-            return fd_;
+        PUMP_INLINE pump_socket get_fd(void_ptr task) {
+            return fd;
         }
 
         /*********************************************************************************
          * Set client socket fd
          ********************************************************************************/
-        PUMP_INLINE void set_client_fd(int32_t client_fd) {
+        PUMP_INLINE void set_client_fd(pump_socket client_fd) {
             un_.client_fd = client_fd;
         }
 
         /*********************************************************************************
          * Get client socket fd
          ********************************************************************************/
-        PUMP_INLINE int32_t get_client_fd() {
+        PUMP_INLINE pump_socket get_client_fd() {
             return un_.client_fd;
         }
 
@@ -151,28 +151,28 @@ namespace net {
          ********************************************************************************/
         PUMP_INLINE void set_notifier(void_wptr ch) {
             PUMP_ASSERT(ch.lock());
-            ch_notifier_ = ch;
+            notifier = ch;
         }
 
         /*********************************************************************************
          * Get iocp task notify
          ********************************************************************************/
         PUMP_INLINE void_sptr get_notifier() {
-            return ch_notifier_.lock();
+            return notifier.lock();
         }
 
         /*********************************************************************************
          * Set error code
          ********************************************************************************/
         PUMP_INLINE void set_errcode(int32_t ec) {
-            errcode_ = ec;
+            ec = ec;
         }
 
         /*********************************************************************************
          * Get error code
          ********************************************************************************/
         PUMP_INLINE int32_t get_errcode() {
-            return errcode_;
+            return ec;
         }
 
         /*********************************************************************************
@@ -181,23 +181,23 @@ namespace net {
          * If iob has no data, task vill use iob buffer size binding.
          ********************************************************************************/
         PUMP_INLINE void bind_io_buffer(toolkit::io_buffer_ptr iob) {
-            iob->add_ref();
-            iob_ = iob;
             if (iob->data_size() > 0) {
-                buf_.buf = (CHAR*)iob->data();
-                buf_.len = iob->data_size();
+                buf.buf = (CHAR*)iob->data();
+                buf.len = iob->data_size();
             } else {
-                buf_.buf = (CHAR*)iob->buffer();
-                buf_.len = iob->buffer_size();
+                buf.buf = (CHAR*)iob->buffer();
+                buf.len = iob->buffer_size();
             }
+            iob->add_ref();
+            this->iob = iob;
         }
 
         /*********************************************************************************
          * Unbind io buffer
          ********************************************************************************/
         PUMP_INLINE void unbind_io_buffer() {
-            PUMP_ASSERT(iob_);
-            iob_->sub_ref();
+            PUMP_ASSERT(iob);
+            iob->sub_ref();
         }
 
         /*********************************************************************************
@@ -205,31 +205,31 @@ namespace net {
          * Task vill use iob data info update.
          ********************************************************************************/
         PUMP_INLINE void update_io_buffer() {
-            PUMP_ASSERT(iob_);
-            buf_.len = iob_->data_size();
-            buf_.buf = (CHAR*)iob_->data();
+            PUMP_ASSERT(iob);
+            buf.len = iob->data_size();
+            buf.buf = (CHAR*)iob->data();
         }
 
         /*********************************************************************************
          * Set processed size
          ********************************************************************************/
         PUMP_INLINE void set_processed_size(int32_t size) {
-            processed_size_ = size;
+            processed_size = size;
         }
 
         /*********************************************************************************
          * Get processed size
          ********************************************************************************/
         PUMP_INLINE int32_t get_processed_size() {
-            return processed_size_;
+            return processed_size;
         }
 
         /*********************************************************************************
          * Get processed data
          ********************************************************************************/
         PUMP_INLINE block_t* get_processed_data(int32_t *size) {
-            *size = processed_size_;
-            return buf_.buf;
+            *size = processed_size;
+            return buf.buf;
         }
 
         /*********************************************************************************
@@ -244,13 +244,13 @@ namespace net {
          * Release resource
          ********************************************************************************/
         PUMP_INLINE void __release_resource() {
-            if (type_ == IOCP_TASK_ACCEPT) {
+            if (kind == IOCP_TASK_ACCEPT) {
                 if (un_.client_fd > 0) {
                     close(un_.client_fd);
                 }
             }
-            if (iob_) {
-                iob_->sub_ref();
+            if (iob) {
+                iob->sub_ref();
             }
         }
     };
@@ -271,7 +271,7 @@ namespace net {
     /*********************************************************************************
      * Create iocp socket
      ********************************************************************************/
-    int32_t create_iocp_socket(int32_t domain, int32_t type, iocp_handler iocp);
+    pump_socket create_iocp_socket(int32_t domain, int32_t type, iocp_handler iocp);
 
     /*********************************************************************************
      * Post iocp accept

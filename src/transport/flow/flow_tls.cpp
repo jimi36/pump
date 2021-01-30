@@ -42,7 +42,7 @@ namespace transport {
         }
 
         int32_t flow_tls::init(poll::channel_sptr &ch,
-                               int32_t fd,
+                               pump_socket fd,
                                void_ptr xcred,
                                bool client) {
             PUMP_DEBUG_ASSIGN(ch, ch_, ch);
@@ -57,13 +57,13 @@ namespace transport {
             read_task_ = net::new_iocp_task();
             read_task_->set_fd(fd_);
             read_task_->set_notifier(ch_);
-            read_task_->set_type(net::IOCP_TASK_READ);
+            read_task_->set_kind(net::IOCP_TASK_READ);
             read_task_->bind_io_buffer(session_->get_net_read_buffer());
 
             send_task_ = net::new_iocp_task();
             send_task_->set_fd(fd_);
             send_task_->set_notifier(ch_);
-            send_task_->set_type(net::IOCP_TASK_SEND);
+            send_task_->set_kind(net::IOCP_TASK_SEND);
             send_task_->bind_io_buffer(session_->get_net_send_buffer());
 #endif
             return FLOW_ERR_NO;

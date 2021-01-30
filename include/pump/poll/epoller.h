@@ -64,7 +64,7 @@ namespace poll {
         void __dispatch_pending_event(int32_t count);
 
       private:
-        int32_t fd_;
+        pump_socket fd_;
 
         void_ptr events_;
         int32_t max_event_count_;

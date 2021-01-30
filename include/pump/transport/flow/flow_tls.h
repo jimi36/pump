@@ -53,7 +53,7 @@ namespace transport {
              *     FLOW_ERR_ABORT => error
              ********************************************************************************/
             int32_t init(poll::channel_sptr &ch,
-                         int32_t fd,
+                         pump_socket fd,
                          void_ptr xcred,
                          bool client);
 

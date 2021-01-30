@@ -19,7 +19,7 @@
 namespace pump {
 namespace poll {
 
-    PUMP_INLINE static bool is_selectable(int32_t fd) {
+    PUMP_INLINE static bool is_selectable(pump_socket fd) {
         return fd < 1024 && fd >= 0;
     }
 
@@ -61,8 +61,8 @@ namespace poll {
         FD_ZERO(&read_fds_);
         FD_ZERO(&write_fds_);
 
-        int32_t fd = -1;
-        int32_t maxfd = -1;
+        pump_socket fd = -1;
+        pump_socket maxfd = -1;
         int32_t listen_event = IO_EVENT_NONE;
         channel_tracker_ptr tracker = nullptr;
         for (auto &item : trackers_) {
@@ -115,8 +115,7 @@ namespace poll {
                 continue;
             }
 
-
-            int32_t fd = tracker->get_fd();
+            pump_socket fd = tracker->get_fd();
             if (FD_ISSET(fd, rfds)) {
                 if (tracker->untrack()) {
                     ch->handle_io_event(IO_EVENT_READ);

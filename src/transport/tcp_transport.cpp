@@ -35,7 +35,7 @@ namespace transport {
         __clear_sendlist();
     }
 
-    void tcp_transport::init(int32_t fd,
+    void tcp_transport::init(pump_socket fd,
                              const address &local_address,
                              const address &remote_address) {
         local_address_ = local_address;

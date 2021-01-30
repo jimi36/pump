@@ -43,7 +43,7 @@ namespace transport {
              *     FLOW_ERR_NO    => success
              *     FLOW_ERR_ABORT => error
              ********************************************************************************/
-            int32_t init(poll::channel_sptr &&ch, int32_t fd);
+            int32_t init(poll::channel_sptr &&ch, pump_socket fd);
 
 #if defined(PUMP_HAVE_IOCP)
             /*********************************************************************************

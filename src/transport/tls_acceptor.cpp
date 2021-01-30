@@ -115,9 +115,9 @@ namespace transport {
 
         address local_address, remote_address;
 #if defined(PUMP_HAVE_IOCP)
-        int32_t fd = flow->accept(iocp_task, &local_address, &remote_address);
+        pump_socket fd = flow->accept(iocp_task, &local_address, &remote_address);
 #else
-        int32_t fd = flow->accept(&local_address, &remote_address);
+        pump_socket fd = flow->accept(&local_address, &remote_address);
 #endif
         if (PUMP_LIKELY(fd > 0)) {
             tls_handshaker_ptr handshaker = __create_handshaker();
