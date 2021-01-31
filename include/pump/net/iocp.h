@@ -20,6 +20,8 @@
 #include "pump/config.h"
 #include "pump/toolkit/buffer.h"
 
+#if defined(PUMP_HAVE_IOCP)
+
 typedef LONG NTSTATUS;
 typedef NTSTATUS* PNTSTATUS;
 
@@ -110,5 +112,7 @@ typedef NTSTATUS (NTAPI* FnNtCreateFile)(
     PVOID EaBuffer,
     ULONG EaLength);
 extern FnNtCreateFile NtCreateFile;
+
+#endif
 
 #endif

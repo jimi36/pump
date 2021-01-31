@@ -21,5 +21,9 @@
 #include "pump/net/iocp.h"
 #include "pump/net/socket.h"
 
+#if defined(PUMP_HAVE_IOCP)
+
 FnNtDeviceIoControlFile NtDeviceIoControlFile = nullptr;
 FnNtCreateFile NtCreateFile = nullptr;
+
+#endif

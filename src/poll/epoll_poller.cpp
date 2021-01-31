@@ -84,7 +84,7 @@ namespace poll {
     bool epoll_poller::__uninstall_channel_tracker(channel_tracker_ptr tracker) {
 #if defined(PUMP_HAVE_EPOLL)
         auto event = tracker->get_event();
-        if (epoll_ctl(fd_, EPOLL_CTL_DEL, tracker->get_fd(), epoll_ev) == 0) {
+        if (epoll_ctl(fd_, EPOLL_CTL_DEL, tracker->get_fd(), event) == 0) {
             cur_event_count_.fetch_sub(1, std::memory_order_relaxed);
             return true;           
         }
