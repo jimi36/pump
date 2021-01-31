@@ -47,9 +47,7 @@ namespace transport {
          * Deconstructor
          ********************************************************************************/
         virtual ~tls_handshaker() {
-#if !defined(PUMP_HAVE_IOCP)
             __stop_handshake_tracker();
-#endif
         }
 
         /*********************************************************************************
@@ -96,19 +94,13 @@ namespace transport {
         /*********************************************************************************
          * Read event callback
          ********************************************************************************/
-#if defined(PUMP_HAVE_IOCP)
-        virtual void on_read_event(net::iocp_task_ptr iocp_task) override;
-#else
         virtual void on_read_event() override;
-#endif
+
         /*********************************************************************************
          * Send event callback
          ********************************************************************************/
-#if defined(PUMP_HAVE_IOCP)
-        virtual void on_send_event(net::iocp_task_ptr iocp_task) override;
-#else
         virtual void on_send_event() override;
-#endif
+
         /*********************************************************************************
          * Timer timeout callback
          ********************************************************************************/
@@ -132,7 +124,7 @@ namespace transport {
         /*********************************************************************************
          * Process handshake
          ********************************************************************************/
-        void __process_handshake(flow::flow_tls_ptr flow);
+        void __process_handshake();
 
         /*********************************************************************************
          * Start handshake timer
@@ -144,7 +136,6 @@ namespace transport {
          ********************************************************************************/
         void __stop_handshake_timer();
 
-#if !defined(PUMP_HAVE_IOCP)
         /*********************************************************************************
          * Start handshake tracker
          ********************************************************************************/
@@ -154,7 +145,7 @@ namespace transport {
          * Stop handshake tracker
          ********************************************************************************/
         void __stop_handshake_tracker();
-#endif
+
         /*********************************************************************************
          * Handshake finished
          ********************************************************************************/
@@ -172,10 +163,9 @@ namespace transport {
         // Handshake timeout timer
         time::timer_sptr timer_;
 
-#if !defined(PUMP_HAVE_IOCP)
         // Channel tracker
         poll::channel_tracker_sptr tracker_;
-#endif
+
         // TLS flow
         flow::flow_tls_sptr flow_;
 

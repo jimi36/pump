@@ -49,9 +49,7 @@ namespace transport {
         __set_service(sv);
 
         toolkit::defer cleanup([&]() {
-#if !defined(PUMP_HAVE_IOCP)
             __stop_dial_tracker();
-#endif
             __close_dial_flow();
             __stop_dial_timer();
             __set_state(TRANSPORT_STARTING, TRANSPORT_ERROR);
@@ -73,12 +71,11 @@ namespace transport {
             return ERROR_FAULT;
         }
 
-#if !defined(PUMP_HAVE_IOCP)
         if (!__start_dial_tracker(shared_from_this())) {
             PUMP_ERR_LOG("tcp_dialer: start failed for starting dial tracker failed");
             return ERROR_FAULT;
         }
-#endif
+
         __set_state(TRANSPORT_STARTING, TRANSPORT_STARTED);
 
         cleanup.clear();
@@ -103,25 +100,16 @@ namespace transport {
         }
     }
 
-#if defined(PUMP_HAVE_IOCP)
-    void tcp_dialer::on_send_event(net::iocp_task_ptr iocp_task) {
-#else
     void tcp_dialer::on_send_event() {
-#endif
         // Stop timeout timer.
         __stop_dial_timer();
 
-#if !defined(PUMP_HAVE_IOCP)
         __stop_dial_tracker();
-#endif
+
         auto flow = flow_.get();
 
         address local_address, remote_address;
-#if defined(PUMP_HAVE_IOCP)
-        bool success = (flow->connect(iocp_task, &local_address, &remote_address) == 0);
-#else
         bool success = (flow->connect(&local_address, &remote_address) == 0);
-#endif
         auto next_status = success ? TRANSPORT_FINISHED : TRANSPORT_ERROR;
         if (!__set_state(TRANSPORT_STARTING, next_status) &&
             !__set_state(TRANSPORT_STARTED, next_status)) {
@@ -152,12 +140,8 @@ namespace transport {
 
         if (dialer->__set_state(TRANSPORT_STARTED, TRANSPORT_TIMEOUTING)) {
             PUMP_DEBUG_LOG("tcp_dialer: handle dialing timeouted");
-#if defined(PUMP_HAVE_IOCP)
-            dialer->__close_dial_flow();
-#else
             dialer->__stop_dial_tracker();
             dialer->__post_channel_event(dialer_locker, 0);
-#endif
         }
     }
 

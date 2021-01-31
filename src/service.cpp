@@ -15,21 +15,21 @@
  */
 
 #include "pump/service.h"
-#include "pump/poll/epoller.h"
-#include "pump/poll/ipoller.h"
-#include "pump/poll/spoller.h"
 #include "pump/time/timer_queue.h"
+#include "pump/poll/epoll_poller.h"
+#include "pump/poll/select_poller.h"
+#include "pump/poll/afd_poller.h"
 
 namespace pump {
 
     service::service(bool with_poller)
       : running_(false),
         read_poller_(nullptr),
-        send_poller_(nullptr),
-        iocp_poller_(nullptr) {
+        send_poller_(nullptr) {
         if (with_poller) {
 #if defined(PUMP_HAVE_IOCP)
-            iocp_poller_ = object_create<poll::iocp_poller>();
+            read_poller_ = object_create<poll::afd_poller>();
+            send_poller_ = object_create<poll::afd_poller>();
 #elif defined(PUMP_HAVE_SELECT)
             read_poller_ = object_create<poll::select_poller>();
             send_poller_ = object_create<poll::select_poller>();
@@ -49,9 +49,6 @@ namespace pump {
         if (send_poller_) {
             delete send_poller_;
         }
-        if (iocp_poller_) {
-            delete iocp_poller_;
-        }
     }
 
     bool service::start() {
@@ -64,9 +61,6 @@ namespace pump {
 
         if (tqueue_) {
             tqueue_->start(pump_bind(&service::__post_timeout_timer, this, _1));
-        }
-        if (iocp_poller_) {
-            iocp_poller_->start();
         }
         if (read_poller_) {
             read_poller_->start();
@@ -88,9 +82,6 @@ namespace pump {
         if (tqueue_) {
             tqueue_->stop();
         }
-        if (iocp_poller_) {
-            iocp_poller_->stop();
-        }
         if (read_poller_) {
             read_poller_->stop();
         }
@@ -100,9 +91,6 @@ namespace pump {
     }
 
     void service::wait_stopped() {
-        if (iocp_poller_) {
-            iocp_poller_->wait_stopped();
-        }
         if (read_poller_) {
             read_poller_->wait_stopped();
         }
@@ -120,7 +108,6 @@ namespace pump {
         }
     }
 
-#if !defined(PUMP_HAVE_IOCP)
     bool service::add_channel_tracker(poll::channel_tracker_sptr &tracker, int32_t pt) {
         if (pt == READ_POLLER) {
             return read_poller_->add_channel_tracker(tracker);
@@ -145,15 +132,10 @@ namespace pump {
         }
         return false;
     }
-#endif
 
     bool service::post_channel_event(poll::channel_sptr &ch, int32_t event) {
-#if defined(PUMP_HAVE_IOCP)
-        iocp_poller_->push_channel_event(ch, event);
-#else
-        send_poller_->push_channel_event(ch, event);
-#endif
-        return true;
+        PUMP_ASSERT(send_poller_);
+        return send_poller_->push_channel_event(ch, event);
     }
 
     bool service::start_timer(time::timer_sptr &tr) {

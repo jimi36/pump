@@ -68,9 +68,7 @@ namespace transport {
         __set_service(sv);
 
         toolkit::defer cleanup([&]() {
-#if !defined(PUMP_HAVE_IOCP)
             __stop_accept_tracker();
-#endif
             __close_accept_flow();
             __set_state(TRANSPORT_STARTING, TRANSPORT_ERROR);
         });
@@ -80,17 +78,11 @@ namespace transport {
             return ERROR_FAULT;
         }
 
-#if defined(PUMP_HAVE_IOCP)
-        if (flow_->post_accept() != flow::FLOW_ERR_NO) {
-            PUMP_ERR_LOG("tls_acceptor: start failed for flow post accept task failed");
-            return ERROR_FAULT;
-        }
-#else
         if (!__start_accept_tracker(shared_from_this())) {
             PUMP_ERR_LOG("tls_acceptor: start failed for starting tracker failed");
             return ERROR_FAULT;
         }
-#endif
+
         __set_state(TRANSPORT_STARTING, TRANSPORT_STARTED);
 
         cleanup.clear();
@@ -106,19 +98,9 @@ namespace transport {
         }
     }
 
-#if defined(PUMP_HAVE_IOCP)
-    void tls_acceptor::on_read_event(net::iocp_task_ptr iocp_task) {
-#else
     void tls_acceptor::on_read_event() {
-#endif
-        auto flow = flow_.get();
-
         address local_address, remote_address;
-#if defined(PUMP_HAVE_IOCP)
-        pump_socket fd = flow->accept(iocp_task, &local_address, &remote_address);
-#else
-        pump_socket fd = flow->accept(&local_address, &remote_address);
-#endif
+        pump_socket fd = flow_->accept(&local_address, &remote_address);
         if (PUMP_LIKELY(fd > 0)) {
             tls_handshaker_ptr handshaker = __create_handshaker();
             if (PUMP_LIKELY(!!handshaker)) {
@@ -149,21 +131,14 @@ namespace transport {
         }
 
         if (__is_state(TRANSPORT_STARTING) || __is_state(TRANSPORT_STARTED)) {
-#if defined(PUMP_HAVE_IOCP)
-            if (flow->post_accept() != flow::FLOW_ERR_NO) {
-                PUMP_DEBUG_LOG("tls_acceptor: handle read event failed for flow post accept task failed");
-            }
-#else
             PUMP_DEBUG_CHECK(__resume_accept_tracker());
-#endif
             return;
         }
 
         __stop_all_handshakers();
 
-#if !defined(PUMP_HAVE_IOCP)
         __stop_accept_tracker();
-#endif
+
         __trigger_interrupt_callbacks();
     }
 

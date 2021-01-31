@@ -47,7 +47,6 @@ namespace transport {
 
             /*********************************************************************************
              * Post connect
-             * If using iocp this post an iocp task for connecting.
              * Return results:
              *     FLOW_ERR_NO    => success
              *     FLOW_ERR_ABORT => error
@@ -58,21 +57,11 @@ namespace transport {
              * Connect
              * Return socket error code.
              ********************************************************************************/
-#if defined(PUMP_HAVE_IOCP)
-            int32_t connect(net::iocp_task_ptr iocp_task,
-                            address_ptr local_address,
-                            address_ptr remote_address);
-#else
             int32_t connect(address_ptr local_address, address_ptr remote_address);
-#endif
+
           private:
             // IPV6
             bool is_ipv6_;
-
-#if defined(PUMP_HAVE_IOCP)
-            // IOCP dial task
-            net::iocp_task_ptr dial_task_;
-#endif
         };
         DEFINE_ALL_POINTER_TYPE(flow_tcp_dialer);
 

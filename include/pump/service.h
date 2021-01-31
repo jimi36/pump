@@ -60,7 +60,6 @@ namespace pump {
          ********************************************************************************/
         void wait_stopped();
 
-#if !defined(PUMP_HAVE_IOCP)
         /*********************************************************************************
          * Add channel checker
          ********************************************************************************/
@@ -75,7 +74,7 @@ namespace pump {
          * Resume channel
          ********************************************************************************/
         bool resume_channel_tracker(poll::channel_tracker_ptr tracker, int32_t pt);
-#endif
+
         /*********************************************************************************
          * Post channel event
          ********************************************************************************/
@@ -119,8 +118,6 @@ namespace pump {
         poll::poller_ptr read_poller_;
         // Write poller
         poll::poller_ptr send_poller_;
-        // IOCP poller
-        poll::poller_ptr iocp_poller_;
 
         // Timer queue
         time::timer_queue_sptr tqueue_;

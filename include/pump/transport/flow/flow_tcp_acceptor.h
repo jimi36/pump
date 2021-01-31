@@ -45,37 +45,17 @@ namespace transport {
              ********************************************************************************/
             int32_t init(poll::channel_sptr &&ch, const address &listen_address);
 
-#if defined(PUMP_HAVE_IOCP)
-            /*********************************************************************************
-             * Post accept
-             * If using iocp this post an iock task for accepting.
-             * Return results:
-             *     FLOW_ERR_NO    => success
-             *     FLOW_ERR_ABORT => error
-             ********************************************************************************/
-            int32_t post_accept();
-#endif
             /*********************************************************************************
              * Accept
              ********************************************************************************/
-#if defined(PUMP_HAVE_IOCP)
-            pump_socket accept(net::iocp_task_ptr iocp_task,
-                           address_ptr local_address,
-                           address_ptr remote_address);
-#else
             pump_socket accept(address_ptr local_address, address_ptr remote_address);
-#endif
+
           private:
             // IPV6
             bool is_ipv6_;
 
             // Accept buffer
             toolkit::io_buffer_ptr iob_;
-
-#if defined(PUMP_HAVE_IOCP)
-            // IOCP accept task
-            net::iocp_task_ptr accept_task_;
-#endif
         };
         DEFINE_ALL_POINTER_TYPE(flow_tcp_acceptor);
 

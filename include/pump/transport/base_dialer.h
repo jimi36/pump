@@ -43,9 +43,7 @@ namespace transport {
          * Deconstructor
          ********************************************************************************/
         virtual ~base_dialer() {
-#if !defined(PUMP_HAVE_IOCP)
             __stop_dial_tracker();
-#endif
         }
 
         /*********************************************************************************
@@ -91,7 +89,6 @@ namespace transport {
         }
 
       protected:
-#if !defined(PUMP_HAVE_IOCP)
         /*********************************************************************************
          * Start dial tracker
          ********************************************************************************/
@@ -101,7 +98,7 @@ namespace transport {
          * Stop dial tracker
          ********************************************************************************/
         void __stop_dial_tracker();
-#endif
+
         /*********************************************************************************
          * Start dial timer
          ********************************************************************************/
@@ -127,10 +124,9 @@ namespace transport {
         int64_t connect_timeout_;
         std::shared_ptr<time::timer> connect_timer_;
 
-#if !defined(PUMP_HAVE_IOCP)
         // Channel tracker
         poll::channel_tracker_sptr tracker_;
-#endif
+
         // Dialer callbacks
         dialer_callbacks cbs_;
     };

@@ -25,10 +25,8 @@ namespace transport {
     }
 
     udp_transport::~udp_transport() {
-#if !defined(PUMP_HAVE_IOCP)
         __stop_read_tracker();
         __stop_send_tracker();
-#endif
     }
 
     int32_t udp_transport::start(service_ptr sv, const transport_callbacks &cbs) {
@@ -120,27 +118,13 @@ namespace transport {
         return ERROR_AGAIN;
     }
 
-#if defined(PUMP_HAVE_IOCP)
-    void udp_transport::on_read_event(net::iocp_task_ptr iocp_task) {
-#else
     void udp_transport::on_read_event() {
-#endif
         auto flow = flow_.get();
 
         address from_addr;
-#if defined(PUMP_HAVE_IOCP)
-        int32_t size = 0;
-        const block_t *b = iocp_task->get_processed_data(&size);
-#else
         block_t b[MAX_UDP_BUFFER_SIZE];
         int32_t size = flow->read_from(b, MAX_UDP_BUFFER_SIZE, &from_addr);
-#endif
         if (PUMP_LIKELY(size > 0)) {
-#if defined(PUMP_HAVE_IOCP)
-            int32_t addrlen = 0;
-            sockaddr *addr = iocp_task->get_remote_address(&addrlen);
-            from_addr.set(addr, addrlen);
-#endif
             // If read state is READ_ONCE, change it to READ_PENDING.
             // If read state is READ_LOOP, last state will be seted to READ_LOOP.
             int32_t last_state = READ_ONCE;
@@ -164,13 +148,7 @@ namespace transport {
             return;
         }
 
-#if defined(PUMP_HAVE_IOCP)
-        if (flow->post_read(iocp_task) == flow::FLOW_ERR_ABORT) {
-            PUMP_WARN_LOG("udp_transport: handle read event failed for flow post read task failed");
-        }
-#else
         PUMP_DEBUG_CHECK(__resume_read_tracker());
-#endif
     }
 
     bool udp_transport::__open_transport_flow() {
@@ -196,17 +174,11 @@ namespace transport {
             return ERROR_AGAIN;
         }
 
-#if defined(PUMP_HAVE_IOCP)
-        if (flow_->post_read() == flow::FLOW_ERR_ABORT) {
-            PUMP_ERR_LOG("udp_transport: async read failed for flow post read task fialed");
-            return ERROR_FAULT;
-        }
-#else
         if (!__start_read_tracker()) {
             PUMP_ERR_LOG("udp_transport: async read failed for starting read tracker fialed");
             return ERROR_FAULT;
         }
-#endif
+
         return ERROR_OK;
     }
 

@@ -14,32 +14,27 @@
  * limitations under the License.
  */
 
-#ifndef pump_poll_spoller_h
-#define pump_poll_spoller_h
+#ifndef pump_poll_epoll_poller_h
+#define pump_poll_epoll_poller_h
 
-#include "pump/net/socket.h"
 #include "pump/poll/poller.h"
-
-#if defined(OS_LINUX) && !defined(OS_CYGWIN)
-#include <sys/select.h>
-#endif
 
 namespace pump {
 namespace poll {
 
-    class select_poller
+    class epoll_poller
       : public poller {
 
       public:
         /*********************************************************************************
          * Constructor
          ********************************************************************************/
-        select_poller() noexcept;
+        epoll_poller() noexcept;
 
         /*********************************************************************************
          * Deconstructor
          ********************************************************************************/
-        virtual ~select_poller() = default;
+        virtual ~epoll_poller();
 
       protected:
         /*********************************************************************************
@@ -66,17 +61,18 @@ namespace poll {
         /*********************************************************************************
          * Dispatch pending event
          ********************************************************************************/
-        void __dispatch_pending_event(const fd_set *rfds, const fd_set *wfds);
+        void __dispatch_pending_event(int32_t count);
 
       private:
-        fd_set read_fds_;
-        fd_set write_fds_;
-#if defined(OS_CYGWIN)
-        __ms_timeval tv_;
-#else
-        timeval tv_;
-#endif
+        int32_t fd_;
+
+        void_ptr events_;
+        int32_t max_event_count_;
+
+        std::atomic_int32_t cur_event_count_;
     };
+
+    DEFINE_ALL_POINTER_TYPE(epoll_poller);
 
 }  // namespace poll
 }  // namespace pump

@@ -14,27 +14,27 @@
  * limitations under the License.
  */
 
-#ifndef pump_poll_epoller_h
-#define pump_poll_epoller_h
+#ifndef pump_poll_afd_poller_h
+#define pump_poll_afd_poller_h
 
 #include "pump/poll/poller.h"
 
 namespace pump {
 namespace poll {
 
-    class epoll_poller
-      : public poller {
+    class afd_poller
+        : public poller {
 
       public:
         /*********************************************************************************
-         * Constructor
+          * Constructor
          ********************************************************************************/
-        epoll_poller() noexcept;
+        afd_poller() noexcept;
 
         /*********************************************************************************
          * Deconstructor
          ********************************************************************************/
-        virtual ~epoll_poller();
+        virtual ~afd_poller() = default;
 
       protected:
         /*********************************************************************************
@@ -48,7 +48,7 @@ namespace poll {
         virtual bool __uninstall_channel_tracker(channel_tracker_ptr tracker) override;
 
         /*********************************************************************************
-         * Awake channel tracker for derived class
+         * Resume channel tracker for derived class
          ********************************************************************************/
         virtual bool __resume_channel_tracker(channel_tracker_ptr tracker) override;
 
@@ -64,17 +64,16 @@ namespace poll {
         void __dispatch_pending_event(int32_t count);
 
       private:
-        pump_socket fd_;
+        // IOCP handler
+        void_ptr iocp_handler_;
+        // AFD device handler
+        void_ptr afd_device_handler_;
 
         void_ptr events_;
         int32_t max_event_count_;
-
-        std::atomic_int32_t cur_event_count_;
     };
 
-    DEFINE_ALL_POINTER_TYPE(epoll_poller);
-
-}  // namespace poll
-}  // namespace pump
+}
+}
 
 #endif

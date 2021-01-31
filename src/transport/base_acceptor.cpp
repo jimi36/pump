@@ -20,9 +20,7 @@ namespace pump {
 namespace transport {
 
     base_acceptor::~base_acceptor() {
-#if !defined(PUMP_HAVE_IOCP)
         __stop_accept_tracker();
-#endif
         __close_accept_flow();
     }
 
@@ -30,7 +28,6 @@ namespace transport {
         __trigger_interrupt_callbacks();
     }
 
-#if !defined(PUMP_HAVE_IOCP)
     bool base_acceptor::__start_accept_tracker(poll::channel_sptr &&ch) {
         if (tracker_) {
             return false;
@@ -67,7 +64,6 @@ namespace transport {
 
         PUMP_DEBUG_LOG("base_acceptor: stop tracker");
     }
-#endif
 
     void base_acceptor::__trigger_interrupt_callbacks() {
         if (__set_state(TRANSPORT_STOPPING, TRANSPORT_STOPPED)) {

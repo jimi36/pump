@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "pump/poll/epoller.h"
+#include "pump/poll/epoll_poller.h"
 
 #if defined(PUMP_HAVE_EPOLL)
 #include <sys/epoll.h>
@@ -59,16 +59,16 @@ namespace poll {
 
     bool epoll_poller::__install_channel_tracker(channel_tracker_ptr tracker) {
 #if defined(PUMP_HAVE_EPOLL)
-        auto ev = tracker->get_event();
-        auto epoll_ev = tracker->get_epoll_event();
-        epoll_ev->data.ptr = tracker;
-        if (ev & IO_EVENT_READ) {
-            epoll_ev->events = EL_READ_EVENT;
-        } else if (ev & IO_EVENT_SEND) {
-            epoll_ev->events = EL_SEND_EVENT;
+        auto expected_event = tracker->get_expected_event();
+        auto event = tracker->get_event();
+        event->data.ptr = tracker;
+        if (expected_event & IO_EVENT_READ) {
+            event->events = EL_READ_EVENT;
+        } else if (expected_event & IO_EVENT_SEND) {
+            event->events = EL_SEND_EVENT;
         }
-        if (epoll_ctl(fd_, EPOLL_CTL_ADD, tracker->get_fd(), epoll_ev) == 0 ||
-            epoll_ctl(fd_, EPOLL_CTL_MOD, tracker->get_fd(), epoll_ev) == 0) {
+        if (epoll_ctl(fd_, EPOLL_CTL_ADD, tracker->get_fd(), event) == 0 ||
+            epoll_ctl(fd_, EPOLL_CTL_MOD, tracker->get_fd(), event) == 0) {
             cur_event_count_.fetch_add(1, std::memory_order_relaxed);
             return true;
         }
@@ -83,7 +83,7 @@ namespace poll {
 
     bool epoll_poller::__uninstall_channel_tracker(channel_tracker_ptr tracker) {
 #if defined(PUMP_HAVE_EPOLL)
-        auto epoll_ev = tracker->get_epoll_event();
+        auto event = tracker->get_event();
         if (epoll_ctl(fd_, EPOLL_CTL_DEL, tracker->get_fd(), epoll_ev) == 0) {
             cur_event_count_.fetch_sub(1, std::memory_order_relaxed);
             return true;           
@@ -99,16 +99,16 @@ namespace poll {
 
     bool epoll_poller::__resume_channel_tracker(channel_tracker_ptr tracker) {
 #if defined(PUMP_HAVE_EPOLL)
-        auto ev = tracker->get_event();
-        auto epoll_ev = tracker->get_epoll_event();
-        epoll_ev->data.ptr = tracker;
-        if (ev & IO_EVENT_READ) {
-            epoll_ev->events = EL_READ_EVENT;
-        } else if (ev & IO_EVENT_SEND) {
-            epoll_ev->events = EL_SEND_EVENT;
+        auto expected_event = tracker->get_expected_event();
+        auto event = tracker->get_event();
+        event->data.ptr = tracker;
+        if (expected_event & IO_EVENT_READ) {
+            event->events = EL_READ_EVENT;
+        } else if (expected_event & IO_EVENT_SEND) {
+            event->events = EL_SEND_EVENT;
         }
-        if (epoll_ctl(fd_, EPOLL_CTL_MOD, tracker->get_fd(), epoll_ev) == 0 ||
-            epoll_ctl(fd_, EPOLL_CTL_ADD, tracker->get_fd(), epoll_ev) == 0) {
+        if (epoll_ctl(fd_, EPOLL_CTL_MOD, tracker->get_fd(), event) == 0 ||
+            epoll_ctl(fd_, EPOLL_CTL_ADD, tracker->get_fd(), event) == 0) {
             return true;
         }
 
@@ -151,7 +151,7 @@ namespace poll {
             if (tracker->untrack()) {
                 auto ch = tracker->get_channel();
                 if (ch) {
-                    ch->handle_io_event(tracker->get_event());
+                    ch->handle_io_event(tracker->get_expected_event());
                 }
             }
         }

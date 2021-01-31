@@ -22,85 +22,17 @@ namespace transport {
 
         flow_tcp::flow_tcp() noexcept 
           : send_iob_(nullptr) {
-#if defined(PUMP_HAVE_IOCP)
-            send_task_ = nullptr;
-#endif
         }
 
         flow_tcp::~flow_tcp() {
-#if defined(PUMP_HAVE_IOCP)
-            if (send_task_) {
-                send_task_->sub_link();
-            }
-#endif
         }
 
         int32_t flow_tcp::init(poll::channel_sptr &&ch, pump_socket fd) {
             PUMP_DEBUG_ASSIGN(ch, ch_, ch);
             PUMP_DEBUG_ASSIGN(fd > 0, fd_, fd);
-
-#if defined(PUMP_HAVE_IOCP)
-            send_task_ = net::new_iocp_task();
-            send_task_->set_fd(fd_);
-            send_task_->set_notifier(ch_);
-            send_task_->set_kind(net::IOCP_TASK_SEND);
-#endif
             return FLOW_ERR_NO;
         }
 
-#if defined(PUMP_HAVE_IOCP)
-        int32_t flow_tcp::post_read(net::iocp_task_ptr iocp_task) {
-            if (!iocp_task) {
-                auto iob = toolkit::io_buffer::create();
-                iob->init_with_size(MAX_TCP_BUFFER_SIZE);
-                iocp_task = net::new_iocp_task();
-                iocp_task->set_fd(fd_);
-                iocp_task->set_notifier(ch_);
-                iocp_task->set_kind(net::IOCP_TASK_READ);
-                iocp_task->bind_io_buffer(iob);
-            } else {
-                iocp_task->add_link();
-            }
-            if (!net::post_iocp_read(iocp_task)) {
-                PUMP_DEBUG_LOG("flow_tcp: post read task failed for posting iocp read task failed");
-                return FLOW_ERR_ABORT;
-            }
-            return FLOW_ERR_NO;
-        }
-#endif
-
-#if defined(PUMP_HAVE_IOCP)
-        int32_t flow_tcp::post_send(toolkit::io_buffer_ptr iob) {
-            PUMP_DEBUG_ASSIGN(iob, send_iob_, iob);
-            send_task_->bind_io_buffer(send_iob_);
-            if (net::post_iocp_send(send_task_)) {
-                return FLOW_ERR_NO;
-            }
-
-            PUMP_DEBUG_LOG("flow_tcp: post send task failed for posting iocp send task failed");
-
-            return FLOW_ERR_ABORT;
-        }
-
-        int32_t flow_tcp::send(net::iocp_task_ptr iocp_task) {
-            int32_t size = iocp_task->get_processed_size();
-            if (size > 0) {
-                if (PUMP_LIKELY(send_iob_->shift(size) == 0)) {
-                    send_task_->unbind_io_buffer();
-                    return FLOW_ERR_NO;
-                }
-
-                send_task_->update_io_buffer();
-                if (net::post_iocp_send(send_task_)) {
-                    return FLOW_ERR_AGAIN;
-                }
-
-                PUMP_DEBUG_LOG("flow_tcp: send failed for posting iocp send task failed");
-            }
-
-            return FLOW_ERR_ABORT;
-        }
-#else
         int32_t flow_tcp::want_to_send(toolkit::io_buffer_ptr iob) {
             PUMP_DEBUG_ASSIGN(iob, send_iob_, iob);
             int32_t size = net::send(fd_, send_iob_->data(), send_iob_->data_size());
@@ -138,7 +70,6 @@ namespace transport {
 
             return FLOW_ERR_ABORT;
         }
-#endif
 
     }  // namespace flow
 }  // namespace transport

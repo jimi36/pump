@@ -85,16 +85,10 @@ namespace transport {
             }
 
           protected:
-            // Channel fd
+            // FD
             pump_socket fd_;
-
             // Channel
             poll::channel_wptr ch_;
-
-#if defined(PUMP_HAVE_IOCP)
-            // IOCP extra function
-            void_ptr extra_fns_;
-#endif
         };
         DEFINE_ALL_POINTER_TYPE(flow_base);
 

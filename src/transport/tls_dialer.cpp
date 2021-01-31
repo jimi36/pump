@@ -60,9 +60,7 @@ namespace transport {
 
         toolkit::defer cleanup([&]() {
             __stop_dial_timer();
-#if !defined(PUMP_HAVE_IOCP)
             __stop_dial_tracker();
-#endif
             __close_dial_flow();
             __set_state(TRANSPORT_STARTING, TRANSPORT_ERROR);
         });
@@ -82,12 +80,11 @@ namespace transport {
             return ERROR_FAULT;
         }
 
-#if !defined(PUMP_HAVE_IOCP)
         if (!__start_dial_tracker(shared_from_this())) {
             PUMP_ERR_LOG("tls_dialer: start failed for starting dial tracker failed");
             return ERROR_FAULT;
         }
-#endif
+
         __set_state(TRANSPORT_STARTING, TRANSPORT_STARTED);
 
         cleanup.clear();
@@ -117,24 +114,15 @@ namespace transport {
         }
     }
 
-#if defined(PUMP_HAVE_IOCP)
-    void tls_dialer::on_send_event(net::iocp_task_ptr iocp_task) {
-#else
     void tls_dialer::on_send_event() {
-#endif
         // Stop dial timer
         __stop_dial_timer();
 
-#if !defined(PUMP_HAVE_IOCP)
         __stop_dial_tracker();
-#endif
+
         auto flow = flow_.get();
         address local_address, remote_address;
-#if defined(PUMP_HAVE_IOCP)
-        bool success = (flow->connect(iocp_task, &local_address, &remote_address) == 0);
-#else
         bool success = (flow->connect(&local_address, &remote_address) == 0);
-#endif
         auto next_status = success ? TRANSPORT_HANDSHAKING : TRANSPORT_ERROR;
         if (!__set_state(TRANSPORT_STARTING, next_status) &&
             !__set_state(TRANSPORT_STARTED, next_status)) {
@@ -150,8 +138,7 @@ namespace transport {
             // here, we shuold stop handshaking.
             handshaker_.reset(object_create<tls_handshaker>(),
                               object_delete<tls_handshaker>);
-            handshaker_->init(
-                flow->unbind(), true, xcred_, local_address, remote_address);
+            handshaker_->init(flow->unbind(), true, xcred_, local_address, remote_address);
 
             tls_handshaker::tls_handshaker_callbacks tls_cbs;
             tls_cbs.handshaked_cb =
@@ -186,12 +173,8 @@ namespace transport {
 
         if (dialer->__set_state(TRANSPORT_STARTED, TRANSPORT_TIMEOUTING)) {
             PUMP_WARN_LOG("tls_dialer: handle dialing timeout");
-#if defined(PUMP_HAVE_IOCP)
-            dialer->__close_dial_flow();
-#else
             dialer->__stop_dial_tracker();
             dialer->__post_channel_event(dialer_locker, 0);
-#endif
         }
     }
 

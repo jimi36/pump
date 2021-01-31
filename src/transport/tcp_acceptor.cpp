@@ -48,9 +48,7 @@ namespace transport {
 
         toolkit::defer cleanup([&]() {
             __close_accept_flow();
-#if !defined(PUMP_HAVE_IOCP)
             __stop_accept_tracker();
-#endif
             __set_state(TRANSPORT_STARTING, TRANSPORT_ERROR);
         });
 
@@ -59,17 +57,11 @@ namespace transport {
             return ERROR_FAULT;
         }
 
-#if defined(PUMP_HAVE_IOCP)
-        if (flow_->post_accept() != flow::FLOW_ERR_NO) {
-            PUMP_ERR_LOG("tcp_acceptor: start failed for flow post accept task failed");
-            return ERROR_FAULT;
-        }
-#else
         if (!__start_accept_tracker(shared_from_this())) {
             PUMP_ERR_LOG("tcp_acceptor: start failed for starting tracker failed");
             return ERROR_FAULT;
         }
-#endif
+
         __set_state(TRANSPORT_STARTING, TRANSPORT_STARTED);
 
         cleanup.clear();
@@ -85,19 +77,9 @@ namespace transport {
         }
     }
 
-#if defined(PUMP_HAVE_IOCP)
-    void tcp_acceptor::on_read_event(net::iocp_task_ptr iocp_task) {
-#else
     void tcp_acceptor::on_read_event() {
-#endif
-        auto flow = flow_.get();
-
         address local_address, remote_address;
-#if defined(PUMP_HAVE_IOCP)
-        pump_socket fd = flow->accept(iocp_task, &local_address, &remote_address);
-#else
-        pump_socket fd = flow->accept(&local_address, &remote_address);
-#endif
+        pump_socket fd = flow_->accept(&local_address, &remote_address);
         if (fd > 0) {
             tcp_transport_sptr tcp_transport = tcp_transport::create();
             tcp_transport->init(fd, local_address, remote_address);
@@ -107,19 +89,11 @@ namespace transport {
         }
 
         if (__is_state(TRANSPORT_STARTING) || __is_state(TRANSPORT_STARTED)) {
-#if defined(PUMP_HAVE_IOCP)
-            if (flow->post_accept() != flow::FLOW_ERR_NO) {
-                PUMP_ERR_LOG("tcp_acceptor: handle read event failed for flow post accept task failed");
-            }
-#else
             PUMP_DEBUG_CHECK(__resume_accept_tracker());
-#endif
             return;
         }
 
-#if !defined(PUMP_HAVE_IOCP)
         __stop_accept_tracker();
-#endif
         __trigger_interrupt_callbacks();
     }
 

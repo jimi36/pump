@@ -45,20 +45,9 @@ namespace transport {
              ********************************************************************************/
             int32_t init(poll::channel_sptr &&ch, const address &bind_address);
 
-#if defined(PUMP_HAVE_IOCP)
-            /*********************************************************************************
-             * Post read
-             * If using IOCP this post an IOCP task for reading, else do nothing.
-             * Return results:
-             *     FLOW_ERR_NO    => success
-             *     FLOW_ERR_ABORT => error
-             ********************************************************************************/
-            int32_t post_read(net::iocp_task_ptr iocp_task = nullptr);
-#endif
             /*********************************************************************************
              * Read from
              ********************************************************************************/
-#if !defined(PUMP_HAVE_IOCP)
             PUMP_INLINE int32_t read_from(block_t *b, int32_t size, address_ptr from_address) {
                 int32_t addrlen = 0;
                 struct sockaddr *addr = from_address->get();
@@ -66,7 +55,7 @@ namespace transport {
                 from_address->set((sockaddr*)addr, addrlen);
                 return size;
             }
-#endif
+
             /*********************************************************************************
              * Send to
              * Return sent size.

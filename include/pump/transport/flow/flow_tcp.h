@@ -45,55 +45,32 @@ namespace transport {
              ********************************************************************************/
             int32_t init(poll::channel_sptr &&ch, pump_socket fd);
 
-#if defined(PUMP_HAVE_IOCP)
-            /*********************************************************************************
-             * Post read
-             * If using IOCP this post an IOCP task for reading, else do nothing.
-             * Return results:
-             *     FLOW_ERR_NO    => success
-             *     FLOW_ERR_ABORT => error
-             ********************************************************************************/
-            int32_t post_read(net::iocp_task_ptr iocp_task = nullptr);
-#else
             /*********************************************************************************
              * Read
              ********************************************************************************/
             PUMP_INLINE int32_t read(block_t *b, int32_t size) {
                 return net::read(fd_, b, size);
             }
-#endif
 
-#if defined(PUMP_HAVE_IOCP)
-            /*********************************************************************************
-             * Post send
-             * Return results:
-             *     FLOW_ERR_NO    => success
-             *     FLOW_ERR_ABORT => error
-             ********************************************************************************/
-            int32_t post_send(toolkit::io_buffer_ptr iob);
-#else
              /*********************************************************************************
               * Want to send
-              * If using IOCP this post an IOCP task for sending, else this try sending
-              *data. Return results:
-              *      FLOW_ERR_NO    => success
+              * Try sending data as much as possible
+              * Return results:
+              *      FLOW_ERR_NO    => send completely
+              *      FLOW_ERR_AGAIN => try again
               *      FLOW_ERR_ABORT => error
               ********************************************************************************/
             int32_t want_to_send(toolkit::io_buffer_ptr iob);
-#endif
+
             /*********************************************************************************
              * Send
              * Return results:
              *     FLOW_ERR_NO      => send completely
-             *     FLOW_ERR_AGAIN   => try to send again
-             *     FLOW_ERR_NO_DATA => no data to send
+             *     FLOW_ERR_AGAIN   => try again
              *     FLOW_ERR_ABORT   => error
              ********************************************************************************/
-#if defined(PUMP_HAVE_IOCP)
-            int32_t send(net::iocp_task_ptr iocp_task);
-#else
             int32_t send();
-#endif
+
             /*********************************************************************************
              * Check there are data to send or not
              ********************************************************************************/
@@ -104,11 +81,6 @@ namespace transport {
           private:
             // Send buffer
             toolkit::io_buffer_ptr send_iob_;
-
-#if defined(PUMP_HAVE_IOCP)
-            // IOCP send task
-            net::iocp_task_ptr send_task_;
-#endif
         };
         DEFINE_ALL_POINTER_TYPE(flow_tcp);
 

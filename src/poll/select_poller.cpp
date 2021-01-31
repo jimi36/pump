@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "pump/poll/spoller.h"
+#include "pump/poll/select_poller.h"
 
 namespace pump {
 namespace poll {
@@ -80,7 +80,7 @@ namespace poll {
                 maxfd = fd;
             }
 
-            listen_event = tracker->get_event();
+            listen_event = tracker->get_expected_event();
             if (listen_event & IO_EVENT_READ) {
                 FD_SET(fd, &read_fds_);
             } else if (listen_event & IO_EVENT_SEND) {
@@ -90,7 +90,7 @@ namespace poll {
 
         tv_.tv_sec = timeout / 1000;
         tv_.tv_usec = (timeout % 1000) * 1000;
-        int32_t count = ::select(maxfd + 1, &read_fds_, &write_fds_, NULL, &tv_);
+        int32_t count = ::select((int32_t)maxfd + 1, &read_fds_, &write_fds_, NULL, &tv_);
 #if defined(OS_WINDOWS)
         if (maxfd == -1 && timeout > 0) {
             Sleep(1);
