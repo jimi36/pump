@@ -42,7 +42,7 @@ namespace transport {
             iob_->init_with_size(ADDRESS_MAX_LEN * 3);
 
             fd_ = net::create_socket(domain, SOCK_STREAM);
-            if (fd_ == -1) {
+            if (fd_ == INVALID_SOCKET) {
                 PUMP_DEBUG_LOG("flow_tcp_acceptor: init failed for creating socket failed");
                 return FLOW_ERR_ABORT;
             }
@@ -75,7 +75,7 @@ namespace transport {
                                               address_ptr remote_address) {
             int32_t addrlen = ADDRESS_MAX_LEN;
             pump_socket client_fd = net::accept(fd_, (struct sockaddr*)iob_->buffer(), &addrlen);
-            if (client_fd == -1) {
+            if (client_fd == INVALID_SOCKET) {
                 PUMP_DEBUG_LOG("flow_tcp_acceptor: accept failed");
                 return -1;
             }

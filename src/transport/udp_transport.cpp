@@ -123,7 +123,7 @@ namespace transport {
 
         address from_addr;
         block_t b[MAX_UDP_BUFFER_SIZE];
-        int32_t size = flow->read_from(b, MAX_UDP_BUFFER_SIZE, &from_addr);
+        int32_t size = flow->read_from(b, sizeof(b), &from_addr);
         if (PUMP_LIKELY(size > 0)) {
             // If read state is READ_ONCE, change it to READ_PENDING.
             // If read state is READ_LOOP, last state will be seted to READ_LOOP.

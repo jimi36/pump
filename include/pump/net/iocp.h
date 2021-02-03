@@ -18,6 +18,7 @@
 #define pump_net_iocp_h
 
 #include "pump/config.h"
+#include "pump/net/socket.h"
 #include "pump/toolkit/buffer.h"
 
 #if defined(PUMP_HAVE_IOCP)
@@ -66,6 +67,11 @@ typedef struct _AFD_POLL_INFO {
     AFD_POLL_HANDLE_INFO Handles[1];
 } AFD_POLL_INFO, *PAFD_POLL_INFO;
 
+typedef struct _AFD_POLL_EVENT {
+    AFD_POLL_INFO info;
+    IO_STATUS_BLOCK iosb;
+} AFD_POLL_EVENT, *PAFD_POLL_EVENT;
+
 typedef VOID(NTAPI* PIO_APC_ROUTINE)(
     PVOID ApcContext,
     PIO_STATUS_BLOCK IoStatusBlock,
@@ -113,6 +119,20 @@ typedef NTSTATUS (NTAPI* FnNtCreateFile)(
     ULONG EaLength);
 extern FnNtCreateFile NtCreateFile;
 
+typedef NTSTATUS (NTAPI* FnNtCancelIoFileEx)(
+    HANDLE FileHandle,
+    PIO_STATUS_BLOCK IoRequestToCancel,
+    PIO_STATUS_BLOCK IoStatusBlock);
+extern FnNtCancelIoFileEx NtCancelIoFileEx;
+
 #endif
+
+namespace pump {
+namespace net {
+
+    pump_socket get_base_socket(pump_socket fd);
+
+}
+}
 
 #endif

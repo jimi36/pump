@@ -23,7 +23,38 @@
 
 #if defined(PUMP_HAVE_IOCP)
 
-FnNtDeviceIoControlFile NtDeviceIoControlFile = nullptr;
 FnNtCreateFile NtCreateFile = nullptr;
+FnNtDeviceIoControlFile NtDeviceIoControlFile = nullptr;
+FnNtCancelIoFileEx NtCancelIoFileEx = nullptr;
 
 #endif
+
+namespace pump {
+namespace net {
+
+    pump_socket get_base_socket(pump_socket fd) {
+#if defined(PUMP_HAVE_IOCP)
+        DWORD bytes;
+        SOCKET base_socket;
+        if (WSAIoctl(
+                fd,
+                SIO_BASE_HANDLE,
+                NULL,
+                0,
+                &base_socket,
+                sizeof(base_socket),
+                &bytes,
+                NULL,
+                NULL) != 0) {
+            return fd;
+        }
+        return base_socket;
+#else
+        return fd;
+#endif
+    }
+
+}
+}
+
+

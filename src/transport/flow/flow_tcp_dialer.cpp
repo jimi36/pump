@@ -34,7 +34,7 @@ namespace transport {
             is_ipv6_ = bind_address.is_ipv6();
             int32_t domain = is_ipv6_ ? AF_INET6 : AF_INET;
 
-            if ((fd_ = net::create_socket(domain, SOCK_STREAM)) == -1) {
+            if ((fd_ = net::create_socket(domain, SOCK_STREAM)) == INVALID_SOCKET) {
                 PUMP_DEBUG_LOG("flow_tcp_dialer: init failed for creating socket failed");
                 return FLOW_ERR_ABORT;
             }

@@ -73,7 +73,7 @@ namespace poll {
         PUMP_DEBUG_CHECK(__install_channel_tracker(tracker.get()));
 
         // Set channel tracker installed.
-        PUMP_DEBUG_CHECK(!tracker->set_installed(true));
+        PUMP_DEBUG_CHECK(tracker->set_installed(true));
 
         // Create tracker event
         PUMP_DEBUG_CHECK(

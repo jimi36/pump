@@ -158,6 +158,9 @@ namespace poll {
               fd_(ch->get_fd()), 
               ch_(ch),
               pr_(nullptr) {
+#if defined(PUMP_HAVE_EPOLL) || defined(PUMP_HAVE_IOCP)
+                memset(&ev_, 0, sizeof(ev_));
+#endif
         }
         channel_tracker(channel_sptr &&ch, int32_t ev) noexcept
           : state_(TRACKER_STATE_STOP),
@@ -166,6 +169,9 @@ namespace poll {
               fd_(ch->get_fd()), 
               ch_(ch), 
               pr_(nullptr) {
+#if defined(PUMP_HAVE_EPOLL) || defined(PUMP_HAVE_IOCP)
+            memset(&ev_, 0, sizeof(ev_));
+#endif
         }
 
         /*********************************************************************************
@@ -230,7 +236,7 @@ namespace poll {
          * Set installed state
          ********************************************************************************/
         PUMP_INLINE bool set_installed(bool installed) {
-            return installed_.exchange(installed, std::memory_order_acquire);
+            return installed_.exchange(installed, std::memory_order_acquire) == false;
         }
 
         /*********************************************************************************
@@ -261,8 +267,8 @@ namespace poll {
         PUMP_INLINE struct epoll_event* get_event() {
             return &ev_;
         }
-#elif defined(PUMP_HAVE_WINSOCK)
-        PUMP_INLINE AFD_POLL_INFO* get_event() {
+#elif defined(PUMP_HAVE_IOCP)
+        PUMP_INLINE AFD_POLL_EVENT* get_event() {
             return &ev_;
         }
 #endif
@@ -278,7 +284,7 @@ namespace poll {
          ********************************************************************************/
         PUMP_INLINE void set_channel(channel_sptr &ch) {
             ch_ = ch;
-            fd_ = ch->get_fd();
+            fd_ = net::get_base_socket(ch->get_fd());
         }
 
         /*********************************************************************************
@@ -317,8 +323,8 @@ namespace poll {
         poller_ptr pr_;
 #if defined(PUMP_HAVE_EPOLL)
         struct epoll_event ev_;
-#elif defined(PUMP_HAVE_WINSOCK)
-        AFD_POLL_INFO ev_;
+#elif defined(PUMP_HAVE_IOCP)
+        AFD_POLL_EVENT ev_;
 #endif
     };
     DEFINE_ALL_POINTER_TYPE(channel_tracker);

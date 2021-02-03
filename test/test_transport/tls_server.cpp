@@ -10,7 +10,7 @@ struct transport_context {
         read_size = 0;
         read_pocket_size = 0;
         last_report_time = (int32_t)::time(0);
-        idx = t->get_fd();
+        idx = (int32_t)t->get_fd();
     }
 
     tls_transport_sptr transport;
@@ -44,11 +44,12 @@ class my_tls_acceptor : public std::enable_shared_from_this<my_tls_acceptor> {
 
         if (transport->start(sv, cbs) == 0) {
             std::lock_guard<std::mutex> lock(mx_);
-            printf("server tls transport accepted %d\n", transp->get_fd());
             transports_[transp.get()] = tctx;
         }
 
         transport->read_for_loop();
+
+        printf("server tls transport accepted\n");
     }
 
     /*********************************************************************************
@@ -61,12 +62,6 @@ class my_tls_acceptor : public std::enable_shared_from_this<my_tls_acceptor> {
      * Tcp read event callback
      ********************************************************************************/
     void on_read_callback(base_transport_ptr transp, const block_t *b, int32_t size) {
-        static int last_fd = 0;
-        if (last_fd != transp->get_fd()) {
-            // printf("transport %d read\n", transp->get_fd());
-            last_fd = transp->get_fd();
-        }
-
         transport_context *ctx = (transport_context *)transp->get_context();
 
         ctx->read_pocket_size += size;
@@ -85,11 +80,9 @@ class my_tls_acceptor : public std::enable_shared_from_this<my_tls_acceptor> {
         std::lock_guard<std::mutex> lock(mx_);
         auto it = transports_.find(transp);
         if (it != transports_.end()) {
-            printf("tls transport %d disconnected all read size %fMB\n",
-                   transp->get_fd(),
+            printf("tls transport disconnected all read size %fMB\n",
                    (double)it->second->read_size / 1024 / 1024);
-            printf("tls transport %d disconnected all read pocket %d\n",
-                   transp->get_fd(),
+            printf("tls transport disconnected all read pocket %d\n",
                    (int32_t)(it->second->read_size / 4096));
             delete it->second;
             transports_.erase(it);

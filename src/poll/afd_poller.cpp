@@ -17,16 +17,46 @@
 #include "pump/debug.h"
 #include "pump/poll/afd_poller.h"
 
-#define AFD_POLL_RECEIVE           0x0001
-#define AFD_POLL_RECEIVE_EXPEDITED 0x0002
-#define AFD_POLL_SEND              0x0004
-#define AFD_POLL_DISCONNECT        0x0008
-#define AFD_POLL_ABORT             0x0010
-#define AFD_POLL_LOCAL_CLOSE       0x0020
-#define AFD_POLL_ACCEPT            0x0080
-#define AFD_POLL_CONNECT_FAIL      0x0100
+#define AFD_POLL_RECEIVE_BIT            0
+#define AFD_POLL_RECEIVE                (1 << AFD_POLL_RECEIVE_BIT)
+#define AFD_POLL_RECEIVE_EXPEDITED_BIT  1
+#define AFD_POLL_RECEIVE_EXPEDITED      (1 << AFD_POLL_RECEIVE_EXPEDITED_BIT)
+#define AFD_POLL_SEND_BIT               2
+#define AFD_POLL_SEND                   (1 << AFD_POLL_SEND_BIT)
+#define AFD_POLL_DISCONNECT_BIT         3
+#define AFD_POLL_DISCONNECT             (1 << AFD_POLL_DISCONNECT_BIT)
+#define AFD_POLL_ABORT_BIT              4
+#define AFD_POLL_ABORT                  (1 << AFD_POLL_ABORT_BIT)
+#define AFD_POLL_LOCAL_CLOSE_BIT        5
+#define AFD_POLL_LOCAL_CLOSE            (1 << AFD_POLL_LOCAL_CLOSE_BIT)
+#define AFD_POLL_CONNECT_BIT            6
+#define AFD_POLL_CONNECT                (1 << AFD_POLL_CONNECT_BIT)
+#define AFD_POLL_ACCEPT_BIT             7
+#define AFD_POLL_ACCEPT                 (1 << AFD_POLL_ACCEPT_BIT)
+#define AFD_POLL_CONNECT_FAIL_BIT       8
+#define AFD_POLL_CONNECT_FAIL           (1 << AFD_POLL_CONNECT_FAIL_BIT)
+#define AFD_POLL_QOS_BIT                9
+#define AFD_POLL_QOS                    (1 << AFD_POLL_QOS_BIT)
+#define AFD_POLL_GROUP_QOS_BIT          10
+#define AFD_POLL_GROUP_QOS              (1 << AFD_POLL_GROUP_QOS_BIT)
 
-#define IOCTL_AFD_POLL             0x00012024
+#define AFD_NUM_POLL_EVENTS             11
+#define AFD_POLL_ALL                    ((1 << AFD_NUM_POLL_EVENTS) - 1)
+
+#define AFD_RECEIVE             5
+#define AFD_RECEIVE_DATAGRAM    6
+#define AFD_POLL                9
+
+#define FSCTL_AFD_BASE FILE_DEVICE_NETWORK
+#define _AFD_CONTROL_CODE(operation, method) \
+    ((FSCTL_AFD_BASE) << 12 | (operation << 2) | method)
+
+#define IOCTL_AFD_RECEIVE \
+    _AFD_CONTROL_CODE(AFD_RECEIVE, METHOD_NEITHER)
+#define IOCTL_AFD_RECEIVE_DATAGRAM \
+    _AFD_CONTROL_CODE(AFD_RECEIVE_DATAGRAM, METHOD_NEITHER)
+#define IOCTL_AFD_POLL \
+    _AFD_CONTROL_CODE(AFD_POLL, METHOD_BUFFERED)
 
 #ifndef FILE_OPEN
 #define FILE_OPEN 0x00000001UL
@@ -37,25 +67,30 @@ namespace poll {
 
 #if defined(PUMP_HAVE_IOCP)
     const static uint32_t AL_NONE_EVENT = 0;
-    const static uint32_t AL_READ_EVENT = (AFD_POLL_ACCEPT | AFD_POLL_RECEIVE | AFD_POLL_RECEIVE_EXPEDITED | AFD_POLL_DISCONNECT | AFD_POLL_LOCAL_CLOSE | AFD_POLL_ABORT);
-    const static uint32_t AL_SEND_EVENT = (AFD_POLL_SEND | AFD_POLL_DISCONNECT | AFD_POLL_LOCAL_CLOSE | AFD_POLL_ABORT | AFD_POLL_CONNECT_FAIL);
+    const static uint32_t AL_READ_EVENT = (AFD_POLL_ACCEPT | AFD_POLL_RECEIVE | AFD_POLL_RECEIVE_EXPEDITED | AFD_POLL_LOCAL_CLOSE  | AFD_POLL_DISCONNECT | AFD_POLL_ABORT);
+    const static uint32_t AL_SEND_EVENT = (AFD_POLL_SEND | AFD_POLL_DISCONNECT | AFD_POLL_CONNECT_FAIL);
     const static uint32_t AL_ERR_EVENT  = (AFD_POLL_ABORT | AFD_POLL_CONNECT_FAIL);
 
-#define RTL_CONSTANT_STRING(s) { sizeof(s) - sizeof((s)[0]), sizeof(s), s }
-    static UNICODE_STRING afd__device_name = RTL_CONSTANT_STRING(L"\\Device\\Afd\\poller");
+#define RTL_CONSTANT_STRING(s) \
+    { sizeof(s) - sizeof((s)[0]), sizeof(s), (PWSTR)s }
+    static UNICODE_STRING afd__device_name = RTL_CONSTANT_STRING(L"\\Device\\Afd\\Poller");
 #undef RTL_CONSTANT_STRING
 
-#define RTL_CONSTANT_OBJECT_ATTRIBUTES(ObjectName, Attributes) { sizeof(OBJECT_ATTRIBUTES), NULL, ObjectName, Attributes, NULL, NULL }
+#define RTL_CONSTANT_OBJECT_ATTRIBUTES(ObjectName, Attributes) \
+    { sizeof(OBJECT_ATTRIBUTES), NULL, ObjectName, Attributes, NULL, NULL }
     static OBJECT_ATTRIBUTES afd__device_attributes = RTL_CONSTANT_OBJECT_ATTRIBUTES(&afd__device_name, 0);
 #undef RTL_CONSTANT_OBJECT_ATTRIBUTES
 
     HANDLE afd_create_device_handle(HANDLE iocp_handle) {
-        /* By opening \Device\Afd without specifying any extended attributes, we'll
+        /* 
+         * By opening \Device\Afd without specifying any extended attributes, we'll
          * get a handle that lets us talk to the AFD driver, but that doesn't have an
-         * associated endpoint (so it's not a socket). */
+         * associated endpoint (so it's not a socket). 
+         */
         IO_STATUS_BLOCK iosb;
         HANDLE afd_device_handle;
-        NTSTATUS status = NtCreateFile(&afd_device_handle,
+        NTSTATUS status = NtCreateFile(
+                            &afd_device_handle,
                             SYNCHRONIZE,
                             &afd__device_attributes,
                             &iosb,
@@ -110,39 +145,58 @@ namespace poll {
         PUMP_DEBUG_LOG("afd_poller: install channel tracker failed");
 
         return false;
-
     }
 
     bool afd_poller::__uninstall_channel_tracker(channel_tracker_ptr tracker) {
-        return true;
+#if defined(PUMP_HAVE_IOCP)
+        auto event = tracker->get_event();
+
+        if (event->iosb.Status != STATUS_PENDING) {
+            return true;
+        }
+
+        IO_STATUS_BLOCK cancel_iosb;
+        NTSTATUS cancel_status = NtCancelIoFileEx(
+                                    afd_device_handler_, 
+                                    &(event->iosb), 
+                                    &cancel_iosb);
+
+        /* NtCancelIoFileEx() may return STATUS_NOT_FOUND if the operation completed
+         * just before calling NtCancelIoFileEx(). This is not an error. */
+        if (cancel_status == STATUS_SUCCESS || cancel_status == STATUS_NOT_FOUND) {
+            return true;
+        }
+#endif
+        return false;
     }
 
     bool afd_poller::__resume_channel_tracker(channel_tracker_ptr tracker) {
 #if defined(PUMP_HAVE_IOCP)
         auto expected_event = tracker->get_expected_event();
         auto event = tracker->get_event();
-        event->Timeout.QuadPart = INT64_MAX;
-        event->Exclusive = FALSE;
-        event->NumberOfHandles = 1;
-        event->Handles[0].Handle = (HANDLE)tracker->get_fd();
+        event->info.Timeout.QuadPart = INT64_MAX;
+        event->info.Exclusive = FALSE;
+        event->info.NumberOfHandles = 1;
+        event->info.Handles[0].Status = 0;
+        event->info.Handles[0].Handle = (HANDLE)tracker->get_fd();
         if (expected_event & IO_EVENT_READ) {
-            event->Handles[0].Events = AL_READ_EVENT;
+            event->info.Handles[0].Events = AL_READ_EVENT;
         } else if (expected_event & IO_EVENT_SEND) {
-            event->Handles[0].Events = AL_SEND_EVENT;
+            event->info.Handles[0].Events = AL_SEND_EVENT;
         }
+        event->iosb.Status = STATUS_PENDING;
 
-        IO_STATUS_BLOCK iosb;
         NTSTATUS status = NtDeviceIoControlFile(
                             afd_device_handler_,
                             NULL,
                             NULL,
                             tracker,
-                            &iosb,
+                            &(event->iosb),
                             IOCTL_AFD_POLL,
+                            &(event->info),
+                            sizeof(event->info),
                             event,
-                            sizeof(*event),
-                            event,
-                            sizeof(*event));
+                            sizeof(event->info));
         if (status == STATUS_SUCCESS || status == STATUS_PENDING) {
             return true;
         }

@@ -3,7 +3,7 @@
 static int count = 1;
 static int send_loop = 1;
 static int send_pocket_size = 1024 * 4;
-static int send_pocket_count = -1; //1024 * 100;
+static int send_pocket_count =  1024 * 100;
 
 class my_tcp_dialer;
 
@@ -54,6 +54,12 @@ class my_tcp_dialer : public std::enable_shared_from_this<my_tcp_dialer> {
         }
 
         transport_->read_for_loop();
+
+        printf("tcp client dialed\n");
+
+        for (int i = 0; i < send_loop; i++) {
+            send_data();
+        }
     }
 
     /*********************************************************************************
@@ -112,6 +118,9 @@ class my_tcp_dialer : public std::enable_shared_from_this<my_tcp_dialer> {
     }
 
     inline bool send_data() {
+        if (!transport_) {
+            return false;
+        }
         if (left_send_pocket_count_ == 0) {
             transport_->stop();
             return false;
@@ -220,9 +229,8 @@ void start_tcp_client(const std::string &ip, uint16_t port, int32_t conn_count) 
     }
     dial_mx.unlock();
 
-    std::this_thread::sleep_for(std::chrono::seconds(3));
-
-    start_send_buffer();
+    //std::this_thread::sleep_for(std::chrono::seconds(3));
+    //start_send_buffer();
 
     time::timer_callback cb = pump_bind(&time_report::on_timer_timeout);
     time::timer_sptr t = time::timer::create(1000 * 1, cb, true);

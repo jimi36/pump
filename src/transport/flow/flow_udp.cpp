@@ -36,7 +36,7 @@ namespace transport {
 
             fd_ = net::create_socket(domain, SOCK_DGRAM);
 
-            if (fd_ == -1) {
+            if (fd_ == INVALID_SOCKET) {
                 PUMP_DEBUG_LOG("flow_udp: init failed for creating socket failed");
                 return FLOW_ERR_ABORT;
             }

@@ -66,12 +66,16 @@ bool init() {
     if (!ntdll) {
         return false;
     }
+    NtCreateFile = (FnNtCreateFile)GetProcAddress(ntdll, "NtCreateFile");
+    if (!NtCreateFile) {
+        return false;
+    }
     NtDeviceIoControlFile = (FnNtDeviceIoControlFile)GetProcAddress(ntdll, "NtDeviceIoControlFile");
     if (!NtDeviceIoControlFile) {
         return false;
     }
-    NtCreateFile = (FnNtCreateFile)GetProcAddress(ntdll, "NtCreateFile");
-    if (!NtCreateFile) {
+    NtCancelIoFileEx = (FnNtCancelIoFileEx)GetProcAddress(ntdll, "NtCancelIoFileEx");
+    if (!NtCancelIoFileEx) {
         return false;
     }
 #endif

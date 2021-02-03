@@ -49,10 +49,12 @@ namespace transport {
              * Read from
              ********************************************************************************/
             PUMP_INLINE int32_t read_from(block_t *b, int32_t size, address_ptr from_address) {
-                int32_t addrlen = 0;
+                int32_t addrlen = ADDRESS_MAX_LEN;
                 struct sockaddr *addr = from_address->get();
                 size = net::read_from(fd_, b, size, addr, &addrlen);
-                from_address->set((sockaddr*)addr, addrlen);
+                if (size > 0) {
+                    from_address->set((sockaddr*)addr, addrlen);
+                }
                 return size;
             }
 

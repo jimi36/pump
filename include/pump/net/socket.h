@@ -25,6 +25,7 @@
 #include <mstcpip.h>
 #include <mswsock.h>
 #include <ws2tcpip.h>
+#include <winioctl.h>
 #else
 #include <poll.h>
 #include <fcntl.h>
@@ -42,6 +43,10 @@
 #else
 #define pump_socket int32_t
 #endif 
+
+#ifndef INVALID_SOCKET
+#define INVALID_SOCKET -1
+#endif
 
 namespace pump {
 namespace net {
