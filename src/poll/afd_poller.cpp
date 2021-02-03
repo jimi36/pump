@@ -116,10 +116,11 @@ namespace poll {
 #endif
 
     afd_poller::afd_poller() noexcept
-      : iocp_handler_(0),
-        afd_device_handler_(nullptr),
+      : iocp_handler_(NULL),
+        afd_device_handler_(NULL),
         events_(nullptr),
-        max_event_count_(1024) {
+        max_event_count_(1024),
+        cur_event_count_(0) {
 #if defined(PUMP_HAVE_IOCP)
         iocp_handler_ = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 0);
         if (!iocp_handler_) {
@@ -137,8 +138,20 @@ namespace poll {
 #endif
     }
 
+    afd_poller::~afd_poller() {
+#if defined(PUMP_HAVE_IOCP)
+        if (afd_device_handler_) {
+            CloseHandle(afd_device_handler_);
+        }
+        if (iocp_handler_) {
+            CloseHandle(iocp_handler_);
+        }
+#endif
+    }
+
     bool afd_poller::__install_channel_tracker(channel_tracker_ptr tracker) {
         if (__resume_channel_tracker(tracker)) {
+            cur_event_count_.fetch_add(1, std::memory_order_relaxed);
             return true;
         }
 
@@ -152,6 +165,7 @@ namespace poll {
         auto event = tracker->get_event();
 
         if (event->iosb.Status != STATUS_PENDING) {
+            cur_event_count_.fetch_sub(1, std::memory_order_relaxed);
             return true;
         }
 
@@ -160,10 +174,8 @@ namespace poll {
                                     afd_device_handler_, 
                                     &(event->iosb), 
                                     &cancel_iosb);
-
-        /* NtCancelIoFileEx() may return STATUS_NOT_FOUND if the operation completed
-         * just before calling NtCancelIoFileEx(). This is not an error. */
         if (cancel_status == STATUS_SUCCESS || cancel_status == STATUS_NOT_FOUND) {
+            cur_event_count_.fetch_sub(1, std::memory_order_relaxed);
             return true;
         }
 #endif
@@ -210,6 +222,13 @@ namespace poll {
 
     void afd_poller::__poll(int32_t timeout) {
 #if defined(PUMP_HAVE_IOCP)
+        auto cur_event_count = cur_event_count_.load(std::memory_order_relaxed);
+        if (PUMP_UNLIKELY(cur_event_count > max_event_count_)) {
+            max_event_count_ = cur_event_count;
+            events_ = pump_realloc(events_, sizeof(OVERLAPPED_ENTRY) * max_event_count_);
+            PUMP_ASSERT(events_);
+        }
+
         DWORD completion_count = 0;
         LPOVERLAPPED_ENTRY iocp_events = (LPOVERLAPPED_ENTRY)events_;
         BOOL ret = GetQueuedCompletionStatusEx(iocp_handler_,

@@ -34,7 +34,7 @@ namespace poll {
         /*********************************************************************************
          * Deconstructor
          ********************************************************************************/
-        virtual ~afd_poller() = default;
+        virtual ~afd_poller();
 
       protected:
         /*********************************************************************************
@@ -71,6 +71,7 @@ namespace poll {
 
         void_ptr events_;
         int32_t max_event_count_;
+        std::atomic_int32_t cur_event_count_;
     };
 
 }

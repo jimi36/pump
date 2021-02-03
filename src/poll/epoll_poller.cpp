@@ -127,7 +127,6 @@ namespace poll {
             max_event_count_ = cur_event_count;
             events_ = pump_realloc(events_, sizeof(struct epoll_event) * max_event_count_);
             PUMP_ASSERT(events_);
-            PUMP_DEBUG_LOG("epoll_poller: update epoll event max count %d", max_event_count_);
         }
 
         auto count = ::epoll_wait(fd_, 
