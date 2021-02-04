@@ -122,7 +122,7 @@ class my_tcp_dialer : public std::enable_shared_from_this<my_tcp_dialer> {
             return false;
         }
         if (left_send_pocket_count_ == 0) {
-            transport_->stop();
+            transport_->force_stop();
             return false;
         } else if (left_send_pocket_count_ > 0) {
             left_send_pocket_count_--;

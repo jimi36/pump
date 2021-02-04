@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef pump_toolkit_array_freelock_h
-#define pump_toolkit_array_freelock_h
+#ifndef pump_toolkit_freelock_array_queue_h
+#define pump_toolkit_freelock_array_queue_h
 
 #include <atomic>
 #include <chrono>
@@ -31,7 +31,7 @@ namespace pump {
 namespace toolkit {
 
     template <typename T>
-    class LIB_PUMP array_freelock_queue
+    class LIB_PUMP freelock_array_queue
       : public noncopyable {
 
       public:
@@ -44,7 +44,7 @@ namespace toolkit {
         /*********************************************************************************
          * Constructor
          ********************************************************************************/
-        array_freelock_queue(uint32_t size)
+        freelock_array_queue(uint32_t size)
             : size_(0),
               mem_block_(nullptr),
               write_index_(0),
@@ -62,7 +62,7 @@ namespace toolkit {
         /*********************************************************************************
          * Deconstructor
          ********************************************************************************/
-        ~array_freelock_queue() {
+        ~freelock_array_queue() {
             if (mem_block_) {
                 int32_t read_index = read_index_.load();
                 int32_t max_read_index = max_read_index_.load();

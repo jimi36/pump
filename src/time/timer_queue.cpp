@@ -65,15 +65,15 @@ namespace time {
 
     void timer_queue::__observe_thread() {
         // Init next observe time.
-        next_observe_time_ = get_clock_milliseconds() + TIMER_DEFAULT_INTERVAL;
+        uint64_t now = get_clock_milliseconds();
+        next_observe_time_ = now + TIMER_DEFAULT_INTERVAL;
 
         while (1) {
             // New timer
             timer_sptr new_timer;
-            // Get now milliseconds
-            uint64_t now = get_clock_milliseconds();
 
             // Wait unitl next observe time arrived or new timer added.
+            now = get_clock_milliseconds();
             if (next_observe_time_ > now) {
                 if (new_timers_.dequeue(new_timer, (next_observe_time_ - now) * 1000)) {
                     timers_.insert(std::make_pair(new_timer->time(), new_timer));
@@ -85,21 +85,23 @@ namespace time {
                 timers_.insert(std::make_pair(new_timer->time(), new_timer));
             }
 
-            __observe();
+            if (!timers_.empty()) {
+                now = get_clock_milliseconds();
+                __observe(now);
+            }
+
+            if (timers_.empty()) {
+                next_observe_time_ = now + TIMER_DEFAULT_INTERVAL;
+            } else {
+                next_observe_time_ = timers_.begin()->first;
+            }
         }
     }
 
-    void timer_queue::__observe() {
-        // Get current time.
-        uint64_t now = get_clock_milliseconds();
-
+    void timer_queue::__observe(uint64_t now) {
+        // If first timer not pending just return.
         auto beg = timers_.begin();
-        auto end = timers_.end();
-        if (beg == end) {
-            next_observe_time_ = now + TIMER_DEFAULT_INTERVAL;
-            return;
-        } else if (beg->first > now) {
-            next_observe_time_ = beg->first;
+        if (beg->first > now) {
             return;
         }
 
@@ -107,13 +109,6 @@ namespace time {
         auto pending_end = timers_.upper_bound(now);
         for (auto it = beg; it != pending_end; ++it) {
             cb_(it->second);
-        }
-
-        // Update next observe time.
-        if (pending_end != end) {
-            next_observe_time_ = pending_end->first;
-        } else {
-            next_observe_time_ = now + TIMER_DEFAULT_INTERVAL;
         }
 
         // Remove pending timers.

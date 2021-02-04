@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef pump_toolkit_single_freelock_queue_h
-#define pump_toolkit_single_freelock_queue_h
+#ifndef pump_toolkit_freelock_single_queue_h
+#define pump_toolkit_freelock_single_queue_h
 
 #include <atomic>
 #include <chrono>
@@ -50,7 +50,7 @@ namespace toolkit {
     };
 
     template <typename T, int32_t PerBlockElementCount = 128>
-    class LIB_PUMP single_freelock_queue
+    class LIB_PUMP freelock_single_queue
       : public noncopyable {
 
       public:
@@ -65,7 +65,7 @@ namespace toolkit {
         /*********************************************************************************
          * Constructor
          ********************************************************************************/
-        single_freelock_queue(int32_t size)
+        freelock_single_queue(int32_t size)
           : capacity_(0),
             block_element_size_(PerBlockElementCount),
             blk_head_(nullptr),
@@ -86,7 +86,7 @@ namespace toolkit {
         /*********************************************************************************
          * Deconstructor
          ********************************************************************************/
-        ~single_freelock_queue() {
+        ~freelock_single_queue() {
             // Get head block node.
             block_node *head_blk = blk_head_.load(std::memory_order_relaxed);
             // Get tail block node.

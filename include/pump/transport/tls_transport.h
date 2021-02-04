@@ -19,7 +19,7 @@
 
 #include "pump/transport/flow/flow_tls.h"
 #include "pump/transport/base_transport.h"
-#include "pump/toolkit/multi_freelock_queue.h"
+#include "pump/toolkit/freelock_multi_queue.h"
 
 namespace pump {
 namespace transport {
@@ -173,7 +173,7 @@ namespace transport {
         std::atomic_int32_t pending_send_cnt_;
 
         // Send buffer list
-        toolkit::multi_freelock_queue<toolkit::io_buffer_ptr, 8> sendlist_;
+        toolkit::freelock_multi_queue<toolkit::io_buffer_ptr, 8> sendlist_;
     };
 
 }  // namespace transport

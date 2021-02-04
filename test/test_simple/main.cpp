@@ -5,8 +5,8 @@
 #include <mutex>
 
 #include <pump/time/timestamp.h>
-#include <pump/toolkit/multi_freelock_queue.h>
-#include <pump/toolkit/single_freelock_queue.h>
+#include <pump/toolkit/freelock_multi_queue.h>
+#include <pump/toolkit/freelock_single_queue.h>
 
 #include "concurrentqueue.h"
 #include "readerwriterqueue.h"
@@ -17,7 +17,7 @@ int test1(int loop) {
 
     int val;
 
-    toolkit::single_freelock_queue<int, 256> sq(1024);
+    toolkit::freelock_single_queue<int, 256> sq(1024);
 
     std::thread t1([&]() {
         {
@@ -47,7 +47,7 @@ int test1(int loop) {
 
     t1.join();
 
-    toolkit::multi_freelock_queue<int> q(1024);
+    toolkit::freelock_multi_queue<int> q(1024);
 
     std::thread t2([&]() {
         int loop2 = loop / 2;
@@ -123,7 +123,7 @@ int test2(int loop) {
 
     int val;
 
-    toolkit::multi_freelock_queue<int> q(1024);
+    toolkit::freelock_multi_queue<int> q(1024);
 
     std::thread t1([&]() {
         int loop2 = loop / 2;
@@ -257,11 +257,6 @@ int main(int argc, const char **argv) {
     if (argc < 2) {
         return -1;
     }
-
-    char* s = "123456";
-    std::string str;
-    str.assign(s, s + 1);
-    printf("%s\n", str.c_str());
 
     int loop = atoi(argv[1]);
 
