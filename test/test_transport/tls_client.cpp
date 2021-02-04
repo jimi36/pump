@@ -38,13 +38,11 @@ class my_tls_dialer : public std::enable_shared_from_this<my_tls_dialer> {
 
         transport_->read_for_loop();
 
-        printf("tls client dialed %d\n", transp->get_fd());
+        printf("tls client dialed\n");
 
         for (int i = 0; i < send_loop; i++) {
             send_data();
         }
-
-        printf("tls client dialed %d sent\n", transp->get_fd());
     }
 
     /*********************************************************************************

@@ -19,7 +19,7 @@
 
 #include "pump/transport/flow/flow_tls.h"
 #include "pump/transport/base_transport.h"
-#include "pump/toolkit/multi_freelock_queue.h"
+#include "pump/toolkit/freelock_multi_queue.h"
 
 namespace pump {
 namespace transport {
@@ -97,19 +97,13 @@ namespace transport {
         /*********************************************************************************
          * Read event callback
          ********************************************************************************/
-#if defined(PUMP_HAVE_IOCP)
-        virtual void on_read_event(net::iocp_task_ptr iocp_task) override;
-#else
         virtual void on_read_event() override;
-#endif
+
         /*********************************************************************************
          * Send event callback
          ********************************************************************************/
-#if defined(PUMP_HAVE_IOCP)
-        virtual void on_send_event(net::iocp_task_ptr iocp_task) override;
-#else
         virtual void on_send_event() override;
-#endif
+
       private:
         /*********************************************************************************
          * Constructor
@@ -179,7 +173,7 @@ namespace transport {
         std::atomic_int32_t pending_send_cnt_;
 
         // Send buffer list
-        toolkit::multi_freelock_queue<toolkit::io_buffer_ptr, 8> sendlist_;
+        toolkit::freelock_multi_queue<toolkit::io_buffer_ptr, 8> sendlist_;
     };
 
 }  // namespace transport

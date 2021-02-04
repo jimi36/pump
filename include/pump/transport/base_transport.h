@@ -259,7 +259,6 @@ namespace transport {
          ********************************************************************************/
         void __interrupt_and_trigger_callbacks();
 
-#if !defined(PUMP_HAVE_IOCP)
         /*********************************************************************************
          * Start trackers
          ********************************************************************************/
@@ -273,7 +272,6 @@ namespace transport {
                     PUMP_WARN_LOG("base_transport: start read tracker failed");
                     return false;
                 }
-                PUMP_DEBUG_LOG("base_transport: start read tracker");
             } else {
                 if (!tracker->get_poller()->resume_channel_tracker(tracker)) {
                     PUMP_WARN_LOG("base_transport: resume read tracker failed");
@@ -292,7 +290,6 @@ namespace transport {
                     PUMP_WARN_LOG("base_transport: start send tracker failed");
                     return false;
                 }
-                PUMP_DEBUG_LOG("base_transport: start send tracker");
             } else {
                 if (!tracker->get_poller()->resume_channel_tracker(tracker)) {
                     PUMP_WARN_LOG("base_transport: resume send tracker failed");
@@ -331,18 +328,17 @@ namespace transport {
             auto tracker = s_tracker_.get();
             return tracker->get_poller()->resume_channel_tracker(tracker);
         }
-#endif
+
       protected:
         // Local address
         address local_address_;
         // Remote address
         address remote_address_;
 
-#if !defined(PUMP_HAVE_IOCP)
         // Channel trackers
         poll::channel_tracker_sptr r_tracker_;
         poll::channel_tracker_sptr s_tracker_;
-#endif
+
         // Transport read state
         std::atomic_int32_t read_state_;
 

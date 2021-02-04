@@ -24,7 +24,7 @@
 #include "pump/memory.h"
 #include "pump/net/socket.h"
 #include "pump/poll/channel.h"
-#include "pump/toolkit/multi_freelock_queue.h"
+#include "pump/toolkit/freelock_multi_queue.h"
 
 namespace pump {
 namespace poll {
@@ -79,7 +79,6 @@ namespace poll {
          ********************************************************************************/
         virtual void wait_stopped();
 
-#if !defined(PUMP_HAVE_IOCP)
         /*********************************************************************************
          * Add channel tracker
          ********************************************************************************/
@@ -101,7 +100,7 @@ namespace poll {
                 "poller: resume channel tracker failed for tracker already tracked");
             return false;
         }
-#endif
+
         /*********************************************************************************
          * Push channel event
          ********************************************************************************/
@@ -157,11 +156,11 @@ namespace poll {
 
         // Channel event
         std::atomic_int32_t cev_cnt_;
-        toolkit::multi_freelock_queue<channel_event_ptr> cevents_;
+        toolkit::freelock_multi_queue<channel_event_ptr> cevents_;
 
         // Channel tracker event
         std::atomic_int32_t tev_cnt_;
-        toolkit::multi_freelock_queue<channel_tracker_event_ptr> tevents_;
+        toolkit::freelock_multi_queue<channel_tracker_event_ptr> tevents_;
 
         // Channel trackers
         std::map<channel_tracker_ptr, channel_tracker_sptr> trackers_;

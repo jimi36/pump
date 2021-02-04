@@ -53,7 +53,7 @@ namespace transport {
              *     FLOW_ERR_ABORT => error
              ********************************************************************************/
             int32_t init(poll::channel_sptr &ch,
-                         int32_t fd,
+                         pump_socket fd,
                          void_ptr xcred,
                          bool client);
 
@@ -65,93 +65,56 @@ namespace transport {
             /*********************************************************************************
              * Handshake
              * Return results:
-             *     FLOW_ERR_NO    => handshake success, no mean finished completely
-             *     FLOW_ERR_ABORT => handshake error
+             *     TLS_HANDSHAKE_OK
+             *     TLS_HANDSHAKE_READ
+             *     TLS_HANDSHAKE_SEND
+             *     TLS_HANDSHAKE_ERROR
              ********************************************************************************/
-            int32_t handshake();
+            PUMP_INLINE int32_t handshake() {
+                return ssl::tls_handshake(session_);
+            }
 
-#if defined(PUMP_HAVE_IOCP)
             /*********************************************************************************
-             * Post read
-             * If using IOCP this post a IOCP task for reading, else do nothing.
-             * Return results:
-             *     FLOW_ERR_BUSY  => busy for read
-             *     FLOW_ERR_NO    => success
-             *     FLOW_ERR_ABORT => error
+             * Read
              ********************************************************************************/
-            int32_t post_read();
-#endif
-            /*********************************************************************************
-             * Read from net
-             * Return results:
-             *     FLOW_ERR_NO    => success
-             *     FLOW_ERR_AGAIN => no more data on net
-             *     FLOW_ERR_ABORT => error
-             ********************************************************************************/
-#if defined(PUMP_HAVE_IOCP)
-            int32_t read_from_net(net::iocp_task_ptr iocp_task);
-#else
-            int32_t read_from_net();
-#endif
-            /*********************************************************************************
-             * Read from ssl
-             ********************************************************************************/
-            int32_t read_from_ssl(block_t *b, int32_t size);
+            PUMP_INLINE int32_t read(block_t* b, int32_t size) {
+                return ssl::tls_read(session_, b, size);
+            }
 
             /*********************************************************************************
              * Check there are data to read or not
              ********************************************************************************/
-            PUMP_INLINE bool has_data_to_read() const {
+            PUMP_INLINE bool has_unread_data() const {
                 PUMP_ASSERT(session_);
-                return session_->has_data_pending();
+                return ssl::tls_has_unread_data(session_);
             }
 
-            /*********************************************************************************
-             * Send to ssl
-             * Return results:
-             *     FLOW_ERR_NO      => success
-             *     FLOW_ERR_ABORT   => error
-             ********************************************************************************/
-            int32_t send_to_ssl(toolkit::io_buffer_ptr iob);
-
-#if defined(PUMP_HAVE_IOCP)
-            /*********************************************************************************
-             * Post send
-             * Return results:
-             *     FLOW_ERR_NO      => success
-             *     FLOW_ERR_ABORT   => error
-             ********************************************************************************/
-            int32_t post_send();
-#else
             /*********************************************************************************
              * Want to send
              * If using iocp this post an iocp task for sending, else this try sending
              * data. Return results:
-             *     FLOW_ERR_NO      => success
-             *     FLOW_ERR_NO_DATA => no
+             *     FLOW_ERR_NO      => send completely
+             *     FLOW_ERR_AGAIN   => try again
              *     FLOW_ERR_ABORT   => error
              ********************************************************************************/
-            int32_t want_to_send();
-#endif
+            int32_t want_to_send(toolkit::io_buffer_ptr iob);
+
             /*********************************************************************************
              * Send to net
              * Return results:
              *     FLOW_ERR_NO      => send completely
-             *     FLOW_ERR_AGAIN   => try to send again
-             *     FLOW_ERR_NO_DATA => no data to send
+             *     FLOW_ERR_AGAIN   => try again
+             *     FLOW_ERR_NO_DATA => no data for sending
              *     FLOW_ERR_ABORT   => error
              ********************************************************************************/
-#if defined(PUMP_HAVE_IOCP)
-            int32_t send_to_net(net::iocp_task_ptr iocp_task);
-#else
-            int32_t send_to_net();
-#endif
+            int32_t send();
+
             /*********************************************************************************
              * Check there are data to send or not
              ********************************************************************************/
-            PUMP_INLINE bool has_data_to_send() const {
+            PUMP_INLINE bool has_unsend_data() const {
                 PUMP_ASSERT(session_);
-                return session_->get_net_send_buffer()->data_size() > 0;
+                return false;
             }
 
             /*********************************************************************************
@@ -164,16 +127,11 @@ namespace transport {
           private:
             // Handshaked status
             bool is_handshaked_;
-
             // TLS session
             ssl::tls_session_ptr session_;
 
-#if defined(PUMP_HAVE_IOCP)
-            // IOCP read task
-            net::iocp_task_ptr read_task_;
-            // IOCP send task
-            net::iocp_task_ptr send_task_;
-#endif
+            toolkit::io_buffer_ptr send_iob_;
+
         };
         DEFINE_ALL_POINTER_TYPE(flow_tls);
 

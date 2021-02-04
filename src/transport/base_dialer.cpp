@@ -23,7 +23,6 @@ namespace transport {
         __trigger_interrupt_callbacks();
     }
 
-#if !defined(PUMP_HAVE_IOCP)
     bool base_dialer::__start_dial_tracker(poll::channel_sptr &&ch) {
         if (tracker_) {
             return false;
@@ -36,7 +35,7 @@ namespace transport {
             return false;
         }
 
-        PUMP_DEBUG_LOG("base_dialer: start tracker");
+        //PUMP_DEBUG_LOG("base_dialer: start tracker");
 
         return true;
     }
@@ -51,7 +50,6 @@ namespace transport {
 
         PUMP_DEBUG_LOG("base_dialer: stop tracker");
     }
-#endif
 
     bool base_dialer::__start_dial_timer(const time::timer_callback &cb) {
         if (connect_timeout_ <= 0) {

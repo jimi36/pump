@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-#include "pump/poll/spoller.h"
+#include "pump/poll/select_poller.h"
 
 namespace pump {
 namespace poll {
 
-    PUMP_INLINE static bool is_selectable(int32_t fd) {
+    PUMP_INLINE static bool is_selectable(pump_socket fd) {
         return fd < 1024 && fd >= 0;
     }
 
@@ -61,8 +61,8 @@ namespace poll {
         FD_ZERO(&read_fds_);
         FD_ZERO(&write_fds_);
 
-        int32_t fd = -1;
-        int32_t maxfd = -1;
+        pump_socket fd = -1;
+        pump_socket maxfd = -1;
         int32_t listen_event = IO_EVENT_NONE;
         channel_tracker_ptr tracker = nullptr;
         for (auto &item : trackers_) {
@@ -80,7 +80,7 @@ namespace poll {
                 maxfd = fd;
             }
 
-            listen_event = tracker->get_event();
+            listen_event = tracker->get_expected_event();
             if (listen_event & IO_EVENT_READ) {
                 FD_SET(fd, &read_fds_);
             } else if (listen_event & IO_EVENT_SEND) {
@@ -90,7 +90,7 @@ namespace poll {
 
         tv_.tv_sec = timeout / 1000;
         tv_.tv_usec = (timeout % 1000) * 1000;
-        int32_t count = ::select(maxfd + 1, &read_fds_, &write_fds_, NULL, &tv_);
+        int32_t count = ::select((int32_t)maxfd + 1, &read_fds_, &write_fds_, NULL, &tv_);
 #if defined(OS_WINDOWS)
         if (maxfd == -1 && timeout > 0) {
             Sleep(1);
@@ -115,8 +115,7 @@ namespace poll {
                 continue;
             }
 
-
-            int32_t fd = tracker->get_fd();
+            pump_socket fd = tracker->get_fd();
             if (FD_ISSET(fd, rfds)) {
                 if (tracker->untrack()) {
                     ch->handle_io_event(IO_EVENT_READ);

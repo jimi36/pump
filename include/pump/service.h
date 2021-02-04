@@ -19,9 +19,9 @@
 
 #include "pump/poll/poller.h"
 #include "pump/time/timer_queue.h"
-#include "pump/toolkit/multi_freelock_queue.h"
-#include "pump/toolkit/single_freelock_queue.h"
-#include "pump/toolkit/block_freelock_queue.h"
+#include "pump/toolkit/freelock_multi_queue.h"
+#include "pump/toolkit/freelock_single_queue.h"
+#include "pump/toolkit/freelock_block_queue.h"
 
 namespace pump {
 
@@ -60,7 +60,6 @@ namespace pump {
          ********************************************************************************/
         void wait_stopped();
 
-#if !defined(PUMP_HAVE_IOCP)
         /*********************************************************************************
          * Add channel checker
          ********************************************************************************/
@@ -75,7 +74,7 @@ namespace pump {
          * Resume channel
          ********************************************************************************/
         bool resume_channel_tracker(poll::channel_tracker_ptr tracker, int32_t pt);
-#endif
+
         /*********************************************************************************
          * Post channel event
          ********************************************************************************/
@@ -119,21 +118,19 @@ namespace pump {
         poll::poller_ptr read_poller_;
         // Write poller
         poll::poller_ptr send_poller_;
-        // IOCP poller
-        poll::poller_ptr iocp_poller_;
 
         // Timer queue
         time::timer_queue_sptr tqueue_;
 
         // Posted task worker
         std::shared_ptr<std::thread> posted_task_worker_;
-        typedef toolkit::multi_freelock_queue<post_task_type> task_impl_queue;
-        toolkit::block_freelock_queue<task_impl_queue> posted_tasks_;
+        typedef toolkit::freelock_multi_queue<post_task_type> task_impl_queue;
+        toolkit::freelock_block_queue<task_impl_queue> posted_tasks_;
 
         // Timout timer worker
         std::shared_ptr<std::thread> timeout_timer_worker_;
-        typedef toolkit::single_freelock_queue<time::timer_wptr> timer_impl_queue;
-        toolkit::block_freelock_queue<timer_impl_queue> timeout_timers_;
+        typedef toolkit::freelock_single_queue<time::timer_wptr> timer_impl_queue;
+        toolkit::freelock_block_queue<timer_impl_queue> timeout_timers_;
     };
     DEFINE_ALL_POINTER_TYPE(service);
 

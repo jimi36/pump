@@ -225,7 +225,7 @@ namespace toolkit {
             // Is there a better way to set the initial spin count?
             // If we lower it to 1000, testBenaphore becomes 15x slower on my Core
             // i7-5930K Windows PC, as threads start hitting the kernel semaphore.
-            int32_t spin = 10000;
+            int32_t spin = 1024;
             while (--spin >= 0) {
                 old_count = count_.load(std::memory_order_relaxed);
                 if ((old_count > 0) &&

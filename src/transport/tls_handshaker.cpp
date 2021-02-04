@@ -27,7 +27,7 @@ namespace transport {
       : base_channel(TLS_HANDSHAKER, nullptr, -1) {
     }
 
-    void tls_handshaker::init(int32_t fd,
+    void tls_handshaker::init(pump_socket fd,
                               bool client,
                               void_ptr xcred,
                               const address &local_address,
@@ -74,18 +74,17 @@ namespace transport {
         });
 
         // Flow init handshake state
-        // If this is client side, tls flow will prepare handshake data to send.
-        if (flow_->handshake() == flow::FLOW_ERR_ABORT) {
+        auto ret = flow_->handshake();
+        if (ret == ssl::TLS_HANDSHAKE_ERROR) {
             PUMP_WARN_LOG("tls_handshaker: start failed for flow handshake failed");
             return false;
         }
 
-#if !defined(PUMP_HAVE_IOCP)
         // New channel tracker
         tracker_.reset(
             object_create<poll::channel_tracker>(shared_from_this(), poll::TRACK_NONE),
             object_delete<poll::channel_tracker>);
-#endif
+
         // Start handshake timeout timer
         if (!__start_handshake_timer(timeout)) {
             PUMP_WARN_LOG("tls_handshaker: start failed for starting handshake timer failed");
@@ -94,38 +93,18 @@ namespace transport {
 
         // If this is server side, we will start to read handshake data.
         // If this is client side, there is handshake data to send at first time.
-        if (flow_->has_data_to_send()) {
-#if defined(PUMP_HAVE_IOCP)
-            if (flow_->post_send() != flow::FLOW_ERR_NO) {
-                PUMP_WARN_LOG("tls_handshaker: start failed for flow post send task failed");
-                return false;
-            }
-#else
-            if (flow_->want_to_send() != flow::FLOW_ERR_NO) {
-                PUMP_WARN_LOG("tls_handshaker: start failed for flow want to send failed");
-                return false;
-            }
-
-            tracker_->set_event(poll::TRACK_SEND);
-
-            if (!get_service()->add_channel_tracker(tracker_, WRITE_POLLER)) {
-                PUMP_WARN_LOG("tls_handshaker: start failed for adding send tracker failed");
-                return false;
-            }
-#endif
+        if (ret == ssl::TLS_HANDSHAKE_SEND) {
+            //if (flow_->want_to_send() != flow::FLOW_ERR_NO) {
+            //    PUMP_WARN_LOG("tls_handshaker: start failed for flow want to send failed");
+            //    return false;
+            //}
+            tracker_->set_expected_event(poll::TRACK_SEND);
         } else {
-#if defined(PUMP_HAVE_IOCP)
-            if (flow_->post_read() != flow::FLOW_ERR_NO) {
-                PUMP_WARN_LOG("tls_handshaker: start failed for flow post read task failed");
-                return false;
-            }
-#else
-            tracker_->set_event(poll::TRACK_READ);
-            if (!get_service()->add_channel_tracker(tracker_, WRITE_POLLER)) {
-                PUMP_WARN_LOG("tls_handshaker: start failed for adding read tracker failed");
-                return false;
-            }
-#endif
+            tracker_->set_expected_event(poll::TRACK_READ);
+        }
+        if (!get_service()->add_channel_tracker(tracker_, WRITE_POLLER)) {
+            PUMP_WARN_LOG("tls_handshaker: start failed for adding tracker failed");
+            return false;
         }
 
         __set_state(TRANSPORT_STARTING, TRANSPORT_STARTED);
@@ -147,63 +126,24 @@ namespace transport {
         }
     }
 
-#if defined(PUMP_HAVE_IOCP)
-    void tls_handshaker::on_read_event(net::iocp_task_ptr iocp_task) {
-#else
     void tls_handshaker::on_read_event() {
-#endif
-        auto flow = flow_.get();
-        auto ret = flow->read_from_net(
-#if defined(PUMP_HAVE_IOCP)
-            iocp_task
-#endif
-        );
-        if (ret == flow::FLOW_ERR_ABORT) {
-            if (__set_state(TRANSPORT_STARTED, TRANSPORT_DISCONNECTING)) {
-                __handshake_finished();
-            }
-        } else {
-            __process_handshake(flow);
-        }
+        __process_handshake();
     }
 
-#if defined(PUMP_HAVE_IOCP)
-    void tls_handshaker::on_send_event(net::iocp_task_ptr iocp_task) {
-#else
     void tls_handshaker::on_send_event() {
-#endif
-        auto flow = flow_.get();
-        auto ret = flow->send_to_net(
-#if defined(PUMP_HAVE_IOCP)
-            iocp_task
-#endif
-        );
-        if (ret == flow::FLOW_ERR_ABORT) {
-            if (__set_state(TRANSPORT_STARTED, TRANSPORT_DISCONNECTING)) {
-                __handshake_finished();
-            }
-            return;
-        } else if (ret == flow::FLOW_ERR_AGAIN) {
-#if !defined(PUMP_HAVE_IOCP)
-            __start_handshake_tracker();
-#endif
-        } else {
-            __process_handshake(flow);
-        }
+        __process_handshake();
     }
 
     void tls_handshaker::on_timeout(tls_handshaker_wptr wptr) {
         PUMP_LOCK_WPOINTER(handshaker, wptr);
-        if (!handshaker) {
-            return;
-        }
-
-        if (handshaker->__set_state(TRANSPORT_STARTED, TRANSPORT_TIMEOUTING)) {
-            handshaker->__close_flow();
+        if (handshaker) {
+            if (handshaker->__set_state(TRANSPORT_STARTED, TRANSPORT_TIMEOUTING)) {
+                handshaker->__close_flow();
+            }
         }
     }
 
-    bool tls_handshaker::__open_flow(int32_t fd, void_ptr xcred, bool is_client) {
+    bool tls_handshaker::__open_flow(pump_socket fd, void_ptr xcred, bool is_client) {
         // Setup flow
         PUMP_ASSERT(!flow_);
         flow_.reset(object_create<flow::flow_tls>(), object_delete<flow::flow_tls>);
@@ -220,60 +160,26 @@ namespace transport {
         return true;
     }
 
-    void tls_handshaker::__process_handshake(flow::flow_tls_ptr flow) {
-        if (flow->handshake() != flow::FLOW_ERR_NO) {
+    void tls_handshaker::__process_handshake() {
+        switch (flow_->handshake()) {
+        case ssl::TLS_HANDSHAKE_OK:
+            if (__set_state(TRANSPORT_STARTED, TRANSPORT_FINISHED)) {
+                __handshake_finished();
+            }
+            return;
+        case ssl::TLS_HANDSHAKE_READ:
+            tracker_->set_expected_event(poll::TRACK_READ);
+            PUMP_DEBUG_CHECK(tracker_->get_poller()->resume_channel_tracker(tracker_.get()));
+            return;
+        case ssl::TLS_HANDSHAKE_SEND:
+            tracker_->set_expected_event(poll::TRACK_SEND);
+            PUMP_DEBUG_CHECK(tracker_->get_poller()->resume_channel_tracker(tracker_.get()));
+            return;
+        default:
             if (__set_state(TRANSPORT_STARTED, TRANSPORT_ERROR)) {
                 __handshake_finished();
             }
-
-            PUMP_ERR_LOG("tls_handshaker: process handshake failed for flow handshake failed");
             return;
-        }
-
-#if !defined(PUMP_HAVE_IOCP)
-        auto tracker = tracker_.get();
-#endif
-        if (flow->has_data_to_send()) {
-#if defined(PUMP_HAVE_IOCP)
-            if (flow->post_send() != flow::FLOW_ERR_NO &&
-                __set_state(TRANSPORT_STARTED, TRANSPORT_ERROR)) {
-                PUMP_ERR_LOG("tls_handshaker: process handshake failed for flow post send task failed");
-                __handshake_finished();
-                return;
-            }
-#else
-            if (flow->want_to_send() != flow::FLOW_ERR_NO &&
-                __set_state(TRANSPORT_STARTED, TRANSPORT_ERROR)) {
-                PUMP_ERR_LOG("tls_handshaker: process handshake failed for flow want to send failed");
-                __handshake_finished();
-                return;
-            }
-
-            tracker->set_event(poll::TRACK_SEND);
-
-            PUMP_DEBUG_CHECK(tracker->get_poller()->resume_channel_tracker(tracker));
-#endif
-            return;
-        }
-
-        if (!flow->is_handshaked()) {
-#if defined(PUMP_HAVE_IOCP)
-            if (flow->post_read() != flow::FLOW_ERR_NO &&
-                __set_state(TRANSPORT_STARTED, TRANSPORT_ERROR)) {
-                PUMP_ERR_LOG("tls_handshaker: process handshake failed for flow post read task failed");
-                __handshake_finished();
-                return;
-            }
-#else
-            tracker->set_event(poll::TRACK_READ);
-
-            PUMP_DEBUG_CHECK(tracker->get_poller()->resume_channel_tracker(tracker));
-#endif
-            return;
-        }
-
-        if (__set_state(TRANSPORT_STARTED, TRANSPORT_FINISHED)) {
-            __handshake_finished();
         }
     }
 
@@ -295,7 +201,6 @@ namespace transport {
         }
     }
 
-#if !defined(PUMP_HAVE_IOCP)
     void tls_handshaker::__start_handshake_tracker() {
         PUMP_ASSERT(tracker_);
         if (!tracker_->get_poller()->resume_channel_tracker(tracker_.get())) {
@@ -308,15 +213,13 @@ namespace transport {
             tracker_->get_poller()->remove_channel_tracker(tracker_);
         }
     }
-#endif
 
     void tls_handshaker::__handshake_finished() {
         // Stop handshake timer
         __stop_handshake_timer();
 
-#if !defined(PUMP_HAVE_IOCP)
         __stop_handshake_tracker();
-#endif
+
         if (__is_state(TRANSPORT_FINISHED)) {
             cbs_.handshaked_cb(this, true);
         } else if (__is_state(TRANSPORT_ERROR)) {

@@ -45,7 +45,9 @@ namespace poll {
         /*********************************************************************************
          * Constructor
          ********************************************************************************/
-        explicit channel(int32_t fd) noexcept : ctx_(nullptr), fd_(fd) {
+        explicit channel(pump_socket fd) noexcept
+          : ctx_(nullptr), 
+            fd_(fd) {
         }
 
         /*********************************************************************************
@@ -56,7 +58,7 @@ namespace poll {
         /*********************************************************************************
          * Get channel fd
          ********************************************************************************/
-        PUMP_INLINE int32_t get_fd() const {
+        PUMP_INLINE pump_socket get_fd() const {
             return fd_;
         }
 
@@ -77,15 +79,6 @@ namespace poll {
         /*********************************************************************************
          * Handle io event
          ********************************************************************************/
-#if defined(PUMP_HAVE_IOCP)
-        PUMP_INLINE void handle_io_event(int32_t ev, net::iocp_task_ptr iocp_task) {
-            if (ev & IO_EVENT_READ) {
-                on_read_event(iocp_task);
-            } else if (ev & IO_EVENT_SEND) {
-                on_send_event(iocp_task);
-            }
-        }
-#else
         PUMP_INLINE void handle_io_event(int32_t ev) {
             if (ev & IO_EVENT_READ) {
                 on_read_event();
@@ -93,7 +86,7 @@ namespace poll {
                 on_send_event();
             }
         }
-#endif
+
         /*********************************************************************************
          * Handle channel event
          ********************************************************************************/
@@ -105,7 +98,7 @@ namespace poll {
         /*********************************************************************************
          * Set channel fd
          ********************************************************************************/
-        PUMP_INLINE void __set_fd(int32_t fd) {
+        PUMP_INLINE void __set_fd(pump_socket fd) {
             fd_ = fd;
         }
 
@@ -113,23 +106,15 @@ namespace poll {
         /*********************************************************************************
          * Read event callback
          ********************************************************************************/
-#if defined(PUMP_HAVE_IOCP)
-        virtual void on_read_event(net::iocp_task_ptr iocp_task) {
-        }
-#else
         virtual void on_read_event() {
         }
-#endif
+
         /*********************************************************************************
          * Send event callback
          ********************************************************************************/
-#if defined(PUMP_HAVE_IOCP)
-        virtual void on_send_event(net::iocp_task_ptr iocp_task) {
-        }
-#else
         virtual void on_send_event() {
         }
-#endif
+
         /*********************************************************************************
          * Channel event callback
          ********************************************************************************/
@@ -140,7 +125,7 @@ namespace poll {
         // Channel context
         void_ptr ctx_;
         // Channel fd
-        int32_t fd_;
+        pump_socket fd_;
     };
     DEFINE_ALL_POINTER_TYPE(channel);
 
@@ -167,20 +152,26 @@ namespace poll {
          * Constructor
          ********************************************************************************/
         channel_tracker(channel_sptr &ch, int32_t ev) noexcept
-            : state_(TRACKER_STATE_STOP),
+          : state_(TRACKER_STATE_STOP),
               installed_(false),
-              event_(ev), 
+              expected_event_(ev),
               fd_(ch->get_fd()), 
               ch_(ch),
               pr_(nullptr) {
+#if defined(PUMP_HAVE_EPOLL) || defined(PUMP_HAVE_IOCP)
+                memset(&ev_, 0, sizeof(ev_));
+#endif
         }
         channel_tracker(channel_sptr &&ch, int32_t ev) noexcept
-            : state_(TRACKER_STATE_STOP),
+          : state_(TRACKER_STATE_STOP),
               installed_(false),
-              event_(ev), 
+              expected_event_(ev),
               fd_(ch->get_fd()), 
               ch_(ch), 
               pr_(nullptr) {
+#if defined(PUMP_HAVE_EPOLL) || defined(PUMP_HAVE_IOCP)
+            memset(&ev_, 0, sizeof(ev_));
+#endif
         }
 
         /*********************************************************************************
@@ -199,7 +190,7 @@ namespace poll {
          * Stop
          ********************************************************************************/
         PUMP_INLINE bool stop() {
-            return state_.exchange(TRACKER_STATE_STOP, std::memory_order_acquire) == 
+            return state_.exchange(TRACKER_STATE_STOP, std::memory_order_acquire) != 
                 TRACKER_STATE_STOP;
         }
 
@@ -245,7 +236,7 @@ namespace poll {
          * Set installed state
          ********************************************************************************/
         PUMP_INLINE bool set_installed(bool installed) {
-            return installed_.exchange(installed, std::memory_order_acquire);
+            return installed_.exchange(installed, std::memory_order_acquire) == false;
         }
 
         /*********************************************************************************
@@ -256,31 +247,35 @@ namespace poll {
         }
 
         /*********************************************************************************
-         * Set track event
+         * Set expected event
          ********************************************************************************/
-        PUMP_INLINE void set_event(int32_t ev) {
-            event_ = ev;
+        PUMP_INLINE void set_expected_event(int32_t ev) {
+            expected_event_ = ev;
         }
 
         /*********************************************************************************
-         * Get track event
+         * Get expected event
          ********************************************************************************/
-        PUMP_INLINE int32_t get_event() const {
-            return event_;
+        PUMP_INLINE int32_t get_expected_event() const {
+            return expected_event_;
         }
 
+        /*********************************************************************************
+         * Get event
+         ********************************************************************************/
 #if defined(PUMP_HAVE_EPOLL)
-        /*********************************************************************************
-         * Get epoll event
-         ********************************************************************************/
-        PUMP_INLINE struct epoll_event* get_epoll_event() {
-            return &epoll_ev_;
+        PUMP_INLINE struct epoll_event* get_event() {
+            return &ev_;
+        }
+#elif defined(PUMP_HAVE_IOCP)
+        PUMP_INLINE AFD_POLL_EVENT* get_event() {
+            return &ev_;
         }
 #endif
         /*********************************************************************************
          * Get fd
          ********************************************************************************/
-        PUMP_INLINE int32_t get_fd() const {
+        PUMP_INLINE pump_socket get_fd() const {
             return fd_;
         }
 
@@ -289,7 +284,7 @@ namespace poll {
          ********************************************************************************/
         PUMP_INLINE void set_channel(channel_sptr &ch) {
             ch_ = ch;
-            fd_ = ch->get_fd();
+            fd_ = net::get_base_socket(ch->get_fd());
         }
 
         /*********************************************************************************
@@ -318,16 +313,18 @@ namespace poll {
         std::atomic_int32_t state_;
         // Installed state
         std::atomic_bool installed_;
-        // Track event
-        int32_t event_;
+        // Track expected event
+        int32_t expected_event_;
         // Track fd
-        int32_t fd_;
+        pump_socket fd_;
         // Channel
         channel_wptr ch_;
         // Poller
         poller_ptr pr_;
 #if defined(PUMP_HAVE_EPOLL)
-        struct epoll_event epoll_ev_;
+        struct epoll_event ev_;
+#elif defined(PUMP_HAVE_IOCP)
+        AFD_POLL_EVENT ev_;
 #endif
     };
     DEFINE_ALL_POINTER_TYPE(channel_tracker);

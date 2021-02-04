@@ -34,12 +34,9 @@ namespace transport {
                 domain = AF_INET6;
             }
 
-#if defined(PUMP_HAVE_IOCP)
-            fd_ = net::create_iocp_socket(domain, SOCK_DGRAM, net::get_iocp_handler());
-#else
             fd_ = net::create_socket(domain, SOCK_DGRAM);
-#endif
-            if (fd_ == -1) {
+
+            if (fd_ == INVALID_SOCKET) {
                 PUMP_DEBUG_LOG("flow_udp: init failed for creating socket failed");
                 return FLOW_ERR_ABORT;
             }
@@ -63,27 +60,6 @@ namespace transport {
 
             return FLOW_ERR_NO;
         }
-
-#if defined(PUMP_HAVE_IOCP)
-        int32_t flow_udp::post_read(net::iocp_task_ptr iocp_task) {
-            if (!iocp_task) {
-                auto iob = toolkit::io_buffer::create();
-                iob->init_with_size(MAX_UDP_BUFFER_SIZE);
-                iocp_task = net::new_iocp_task();
-                iocp_task->set_fd(fd_);
-                iocp_task->set_notifier(ch_);
-                iocp_task->set_type(net::IOCP_TASK_READ);
-                iocp_task->bind_io_buffer(iob);
-            } else {
-                iocp_task->add_link();
-            }
-            if (!net::post_iocp_read_from(iocp_task)) {
-                PUMP_DEBUG_LOG("flow_udp: post read task failed");
-                return FLOW_ERR_ABORT;
-            }
-            return FLOW_ERR_NO;
-        }
-#endif
 
         int32_t flow_udp::send(const block_t *b, int32_t size, const address &to_address) {
             return net::send_to(fd_, 

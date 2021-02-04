@@ -14,65 +14,69 @@
  * limitations under the License.
  */
 
-#ifndef pump_poll_ipoller_h
-#define pump_poll_ipoller_h
+#ifndef pump_poll_select_poller_h
+#define pump_poll_select_poller_h
 
-#include <vector>
-
-#include "pump/net/iocp.h"
+#include "pump/net/socket.h"
 #include "pump/poll/poller.h"
+
+#if defined(OS_LINUX) && !defined(OS_CYGWIN)
+#include <sys/select.h>
+#endif
 
 namespace pump {
 namespace poll {
 
-    class iocp_poller
+    class select_poller
       : public poller {
 
       public:
         /*********************************************************************************
          * Constructor
          ********************************************************************************/
-        iocp_poller() noexcept;
+        select_poller() noexcept;
 
         /*********************************************************************************
          * Deconstructor
          ********************************************************************************/
-        virtual ~iocp_poller();
-
-        /*********************************************************************************
-         * Start
-         ********************************************************************************/
-        virtual bool start() override;
-
-        /*********************************************************************************
-         * Stop
-         ********************************************************************************/
-        virtual void stop() override;
-
-        /*********************************************************************************
-         * Wait stopping
-         ********************************************************************************/
-        virtual void wait_stopped() override;
-
-        /*********************************************************************************
-         * Push channel event
-         ********************************************************************************/
-        virtual bool push_channel_event(channel_sptr &c, int32_t ev) override;
+        virtual ~select_poller() = default;
 
       protected:
         /*********************************************************************************
-         * Work thread
+         * Install channel tracker for derived class
          ********************************************************************************/
-        void __work_thread();
+        virtual bool __install_channel_tracker(channel_tracker_ptr tracker) override;
+
+        /*********************************************************************************
+         * Uninstall append channel for derived class
+         ********************************************************************************/
+        virtual bool __uninstall_channel_tracker(channel_tracker_ptr tracker) override;
+
+        /*********************************************************************************
+         * Resume channel tracker for derived class
+         ********************************************************************************/
+        virtual bool __resume_channel_tracker(channel_tracker_ptr tracker) override;
+
+        /*********************************************************************************
+         * Poll
+         ********************************************************************************/
+        virtual void __poll(int32_t timeout) override;
 
       private:
-        // IOCP handler
-        void_ptr iocp_;
-        // IOCP worker threads
-        std::vector<std::thread *> workrs_;
-    };
+        /*********************************************************************************
+         * Dispatch pending event
+         ********************************************************************************/
+        void __dispatch_pending_event(const fd_set *rfds, const fd_set *wfds);
 
-    DEFINE_ALL_POINTER_TYPE(iocp_poller);
+      private:
+        fd_set read_fds_;
+        fd_set write_fds_;
+#if defined(OS_CYGWIN)
+        __ms_timeval tv_;
+#else
+        timeval tv_;
+#endif
+    };
 
 }  // namespace poll
 }  // namespace pump

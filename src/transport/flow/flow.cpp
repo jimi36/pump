@@ -22,13 +22,10 @@ namespace transport {
 
         flow_base::flow_base() noexcept 
           : fd_(-1){
-#if defined(PUMP_HAVE_IOCP)
-            extra_fns_ = nullptr;
-#endif
         }
 
-        int32_t flow_base::unbind() {
-            int32_t fd = fd_;
+        pump_socket flow_base::unbind() {
+            pump_socket fd = fd_;
             fd_ = -1;
             return fd;
         }
@@ -40,12 +37,6 @@ namespace transport {
         }
 
         void flow_base::close() {
-#if defined(PUMP_HAVE_IOCP)
-            if (extra_fns_) {
-                net::delete_iocp_extra_function(extra_fns_);
-                extra_fns_ = nullptr;
-            }
-#endif
             if (fd_ > 0) {
                 net::close(fd_);
                 fd_ = -1;

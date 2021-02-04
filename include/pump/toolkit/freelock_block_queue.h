@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef pump_toolkit_block_freelock_queue_h
-#define pump_toolkit_block_freelock_queue_h
+#ifndef pump_toolkit_freelock_block_queue_h
+#define pump_toolkit_freelock_block_queue_h
 
 #include "pump/platform.h"
 #include "pump/toolkit/features.h"
@@ -25,7 +25,7 @@ namespace pump {
 namespace toolkit {
 
     template <typename Q>
-    class LIB_PUMP block_freelock_queue
+    class LIB_PUMP freelock_block_queue
       : public noncopyable {
 
       public:
@@ -38,7 +38,7 @@ namespace toolkit {
         /*********************************************************************************
          * Constructor
          ********************************************************************************/
-        block_freelock_queue(uint32_t size = 1024)
+        freelock_block_queue(uint32_t size = 1024)
           : queue_(size) {
         }
 

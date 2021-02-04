@@ -59,7 +59,6 @@ namespace poll {
         }
     }
 
-#if !defined(PUMP_HAVE_IOCP)
     bool poller::add_channel_tracker(channel_tracker_sptr &tracker) {
         if (PUMP_UNLIKELY(!started_.load(std::memory_order_relaxed))) {
             PUMP_DEBUG_LOG("poller: add channel tracker failed for poller not started");
@@ -74,7 +73,7 @@ namespace poll {
         PUMP_DEBUG_CHECK(__install_channel_tracker(tracker.get()));
 
         // Set channel tracker installed.
-        PUMP_DEBUG_CHECK(!tracker->set_installed(true));
+        PUMP_DEBUG_CHECK(tracker->set_installed(true));
 
         // Create tracker event
         PUMP_DEBUG_CHECK(
@@ -110,7 +109,6 @@ namespace poll {
         // Add pending trakcer event count
         tev_cnt_.fetch_add(1, std::memory_order_release);
     }
-#endif
 
     bool poller::push_channel_event(channel_sptr &c, int32_t event) {
         if (PUMP_UNLIKELY(!started_.load())) {

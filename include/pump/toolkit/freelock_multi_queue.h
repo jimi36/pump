@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef pump_toolkit_multi_freelock_queue_h
-#define pump_toolkit_multi_freelock_queue_h
+#ifndef pump_toolkit_freelock_multi_queue_h
+#define pump_toolkit_freelock_multi_queue_h
 
 #include <atomic>
 #include <chrono>
@@ -28,7 +28,7 @@ namespace pump {
 namespace toolkit {
  
     template <typename T, int32_t PerBlockElementCount = 128>
-    class LIB_PUMP multi_freelock_queue
+    class LIB_PUMP freelock_multi_queue
       : public noncopyable {
 
       public:
@@ -40,9 +40,9 @@ namespace toolkit {
         // Element node
         struct element_node {
             element_node()
-             : next(this+1) {
+             : ready(0), next(this+1) {
             }
-            std::atomic_bool ready;
+            volatile int32_t ready;
             element_node *next;
             block_t data[element_size];
         };
@@ -57,7 +57,7 @@ namespace toolkit {
         /*********************************************************************************
          * Constructor
          ********************************************************************************/
-        multi_freelock_queue(int32_t size)
+        freelock_multi_queue(int32_t size)
           : capacity_(0),
             tail_block_node_(nullptr),
             head_(nullptr), 
@@ -68,7 +68,7 @@ namespace toolkit {
         /*********************************************************************************
          * Deconstructor
          ********************************************************************************/
-        ~multi_freelock_queue() {
+        ~freelock_multi_queue() {
             // Get element head node.
             element_node *beg_node = tail_.load(std::memory_order_relaxed)->next;
             // Get next element node of the head element node.
@@ -76,7 +76,7 @@ namespace toolkit {
 
             while (beg_node != end_node) {
                 // Deconstruct element data.
-                if (beg_node->ready.load(std::memory_order_relaxed)) {
+                if (beg_node->ready == 1) {
                     ((element_type*)beg_node->data)->~element_type();
                 }
                 // Move to next node.
@@ -109,10 +109,8 @@ namespace toolkit {
             element_node *next_write_node = head_.load(std::memory_order_relaxed);
             do {
                 // If current write node is invalid, list is being extended and try again.
-                if (next_write_node == nullptr) {
-                    if ((next_write_node = head_.load(std::memory_order_relaxed)) == nullptr) {
-                        continue;
-                    }
+                while (next_write_node == nullptr) {
+                    next_write_node = head_.load(std::memory_order_relaxed);
                 }
 
                 // If next write node is the tail node, list is full and try to extend it.
@@ -134,13 +132,13 @@ namespace toolkit {
             } while (true);
 
             // Wait current write node be not ready.
-            while (next_write_node->ready.load(std::memory_order_relaxed));
+            while (next_write_node->ready == 1);
 
             // Construct node data.
             new (next_write_node->data) element_type(data);
 
             // Mark node ready.
-            next_write_node->ready.store(true, std::memory_order_release);
+            next_write_node->ready = 1;
 
             return true;
         }
@@ -157,7 +155,7 @@ namespace toolkit {
 
             do {
                 // Check next read node is ready or not.
-                if (!next_read_node->ready.load(std::memory_order_consume)) {
+                if (next_read_node->ready == 0) {
                     return false;
                 }
 
@@ -176,7 +174,7 @@ namespace toolkit {
             elem->~element_type();
 
             // Mark next read node not ready.
-            next_read_node->ready.store(false, std::memory_order_release);
+            next_read_node->ready = 0;
 
             return true;
         }

@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef pump_poll_epoller_h
-#define pump_poll_epoller_h
+#ifndef pump_poll_epoll_poller_h
+#define pump_poll_epoll_poller_h
 
 #include "pump/poll/poller.h"
 
@@ -68,7 +68,6 @@ namespace poll {
 
         void_ptr events_;
         int32_t max_event_count_;
-
         std::atomic_int32_t cur_event_count_;
     };
 

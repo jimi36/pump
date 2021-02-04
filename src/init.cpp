@@ -61,6 +61,23 @@ bool init() {
         PUMP_WARN_LOG("init: WSAStartup failed");
         return false;
     }
+
+    HMODULE ntdll = LoadLibraryA("ntdll.dll");
+    if (!ntdll) {
+        return false;
+    }
+    NtCreateFile = (FnNtCreateFile)GetProcAddress(ntdll, "NtCreateFile");
+    if (!NtCreateFile) {
+        return false;
+    }
+    NtDeviceIoControlFile = (FnNtDeviceIoControlFile)GetProcAddress(ntdll, "NtDeviceIoControlFile");
+    if (!NtDeviceIoControlFile) {
+        return false;
+    }
+    NtCancelIoFileEx = (FnNtCancelIoFileEx)GetProcAddress(ntdll, "NtCancelIoFileEx");
+    if (!NtCancelIoFileEx) {
+        return false;
+    }
 #endif
 
 #if defined(OS_LINUX)
@@ -89,10 +106,6 @@ void uninit() {
 
 #if defined(OS_LINUX)
     setup_signal(SIGPIPE, SIG_DFL);
-#endif
-
-#if defined(PUMP_HAVE_IOCP)
-    CloseHandle(net::get_iocp_handler());
 #endif
 
 #if defined(PUMP_HAVE_GNUTLS)

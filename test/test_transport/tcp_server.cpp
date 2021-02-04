@@ -11,7 +11,7 @@ struct transport_context {
         read_size = 0;
         read_pocket_size = 0;
         last_report_time = (int32_t)::time(0);
-        idx = t->get_fd();
+        idx = (int32_t)t->get_fd();
     }
 
     tcp_transport_sptr transport;
@@ -49,6 +49,8 @@ class my_tcp_acceptor : public std::enable_shared_from_this<my_tcp_acceptor> {
         }
 
         transport->read_for_loop();
+
+        printf("server tcp transport accepted\n");
     }
 
     /*********************************************************************************
@@ -59,15 +61,14 @@ class my_tcp_acceptor : public std::enable_shared_from_this<my_tcp_acceptor> {
     /*********************************************************************************
      * Tcp read event callback
      ********************************************************************************/
-    void on_read_callback(base_transport_ptr transp, const block_t *b,
-                          int32_t size) {
+    void on_read_callback(base_transport_ptr transp, const block_t *b, int32_t size) {
         transport_context *ctx = (transport_context *)transp->get_context();
 
         ctx->read_size += size;
         ctx->all_read_size += size;
         ctx->read_pocket_size += size;
 
-        while (ctx->read_pocket_size >= send_pocket_size) {
+        if (ctx->read_pocket_size >= send_pocket_size) {
             ctx->read_pocket_size -= send_pocket_size;
             send_data(transp);
         }

@@ -75,7 +75,6 @@ namespace transport {
         }
 
       protected:
-#if !defined(PUMP_HAVE_IOCP)
         /*********************************************************************************
          * Start accept tracker
          ********************************************************************************/
@@ -90,7 +89,7 @@ namespace transport {
          * Stop accept tracker
          ********************************************************************************/
         void __stop_accept_tracker();
-#endif
+
         /*********************************************************************************
          * Trigger interrupt callbacks
          ********************************************************************************/
@@ -100,10 +99,9 @@ namespace transport {
         // Listen address
         address listen_address_;
 
-#if !defined(PUMP_HAVE_IOCP)
         // Channel tracker
         poll::channel_tracker_sptr tracker_;
-#endif
+
         // Acceptor callbacks
         acceptor_callbacks cbs_;
     };

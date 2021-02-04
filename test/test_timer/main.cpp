@@ -1,3 +1,4 @@
+#include <pump/init.h>
 #include <pump/service.h>
 #include <pump/time/timer.h>
 #include <stdio.h>
@@ -51,6 +52,8 @@ class Timeout : public std::enable_shared_from_this<Timeout> {
 
 int main(int argc, const char **argv) {
     
+    pump::init();
+
     pump::service *sv = new pump::service;
     sv->start();
 

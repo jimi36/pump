@@ -36,9 +36,9 @@ namespace time {
 
             if (PUMP_LIKELY(repeated_)) {
                 if (__set_state(TIMER_PENDING, TIMER_STARTED)) {
-                    // Update timer overtime.
+                    // Update overtime.
                     overtime_ = get_clock_milliseconds() + timeout_;
-                    // Add to timer queue
+                    // Add to timer queue.
                     queue_->add_timer(shared_from_this(), true);
                 }
             } else {
@@ -52,10 +52,10 @@ namespace time {
             return false;
         }
 
-        // Update timer overtime.
+        // Update overtime.
         overtime_ = get_clock_milliseconds() + timeout_;
 
-        // Store timer queue.
+        // Save timer queue.
         queue_ = queue;
 
         return true;
