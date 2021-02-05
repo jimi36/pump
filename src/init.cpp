@@ -61,7 +61,7 @@ bool init() {
         PUMP_WARN_LOG("init: WSAStartup failed");
         return false;
     }
-
+#if defined(PUMP_HAVE_IOCP)
     HMODULE ntdll = LoadLibraryA("ntdll.dll");
     if (!ntdll) {
         return false;
@@ -78,6 +78,7 @@ bool init() {
     if (!NtCancelIoFileEx) {
         return false;
     }
+#endif
 #endif
 
 #if defined(OS_LINUX)
