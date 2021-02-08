@@ -14,30 +14,26 @@
  * limitations under the License.
  */
 
-#include "pump/ssl/ssl_helper.h"
 #include "pump/transport/tls_acceptor.h"
 #include "pump/transport/tls_transport.h"
 
 namespace pump {
 namespace transport {
 
-    tls_acceptor::tls_acceptor(bool is_file,
-                               const std::string &cert,
-                               const std::string &key,
-                               const address &listen_address,
-                               int64_t handshake_timeout)
-      : base_acceptor(TLS_ACCEPTOR, listen_address),
-        xcred_(nullptr),
-        handshake_timeout_(0) {
-        if (is_file) {
-            xcred_ = ssl::create_tls_certificate_by_file(false, cert, key);
-        } else {
-            xcred_ = ssl::create_tls_certificate_by_buffer(false, cert, key);
-        }
+    tls_acceptor::tls_acceptor(void_ptr xcred,
+                               bool xcred_owner,
+                               const address& listen_address,
+                               int64_t handshake_timeout) 
+      : base_acceptor(TLS_ACCEPTOR, listen_address), 
+        xcred_(xcred), 
+        xcred_owner_(xcred_owner) ,
+        handshake_timeout_(handshake_timeout) {
     }
 
     tls_acceptor::~tls_acceptor() {
-        ssl::destory_tls_certificate(xcred_);
+        if (xcred_owner_) {
+            ssl::destory_tls_certificate(xcred_);
+        }
     }
 
     int32_t tls_acceptor::start(service_ptr sv, const acceptor_callbacks &cbs) {

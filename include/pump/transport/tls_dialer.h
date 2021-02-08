@@ -19,6 +19,7 @@
 
 #include <future>
 
+#include "pump/ssl/ssl_helper.h"
 #include "pump/transport/base_dialer.h"
 #include "pump/transport/tls_handshaker.h"
 #include "pump/transport/flow/flow_tls_dialer.h"
@@ -43,15 +44,27 @@ namespace transport {
                                                   int64_t handshake_timeout = 0) {
             INLINE_OBJECT_CREATE(
                 obj,
-                tls_dialer,
-                (local_address, remote_address, dial_timeout, handshake_timeout));
+                tls_dialer, 
+                (nullptr, local_address, remote_address, dial_timeout, handshake_timeout));
+            return tls_dialer_sptr(obj, object_delete<tls_dialer>);
+        }
+
+        PUMP_INLINE static tls_dialer_sptr create_with_cred(void_ptr xcred,
+                                                  const address &local_address,
+                                                  const address &remote_address,
+                                                  int64_t dial_timeout = 0,
+                                                  int64_t handshake_timeout = 0) {
+            INLINE_OBJECT_CREATE(
+                obj,
+                tls_dialer, 
+                (xcred, local_address, remote_address, dial_timeout, handshake_timeout));
             return tls_dialer_sptr(obj, object_delete<tls_dialer>);
         }
 
         /*********************************************************************************
          * Deconstructor
          ********************************************************************************/
-        virtual ~tls_dialer() = default;
+        virtual ~tls_dialer();
 
         /*********************************************************************************
          * Start
@@ -105,14 +118,18 @@ namespace transport {
         /*********************************************************************************
          * Constructor
          ********************************************************************************/
-        tls_dialer(const address &local_address,
+        tls_dialer(void_ptr xcred,
+                   const address &local_address,
                    const address &remote_address,
                    int64_t dial_timeout,
                    int64_t handshake_timeout) noexcept;
 
+
       private:
-        // GNUTLS credentials
+        // Credentials
         void_ptr xcred_;
+        // Credentials owner
+        bool xcred_owner_;
 
         // Handshake timeout
         int64_t handshake_timeout_;
@@ -144,7 +161,7 @@ namespace transport {
         virtual ~tls_sync_dialer() = default;
 
         /*********************************************************************************
-         * Dial by sync
+         * Dial by synchronization
          ********************************************************************************/
         base_transport_sptr dial(service_ptr sv,
                                  const address &local_address,

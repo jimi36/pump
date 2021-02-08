@@ -14,21 +14,31 @@
  * limitations under the License.
  */
 
-#include "pump/ssl/ssl_helper.h"
 #include "pump/transport/tls_dialer.h"
 #include "pump/transport/tls_transport.h"
 
 namespace pump {
 namespace transport {
 
-    tls_dialer::tls_dialer(const address &local_address,
+    tls_dialer::tls_dialer(void_ptr xcred,
+                           const address &local_address,
                            const address &remote_address,
                            int64_t dial_timeout,
                            int64_t handshake_timeout) noexcept
       : base_dialer(TLS_DIALER, local_address, remote_address, dial_timeout),
-        xcred_(nullptr),
+        xcred_(xcred),
+        xcred_owner_(false),
         handshake_timeout_(handshake_timeout) {
-        xcred_ = ssl::create_tls_client_certificate();
+        if (!xcred_) {
+            xcred_owner_ = true;
+            xcred_ = ssl::create_tls_client_certificate();
+        }
+    }
+
+    tls_dialer::~tls_dialer() {
+        if (xcred_owner_) {
+            ssl::destory_tls_certificate(xcred_);
+        }
     }
 
     int32_t tls_dialer::start(service_ptr sv, const dialer_callbacks &cbs) {
