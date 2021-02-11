@@ -18,31 +18,31 @@
 
 namespace pump {
 namespace transport {
-    namespace flow {
+namespace flow {
 
-        flow_base::flow_base() noexcept 
-          : fd_(-1){
+    flow_base::flow_base() noexcept 
+        : fd_(-1){
+    }
+
+    pump_socket flow_base::unbind() {
+        pump_socket fd = fd_;
+        fd_ = -1;
+        return fd;
+    }
+
+    void flow_base::shutdown() {
+        if (fd_ > 0) {
+            net::shutdown(fd_);
         }
+    }
 
-        pump_socket flow_base::unbind() {
-            pump_socket fd = fd_;
+    void flow_base::close() {
+        if (fd_ > 0) {
+            net::close(fd_);
             fd_ = -1;
-            return fd;
         }
+    }
 
-        void flow_base::shutdown() {
-            if (fd_ > 0) {
-                net::shutdown(fd_);
-            }
-        }
-
-        void flow_base::close() {
-            if (fd_ > 0) {
-                net::close(fd_);
-                fd_ = -1;
-            }
-        }
-
-    }  // namespace flow
+}  // namespace flow
 }  // namespace transport
 }  // namespace pump

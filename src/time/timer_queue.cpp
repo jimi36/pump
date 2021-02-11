@@ -29,11 +29,11 @@ namespace time {
     timer_queue::~timer_queue() {
     }
 
-    bool timer_queue::start(const timeout_callback &cb) {
+    bool timer_queue::start(const timer_pending_callback &cb) {
         if (!started_.load()) {
             started_.store(true);
 
-            PUMP_DEBUG_ASSIGN(cb, cb_, cb);
+            PUMP_DEBUG_ASSIGN(cb, pending_cb_, cb);
 
             observer_.reset(
                 object_create<std::thread>(pump_bind(&timer_queue::__observe_thread, this)),
@@ -49,12 +49,12 @@ namespace time {
         }
     }
 
-    bool timer_queue::add_timer(timer_sptr &&ptr, bool repeated) {
+    bool timer_queue::start_timer(timer_sptr &ptr) {
         if (!started_.load()) {
             return false;
         }
 
-        if (!repeated && !ptr->__start(this)) {
+        if (!ptr->__start(this)) {
             return false;
         }
 
@@ -63,30 +63,44 @@ namespace time {
         return true;
     }
 
+    bool timer_queue::restart_timer(timer_sptr &&ptr) {
+        if (started_.load()) {
+            PUMP_DEBUG_CHECK(new_timers_.enqueue(std::move(ptr)));
+            return true;
+        }
+        return false;
+    }
+
     void timer_queue::__observe_thread() {
+        // New timer
+        timer_sptr new_timer;
+        // New timer overtime
+        uint64_t new_timer_overtime;
+
         // Init next observe time.
         uint64_t now = get_clock_milliseconds();
         next_observe_time_ = now + TIMER_DEFAULT_INTERVAL;
 
         while (1) {
-            // New timer
-            timer_sptr new_timer;
-
             // Wait unitl next observe time arrived or new timer added.
             now = get_clock_milliseconds();
             if (next_observe_time_ > now) {
                 if (new_timers_.dequeue(new_timer, (next_observe_time_ - now) * 1000)) {
-                    timers_.insert(std::make_pair(new_timer->time(), new_timer));
+                    new_timer_overtime = new_timer->time();
+                    timers_.insert(std::make_pair(new_timer_overtime, std::move(new_timer)));
+                } else {
+                    now = next_observe_time_;
                 }
+                
             }
 
             // Try to add new timers.
             while (new_timers_.try_dequeue(new_timer)) {
-                timers_.insert(std::make_pair(new_timer->time(), new_timer));
+                new_timer_overtime = new_timer->time();
+                timers_.insert(std::make_pair(new_timer_overtime, std::move(new_timer)));
             }
 
             if (!timers_.empty()) {
-                now = get_clock_milliseconds();
                 __observe(now);
             }
 
@@ -108,7 +122,7 @@ namespace time {
         // Callback pending timers.  
         auto pending_end = timers_.upper_bound(now);
         for (auto it = beg; it != pending_end; ++it) {
-            cb_(it->second);
+            pending_cb_(std::move(it->second));
         }
 
         // Remove pending timers.

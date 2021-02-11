@@ -21,12 +21,12 @@
 
 namespace pump {
 namespace transport {
-    namespace flow {
+namespace flow {
 
-        typedef flow_tcp_acceptor flow_tls_acceptor;
-        DEFINE_ALL_POINTER_TYPE(flow_tls_acceptor);
+    typedef flow_tcp_acceptor flow_tls_acceptor;
+    DEFINE_ALL_POINTER_TYPE(flow_tls_acceptor);
 
-    }  // namespace flow
+}  // namespace flow
 }  // namespace transport
 }  // namespace pump
 

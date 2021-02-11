@@ -39,7 +39,7 @@ namespace time {
                     // Update overtime.
                     overtime_ = get_clock_milliseconds() + timeout_;
                     // Add to timer queue.
-                    queue_->add_timer(shared_from_this(), true);
+                    queue_->restart_timer(shared_from_this());
                 }
             } else {
                 __set_state(TIMER_PENDING, TIMER_STOPPED);

@@ -22,129 +22,129 @@
 
 namespace pump {
 namespace protocol {
-    namespace websocket {
+namespace websocket {
 
-        class client;
-        DEFINE_ALL_POINTER_TYPE(client);
+    class client;
+    DEFINE_ALL_POINTER_TYPE(client);
 
-        struct client_callbacks {
-            // Started callback
-            pump_function<void()> started_cb;
-            // Data callback
-            pump_function<void(const block_t*, int32_t, bool)> data_cb;
-            // Error callback
-            pump_function<void(const std::string &)> error_cb;
-        };
+    struct client_callbacks {
+        // Started callback
+        pump_function<void()> started_cb;
+        // Data callback
+        pump_function<void(const block_t*, int32_t, bool)> data_cb;
+        // Error callback
+        pump_function<void(const std::string &)> error_cb;
+    };
 
-        class LIB_PUMP client 
-          : public std::enable_shared_from_this<client> {
+    class LIB_PUMP client 
+      : public std::enable_shared_from_this<client> {
 
-          public:
-            /*********************************************************************************
-             * Create instance
-             ********************************************************************************/
-            PUMP_INLINE static client_sptr create(
-                const std::string &url,
-                const std::map<std::string, std::string> &headers) {
-                INLINE_OBJECT_CREATE(obj, client, (url, headers));
-                return client_sptr(obj, object_delete<client>);
-            }
+      public:
+        /*********************************************************************************
+         * Create instance
+         ********************************************************************************/
+        PUMP_INLINE static client_sptr create(
+            const std::string &url,
+            const std::map<std::string, std::string> &headers) {
+            INLINE_OBJECT_CREATE(obj, client, (url, headers));
+            return client_sptr(obj, object_delete<client>);
+        }
 
-            /*********************************************************************************
-             * Deconstructor
-             ********************************************************************************/
-            virtual ~client() = default;
+        /*********************************************************************************
+         * Deconstructor
+         ********************************************************************************/
+        virtual ~client() = default;
 
-            /*********************************************************************************
-             * Start
-             ********************************************************************************/
-            bool start(service_ptr sv, const client_callbacks &cbs);
+        /*********************************************************************************
+         * Start
+         ********************************************************************************/
+        bool start(service_ptr sv, const client_callbacks &cbs);
 
-            /*********************************************************************************
-             * Stop
-             ********************************************************************************/
-            void stop();
+        /*********************************************************************************
+         * Stop
+         ********************************************************************************/
+        void stop();
 
-            /*********************************************************************************
-             * Send
-             ********************************************************************************/
-            bool send(const block_t *b, int32_t size);
+        /*********************************************************************************
+         * Send
+         ********************************************************************************/
+        bool send(const block_t *b, int32_t size);
 
-          protected:
-            /*********************************************************************************
-             * Dialed callback
-             ********************************************************************************/
-            static void on_dialed(client_wptr wptr,
-                                  transport::base_transport_sptr &transp,
-                                  bool succ);
+      protected:
+        /*********************************************************************************
+         * Dialed callback
+         ********************************************************************************/
+        static void on_dialed(client_wptr wptr,
+                              transport::base_transport_sptr &transp,
+                              bool succ);
 
-            /*********************************************************************************
-             * Dialed timeout callback
-             ********************************************************************************/
-            static void on_dial_timeouted(client_wptr wptr);
+        /*********************************************************************************
+         * Dialed timeout callback
+         ********************************************************************************/
+        static void on_dial_timeouted(client_wptr wptr);
 
-            /*********************************************************************************
-             * Stopped dialing callback
-             ********************************************************************************/
-            static void on_dial_stopped(client_wptr wptr);
+        /*********************************************************************************
+         * Stopped dialing callback
+         ********************************************************************************/
+        static void on_dial_stopped(client_wptr wptr);
 
-          protected:
-            /*********************************************************************************
-             * Upgrade response callback
-             ********************************************************************************/
-            static void on_upgrade_response(client_wptr wptr, http::pocket_sptr pk);
+      protected:
+        /*********************************************************************************
+         * Upgrade response callback
+         ********************************************************************************/
+        static void on_upgrade_response(client_wptr wptr, http::pocket_sptr pk);
 
-            /*********************************************************************************
-             * Frame callback
-             ********************************************************************************/
-            static void on_frame(client_wptr wptr, const block_t *b, int32_t size, bool end);
+        /*********************************************************************************
+         * Frame callback
+         ********************************************************************************/
+        static void on_frame(client_wptr wptr, const block_t *b, int32_t size, bool end);
 
-            /*********************************************************************************
-             * Connection error closed
-             ********************************************************************************/
-            static void on_error(client_wptr wptr, const std::string &msg);
+        /*********************************************************************************
+         * Connection error closed
+         ********************************************************************************/
+        static void on_error(client_wptr wptr, const std::string &msg);
 
-          private:
-            /*********************************************************************************
-             * Constructor
-             ********************************************************************************/
-            client(const std::string &url, 
-                   const std::map<std::string, std::string> &headers) noexcept;
+      private:
+        /*********************************************************************************
+         * Constructor
+         ********************************************************************************/
+        client(const std::string &url, 
+               const std::map<std::string, std::string> &headers) noexcept;
 
-            /*********************************************************************************
-             * Start dial and upgrade
-             ********************************************************************************/
-            bool __start();
+        /*********************************************************************************
+         * Start dial and upgrade
+         ********************************************************************************/
+        bool __start();
 
-            /*********************************************************************************
-             * Check http upgrade response
-             ********************************************************************************/
-            bool __check_upgrade_response(http::response_sptr &resp);
+        /*********************************************************************************
+         * Check http upgrade response
+         ********************************************************************************/
+        bool __check_upgrade_response(http::response_sptr &resp);
 
-          private:
-            // Started state
-            std::atomic_bool started_;
+      private:
+        // Started state
+        std::atomic_bool started_;
 
-            // Service
-            service_ptr sv_;
+        // Service
+        service_ptr sv_;
 
-            // Transport Dialer
-            transport::base_dialer_sptr dialer_;
+        // Transport Dialer
+        transport::base_dialer_sptr dialer_;
 
-            // Websocket connection
-            connection_sptr conn_;
+        // Websocket connection
+        connection_sptr conn_;
 
-            // Upgrade info
-            bool is_upgraded_;
-            std::string upgrade_url_;
-            http::request_sptr upgrade_req_;
-            std::map<std::string, std::string> upgrade_req_headers_;
+        // Upgrade info
+        bool is_upgraded_;
+        std::string upgrade_url_;
+        http::request_sptr upgrade_req_;
+        std::map<std::string, std::string> upgrade_req_headers_;
 
-            // Client callbacks
-            client_callbacks cbs_;
-        };
+        // Client callbacks
+        client_callbacks cbs_;
+    };
 
-    }  // namespace websocket
+}  // namespace websocket
 }  // namespace protocol
 }  // namespace pump
 

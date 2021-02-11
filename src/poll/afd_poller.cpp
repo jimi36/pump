@@ -89,18 +89,17 @@ namespace poll {
          */
         IO_STATUS_BLOCK iosb;
         HANDLE afd_device_handle;
-        NTSTATUS status = NtCreateFile(
-                            &afd_device_handle,
-                            SYNCHRONIZE,
-                            &afd__device_attributes,
-                            &iosb,
-                            NULL,
-                            0,
-                            FILE_SHARE_READ | FILE_SHARE_WRITE,
-                            FILE_OPEN,
-                            0,
-                            NULL,
-                            0);
+        NTSTATUS status = NtCreateFile(&afd_device_handle,
+                                       SYNCHRONIZE,
+                                       &afd__device_attributes,
+                                       &iosb,
+                                       NULL,
+                                       0,
+                                       FILE_SHARE_READ | FILE_SHARE_WRITE,
+                                       FILE_OPEN,
+                                       0,
+                                       NULL,
+                                       0);
         if (status != STATUS_SUCCESS) {
             return NULL;
         }
@@ -170,10 +169,9 @@ namespace poll {
         }
 
         IO_STATUS_BLOCK cancel_iosb;
-        NTSTATUS cancel_status = NtCancelIoFileEx(
-                                    afd_device_handler_, 
-                                    &(event->iosb), 
-                                    &cancel_iosb);
+        NTSTATUS cancel_status = NtCancelIoFileEx(afd_device_handler_, 
+                                                  &(event->iosb), 
+                                                  &cancel_iosb);
         if (cancel_status == STATUS_SUCCESS || cancel_status == STATUS_NOT_FOUND) {
             cur_event_count_.fetch_sub(1, std::memory_order_relaxed);
             return true;
@@ -198,17 +196,16 @@ namespace poll {
         }
         event->iosb.Status = STATUS_PENDING;
 
-        NTSTATUS status = NtDeviceIoControlFile(
-                            afd_device_handler_,
-                            NULL,
-                            NULL,
-                            tracker,
-                            &(event->iosb),
-                            IOCTL_AFD_POLL,
-                            &(event->info),
-                            sizeof(event->info),
-                            event,
-                            sizeof(event->info));
+        NTSTATUS status = NtDeviceIoControlFile(afd_device_handler_,
+                                                NULL,
+                                                NULL,
+                                                tracker,
+                                                &(event->iosb),
+                                                IOCTL_AFD_POLL,
+                                                &(event->info),
+                                                sizeof(event->info),
+                                                event,
+                                                sizeof(event->info));
         if (status == STATUS_SUCCESS || status == STATUS_PENDING) {
             return true;
         }
@@ -249,12 +246,11 @@ namespace poll {
 
     void afd_poller::__dispatch_pending_event(int32_t count) {
 #if defined(PUMP_HAVE_IOCP)
-        channel_tracker_ptr tracker;
         auto ev_beg = (LPOVERLAPPED_ENTRY)events_;
         auto ev_end = (LPOVERLAPPED_ENTRY)events_ + count;
         for (auto ev = ev_beg; ev != ev_end; ++ev) {
             // If channel is invalid, tracker should be removed.
-            tracker = (channel_tracker_ptr)ev->lpOverlapped;
+            auto tracker = (channel_tracker_ptr)ev->lpOverlapped;
             if (tracker->untrack()) {
                 auto ch = tracker->get_channel();
                 if (ch) {

@@ -102,7 +102,7 @@ namespace transport {
         } else {
             tracker_->set_expected_event(poll::TRACK_READ);
         }
-        if (!get_service()->add_channel_tracker(tracker_, WRITE_POLLER)) {
+        if (!get_service()->add_channel_tracker(tracker_, SEND_POLLER)) {
             PUMP_WARN_LOG("tls_handshaker: start failed for adding tracker failed");
             return false;
         }

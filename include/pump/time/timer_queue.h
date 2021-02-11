@@ -36,7 +36,7 @@ namespace time {
       : public toolkit::noncopyable {
 
       protected:
-        typedef pump_function<void(timer_wptr&)> timeout_callback;
+        typedef pump_function<void(timer_wptr&&)> timer_pending_callback;
 
       public:
           /*********************************************************************************
@@ -55,7 +55,7 @@ namespace time {
         /*********************************************************************************
          * Start
          ********************************************************************************/
-        bool start(const timeout_callback &cb);
+        bool start(const timer_pending_callback &cb);
 
         /*********************************************************************************
          * Stop
@@ -70,16 +70,15 @@ namespace time {
         void wait_stopped();
 
         /*********************************************************************************
-         * Add timer
+         * Start timer
          ********************************************************************************/
-        PUMP_INLINE bool add_timer(timer_sptr &ptr, bool repeated = false) {
-            return add_timer(std::forward<timer_sptr>(ptr), repeated);
-        }
+        bool start_timer(timer_sptr &ptr);
 
         /*********************************************************************************
-         * Add timer
+         * Restart timer
+         * Just timer can call this function, user code must dont call this.
          ********************************************************************************/
-        bool add_timer(timer_sptr &&ptr, bool repeated = false);
+        bool restart_timer(timer_sptr &&ptr);
 
       protected:
         /*********************************************************************************
@@ -102,9 +101,6 @@ namespace time {
         // Started status
         std::atomic_bool started_;
 
-        // Timeout callback
-        timeout_callback cb_;
-
         // Next observer time
         uint64_t next_observe_time_;
 
@@ -114,8 +110,12 @@ namespace time {
         // New timers
         typedef toolkit::freelock_multi_queue<timer_sptr> timer_impl_queue;
         toolkit::freelock_block_queue<timer_impl_queue> new_timers_;
-        // Observe Timers
+
+        // Observed Timers
         std::multimap<uint64_t, timer_wptr> timers_;
+
+        // Timeout callback
+        timer_pending_callback pending_cb_;
 
     };
     DEFINE_ALL_POINTER_TYPE(timer_queue);

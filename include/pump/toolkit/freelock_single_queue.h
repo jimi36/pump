@@ -99,7 +99,7 @@ namespace toolkit {
 
                 while (head != tail) {
                     // Destory element
-                    element_type *elem = (element_type*)(head_blk->data + head * element_size);
+                    auto elem = (element_type*)(head_blk->data + head * element_size);
                     elem->~element_type();
                     // Move next element position
                     head = (head + 1) & block_element_size_mask_;
@@ -146,7 +146,7 @@ namespace toolkit {
                 std::atomic_thread_fence(std::memory_order_acquire);
 
                 // Construct element
-                new (blk->data + tail * element_size) element_type(data);
+                new (blk->data + tail * element_size) element_type(std::forward<U>(data));
 
                 std::atomic_thread_fence(std::memory_order_release);
                 // Move tail position of block
@@ -162,7 +162,7 @@ namespace toolkit {
                 std::atomic_thread_fence(std::memory_order_acquire);
 
                 // Construct element
-                new (blk->data + tail * element_size) element_type(data);
+                new (blk->data + tail * element_size) element_type(std::forward<U>(data));
 
                 // Get next tail element position
                 next_tail = (tail + 1) & block_element_size_mask_;
@@ -181,7 +181,7 @@ namespace toolkit {
                 blk = new_blk;
 
                 // Construct element
-                new (blk->data) element_type(data);
+                new (blk->data) element_type(std::forward<U>(data));
 
                 // Init tail and cache tail element position
                 blk->cache_tail = 1;
@@ -213,7 +213,7 @@ namespace toolkit {
                 std::atomic_thread_fence(std::memory_order_acquire);
 
                 // Load element from block node data
-                element_type *elem = reinterpret_cast<element_type*>(blk->data + head * element_size);
+                element_type *elem = (element_type*)(blk->data + head * element_size);
                 data = std::move(*elem);
                 elem->~element_type();
 
@@ -244,8 +244,8 @@ namespace toolkit {
                     std::atomic_thread_fence(std::memory_order_acquire);
                 }
 
-                // Pop element from block node data
-                element_type *elem = reinterpret_cast<element_type*>(blk->data + head * element_size);
+                // Pop element data
+                element_type *elem = (element_type*)(blk->data + head * element_size);
                 data = std::move(*elem);
                 elem->~element_type();
 

@@ -141,12 +141,11 @@ namespace poll {
 
     void epoll_poller::__dispatch_pending_event(int32_t count) {
 #if defined(PUMP_HAVE_EPOLL)
-        channel_tracker_ptr tracker;
         auto ev_beg = (epoll_event*)events_;
         auto ev_end = (epoll_event*)events_ + count;
         for (auto ev = ev_beg; ev != ev_end; ++ev) {
             // If channel is invalid, tracker should be removed.
-            tracker = (channel_tracker_ptr)ev->data.ptr;
+            auto tracker = (channel_tracker_ptr)ev->data.ptr;
             if (tracker->untrack()) {
                 auto ch = tracker->get_channel();
                 if (ch) {

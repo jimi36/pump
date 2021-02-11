@@ -22,38 +22,38 @@
 
 namespace pump {
 namespace protocol {
-    namespace http {
+namespace http {
 
-        #define HTTP_CR "\r\n"
+    #define HTTP_CR "\r\n"
 
-        #define HTTP_CR_LEN 2
+    #define HTTP_CR_LEN 2
 
-        #define HTTP_LINE_MAX_LEN 2048
-        #define HTTP_LINE_MIN_LEN HTTP_CR_LEN
+    #define HTTP_LINE_MAX_LEN 2048
+    #define HTTP_LINE_MIN_LEN HTTP_CR_LEN
 
-        #define HTTP_HEAD_VALUE_MAX_LEN (HTTP_LINE_MAX_LEN - 5)
+    #define HTTP_HEAD_VALUE_MAX_LEN (HTTP_LINE_MAX_LEN - 5)
 
-        /*********************************************************************************
-         * Find http line end position
-         ********************************************************************************/
-        LIB_PUMP const block_t* find_http_line_end(const block_t *src, int32_t len);
+    /*********************************************************************************
+     * Find http line end position
+     ********************************************************************************/
+    LIB_PUMP const block_t* find_http_line_end(const block_t *src, int32_t len);
 
-        /*********************************************************************************
-         * Decode url string
-         ********************************************************************************/
-        LIB_PUMP bool url_decode(const std::string &src, std::string &des);
+    /*********************************************************************************
+     * Decode url string
+     ********************************************************************************/
+    LIB_PUMP bool url_decode(const std::string &src, std::string &des);
 
-        /*********************************************************************************
-         * Encode to url string
-         ********************************************************************************/
-        LIB_PUMP bool url_encode(const std::string &src, std::string &des);
+    /*********************************************************************************
+     * Encode to url string
+     ********************************************************************************/
+    LIB_PUMP bool url_encode(const std::string &src, std::string &des);
 
-        /*********************************************************************************
-         * Host to address
-         ********************************************************************************/
-        LIB_PUMP transport::address host_to_address(bool https, const std::string &host);
+    /*********************************************************************************
+     * Host to address
+     ********************************************************************************/
+    LIB_PUMP transport::address host_to_address(bool https, const std::string &host);
 
-    }  // namespace http
+}  // namespace http
 }  // namespace protocol
 }  // namespace pump
 

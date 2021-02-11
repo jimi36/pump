@@ -25,20 +25,17 @@
 
 namespace pump {
 
-#define READ_POLLER 0
-#define WRITE_POLLER 1
+    const int32_t READ_POLLER = 0;
+    const int32_t SEND_POLLER = 1;
 
     class LIB_PUMP service 
       : public toolkit::noncopyable {
-
-      protected:
-        typedef pump_function<void()> post_task_type;
 
       public:
         /*********************************************************************************
          * Constructor
          ********************************************************************************/
-        service(bool with_poller = true);
+        service(bool enable_poller = true);
 
         /*********************************************************************************
          * Deconstructor
@@ -63,17 +60,17 @@ namespace pump {
         /*********************************************************************************
          * Add channel checker
          ********************************************************************************/
-        bool add_channel_tracker(poll::channel_tracker_sptr &tracker, int32_t pt);
+        bool add_channel_tracker(poll::channel_tracker_sptr &tracker, int32_t pi);
 
         /*********************************************************************************
          * Delete channel
          ********************************************************************************/
-        void remove_channel_tracker(poll::channel_tracker_sptr &tracker, int32_t pt);
+        void remove_channel_tracker(poll::channel_tracker_sptr &tracker, int32_t pi);
 
         /*********************************************************************************
          * Resume channel
          ********************************************************************************/
-        bool resume_channel_tracker(poll::channel_tracker_ptr tracker, int32_t pt);
+        bool resume_channel_tracker(poll::channel_tracker_ptr tracker, int32_t pi);
 
         /*********************************************************************************
          * Post channel event
@@ -83,21 +80,22 @@ namespace pump {
         /*********************************************************************************
          * Post callback task
          ********************************************************************************/
-        PUMP_INLINE void post(const post_task_type &task) {
-            posted_tasks_.enqueue(task);
+        template <typename PostedTaskType>
+        PUMP_INLINE void post(PostedTaskType &&task) {
+            posted_tasks_.enqueue(std::forward<PostedTaskType>(task));
         }
 
         /*********************************************************************************
          * Start timer
          ********************************************************************************/
-        bool start_timer(time::timer_sptr &tr);
+        bool start_timer(time::timer_sptr &timer);
 
       private:
         /*********************************************************************************
-        * Post timeout timer
+        * Post pending timer
         ********************************************************************************/
-        PUMP_INLINE void __post_timeout_timer(time::timer_wptr &timer) {
-            timeout_timers_.enqueue(timer);
+        PUMP_INLINE void __post_pending_timer(time::timer_wptr &&timer) {
+            pending_timers_.enqueue(std::move(timer));
         }
 
         /*********************************************************************************
@@ -114,23 +112,22 @@ namespace pump {
         // Running status
         bool running_;
 
-        // Read poller
-        poll::poller_ptr read_poller_;
-        // Write poller
-        poll::poller_ptr send_poller_;
-
-        // Timer queue
-        time::timer_queue_sptr tqueue_;
+        // Pollers
+        poll::poller_ptr pollers_[2];
 
         // Posted task worker
         std::shared_ptr<std::thread> posted_task_worker_;
-        typedef toolkit::freelock_multi_queue<post_task_type> task_impl_queue;
+        typedef pump_function<void()> posted_task_type;
+        typedef toolkit::freelock_multi_queue<posted_task_type> task_impl_queue;
         toolkit::freelock_block_queue<task_impl_queue> posted_tasks_;
 
-        // Timout timer worker
-        std::shared_ptr<std::thread> timeout_timer_worker_;
+        // Timer queue
+        time::timer_queue_sptr timers_;
+
+        // Timeout timer worker
+        std::shared_ptr<std::thread> pending_timer_worker_;
         typedef toolkit::freelock_single_queue<time::timer_wptr> timer_impl_queue;
-        toolkit::freelock_block_queue<timer_impl_queue> timeout_timers_;
+        toolkit::freelock_block_queue<timer_impl_queue> pending_timers_;
     };
     DEFINE_ALL_POINTER_TYPE(service);
 

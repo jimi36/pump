@@ -24,106 +24,106 @@
 
 namespace pump {
 namespace protocol {
-    namespace http {
+namespace http {
 
-        class server;
-        DEFINE_ALL_POINTER_TYPE(server);
+    class server;
+    DEFINE_ALL_POINTER_TYPE(server);
 
-        struct server_callbacks {
-            // Http request callback
-            pump_function<void(connection_wptr &, request_sptr &&)> request_cb;
-            // Http server stopped callback
-            pump_function<void()> stopped_cb;
-        };
+    struct server_callbacks {
+        // Http request callback
+        pump_function<void(connection_wptr &, request_sptr &&)> request_cb;
+        // Http server stopped callback
+        pump_function<void()> stopped_cb;
+    };
 
-        class LIB_PUMP server 
-          : public std::enable_shared_from_this<server> {
+    class LIB_PUMP server 
+      : public std::enable_shared_from_this<server> {
 
-          public:
-            /*********************************************************************************
-             * Create instance
-             ********************************************************************************/
-            PUMP_INLINE static server_sptr create() {
-                INLINE_OBJECT_CREATE(obj, server, ());
-                return server_sptr(obj, object_delete<server>);
-            }
+      public:
+        /*********************************************************************************
+         * Create instance
+         ********************************************************************************/
+        PUMP_INLINE static server_sptr create() {
+            INLINE_OBJECT_CREATE(obj, server, ());
+            return server_sptr(obj, object_delete<server>);
+        }
 
-            /*********************************************************************************
-             * Deconstructor
-             ********************************************************************************/
-            virtual ~server();
+        /*********************************************************************************
+         * Deconstructor
+         ********************************************************************************/
+        virtual ~server();
 
-            /*********************************************************************************
-             * Start server
-             ********************************************************************************/
-            bool start(service_ptr sv,
-                       const transport::address &listen_address,
-                       const server_callbacks &cbs);
+        /*********************************************************************************
+         * Start server
+         ********************************************************************************/
+        bool start(service_ptr sv,
+                   const transport::address &listen_address,
+                   const server_callbacks &cbs);
 
-            /*********************************************************************************
-             * Start server with tls
-             ********************************************************************************/
-            bool start(service_ptr sv,
-                       const std::string &crtfile,
-                       const std::string &keyfile,
-                       const transport::address &listen_address,
-                       const server_callbacks &cbs);
+        /*********************************************************************************
+         * Start server with tls
+         ********************************************************************************/
+        bool start(service_ptr sv,
+                   const std::string &crtfile,
+                   const std::string &keyfile,
+                   const transport::address &listen_address,
+                   const server_callbacks &cbs);
 
-            /*********************************************************************************
-             * Stop server
-             ********************************************************************************/
-            void stop();
+        /*********************************************************************************
+         * Stop server
+         ********************************************************************************/
+        void stop();
 
-          protected:
-            /*********************************************************************************
-             * Acceptor accepted callback
-             ********************************************************************************/
-            static void on_accepted(server_wptr wptr,
-                                    transport::base_transport_sptr &transp);
+      protected:
+        /*********************************************************************************
+         * Acceptor accepted callback
+         ********************************************************************************/
+        static void on_accepted(server_wptr wptr,
+                                transport::base_transport_sptr &transp);
 
-            /*********************************************************************************
-             * Acceptor stopped callback
-             ********************************************************************************/
-            static void on_stopped(server_wptr wptr);
+        /*********************************************************************************
+         * Acceptor stopped callback
+         ********************************************************************************/
+        static void on_stopped(server_wptr wptr);
 
-          protected:
-            /*********************************************************************************
-             * Http request callback
-             ********************************************************************************/
-            static void on_http_request(server_wptr wptr,
-                                        connection_wptr conn,
-                                        pocket_sptr &&pk);
+      protected:
+        /*********************************************************************************
+         * Http request callback
+         ********************************************************************************/
+        static void on_http_request(server_wptr wptr,
+                                    connection_wptr conn,
+                                    pocket_sptr &&pk);
 
-            /*********************************************************************************
-             * Http error callback
-             ********************************************************************************/
-            static void on_http_error(server_wptr wptr,
-                                      connection_wptr conn,
-                                      const std::string &msg);
+        /*********************************************************************************
+         * Http error callback
+         ********************************************************************************/
+        static void on_http_error(server_wptr wptr,
+                                  connection_wptr conn,
+                                  const std::string &msg);
 
-          private:
-            /*********************************************************************************
-             * Constructor
-             ********************************************************************************/
-            server() noexcept;
+      private:
+        /*********************************************************************************
+         * Constructor
+         ********************************************************************************/
+        server() noexcept;
 
-          private:
-            // Service
-            service_ptr sv_;
+      private:
+        // Service
+        service_ptr sv_;
 
-            // Acceptor
-            transport::base_acceptor_sptr acceptor_;
+        // Acceptor
+        transport::base_acceptor_sptr acceptor_;
 
-            // Connections
-            std::mutex conn_mx_;
-            std::condition_variable conn_cond_;
-            std::map<connection_ptr, connection_sptr> conns_;
+        // Connections
+        std::mutex conn_mx_;
+        std::condition_variable conn_cond_;
+        std::map<connection_ptr, connection_sptr> conns_;
 
-            // Server callbacks
-            server_callbacks cbs_;
-        };
+        // Server callbacks
+        server_callbacks cbs_;
+    };
 
-    }  // namespace http
+}  // namespace http
 }  // namespace protocol
 }  // namespace pump
 

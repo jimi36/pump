@@ -21,96 +21,96 @@
 
 namespace pump {
 namespace protocol {
-    namespace http {
+namespace http {
 
-        class LIB_PUMP body {
+    class LIB_PUMP body {
 
-          public:
-            /*********************************************************************************
-             * Constructor
-             ********************************************************************************/
-             body() noexcept;
+      public:
+        /*********************************************************************************
+         * Constructor
+         ********************************************************************************/
+        body() noexcept;
 
-            /*********************************************************************************
-             * Deconstructor
-             ********************************************************************************/
-            ~body() = default;
+        /*********************************************************************************
+         * Deconstructor
+         ********************************************************************************/
+        ~body() = default;
 
-            /*********************************************************************************
-             * Set chunked mode
-             ********************************************************************************/
-            PUMP_INLINE void set_chunked() {
-                is_chunked_ = true;
-            }
+        /*********************************************************************************
+         * Set chunked mode
+         ********************************************************************************/
+        PUMP_INLINE void set_chunked() {
+            is_chunked_ = true;
+        }
 
-            /*********************************************************************************
-             * Append data
-             ********************************************************************************/
-            void append(const block_t *b, int32_t size);
-            void append(const std::string &data);
+        /*********************************************************************************
+         * Append data
+         ********************************************************************************/
+        void append(const block_t *b, int32_t size);
+        void append(const std::string &data);
 
-            /*********************************************************************************
-             * Parse
-             * This return parsed size. If return -1, it means parse error.
-             ********************************************************************************/
-            int32_t parse(const block_t *b, int32_t size);
+        /*********************************************************************************
+         * Parse
+         * This return parsed size. If return -1, it means parse error.
+         ********************************************************************************/
+        int32_t parse(const block_t *b, int32_t size);
 
-            /*********************************************************************************
-             * Serialize
-             ********************************************************************************/
-            int32_t serialize(std::string &buf) const;
+        /*********************************************************************************
+         * Serialize
+         ********************************************************************************/
+        int32_t serialize(std::string &buf) const;
 
-            /*********************************************************************************
-             * Get data
-             ********************************************************************************/
-            PUMP_INLINE const std::string &data() const {
-                return data_;
-            }
+        /*********************************************************************************
+         * Get data
+         ********************************************************************************/
+        PUMP_INLINE const std::string &data() const {
+            return data_;
+        }
 
-            /*********************************************************************************
-             * Set body length to parse
-             * If chunked mode is set, content length will be ignore.
-             ********************************************************************************/
-            PUMP_INLINE void set_length_to_parse(int32_t len) {
-                content_length_ = len;
-            }
+        /*********************************************************************************
+         * Set body length to parse
+         * If chunked mode is set, content length will be ignore.
+         ********************************************************************************/
+        PUMP_INLINE void set_length_to_parse(int32_t len) {
+            content_length_ = len;
+        }
 
-            /*********************************************************************************
-             * Check parse is finished or not
-             ********************************************************************************/
-            PUMP_INLINE bool is_parse_finished() const {
-                return parse_finished_;
-            }
+        /*********************************************************************************
+         * Check parse is finished or not
+         ********************************************************************************/
+        PUMP_INLINE bool is_parse_finished() const {
+            return parse_finished_;
+        }
 
-          private:
-            /*********************************************************************************
-             * Parse body by content length mode
-             ********************************************************************************/
-            int32_t __parse_by_length(const block_t *b, int32_t size);
+      private:
+        /*********************************************************************************
+         * Parse body by content length mode
+         ********************************************************************************/
+        int32_t __parse_by_length(const block_t *b, int32_t size);
 
-            /*********************************************************************************
-             * Parse body by chunk mode
-             ********************************************************************************/
-            int32_t __parse_by_chunk(const block_t *b, int32_t size);
+        /*********************************************************************************
+         * Parse body by chunk mode
+         ********************************************************************************/
+        int32_t __parse_by_chunk(const block_t *b, int32_t size);
 
-          private:
-            // Parse finished mark
-            bool parse_finished_;
+      private:
+        // Parse finished mark
+        bool parse_finished_;
 
-            // Body data
-            std::string data_;
+        // Body data
+        std::string data_;
 
-            // Chunk mode flag
-            bool is_chunked_;
-            // Next chunk size for chunk mode
-            int32_t next_chunk_size_;
+        // Chunk mode flag
+        bool is_chunked_;
+        // Next chunk size for chunk mode
+        int32_t next_chunk_size_;
    
-            // Content length for content length mode
-            int32_t content_length_;
-        };
-        DEFINE_ALL_POINTER_TYPE(body);
+        // Content length for content length mode
+        int32_t content_length_;
+    };
+    DEFINE_ALL_POINTER_TYPE(body);
 
-    }  // namespace http
+}  // namespace http
 }  // namespace protocol
 }  // namespace pump
 

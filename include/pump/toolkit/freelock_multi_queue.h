@@ -127,7 +127,7 @@ namespace toolkit {
                     if (__extend_list(next_write_node)) {
                         break;
                     }
-                    next_write_node = nullptr;
+                    next_write_node = head_.load(std::memory_order_acquire);
                 }
             } while (true);
 
@@ -135,7 +135,7 @@ namespace toolkit {
             while (next_write_node->ready == 1);
 
             // Construct node data.
-            new (next_write_node->data) element_type(data);
+            new (next_write_node->data) element_type(std::forward<U>(data));
 
             // Mark node ready.
             next_write_node->ready = 1;
@@ -148,13 +148,15 @@ namespace toolkit {
          ********************************************************************************/
         template <typename U>
         bool pop(U &data) {
+            // Next read node.
+            element_node *next_read_node = nullptr;
             // Get current tail node.
             element_node *current_tail = tail_.load(std::memory_order_relaxed);
-            // Get next read node.
-            element_node *next_read_node = current_tail->next;
 
             do {
-                // Check next read node is ready or not.
+                // Get next read node.
+                next_read_node = current_tail->next;
+                // If next read node is not ready just return false.
                 if (next_read_node->ready == 0) {
                     return false;
                 }
@@ -162,13 +164,13 @@ namespace toolkit {
                 // Update tail node to next node.
                 if (tail_.compare_exchange_strong(current_tail,
                                                   next_read_node,
-                                                  std::memory_order_release,
-                                                  std::memory_order_acquire)) {
+                                                  std::memory_order_acquire,
+                                                  std::memory_order_relaxed)) {
                     break;
                 }
-            } while ((next_read_node = current_tail->next));
+            } while (true);
 
-            // Copy and destory node data.
+            // Pop element data.
             element_type *elem = (element_type*)next_read_node->data;
             data = std::move(*elem);
             elem->~element_type();
@@ -258,7 +260,7 @@ namespace toolkit {
             head->next = bnode->elems;
 
             // Update head node to the next node of current head node.
-            head_.store(head->next, std::memory_order_relaxed);
+            head_.store(head->next, std::memory_order_release);
 
             // Update list capacity.
             capacity_.fetch_add(PerBlockElementCount, std::memory_order_relaxed);

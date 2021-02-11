@@ -22,32 +22,31 @@
 
 namespace pump {
 
-    service::service(bool with_poller)
-      : running_(false),
-        read_poller_(nullptr),
-        send_poller_(nullptr) {
-        if (with_poller) {
+    service::service(bool enable_poller)
+      : running_(false) {
+        memset(pollers_, 0, sizeof(pollers_));
+        if (enable_poller) {
 #if defined(PUMP_HAVE_IOCP)
-            read_poller_ = object_create<poll::afd_poller>();
-            send_poller_ = object_create<poll::afd_poller>();
+            pollers_[READ_POLLER] = object_create<poll::afd_poller>();
+            pollers_[SEND_POLLER] = object_create<poll::afd_poller>();
 #elif defined(PUMP_HAVE_SELECT)
-            read_poller_ = object_create<poll::select_poller>();
-            send_poller_ = object_create<poll::select_poller>();
+            pollers_[READ_POLLER] = object_create<poll::select_poller>();
+            pollers_[SEND_POLLER] = object_create<poll::select_poller>();
 #elif defined(PUMP_HAVE_EPOLL)
-            read_poller_ = object_create<poll::epoll_poller>();
-            send_poller_ = object_create<poll::epoll_poller>();
+            pollers_[READ_POLLER] = object_create<poll::epoll_poller>();
+            pollers_[SEND_POLLER] = object_create<poll::epoll_poller>();
 #endif
         }
 
-        tqueue_ = time::timer_queue::create();
+        timers_ = time::timer_queue::create();
     }
 
     service::~service() {
-        if (read_poller_) {
-            delete read_poller_;
+        if (pollers_[READ_POLLER]) {
+            delete pollers_[READ_POLLER];
         }
-        if (send_poller_) {
-            delete send_poller_;
+        if (pollers_[SEND_POLLER]) {
+            delete pollers_[SEND_POLLER];
         }
     }
 
@@ -59,14 +58,14 @@ namespace pump {
 
         running_ = true;
 
-        if (tqueue_) {
-            tqueue_->start(pump_bind(&service::__post_timeout_timer, this, _1));
+        if (timers_) {
+            timers_->start(pump_bind(&service::__post_pending_timer, this, _1));
         }
-        if (read_poller_) {
-            read_poller_->start();
+        if (pollers_[READ_POLLER]) {
+            pollers_[READ_POLLER]->start();
         }
-        if (send_poller_) {
-            send_poller_->start();
+        if (pollers_[SEND_POLLER]) {
+            pollers_[SEND_POLLER]->start();
         }
 
         __start_posted_task_worker();
@@ -79,69 +78,69 @@ namespace pump {
     void service::stop() {
         running_ = false;
 
-        if (tqueue_) {
-            tqueue_->stop();
+        if (timers_) {
+            timers_->stop();
         }
-        if (read_poller_) {
-            read_poller_->stop();
+        if (pollers_[READ_POLLER]) {
+            pollers_[READ_POLLER]->stop();
         }
-        if (send_poller_) {
-            send_poller_->stop();
+        if (pollers_[SEND_POLLER]) {
+            pollers_[SEND_POLLER]->stop();
         }
     }
 
     void service::wait_stopped() {
-        if (read_poller_) {
-            read_poller_->wait_stopped();
+        if (pollers_[READ_POLLER]) {
+            pollers_[READ_POLLER]->wait_stopped();
         }
-        if (send_poller_) {
-            send_poller_->wait_stopped();
+        if (pollers_[SEND_POLLER]) {
+            pollers_[SEND_POLLER]->wait_stopped();
         }
-        if (tqueue_) {
-            tqueue_->wait_stopped();
+        if (timers_) {
+            timers_->wait_stopped();
         }
         if (posted_task_worker_) {
             posted_task_worker_->join();
         }
-        if (timeout_timer_worker_) {
-            timeout_timer_worker_->join();
+        if (pending_timer_worker_) {
+            pending_timer_worker_->join();
         }
     }
 
-    bool service::add_channel_tracker(poll::channel_tracker_sptr &tracker, int32_t pt) {
-        if (pt == READ_POLLER) {
-            return read_poller_->add_channel_tracker(tracker);
-        } else {
-            return send_poller_->add_channel_tracker(tracker);
+    bool service::add_channel_tracker(poll::channel_tracker_sptr &tracker, int32_t pi) {
+        PUMP_ASSERT(pi <= SEND_POLLER);
+        if (pollers_[pi]) {
+            return pollers_[pi]->add_channel_tracker(tracker);
+        }
+        return false;
+    }
+
+    void service::remove_channel_tracker(poll::channel_tracker_sptr &tracker, int32_t pi) {
+        PUMP_ASSERT(pi <= SEND_POLLER);
+        if (pollers_[pi]) {
+            return pollers_[pi]->remove_channel_tracker(tracker);
         }
     }
 
-    void service::remove_channel_tracker(poll::channel_tracker_sptr &tracker, int32_t pt) {
-        if (pt == READ_POLLER) {
-            read_poller_->remove_channel_tracker(tracker);
-        } else {
-            send_poller_->remove_channel_tracker(tracker);
-        }
-    }
-
-    bool service::resume_channel_tracker(poll::channel_tracker_ptr tracker, int32_t pt) {
-        if (pt == READ_POLLER) {
-            return read_poller_->resume_channel_tracker(tracker);
-        } else {
-            return send_poller_->resume_channel_tracker(tracker);
+    bool service::resume_channel_tracker(poll::channel_tracker_ptr tracker, int32_t pi) {
+        PUMP_ASSERT(pi <= SEND_POLLER);
+        if (pollers_[pi]) {
+            return pollers_[pi]->resume_channel_tracker(tracker);
         }
         return false;
     }
 
     bool service::post_channel_event(poll::channel_sptr &ch, int32_t event) {
-        PUMP_ASSERT(send_poller_);
-        return send_poller_->push_channel_event(ch, event);
+        if (PUMP_LIKELY(!!pollers_[SEND_POLLER])) {
+            return pollers_[SEND_POLLER]->push_channel_event(ch, event);
+        }
+        return false;
     }
 
-    bool service::start_timer(time::timer_sptr &tr) {
-        auto queue = tqueue_;
+    bool service::start_timer(time::timer_sptr &timer) {
+        auto queue = timers_;
         if (PUMP_LIKELY(!!queue)) {
-            return queue->add_timer(tr);
+            return queue->start_timer(timer);
         }
 
         PUMP_WARN_LOG("service: start timer failed with invalid timer queue");
@@ -151,7 +150,7 @@ namespace pump {
 
     void service::__start_posted_task_worker() {
         auto func = [&]() {
-            post_task_type task;
+            posted_task_type task;
             while (running_) {
                 if (posted_tasks_.dequeue(task, std::chrono::seconds(1))) {
                     task();
@@ -166,7 +165,7 @@ namespace pump {
         auto func = [&]() {
             time::timer_wptr wptr;
             while (running_) {
-                if (timeout_timers_.dequeue(wptr, std::chrono::seconds(1))) {
+                if (pending_timers_.dequeue(wptr, std::chrono::seconds(1))) {
                     auto ptr = wptr.lock();
                     if (PUMP_LIKELY(!!ptr)) {
                         ptr->handle_timeout();
@@ -174,7 +173,7 @@ namespace pump {
                 }
             }
         };
-        timeout_timer_worker_.reset(object_create<std::thread>(func),
+        pending_timer_worker_.reset(object_create<std::thread>(func),
                                     object_delete<std::thread>);
     }
 

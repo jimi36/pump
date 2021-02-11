@@ -23,32 +23,32 @@
 
 namespace pump {
 namespace protocol {
-    namespace websocket {
+namespace websocket {
 
-        /*********************************************************************************
-         * Compute Sec-WebSocket-Key
-         ********************************************************************************/
-        std::string compute_sec_key();
+    /*********************************************************************************
+     * Compute Sec-WebSocket-Key
+     ********************************************************************************/
+    std::string compute_sec_key();
 
-        /*********************************************************************************
-         * Compute Sec-WebSocket-Accept
-         ********************************************************************************/
-        std::string compute_sec_accept_key(const std::string &sec_key);
+    /*********************************************************************************
+     * Compute Sec-WebSocket-Accept
+     ********************************************************************************/
+    std::string compute_sec_accept_key(const std::string &sec_key);
 
-        /*********************************************************************************
-         * Match websocket protocol
-         ********************************************************************************/
-        std::string match_protocol(const std::vector<std::string> &srcs,
-                                   const std::string &des);
+    /*********************************************************************************
+     * Match websocket protocol
+     ********************************************************************************/
+    std::string match_protocol(const std::vector<std::string> &srcs,
+                               const std::string &des);
 
-        /*********************************************************************************
-         * Send http error response
-         ********************************************************************************/
-        void send_http_error_response(connection_ptr conn,
-                                      int32_t status_code,
-                                      const std::string &reason);
+    /*********************************************************************************
+     * Send http error response
+     ********************************************************************************/
+    void send_http_error_response(connection_ptr conn,
+                                  int32_t status_code,
+                                  const std::string &reason);
 
-    }  // namespace websocket
+}  // namespace websocket
 }  // namespace protocol
 }  // namespace pump
 

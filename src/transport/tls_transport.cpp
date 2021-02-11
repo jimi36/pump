@@ -41,10 +41,6 @@ namespace transport {
 
         PUMP_DEBUG_ASSIGN(flow, flow_, flow);
 
-        // Flow rebind channel
-        poll::channel_sptr ch = shared_from_this();
-        flow_->rebind_channel(ch);
-
         // Set channel fd
         poll::channel::__set_fd(flow->get_fd());
     }

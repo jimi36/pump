@@ -63,10 +63,8 @@ namespace poll {
 
         pump_socket fd = -1;
         pump_socket maxfd = -1;
-        int32_t listen_event = IO_EVENT_NONE;
-        channel_tracker_ptr tracker = nullptr;
         for (auto &item : trackers_) {
-            tracker = item.second.get();
+            auto tracker = item.second.get();
             if (!tracker->is_tracked()) {
                 continue;
             }
@@ -80,7 +78,7 @@ namespace poll {
                 maxfd = fd;
             }
 
-            listen_event = tracker->get_expected_event();
+            auto listen_event = tracker->get_expected_event();
             if (listen_event & IO_EVENT_READ) {
                 FD_SET(fd, &read_fds_);
             } else if (listen_event & IO_EVENT_SEND) {

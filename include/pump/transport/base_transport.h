@@ -286,7 +286,7 @@ namespace transport {
                 tracker = object_create<poll::channel_tracker>(
                     shared_from_this(), poll::TRACK_SEND);
                 s_tracker_.reset(tracker, object_delete<poll::channel_tracker>);
-                if (!get_service()->add_channel_tracker(s_tracker_, WRITE_POLLER)) {
+                if (!get_service()->add_channel_tracker(s_tracker_, SEND_POLLER)) {
                     PUMP_WARN_LOG("base_transport: start send tracker failed");
                     return false;
                 }
@@ -311,7 +311,7 @@ namespace transport {
         PUMP_INLINE void __stop_send_tracker() {
             if (s_tracker_) {
                 PUMP_DEBUG_LOG("base_transport: stop send tracker");
-                get_service()->remove_channel_tracker(s_tracker_, WRITE_POLLER);
+                get_service()->remove_channel_tracker(s_tracker_, SEND_POLLER);
             }
         }
 

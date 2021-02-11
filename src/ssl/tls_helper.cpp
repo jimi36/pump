@@ -43,35 +43,20 @@ namespace ssl {
             gnutls_init(&ssl_ctx, GNUTLS_SERVER | GNUTLS_NONBLOCK);
         }
         gnutls_set_default_priority(ssl_ctx);
-        // Set transport ptr
-        //gnutls_transport_set_ptr(ssl_ctx, session);
         // Set GnuTLS session with credentials
         gnutls_credentials_set(ssl_ctx, GNUTLS_CRD_CERTIFICATE, xcred);
-        // Set GnuTLS handshake timeout time 1000ms.
-        // gnutls_handshake_set_timeout(ssl_ctx, 1000);
-        //gnutls_handshake_set_timeout(ssl_ctx, GNUTLS_INDEFINITE_TIMEOUT);
-        // Set callback that allows GnuTLS to PUSH data TO the transport layer
-        //gnutls_transport_set_push_function(ssl_ctx, tls_net_layer::data_push);
-        // Set callback that allows GnuTls to PULL data FROM the tranport layer
-        //gnutls_transport_set_pull_function(ssl_ctx, tls_net_layer::data_pull);
-        // Set callback that allows GnuTls to Get error for PULL or PUSH
-        //gnutls_transport_set_errno_function(ssl_ctx, tls_net_layer::get_error);
+        // Set GnuTLS handshake timeout time.
+        gnutls_handshake_set_timeout(ssl_ctx, GNUTLS_INDEFINITE_TIMEOUT);
+        // Set GnuTLS transport fd.
         gnutls_transport_set_int(ssl_ctx, fd);
 
         session->ssl_ctx = ssl_ctx;
-        //session->net_send_iob = toolkit::io_buffer::create();
-        //session->net_read_iob = toolkit::io_buffer::create();
-        //session->net_read_iob->init_with_size(buffer_size);
 
         return session;
 #elif defined(PUMP_HAVE_OPENSSL)
         tls_session_ptr session = object_create<tls_session>();
         SSL *ssl_ctx = SSL_new((SSL_CTX*)xcred);
         SSL_set_fd(ssl_ctx, fd);
-        //BIO *rbio = BIO_new(BIO_s_mem());
-        //BIO *sbio = BIO_new(BIO_s_mem());
-
-        //SSL_set_bio(ssl_ctx, rbio, sbio);
         if (client) {
             SSL_set_connect_state(ssl_ctx);
         } else {
@@ -79,11 +64,6 @@ namespace ssl {
         }
 
         session->ssl_ctx = ssl_ctx;
-        //session->net_send_iob = toolkit::io_buffer::create();
-        //session->net_read_iob = toolkit::io_buffer::create();
-        //session->net_read_iob->init_with_size(buffer_size);
-        //session->read_bio = rbio;
-        //session->send_bio = sbio;
 
         return session;
 #else

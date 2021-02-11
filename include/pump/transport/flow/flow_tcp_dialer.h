@@ -21,51 +21,51 @@
 
 namespace pump {
 namespace transport {
-    namespace flow {
+namespace flow {
 
-        class flow_tcp_dialer 
-          : public flow_base {
+    class flow_tcp_dialer 
+      : public flow_base {
 
-          public:
-            /*********************************************************************************
-             * Constructor
-             ********************************************************************************/
-            flow_tcp_dialer() noexcept;
+      public:
+        /*********************************************************************************
+         * Constructor
+         ********************************************************************************/
+        flow_tcp_dialer() noexcept;
 
-            /*********************************************************************************
-             * Deconstructor
-             ********************************************************************************/
-            virtual ~flow_tcp_dialer();
+        /*********************************************************************************
+            * Deconstructor
+            ********************************************************************************/
+        virtual ~flow_tcp_dialer();
 
-            /*********************************************************************************
-             * Init
-             * Return results:
-             *     FLOW_ERR_NO    => success
-             *     FLOW_ERR_ABORT => error
-             ********************************************************************************/
-            int32_t init(poll::channel_sptr &&ch, const address &bind_address);
+        /*********************************************************************************
+         * Init
+         * Return results:
+         *     FLOW_ERR_NO    => success
+         *     FLOW_ERR_ABORT => error
+         ********************************************************************************/
+        int32_t init(poll::channel_sptr &&ch, const address &bind_address);
 
-            /*********************************************************************************
-             * Post connect
-             * Return results:
-             *     FLOW_ERR_NO    => success
-             *     FLOW_ERR_ABORT => error
-             ********************************************************************************/
-            int32_t post_connect(const address &remote_address);
+        /*********************************************************************************
+         * Post connect
+         * Return results:
+         *     FLOW_ERR_NO    => success
+         *     FLOW_ERR_ABORT => error
+         ********************************************************************************/
+        int32_t post_connect(const address &remote_address);
 
-            /*********************************************************************************
-             * Connect
-             * Return socket error code.
-             ********************************************************************************/
-            int32_t connect(address_ptr local_address, address_ptr remote_address);
+        /*********************************************************************************
+         * Connect
+         * Return socket error code.
+         ********************************************************************************/
+        int32_t connect(address_ptr local_address, address_ptr remote_address);
 
-          private:
-            // IPV6
-            bool is_ipv6_;
-        };
-        DEFINE_ALL_POINTER_TYPE(flow_tcp_dialer);
+      private:
+        // IPV6
+        bool is_ipv6_;
+    };
+    DEFINE_ALL_POINTER_TYPE(flow_tcp_dialer);
 
-    }  // namespace flow
+}  // namespace flow
 }  // namespace transport
 }  // namespace pump
 

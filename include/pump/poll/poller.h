@@ -42,14 +42,14 @@ namespace poll {
         };
         DEFINE_RAW_POINTER_TYPE(channel_event);
 
-        struct channel_tracker_event {
-            channel_tracker_event(channel_tracker_sptr &t, int32_t ev) noexcept
+        struct tracker_event {
+            tracker_event(channel_tracker_sptr &t, int32_t ev) noexcept
                 : tracker(t), event(ev) {
             }
             channel_tracker_sptr tracker;
             int32_t event;
         };
-        DEFINE_RAW_POINTER_TYPE(channel_tracker_event);
+        DEFINE_RAW_POINTER_TYPE(tracker_event);
 
       public:
         /*********************************************************************************
@@ -160,7 +160,7 @@ namespace poll {
 
         // Channel tracker event
         std::atomic_int32_t tev_cnt_;
-        toolkit::freelock_multi_queue<channel_tracker_event_ptr> tevents_;
+        toolkit::freelock_multi_queue<tracker_event_ptr> tevents_;
 
         // Channel trackers
         std::map<channel_tracker_ptr, channel_tracker_sptr> trackers_;

@@ -23,135 +23,133 @@
 
 namespace pump {
 namespace protocol {
-    namespace websocket {
+namespace websocket {
 
-        class server;
-        DEFINE_ALL_POINTER_TYPE(server);
+    class server;
+    DEFINE_ALL_POINTER_TYPE(server);
 
-        struct server_callbacks {
-            // Check upgrade request callback
-            pump_function<bool(http::c_request_ptr)> check_request_cb;
-            // Upgraded callback
-            pump_function<void(const std::string&, connection_sptr&)> upgraded_cb;
-            // Error callback
-            pump_function<void(const std::string&)> error_cb;
+    struct server_callbacks {
+        // Check upgrade request callback
+        pump_function<bool(http::c_request_ptr)> check_request_cb;
+        // Upgraded callback
+        pump_function<void(const std::string&, connection_sptr&)> upgraded_cb;
+        // Error callback
+        pump_function<void(const std::string&)> error_cb;
+    };
+
+    class LIB_PUMP server
+      : public std::enable_shared_from_this<server> {
+
+      public:
+        typedef pump_function<service_ptr()> select_service_callback;
+
+        struct ws_upgarde_config {
+            std::string host;
+            std::string origin;
+            std::string protoc;
         };
 
-        class LIB_PUMP server
-          : public std::enable_shared_from_this<server> {
+      public:
+        /*********************************************************************************
+         * Create instance
+         ********************************************************************************/
+        PUMP_INLINE static server_sptr create(
+            const transport::address &listen_address) {
+            INLINE_OBJECT_CREATE(obj, server, (listen_address));
+            return server_sptr(obj, object_delete<server>);
+        }
+        PUMP_INLINE static server_sptr create(
+            const transport::address &listen_address,
+            const std::string &certfile,
+            const std::string &keyfile) {
+            INLINE_OBJECT_CREATE(obj, server, (listen_address, certfile, keyfile));
+            return server_sptr(obj, object_delete<server>);
+        }
 
-          public:
-            typedef pump_function<service_ptr()> select_service_callback;
+        /*********************************************************************************
+         * Deconstructor
+         ********************************************************************************/
+        virtual ~server() = default;
 
-            struct ws_upgarde_config {
-                std::string host;
-                std::string origin;
-                std::string protoc;
-            };
+        /*********************************************************************************
+         * Start
+         ********************************************************************************/
+        bool start(service_ptr sv, const server_callbacks &cbs);
 
-          public:
-            /*********************************************************************************
-             * Create instance
-             ********************************************************************************/
-            PUMP_INLINE static server_sptr create(
-                const transport::address &listen_address) {
-                INLINE_OBJECT_CREATE(obj, server, (listen_address));
-                return server_sptr(obj, object_delete<server>);
-            }
-            PUMP_INLINE static server_sptr create(
-                const transport::address &listen_address,
-                const std::string &certfile,
-                const std::string &keyfile) {
-                INLINE_OBJECT_CREATE(obj, server, (listen_address, certfile, keyfile));
-                return server_sptr(obj, object_delete<server>);
-            }
+        /*********************************************************************************
+         * Stop
+         ********************************************************************************/
+        void stop();
 
-            /*********************************************************************************
-             * Deconstructor
-             ********************************************************************************/
-            virtual ~server() = default;
+        /*********************************************************************************
+         * Set select service callabck
+         ********************************************************************************/
+        PUMP_INLINE void set_select_service_callabck(const select_service_callback &cb) {
+            select_service_cb_ = cb;
+        }
 
-            /*********************************************************************************
-             * Start
-             ********************************************************************************/
-            bool start(service_ptr sv, const server_callbacks &cbs);
+      protected:
+        /*********************************************************************************
+         * Acceptor accepted callback
+         ********************************************************************************/
+        static void on_accepted(server_wptr wptr, transport::base_transport_sptr &transp);
 
-            /*********************************************************************************
-             * Stop
-             ********************************************************************************/
-            void stop();
+        /*********************************************************************************
+         * Acceptor stopped callback
+         ********************************************************************************/
+        static void on_stopped(server_wptr wptr);
 
-            /*********************************************************************************
-             * Set select service callabck
-             ********************************************************************************/
-            PUMP_INLINE void set_select_service_callabck(
-                const select_service_callback &cb) {
-                select_service_cb_ = cb;
-            }
+        /*********************************************************************************
+         * Upgrade request callback
+         ********************************************************************************/
+        static void on_upgrade_request(server_wptr wptr,
+                                       connection_ptr conn,
+                                       http::pocket_sptr pk);
 
-          protected:
-            /*********************************************************************************
-             * Acceptor accepted callback
-             ********************************************************************************/
-            static void on_accepted(server_wptr wptr,
-                                    transport::base_transport_sptr &transp);
+        /*********************************************************************************
+         * Connection error callback
+         ********************************************************************************/
+        static void on_error(server_wptr wptr,
+                             connection_ptr conn,
+                             const std::string &msg);
 
-            /*********************************************************************************
-             * Acceptor stopped callback
-             ********************************************************************************/
-            static void on_stopped(server_wptr wptr);
+      private:
+        /*********************************************************************************
+         * Constructor
+         ********************************************************************************/
+        server(const transport::address &listen_address) noexcept;
+        server(const transport::address &listen_address, 
+               const std::string &certfile,
+               const std::string &keyfile) noexcept;
 
-            /*********************************************************************************
-             * Upgrade request callback
-             ********************************************************************************/
-            static void on_upgrade_request(server_wptr wptr,
-                                           connection_ptr conn,
-                                           http::pocket_sptr pk);
+        /*********************************************************************************
+         * Handle http upgrade request
+         ********************************************************************************/
+        bool __handle_upgrade_request(connection_ptr conn, http::request_ptr req);
 
-            /*********************************************************************************
-             * Connection error callback
-             ********************************************************************************/
-            static void on_error(server_wptr wptr,
-                                 connection_ptr conn,
-                                 const std::string &msg);
+        /*********************************************************************************
+         * Stop all upgrading connections
+         ********************************************************************************/
+        void __stop_all_upgrading_conns();
 
-          private:
-            /*********************************************************************************
-             * Constructor
-             ********************************************************************************/
-            server(const transport::address &listen_address) noexcept;
-            server(const transport::address &listen_address, 
-                   const std::string &certfile,
-                   const std::string &keyfile) noexcept;
+      private:
+        // Service
+        service_ptr sv_;
+        // Acceptor
+        transport::base_acceptor_sptr acceptor_;
 
-            /*********************************************************************************
-             * Handle http upgrade request
-             ********************************************************************************/
-            bool __handle_upgrade_request(connection_ptr conn, http::request_ptr req);
+        // Select service callback
+        select_service_callback select_service_cb_;
 
-            /*********************************************************************************
-             * Stop all upgrading connections
-             ********************************************************************************/
-            void __stop_all_upgrading_conns();
+        // Connections
+        std::mutex conn_mx_;
+        std::map<void_ptr, connection_sptr> conns_;
 
-          private:
-            // Service
-            service_ptr sv_;
-            // Acceptor
-            transport::base_acceptor_sptr acceptor_;
+        // Callbacks
+        server_callbacks cbs_;
+    };
 
-            // Select service callback
-            select_service_callback select_service_cb_;
-
-            // Connections
-            std::mutex conn_mx_;
-            std::map<void_ptr, connection_sptr> conns_;
-
-            // Callbacks
-            server_callbacks cbs_;
-        };
-
-    }  // namespace websocket
+}  // namespace websocket
 }  // namespace protocol
 }  // namespace pump
 

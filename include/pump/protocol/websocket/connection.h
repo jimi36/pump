@@ -26,169 +26,164 @@
 
 namespace pump {
 namespace protocol {
-    namespace websocket {
+namespace websocket {
 
-        class connection;
-        DEFINE_ALL_POINTER_TYPE(connection);
+    class connection;
+    DEFINE_ALL_POINTER_TYPE(connection);
 
-        struct connection_callbacks {
-            // Frame callback
-            pump_function<void(const block_t*, int32_t, bool)> frame_cb;
-            // Error callback
-            pump_function<void(const std::string &)> error_cb;
-        };
+    struct connection_callbacks {
+        // Frame callback
+        pump_function<void(const block_t*, int32_t, bool)> frame_cb;
+        // Error callback
+        pump_function<void(const std::string &)> error_cb;
+    };
 
-        struct upgrade_callbacks {
-            // Upgrade pocket callback
-            pump_function<void(http::pocket_sptr)> pocket_cb;
-            // Upgrade error callback
-            pump_function<void(const std::string &)> error_cb;
-        };
+    struct upgrade_callbacks {
+        // Upgrade pocket callback
+        pump_function<void(http::pocket_sptr)> pocket_cb;
+        // Upgrade error callback
+        pump_function<void(const std::string &)> error_cb;
+    };
 
-        enum read_type { 
-            READ_NONE = 0, 
-            READ_FRAME, 
-            READ_POCKET 
-        };
+    class LIB_PUMP connection 
+      : public std::enable_shared_from_this<connection> {
 
-        class LIB_PUMP connection 
-          : public std::enable_shared_from_this<connection> {
+      protected:
+        friend class client;
+        friend class server;
 
-          protected:
-            friend class client;
-            friend class server;
+      public:
+        /*********************************************************************************
+         * Constructor
+         ********************************************************************************/
+        connection(service_ptr sv,
+                   transport::base_transport_sptr &transp,
+                   bool has_mask) noexcept;
 
-          public:
-            /*********************************************************************************
-             * Constructor
-             ********************************************************************************/
-            connection(service_ptr sv,
-                       transport::base_transport_sptr &transp,
-                       bool has_mask) noexcept;
+        /*********************************************************************************
+         * Deconstructor
+         ********************************************************************************/
+        virtual ~connection() = default;
 
-            /*********************************************************************************
-             * Deconstructor
-             ********************************************************************************/
-            virtual ~connection() = default;
+        /*********************************************************************************
+         * Start upgrade
+         * User must not call this function!!!
+         ********************************************************************************/
+        bool start_upgrade(bool client, const upgrade_callbacks &ucbs);
 
-            /*********************************************************************************
-             * Start upgrade
-             * User must not call this function!!!
-             ********************************************************************************/
-            bool start_upgrade(bool client, const upgrade_callbacks &ucbs);
+        /*********************************************************************************
+         * Start
+         ********************************************************************************/
+        bool start(const connection_callbacks &cbs);
 
-            /*********************************************************************************
-             * Start
-             ********************************************************************************/
-            bool start(const connection_callbacks &cbs);
+        /*********************************************************************************
+         * Stop
+         ********************************************************************************/
+        void stop();
 
-            /*********************************************************************************
-             * Stop
-             ********************************************************************************/
-            void stop();
+        /*********************************************************************************
+         * Async read next frame
+         ********************************************************************************/
+        bool async_read_next_frame();
 
-            /*********************************************************************************
-             * Async read next frame
-             ********************************************************************************/
-            bool async_read_next_frame();
+        /*********************************************************************************
+         * Send buffer
+         * Send raw buffer without packing as frame.
+         ********************************************************************************/
+        bool send_buffer(const block_t *b, int32_t size);
 
-            /*********************************************************************************
-             * Send buffer
-             * Send raw buffer without packing as frame.
-             ********************************************************************************/
-            bool send_buffer(const block_t *b, int32_t size);
+        /*********************************************************************************
+         * Send
+         * Send buffer with packing as frame.
+         ********************************************************************************/
+        bool send(const block_t *b, int32_t size);
 
-            /*********************************************************************************
-             * Send
-             * Send buffer with packing as frame.
-             ********************************************************************************/
-            bool send(const block_t *b, int32_t size);
-
-            /*********************************************************************************
-             * Check connection is valid or not
-             ********************************************************************************/
-            PUMP_INLINE bool is_valid() const {
-                if (transp_ && transp_->is_started()) {
-                    return true;
-                }
-                return false;
+        /*********************************************************************************
+         * Check connection is valid or not
+         ********************************************************************************/
+        PUMP_INLINE bool is_valid() const {
+            if (transp_ && transp_->is_started()) {
+                return true;
             }
+            return false;
+        }
 
-          protected:
-            /*********************************************************************************
-             * Read event callback
-             ********************************************************************************/
-            static void on_read(connection_wptr wptr, const block_t *b, int32_t size);
+      protected:
+        /*********************************************************************************
+         * Read event callback
+         ********************************************************************************/
+        static void on_read(connection_wptr wptr, const block_t *b, int32_t size);
 
-            /*********************************************************************************
-             * Disconnected event callback
-             ********************************************************************************/
-            static void on_disconnected(connection_wptr wptr);
+        /*********************************************************************************
+         * Disconnected event callback
+         ********************************************************************************/
+        static void on_disconnected(connection_wptr wptr);
 
-            /*********************************************************************************
-             * Stopped event callback
-             ********************************************************************************/
-            static void on_stopped(connection_wptr wptr);
+        /*********************************************************************************
+         * Stopped event callback
+         ********************************************************************************/
+        static void on_stopped(connection_wptr wptr);
 
-          private:
-            /*********************************************************************************
-             * Handle frame
-             ********************************************************************************/
-            int32_t __handle_pocket(const block_t *b, int32_t size);
+      private:
+        /*********************************************************************************
+         * Handle frame
+         ********************************************************************************/
+        int32_t __handle_pocket(const block_t *b, int32_t size);
 
-            /*********************************************************************************
-             * Handle frame
-             ********************************************************************************/
-            int32_t __handle_frame(const block_t *b, int32_t size);
+        /*********************************************************************************
+         * Handle frame
+         ********************************************************************************/
+        int32_t __handle_frame(const block_t *b, int32_t size);
 
-            /*********************************************************************************
-             * Send ping frame
-             ********************************************************************************/
-            void __send_ping_frame();
+        /*********************************************************************************
+         * Send ping frame
+         ********************************************************************************/
+        void __send_ping_frame();
 
-            /*********************************************************************************
-             * Send pong
-             ********************************************************************************/
-            void __send_pong_frame();
+        /*********************************************************************************
+         * Send pong
+         ********************************************************************************/
+        void __send_pong_frame();
 
-            /*********************************************************************************
-             * Send close frame
-             ********************************************************************************/
-            void __send_close_frame();
+        /*********************************************************************************
+         * Send close frame
+         ********************************************************************************/
+        void __send_close_frame();
 
-          private:
-            // Service
-            service_ptr sv_;
+      private:
+        // Service
+        service_ptr sv_;
 
-            // Transport
-            transport::base_transport_sptr transp_;
+        // Transport
+        transport::base_transport_sptr transp_;
 
-            // Read type
-            read_type rt_;
+        // Read type
+        int32_t rt_;
 
-            // Read Cache
-            std::string read_cache_;
+        // Read Cache
+        std::string read_cache_;
 
-            // Pocket
-            http::pocket_sptr pocket_;
+        // Pocket
+        http::pocket_sptr pocket_;
 
-            // Frame mask
-            bool has_mask_;
-            uint8_t mask_key_[4];
-            // Frame closed
-            std::atomic_flag closed_;
-            // Frame decode info
-            int16_t decode_phase_;
-            frame_header decode_hdr_;
+        // Frame mask
+        bool has_mask_;
+        uint8_t mask_key_[4];
+        // Frame closed
+        std::atomic_flag closed_;
 
-            // Upgrade callback
-            upgrade_callbacks ucbs_;
-            // Connection callbacks
-            connection_callbacks cbs_;
-        };
-        DEFINE_ALL_POINTER_TYPE(connection);
+        // Frame decode info
+        int32_t decode_phase_;
+        frame_header decode_hdr_;
 
-    }  // namespace websocket
+        // Upgrade callback
+        upgrade_callbacks ucbs_;
+        // Connection callbacks
+        connection_callbacks cbs_;
+    };
+    DEFINE_ALL_POINTER_TYPE(connection);
+
+}  // namespace websocket
 }  // namespace protocol
 }  // namespace pump
 
