@@ -27,9 +27,9 @@ namespace pump {
 namespace time {
 
     /*********************************************************************************
-     * Get clock microsecond, just for calculating time difference
+     * Get clock microseconds, just for calculating time difference
      ********************************************************************************/
-    LIB_PUMP uint64_t get_clock_microsecond();
+    LIB_PUMP uint64_t get_clock_microseconds();
 
     /*********************************************************************************
      * Get clock milliseconds, just for calculating time difference

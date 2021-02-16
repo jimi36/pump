@@ -27,7 +27,7 @@ namespace time {
     const static uint64_t MS_PER_SECOND = US_PER_MS;
     const static uint64_t US_PER_SECOND = US_PER_MS * US_PER_MS;
 
-    uint64_t get_clock_microsecond() {
+    uint64_t get_clock_microseconds() {
         return std::chrono::time_point_cast<std::chrono::microseconds>(
                    std::chrono::high_resolution_clock::now())
             .time_since_epoch()
