@@ -44,6 +44,19 @@ uint8_t hexchar_to_decnum(uint8_t c) {
     return 0;
 }
 
+uint16_t change_endian(uint16_t val) {
+    return (val >> 8) | (val << 8);
+}
+
+uint32_t change_endian(uint32_t val) {
+    return ((val >> 24) & 0x000000ff) | 
+           ((val >> 8) & 0x0000ff00) |
+           ((val << 8) & 0x00ff0000) |
+           (val << 24);
+}
+
+uint32_t to_little_endian(uint32_t val);
+
 int32_t ceil_to_pow2(int32_t x) {
     // From http://graphics.stanford.edu/~seander/bithacks.html#RoundUpPowerOf2
     --x;

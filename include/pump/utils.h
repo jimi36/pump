@@ -35,6 +35,12 @@ LIB_PUMP uint8_t decnum_to_hexchar(uint8_t n);
 LIB_PUMP uint8_t hexchar_to_decnum(uint8_t c);
 
 /*********************************************************************************
+ * Change little endian and big endian
+ ********************************************************************************/
+LIB_PUMP uint16_t change_endian(uint16_t val);
+LIB_PUMP uint32_t change_endian(uint32_t val);
+
+/*********************************************************************************
  * Ceil to pow of 2
  ********************************************************************************/
 LIB_PUMP int32_t ceil_to_pow2(int32_t x);
