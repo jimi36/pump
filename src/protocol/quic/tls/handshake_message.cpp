@@ -15,7 +15,7 @@
  */
 
 #include "pump/utils.h"
-#include "pump/protocol/quic/tls/handshake_messages.h"
+#include "pump/protocol/quic/tls/handshake_message.h"
 
 PUMP_INLINE uint8_t* __pack_bytes(uint8_t *des, uint8_t *end, const uint8_t *src, int32_t size) {
     if (end < des + size) {
@@ -117,11 +117,15 @@ PUMP_INLINE const uint8_t* __unpack_uint32(const uint8_t *p, const uint8_t *end,
     return p + 4;
 }
 
-int32_t pack_client_hello(const client_hello_message *msg, uint8_t *buf, int32_t max_size) {
 #define PACK_AND_RETURN_ERR(pack) \
     p = pack; \
     if (!p) { return -1; } void(0)
 
+#define UNPACK_AND_RETURN_ERR(unpack) \
+    p = unpack; \
+    if (!p) { return -1; } void(0)
+
+int32_t pack_client_hello(const client_hello_message *msg, uint8_t *buf, int32_t max_size) {
     uint8_t *p = buf;
     uint8_t *end = p + max_size;
 
@@ -132,7 +136,7 @@ int32_t pack_client_hello(const client_hello_message *msg, uint8_t *buf, int32_t
     uint8_t *payload_len = p; p += 3;
 
     // Pack client tls version with 2 bytes.
-    PACK_AND_RETURN_ERR(__pack_uint16(p, end, msg->client_version));
+    PACK_AND_RETURN_ERR(__pack_uint16(p, end, msg->legacy_version));
 
     // Pack random with 32 bytes.
     PACK_AND_RETURN_ERR(__pack_bytes(p, end, msg->random, 32));
@@ -339,27 +343,22 @@ int32_t pack_client_hello(const client_hello_message *msg, uint8_t *buf, int32_t
     __pack_uint24(payload_len, p, uint16_t(p - payload_len - 3));
 
     return int32_t(p - buf);
-
-#undef PACK_AND_RETURN_ERR
 }
 
 int32_t unpack_client_hello(const uint8_t *buf, int32_t size, client_hello_message *msg) {
-#define UNPACK_AND_RETURN_ERR(unpack) \
-    p = unpack; \
-    if (!p) { return -1; } void(0)
-
     const uint8_t *p = buf;
     const uint8_t *end = buf + size;
     if (p[0] != TLS_MSG_CLIENT_HELLO) {
         return -1;
     }
+    p += 1;
 
     // Unpack payload length.
     uint32_t payload_len = 0; 
     UNPACK_AND_RETURN_ERR(__unpack_uint24(p, end, payload_len));
 
     // Unpack client tls version.
-    UNPACK_AND_RETURN_ERR(__unpack_uint16(p, end, msg->client_version));
+    UNPACK_AND_RETURN_ERR(__unpack_uint16(p, end, msg->legacy_version));
 
     // Unpack random with 32 bytes.
     UNPACK_AND_RETURN_ERR(__unpack_bytes(p, end, msg->random, 32));
@@ -427,45 +426,51 @@ int32_t unpack_client_hello(const uint8_t *buf, int32_t size, client_hello_messa
             }
             break;
         case TLS_EXTENSION_STATUS_REQUEST:
-            uint8_t status_type = 0;
-            UNPACK_AND_RETURN_ERR(__unpack_uint8(p, end, status_type));
-            uint16_t ignored_len = 0;
-            UNPACK_AND_RETURN_ERR(__unpack_uint16(p, end, ignored_len));
-            if (ignored_len > 0) {
-                std::string ignored;
-                UNPACK_AND_RETURN_ERR(__unpack_bytes(p, end, ignored, (int32_t)ignored_len));
-            }
-            UNPACK_AND_RETURN_ERR(__unpack_uint16(p, end, ignored_len));
-            if (ignored_len > 0) {
-                std::string ignored;
-                UNPACK_AND_RETURN_ERR(__unpack_bytes(p, end, ignored, (int32_t)ignored_len));
-            }
-            if (status_type == 1) {
-                msg->is_support_ocsp = true;
+            {
+                uint8_t status_type = 0;
+                UNPACK_AND_RETURN_ERR(__unpack_uint8(p, end, status_type));
+                uint16_t ignored_len = 0;
+                UNPACK_AND_RETURN_ERR(__unpack_uint16(p, end, ignored_len));
+                if (ignored_len > 0) {
+                    std::string ignored;
+                    UNPACK_AND_RETURN_ERR(__unpack_bytes(p, end, ignored, (int32_t)ignored_len));
+                }
+                UNPACK_AND_RETURN_ERR(__unpack_uint16(p, end, ignored_len));
+                if (ignored_len > 0) {
+                    std::string ignored;
+                    UNPACK_AND_RETURN_ERR(__unpack_bytes(p, end, ignored, (int32_t)ignored_len));
+                }
+                if (status_type == 1) {
+                    msg->is_support_ocsp = true;
+                }
             }
             break;
         case TLS_EXTENSION_SUPPORTED_GROUPS:
-            uint16_t groups_len = 0;
-            UNPACK_AND_RETURN_ERR(__unpack_uint16(p, end, groups_len));
-            if (extension_len != groups_len + 2) {
-                return -1;
-            }
-            for (uint16_t i = groups_len; i > 0; i -= 2) {
-                uint16_t group_type = 0;
-                UNPACK_AND_RETURN_ERR(__unpack_uint16(p, end, group_type));
-                msg->supported_groups.push_back(group_type);
+            {
+                uint16_t groups_len = 0;
+                UNPACK_AND_RETURN_ERR(__unpack_uint16(p, end, groups_len));
+                if (extension_len != groups_len + 2) {
+                    return -1;
+                }
+                for (uint16_t i = groups_len; i > 0; i -= 2) {
+                    uint16_t group_type = 0;
+                    UNPACK_AND_RETURN_ERR(__unpack_uint16(p, end, group_type));
+                    msg->supported_groups.push_back(group_type);
+                }
             }
             break;
         case TLS_EXTENSION_SUPPORTED_POINTS:
-            uint8_t points_len = 0;
-            UNPACK_AND_RETURN_ERR(__unpack_uint8(p, end, points_len));
-            if (extension_len != points_len + 1) {
-                return -1;
-            }
-            for (uint8_t i = points_len; i > 0; i -= 2) {
-                uint8_t point_type = 0;
-                UNPACK_AND_RETURN_ERR(__unpack_uint8(p, end, point_type));
-                msg->supported_points.push_back(point_type);
+            {
+                uint8_t points_len = 0;
+                UNPACK_AND_RETURN_ERR(__unpack_uint8(p, end, points_len));
+                if (extension_len != points_len + 1) {
+                    return -1;
+                }
+                for (uint8_t i = points_len; i > 0; i -= 2) {
+                    uint8_t point_type = 0;
+                    UNPACK_AND_RETURN_ERR(__unpack_uint8(p, end, point_type));
+                    msg->supported_points.push_back(point_type);
+                }
             }
             break;
         case TLS_EXTENSION_SESSION_TICKET:
@@ -475,161 +480,176 @@ int32_t unpack_client_hello(const uint8_t *buf, int32_t size, client_hello_messa
             }
             break;
         case TLS_EXTENSION_SIGNATURE_ALGORITHMS:
-            uint16_t algorithms_len = 0;
-            UNPACK_AND_RETURN_ERR(__unpack_uint16(p, end, algorithms_len));
-            if (extension_len != algorithms_len + 2) {
-                return -1;
-            }
-            for (uint16_t i = algorithms_len; i > 0; i -= 2) {
-                uint16_t algorithms_type = 0;
-                UNPACK_AND_RETURN_ERR(__unpack_uint16(p, end, algorithms_type));
-                msg->supported_signature_algorithms.push_back(algorithms_type);
+            {
+                uint16_t algorithms_len = 0;
+                UNPACK_AND_RETURN_ERR(__unpack_uint16(p, end, algorithms_len));
+                if (extension_len != algorithms_len + 2) {
+                    return -1;
+                }
+                for (uint16_t i = algorithms_len; i > 0; i -= 2) {
+                    uint16_t algorithms_type = 0;
+                    UNPACK_AND_RETURN_ERR(__unpack_uint16(p, end, algorithms_type));
+                    msg->supported_signature_algorithms.push_back(algorithms_type);
+                }
             }
             break;
         case TLS_EXTENSION_SIGNATURE_ALGORITHMS_CERT:
-            uint16_t certs_len = 0;
-            UNPACK_AND_RETURN_ERR(__unpack_uint16(p, end, certs_len));
-            if (extension_len != certs_len + 2) {
-                return -1;
-            }
-            for (uint16_t i = certs_len; i > 0; i -= 2) {
-                uint16_t cert_type = 0;
-                UNPACK_AND_RETURN_ERR(__unpack_uint16(p, end, cert_type));
-                msg->supported_signature_algorithms_certs.push_back(cert_type);
+            {
+                uint16_t certs_len = 0;
+                UNPACK_AND_RETURN_ERR(__unpack_uint16(p, end, certs_len));
+                if (extension_len != certs_len + 2) {
+                    return -1;
+                }
+                for (uint16_t i = certs_len; i > 0; i -= 2) {
+                    uint16_t cert_type = 0;
+                    UNPACK_AND_RETURN_ERR(__unpack_uint16(p, end, cert_type));
+                    msg->supported_signature_algorithms_certs.push_back(cert_type);
+                }
             }
             break;
         case TLS_EXTENSION_RENEGOTIATION_INFO:
-            uint16_t info_len = 0;
-            UNPACK_AND_RETURN_ERR(__unpack_uint16(p, end, info_len));
-            if (extension_len != info_len + 2) {
-                return -1;
-            }
-            if (info_len > 0) {
-                msg->is_support_renegotiation_info = true;
-                UNPACK_AND_RETURN_ERR(__unpack_bytes(p, end, msg->renegotiation_info, (int32_t)info_len));
+            {
+                uint16_t info_len = 0;
+                UNPACK_AND_RETURN_ERR(__unpack_uint16(p, end, info_len));
+                if (extension_len != info_len + 2) {
+                    return -1;
+                }
+                if (info_len > 0) {
+                    msg->is_support_renegotiation_info = true;
+                    UNPACK_AND_RETURN_ERR(__unpack_bytes(p, end, msg->renegotiation_info, (int32_t)info_len));
+                }
             }
             break;
         case TLS_EXTENSION_ALPN:
-            uint16_t alpns_len = 0;
-            UNPACK_AND_RETURN_ERR(__unpack_uint16(p, end, alpns_len));
-            if (extension_len != alpns_len + 2) {
-                return -1;
-            }
-            while(alpns_len > 0) {
-                uint8_t alpn_len = 0;
-                UNPACK_AND_RETURN_ERR(__unpack_uint8(p, end, alpn_len));
-                if (alpn_len == 0 || alpns_len < (uint16_t)alpn_len - 1) {
+            {
+                uint16_t alpns_len = 0;
+                UNPACK_AND_RETURN_ERR(__unpack_uint16(p, end, alpns_len));
+                if (extension_len != alpns_len + 2) {
                     return -1;
                 }
-                std::string alpn;
-                UNPACK_AND_RETURN_ERR(__unpack_bytes(p, end, alpn, (int32_t)alpn_len));
-                msg->alpns.push_back(std::move(alpn));
-                alpns_len -= uint16_t(1 + alpn_len);
+                while(alpns_len > 0) {
+                    uint8_t alpn_len = 0;
+                    UNPACK_AND_RETURN_ERR(__unpack_uint8(p, end, alpn_len));
+                    if (alpn_len == 0 || alpns_len < (uint16_t)alpn_len - 1) {
+                        return -1;
+                    }
+                    std::string alpn;
+                    UNPACK_AND_RETURN_ERR(__unpack_bytes(p, end, alpn, (int32_t)alpn_len));
+                    msg->alpns.push_back(std::move(alpn));
+                    alpns_len -= uint16_t(1 + alpn_len);
+                }
             }
             break;
         case TLS_EXTENSION_SCT:
             msg->is_support_sct = true;
             break;
         case TLS_EXTENSION_SUPPORTED_VERSIONS:
-            uint8_t versions_len = 0;
-            UNPACK_AND_RETURN_ERR(__unpack_uint8(p, end, versions_len));
-            if (extension_len != uint16_t(versions_len + 1)) {
-                return -1;
-            }
-            for (uint8_t i = 0; i > versions_len; i++) {
-                uint16_t version_type = 0;
-                UNPACK_AND_RETURN_ERR(__unpack_uint16(p, end, version_type));
-                msg->supported_versions.push_back(version_type);
+            {
+                uint8_t versions_len = 0;
+                UNPACK_AND_RETURN_ERR(__unpack_uint8(p, end, versions_len));
+                if (extension_len != uint16_t(versions_len + 1)) {
+                    return -1;
+                }
+                for (uint8_t i = 0; i > versions_len; i++) {
+                    uint16_t version_type = 0;
+                    UNPACK_AND_RETURN_ERR(__unpack_uint16(p, end, version_type));
+                    msg->supported_versions.push_back(version_type);
+                }
             }
             break;
         case TLS_EXTENSION_COOKIE:
-            uint16_t cookie_len = 0;
-            UNPACK_AND_RETURN_ERR(__unpack_uint16(p, end, cookie_len));
-            if (extension_len != cookie_len + 2) {
-                return -1;
-            }
-            UNPACK_AND_RETURN_ERR(__unpack_bytes(p, end, msg->cookie, (int32_t)cookie_len));
-            break;
-        case TLS_EXTENSION_KEY_SHARE:
-            uint16_t key_shares_len = 0;
-            UNPACK_AND_RETURN_ERR(__unpack_uint16(p, end, key_shares_len));
-            if (extension_len != uint16_t(key_shares_len + 2)) {
-                return -1;
-            }
-            while(key_shares_len > 0) {
-                handshake_key_share key_share;
-                UNPACK_AND_RETURN_ERR(__unpack_uint16(p, end, key_share.group));
-                uint16_t key_share_len = 0;
-                UNPACK_AND_RETURN_ERR(__unpack_uint16(p, end, key_share_len));
-                if (key_shares_len < 2 + 2 + key_share_len) {
+            {
+                uint16_t cookie_len = 0;
+                UNPACK_AND_RETURN_ERR(__unpack_uint16(p, end, cookie_len));
+                if (extension_len != cookie_len + 2) {
                     return -1;
                 }
-                UNPACK_AND_RETURN_ERR(__unpack_bytes(p, end, key_share.data, (int32_t)key_share_len));
-                msg->key_shares.push_back(key_share);
-                key_shares_len -= (2 + 2 + key_share_len);
+                UNPACK_AND_RETURN_ERR(__unpack_bytes(p, end, msg->cookie, (int32_t)cookie_len));
             }
+            break;
+        case TLS_EXTENSION_KEY_SHARE:
+            {
+                uint16_t key_shares_len = 0;
+                UNPACK_AND_RETURN_ERR(__unpack_uint16(p, end, key_shares_len));
+                if (extension_len != uint16_t(key_shares_len + 2)) {
+                    return -1;
+                }
+                while(key_shares_len > 0) {
+                    key_share key_share;
+                    UNPACK_AND_RETURN_ERR(__unpack_uint16(p, end, key_share.group));
+                    uint16_t key_share_len = 0;
+                    UNPACK_AND_RETURN_ERR(__unpack_uint16(p, end, key_share_len));
+                    if (key_shares_len < 2 + 2 + key_share_len) {
+                        return -1;
+                    }
+                    UNPACK_AND_RETURN_ERR(__unpack_bytes(p, end, key_share.data, (int32_t)key_share_len));
+                    msg->key_shares.push_back(key_share);
+                    key_shares_len -= (2 + 2 + key_share_len);
+                }
+            }  
             break;
         case TLS_EXTENSION_EARLY_DATA:
             msg->is_support_early_data = true;
             break;
         case TLS_EXTENSION_PSK_MODES:
-            uint8_t psk_modes_len = 0;
-            UNPACK_AND_RETURN_ERR(__unpack_uint8(p, end, psk_modes_len));
-            if (extension_len != uint16_t(psk_modes_len + 2)) {
-                return -1;
-            }
-            for (uint8_t i = 0; i < psk_modes_len; i++) {
-                uint8_t psk_mode = 0;
-                UNPACK_AND_RETURN_ERR(__unpack_uint8(p, end, psk_mode));
-                msg->psk_modes.push_back(psk_mode);
+            {
+                uint8_t psk_modes_len = 0;
+                UNPACK_AND_RETURN_ERR(__unpack_uint8(p, end, psk_modes_len));
+                if (extension_len != uint16_t(psk_modes_len + 2)) {
+                    return -1;
+                }
+                for (uint8_t i = 0; i < psk_modes_len; i++) {
+                    uint8_t psk_mode = 0;
+                    UNPACK_AND_RETURN_ERR(__unpack_uint8(p, end, psk_mode));
+                    msg->psk_modes.push_back(psk_mode);
+                }
             }
             break;
         case TLS_EXTENSION_PRE_SHARED_KEY:
-            uint16_t psk_identities_len = 0;
-            UNPACK_AND_RETURN_ERR(__unpack_uint16(p, end, psk_identities_len));
-            for (uint16_t i = psk_identities_len; i > 0;) {
-                uint16_t psk_identity_len = 0;
-                UNPACK_AND_RETURN_ERR(__unpack_uint16(p, end, psk_identity_len));
-                if (i < (2 + psk_identity_len + 4)) {
-                    return -1;
+            {
+                uint16_t psk_identities_len = 0;
+                UNPACK_AND_RETURN_ERR(__unpack_uint16(p, end, psk_identities_len));
+                for (uint16_t i = psk_identities_len; i > 0;) {
+                    uint16_t psk_identity_len = 0;
+                    UNPACK_AND_RETURN_ERR(__unpack_uint16(p, end, psk_identity_len));
+                    if (i < (2 + psk_identity_len + 4)) {
+                        return -1;
+                    }
+                    psk_identity psk_identity;
+                    UNPACK_AND_RETURN_ERR(__unpack_bytes(p, end, psk_identity.identity, (int32_t)psk_identity_len));
+                    UNPACK_AND_RETURN_ERR(__unpack_uint32(p, end, psk_identity.obfuscated_ticket_age));
+                    i -= (2 + psk_identity_len + 4);
                 }
-                handshake_psk_identity psk_identity;
-                UNPACK_AND_RETURN_ERR(__unpack_bytes(p, end, psk_identity.identity, (int32_t)psk_identity_len));
-                UNPACK_AND_RETURN_ERR(__unpack_uint32(p, end, psk_identity.obfuscated_ticket_age));
-                i -= (2 + psk_identity_len + 4);
-            }
-            uint16_t psk_binders_len = 0;
-            UNPACK_AND_RETURN_ERR(__unpack_uint16(p, end, psk_binders_len));
-            for (uint16_t i = psk_binders_len; i > 0;) {
-                uint8_t psk_biner_len = 0;
-                UNPACK_AND_RETURN_ERR(__unpack_uint8(p, end, psk_biner_len));
-                if (i < uint16_t(1 + psk_biner_len)) {
-                    return -1;
+                uint16_t psk_binders_len = 0;
+                UNPACK_AND_RETURN_ERR(__unpack_uint16(p, end, psk_binders_len));
+                for (uint16_t i = psk_binders_len; i > 0;) {
+                    uint8_t psk_biner_len = 0;
+                    UNPACK_AND_RETURN_ERR(__unpack_uint8(p, end, psk_biner_len));
+                    if (i < uint16_t(1 + psk_biner_len)) {
+                        return -1;
+                    }
+                    std::string psk_binder;
+                    UNPACK_AND_RETURN_ERR(__unpack_bytes(p, end, psk_binder, (int32_t)psk_biner_len));
+                    msg->psk_binders.push_back(psk_binder);
+                    i -= uint16_t(1 + psk_biner_len);
                 }
-                std::string psk_binder;
-                UNPACK_AND_RETURN_ERR(__unpack_bytes(p, end, psk_binder, (int32_t)psk_biner_len));
-                msg->psk_binders.push_back(psk_binder);
-                i -= uint16_t(1 + psk_biner_len);
             }
             break;
         default:
-            extension additional_extension;
-            additional_extension.type = extension_type;
-            UNPACK_AND_RETURN_ERR(__unpack_bytes(p, end, additional_extension.data, (int32_t)extension_len));
-            msg->additional_extensions.push_back(std::move(additional_extension));
+            {
+                extension additional_extension;
+                additional_extension.type = extension_type;
+                UNPACK_AND_RETURN_ERR(__unpack_bytes(p, end, additional_extension.data, (int32_t)extension_len));
+                msg->additional_extensions.push_back(std::move(additional_extension));
+            }
+            break;
         }
     }
 
     return int32_t(p - buf);
-
-#undef UNPACK_AND_RETURN_ERR
 }
 
 int32_t pack_server_hello(const server_hello_message *msg, uint8_t *buf, int32_t max_size) {
-#define PACK_AND_RETURN_ERR(pack) \
-    p = pack; \
-    if (!p) { return -1; } void(0)
-
     uint8_t *p = buf;
     uint8_t *end = p + max_size;
 
@@ -640,7 +660,7 @@ int32_t pack_server_hello(const server_hello_message *msg, uint8_t *buf, int32_t
     uint8_t *payload_len = p; p += 3;
 
     // Pack server tls version with 2 bytes.
-    PACK_AND_RETURN_ERR(__pack_uint16(p, end, msg->server_version));
+    PACK_AND_RETURN_ERR(__pack_uint16(p, end, msg->legacy_version));
 
     // Pack random with 32 bytes.
     PACK_AND_RETURN_ERR(__pack_bytes(p, end, msg->random, 32));
@@ -681,8 +701,8 @@ int32_t pack_server_hello(const server_hello_message *msg, uint8_t *buf, int32_t
         PACK_AND_RETURN_ERR(__pack_uint16(p, end, TLS_EXTENSION_ALPN));
         PACK_AND_RETURN_ERR(__pack_uint16(p, end, uint16_t(2 + 1 + msg->alpn.size())));
         PACK_AND_RETURN_ERR(__pack_uint16(p, end, uint16_t(1 + msg->alpn.size())));
-        PACK_AND_RETURN_ERR(__pack_uint8(p, end, (uint8_t)msg->alpn.size())));
-        PACK_AND_RETURN_ERR(__pack_bytes(p, end, msg->renegotiation_info));
+        PACK_AND_RETURN_ERR(__pack_uint8(p, end, (uint8_t)msg->alpn.size()));
+        PACK_AND_RETURN_ERR(__pack_bytes(p, end, msg->alpn));
     }
 
     if (!msg->scts.empty()) {
@@ -746,27 +766,22 @@ int32_t pack_server_hello(const server_hello_message *msg, uint8_t *buf, int32_t
     __pack_uint24(payload_len, p, uint16_t(p - payload_len - 3));
 
     return int32_t(p - buf);
-
-#undef PACK_AND_RETURN_ERR
 }
 
 int32_t unpack_server_hello(const uint8_t *buf, int32_t size, server_hello_message *msg) {
-#define UNPACK_AND_RETURN_ERR(unpack) \
-    p = unpack; \
-    if (!p) { return -1; } void(0)
-
     const uint8_t *p = buf;
     const uint8_t *end = buf + size;
-    if (p[0] != TLS_MSG_CLIENT_HELLO) {
+    if (p[0] != TLS_MSG_SERVER_HELLO) {
         return -1;
     }
+    p += 1;
 
     // Unpack payload length.
     uint32_t payload_len = 0; 
     UNPACK_AND_RETURN_ERR(__unpack_uint24(p, end, payload_len));
 
     // Unpack client tls version.
-    UNPACK_AND_RETURN_ERR(__unpack_uint16(p, end, msg->server_version));
+    UNPACK_AND_RETURN_ERR(__unpack_uint16(p, end, msg->legacy_version));
 
     // Unpack random with 32 bytes.
     UNPACK_AND_RETURN_ERR(__unpack_bytes(p, end, msg->random, 32));
@@ -807,40 +822,48 @@ int32_t unpack_server_hello(const uint8_t *buf, int32_t size, server_hello_messa
             msg->is_support_session_ticket = true;
             break;
         case TLS_EXTENSION_RENEGOTIATION_INFO:
-            uint8_t len = 0;
-            UNPACK_AND_RETURN_ERR( __unpack_uint8(p, end, len));
-            UNPACK_AND_RETURN_ERR( __unpack_bytes(p, end, msg->renegotiation_info, (int32_t)len));
-            msg->is_support_renegotiation_info = true;
+            {
+                uint8_t info_len = 0;
+                UNPACK_AND_RETURN_ERR( __unpack_uint8(p, end, info_len));
+                UNPACK_AND_RETURN_ERR( __unpack_bytes(p, end, msg->renegotiation_info, (int32_t)info_len));
+                msg->is_support_renegotiation_info = true;
+            }
             break;
         case TLS_EXTENSION_ALPN:
-            uint16_t len1 = 0;
-            UNPACK_AND_RETURN_ERR( __unpack_uint16(p, end, len1));
-            uint8_t len2 = 0;
-            UNPACK_AND_RETURN_ERR( __unpack_uint8(p, end, len2));
-            UNPACK_AND_RETURN_ERR( __unpack_bytes(p, end, msg->alpn, (int32_t)len2));
+            {
+                uint16_t alpns_len = 0;
+                UNPACK_AND_RETURN_ERR( __unpack_uint16(p, end, alpns_len));
+                uint8_t alpn_len = 0;
+                UNPACK_AND_RETURN_ERR( __unpack_uint8(p, end, alpn_len));
+                UNPACK_AND_RETURN_ERR( __unpack_bytes(p, end, msg->alpn, (int32_t)alpn_len));
+            }
             break;
         case TLS_EXTENSION_SCT:
-            uint16_t len = 0;
-            UNPACK_AND_RETURN_ERR( __unpack_uint16(p, end, len));
-            while(len > 0) {
-                uint16_t sct_len = 0;
-                UNPACK_AND_RETURN_ERR( __unpack_uint16(p, end, sct_len));
-                if (len < 2 + sct_len) { return -1; } 
-                std::string sct;
-                UNPACK_AND_RETURN_ERR( __unpack_bytes(p, end, sct, (int32_t)sct_len));
-                msg->scts.push_back(sct);
-                len -= (2 + sct_len); 
+            {
+                uint16_t scts_len = 0;
+                UNPACK_AND_RETURN_ERR( __unpack_uint16(p, end, scts_len));
+                while(scts_len > 0) {
+                    uint16_t sct_len = 0;
+                    UNPACK_AND_RETURN_ERR( __unpack_uint16(p, end, sct_len));
+                    if (scts_len < 2 + sct_len) { return -1; } 
+                    scts_len -= (2 + sct_len);
+                    std::string sct;
+                    UNPACK_AND_RETURN_ERR( __unpack_bytes(p, end, sct, (int32_t)sct_len));
+                    msg->scts.push_back(sct);
+                }
             }
             break;
         case TLS_EXTENSION_SUPPORTED_VERSIONS:
             UNPACK_AND_RETURN_ERR( __unpack_uint16(p, end, msg->supported_version));
             break;
         case TLS_EXTENSION_COOKIE:
-            uint16_t len = 0;
-            UNPACK_AND_RETURN_ERR( __unpack_uint16(p, end, len));
-            UNPACK_AND_RETURN_ERR( __unpack_bytes(p, end, msg->cookie, (int32_t)len));
+            {
+                uint16_t cookie_len = 0;
+                UNPACK_AND_RETURN_ERR( __unpack_uint16(p, end, cookie_len));
+                UNPACK_AND_RETURN_ERR( __unpack_bytes(p, end, msg->cookie, (int32_t)cookie_len));
+            }
             break;
-        case TLS_EXTENSION_KEY_SHARE：
+        case TLS_EXTENSION_KEY_SHARE:
             if (extensions_len == 2) {
                 UNPACK_AND_RETURN_ERR( __unpack_uint16(p, end, msg->selected_group));
             } else {
@@ -856,12 +879,14 @@ int32_t unpack_server_hello(const uint8_t *buf, int32_t size, server_hello_messa
             msg->selected_psk_identity = true;
             break;
         case TLS_EXTENSION_SUPPORTED_POINTS:
-            uint8_t len = 0;
-            UNPACK_AND_RETURN_ERR( __unpack_uint8(p, end, len));
-            for (uint8_t i = 0; i < len; i++) {
-                tls_point_format_type point_type = 0;
-                UNPACK_AND_RETURN_ERR( __unpack_uint8(p, end, point_type));
-                msg->supported_points.push_back(point_type);
+            {
+                uint8_t points_len = 0;
+                UNPACK_AND_RETURN_ERR( __unpack_uint8(p, end, points_len));
+                for (uint8_t i = 0; i < points_len; i++) {
+                    tls_point_format_type point_type = 0;
+                    UNPACK_AND_RETURN_ERR( __unpack_uint8(p, end, point_type));
+                    msg->supported_points.push_back(point_type);
+                }
             }
             break;
         default:
@@ -871,6 +896,175 @@ int32_t unpack_server_hello(const uint8_t *buf, int32_t size, server_hello_messa
     }
 
     return int32_t(p - buf); 
+}
+
+int32_t pack_encrypted_extensions(const encrypted_extensions_message *msg, uint8_t *buf, int32_t max_size) {
+    uint8_t *p = buf;
+    uint8_t *end = p + max_size;
+
+    // Pack message type with 1 bytes.
+    PACK_AND_RETURN_ERR(__pack_uint8(p, end, TLS_MSG_ENCRYPTED_EXTENSIONS));
+
+    // Skip to pack payload length with 3 bytes.
+    uint8_t *payload_len = p; p += 3;
+
+    // Skip to pack extensions length with 2 bytes.
+    uint8_t *extension_len = p; p += 2;
+
+    if (!msg->alpn.empty()) {
+        PACK_AND_RETURN_ERR(__pack_uint16(p, end, TLS_EXTENSION_ALPN));
+        PACK_AND_RETURN_ERR(__pack_uint16(p, end, uint16_t(2 + 1 + msg->alpn.size())));
+        PACK_AND_RETURN_ERR(__pack_uint16(p, end, uint16_t(1 + msg->alpn.size())));
+        PACK_AND_RETURN_ERR(__pack_uint8(p, end, (uint8_t)msg->alpn.size()));
+        PACK_AND_RETURN_ERR(__pack_bytes(p, end, msg->alpn)); 
+    }
+
+    if (msg->is_support_early_data) {
+        PACK_AND_RETURN_ERR(__pack_uint16(p, end, TLS_EXTENSION_EARLY_DATA));
+        PACK_AND_RETURN_ERR(__pack_uint16(p, end, 0));
+    }
+
+    for (int32_t i = 0; i < (int32_t)msg->additional_extensions.size(); i++) {
+        PACK_AND_RETURN_ERR(__pack_uint16(p, end, msg->additional_extensions[i].type));
+        PACK_AND_RETURN_ERR(__pack_uint16(p, end, (uint16_t)msg->additional_extensions[i].data.size()));
+        PACK_AND_RETURN_ERR(__pack_bytes(p, end, msg->additional_extensions[i].data));
+    }
+
+    // Pack extensions length.
+    __pack_uint16(extension_len, p, uint16_t(p - extension_len - 2));
+
+    // Pack payload length.
+    __pack_uint24(payload_len, p, uint16_t(p - payload_len - 3));
+
+    return int32_t(p - buf);
+}
+
+int32_t unpack_encrypted_extensions(const uint8_t *buf, int32_t size, encrypted_extensions_message *msg) {
+    const uint8_t *p = buf;
+    const uint8_t *end = buf + size;
+    if (p[0] != TLS_MSG_ENCRYPTED_EXTENSIONS) {
+        return -1;
+    }
+    p += 1;
+
+    // Unpack payload length.
+    uint32_t payload_len = 0; 
+    UNPACK_AND_RETURN_ERR(__unpack_uint24(p, end, payload_len));
+
+    // Unpack extensions length.
+    uint16_t extensions_len = 0;
+    UNPACK_AND_RETURN_ERR(__unpack_uint16(p, end, extensions_len));
+    if (size < extensions_len) {
+        return -1;
+    }
+
+    const uint8_t *extensions_end = p + extensions_len;
+    while (p < extensions_end) {
+        uint16_t extension_type = -1;
+        UNPACK_AND_RETURN_ERR(__unpack_uint16(p, end, extension_type));
+        uint16_t extension_len = 0; 
+        UNPACK_AND_RETURN_ERR( __unpack_uint16(p, end, extension_len));
+        switch (extension_type) {
+        case TLS_EXTENSION_ALPN:
+            {
+                uint16_t alpns_len = 0;
+                UNPACK_AND_RETURN_ERR( __unpack_uint16(p, end, alpns_len));
+                uint8_t alpn_len = 0;
+                UNPACK_AND_RETURN_ERR( __unpack_uint8(p, end, alpn_len));
+                UNPACK_AND_RETURN_ERR( __unpack_bytes(p, end, msg->alpn, (int32_t)alpn_len));
+            }
+            break;
+        case TLS_EXTENSION_EARLY_DATA:
+            msg->is_support_early_data = true;
+            break;
+        default:
+            {
+                extension additional_extension;
+                additional_extension.type = extension_type;
+                UNPACK_AND_RETURN_ERR(__unpack_bytes(p, end, additional_extension.data, (int32_t)extension_len));
+                msg->additional_extensions.push_back(std::move(additional_extension));
+            }
+            break;
+        }
+    }
+
+    return int32_t(p - buf); 
+}
+
+int32_t pack_end_early_data(const end_early_data_message *msg, uint8_t *buf, int32_t max_size) {
+    uint8_t *p = buf;
+    uint8_t *end = p + max_size;
+
+    // Pack message type with 1 bytes.
+    PACK_AND_RETURN_ERR(__pack_uint8(p, end, TLS_MSG_END_OF_EARLY_DATA));
+
+    // Pack payload length.
+    PACK_AND_RETURN_ERR(__pack_uint24(p, end, 0));
+
+    return int32_t(p - buf);  
+}
+
+int32_t unpack_end_early_data(const uint8_t *buf, int32_t size, end_early_data_message *msg) {
+    const uint8_t *p = buf;
+    const uint8_t *end = buf + size;
+    if (p[0] != TLS_MSG_END_OF_EARLY_DATA) {
+        return -1;
+    }
+    p += 1;
+
+    // Unpack payload length.
+    uint32_t payload_len = 0; 
+    UNPACK_AND_RETURN_ERR(__unpack_uint24(p, end, payload_len));
+    if (payload_len != 0) {
+        return -1;
+    }
+
+    return int32_t(p - buf);
+}
+
+int32_t pack_key_update(const key_update_message *msg, uint8_t *buf, int32_t max_size) {
+    uint8_t *p = buf;
+    uint8_t *end = p + max_size;
+
+    // Pack message type with 1 bytes.
+    PACK_AND_RETURN_ERR(__pack_uint8(p, end, TLS_MSG_KEY_UPDATE));
+
+    // Skip to pack payload length with 3 bytes.
+    uint8_t *payload_len = p; p += 3;
+
+    if (msg->update_requested) {
+        PACK_AND_RETURN_ERR(__pack_uint8(p, end, 1));
+    } else {
+        PACK_AND_RETURN_ERR(__pack_uint8(p, end, 0));
+    }
+
+    // Pack payload length.
+    PACK_AND_RETURN_ERR(__pack_uint24(p, end, 0));
+
+    return int32_t(p - buf);
+}
+
+int32_t unpack_key_update(const uint8_t *buf, int32_t size, key_update_message *msg) {
+    const uint8_t *p = buf;
+    const uint8_t *end = buf + size;
+    if (p[0] != TLS_MSG_KEY_UPDATE) {
+        return -1;
+    }
+    p += 1;
+
+    // Unpack payload length.
+    uint32_t payload_len = 0; 
+    UNPACK_AND_RETURN_ERR(__unpack_uint24(p, end, payload_len));
+    if (payload_len != 1) {
+        return -1;
+    }
+
+    uint8_t update_requested = 0;
+    UNPACK_AND_RETURN_ERR(__unpack_uint8(p, end, update_requested));
+    msg->update_requested = (update_requested == 1);
+
+    return int32_t(p - buf);
+}
 
 #undef UNPACK_AND_RETURN_ERR
-}
+#undef PACK_AND_RETURN_ERR
