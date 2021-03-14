@@ -206,5 +206,57 @@ namespace ssl {
 #endif
     }
 
+    bool generate_X25519_key_pair(ecdhe_key_pair *kp) {
+#if defined(PUMP_HAVE_OPENSSL)
+        // Create and init context.
+        EVP_PKEY_CTX *pctx = NULL;
+        if ((pctx = EVP_PKEY_CTX_new_id(NID_X25519, NULL)) == NULL) {
+            return false;
+        }
+        if (EVP_PKEY_keygen_init(pctx) <= 0) {
+            EVP_PKEY_CTX_free(pctx);
+            return false;
+        }
+
+        // Generate the key.
+        EVP_PKEY *pkey = NULL;
+        if (EVP_PKEY_keygen(pctx, &pkey) != 1) {
+            EVP_PKEY_CTX_free(pctx);
+            return false;
+        }
+        EVP_PKEY_CTX_free(pctx);
+
+        // Get private key.
+        char *key = NULL;
+        int32_t key_len = 0;
+        BIO *mem_bio = BIO_new(BIO_s_mem());
+        if (PEM_write_bio_PrivateKey(mem_bio, pkey, NULL,NULL, 0, NULL, NULL) <= 0) {
+            EVP_PKEY_free(pkey);
+            BIO_free(mem_bio);
+            return false;
+        }
+        key_len = BIO_get_mem_data(mem_bio, &key);
+        kp->prikey.assign(key, key_len);
+
+        // Get public key.
+        key = NULL;
+        key_len = 0;
+        BIO_reset(mem_bio);
+        if (PEM_write_bio_PUBKEY(mem_bio, pkey) <= 0) {
+            EVP_PKEY_free(pkey);
+            BIO_free(mem_bio);
+            return false;
+        }
+        key_len = BIO_get_mem_data(mem_bio, &key);
+        kp->pubkey.assign(key, key_len);
+
+        EVP_PKEY_free(pkey);
+
+        return true;
+#else
+        return false;
+#endif
+    }
+
 }  // namespace ssl
 }  // namespace pump

@@ -48,6 +48,16 @@ namespace ssl {
      ********************************************************************************/
     void destory_tls_certificate(void_ptr xcred);
 
+    struct ecdhe_key_pair {
+        std::string prikey;
+        std::string pubkey;
+    };
+
+    /*********************************************************************************
+     * Generate X25519 key pair.
+     ********************************************************************************/
+    bool generate_X25519_key_pair(ecdhe_key_pair *kp);
+
 }  // namespace ssl
 }  // namespace pump
 
