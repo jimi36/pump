@@ -133,6 +133,7 @@ namespace tls {
             object_delete((key_update_message*)msg->msg);
             break;
         default:
+            break;
         }
     }
 

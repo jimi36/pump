@@ -63,6 +63,7 @@ typedef uint8_t tls_point_format_type;
 // https://www.iana.org/assignments/tls-parameters/tls-parameters.xml
 typedef uint16_t tls_cipher_suite_type;
 // TLS 1.0 - 1.2 cipher suites.
+#define TLS_CIPHER_SUITE_UNKNOWN                       0x0000
 #define TLS_RSA_WITH_RC4_128_SHA                       0x0005
 #define TLS_RSA_WITH_3DES_EDE_CBC_SHA                  0x000a
 #define TLS_RSA_WITH_AES_128_CBC_SHA                   0x002f
@@ -105,10 +106,11 @@ typedef uint8_t tls_certicate_status_type;
 
 // TLS curve group types.
 typedef uint16_t tls_group_type;
-#define TLS_GROUP_P256   23
-#define TLS_GROUP_P384   24
-#define TLS_GROUP_P2521  25
-#define TLS_GROUP_X25519 29
+#define TLS_GROUP_UNKNOWN 0
+#define TLS_GROUP_P256    23
+#define TLS_GROUP_P384    24
+#define TLS_GROUP_P2521   25
+#define TLS_GROUP_X25519  29
 
 // TLS signature scheme types
 typedef uint16_t tls_signature_scheme_type;
@@ -156,6 +158,26 @@ typedef uint16_t tls_extension_type;
 #define TLS_EXTENSION_KEY_SHARE                 51 // https://tools.ietf.org/html/rfc8446#section-4.2.8
 #define TLS_EXTENSION_RENEGOTIATION_INFO        0xff01 // https://tools.ietf.org/html/rfc5746#section-3.2
 #define TLS_EXTENSION_QUIC                      0xffa5
+
+// TLS handshaker status.
+typedef int32_t handshaker_status;
+#define HANDSHAKER_INIT                      0
+#define HANDSHAKER_CLIENT_HELLO_SENT         1
+#define HANDSHAKER_CLIENT_HELLO_RECV         2
+#define HANDSHAKER_SERVER_HELLO_SENT         3
+#define HANDSHAKER_SERVER_HELLO_RECV         4
+#define HANDSHAKER_HELLO_RETRY_SENT          5
+#define HANDSHAKER_HELLO_RETRY_RECV          6
+#define HANDSHAKER_ENCRYPTED_EXTENSIONS_SENT 7
+#define HANDSHAKER_ENCRYPTED_EXTENSIONS_RECV 8
+#define HANDSHAKER_CARTIFICATE_REQUEST_SENT  9
+#define HANDSHAKER_CARTIFICATE_REQUEST_RECV  10
+#define HANDSHAKER_CARTIFICATE_SENT          11
+#define HANDSHAKER_CARTIFICATE_RECV          12
+#define HANDSHAKER_CARTIFICATE_VERIFY_SENT   13
+#define HANDSHAKER_CARTIFICATE_VERIFY_RECV   14
+#define HANDSHAKER_FINISHED_SENT             15
+#define HANDSHAKER_FINISHED_RECV             16
 
 struct key_share {
     tls_group_type group;

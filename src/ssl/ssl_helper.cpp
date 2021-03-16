@@ -34,6 +34,118 @@ extern "C" {
 namespace pump {
 namespace ssl {
 
+    void_ptr hash_create_context(hash_algorithm algorithm) {
+        void_ptr ctx = nullptr;
+#if defined(PUMP_HAVE_OPENSSL)
+        switch (algorithm) {
+        case HASH_SHA256:
+            ctx = (uint8_t*)pump_malloc(sizeof(algorithm) + sizeof(SHA256_CTX)) + sizeof(algorithm);
+            if (SHA256_Init((SHA256_CTX*)ctx) == 0) {
+                pump_free(ctx);
+                return nullptr;
+            }
+            break;
+        case HASH_SHA384:
+            ctx = (uint8_t*)pump_malloc(sizeof(algorithm) + sizeof(SHA512_CTX)) + sizeof(algorithm);
+            if (SHA384_Init((SHA512_CTX*)ctx) == 0) {
+                pump_free(ctx);
+                return nullptr;
+            }
+            break;
+        }
+#endif
+        return ctx;
+    }
+
+    void hash_destory_context(void_ptr ctx) {
+        if (ctx) {
+#if defined(PUMP_HAVE_OPENSSL)
+            pump_free((uint8_t*)ctx - sizeof(hash_algorithm));
+#endif
+        }
+    }
+
+    bool hash_update(void_ptr ctx, const void_ptr data, int32_t data_len) {
+#if defined(PUMP_HAVE_OPENSSL)
+        PUMP_ASSERT(ctx);
+        PUMP_ASSERT(data && data_len > 0);
+        hash_algorithm algorithm = hash_algorithm((uint8_t*)ctx - sizeof(hash_algorithm));
+        switch (algorithm)
+        {
+        case HASH_SHA256:
+            if (SHA256_Update((SHA256_CTX*)ctx, data, data_len) == 1) {
+                return true;
+            }
+            break;
+        case HASH_SHA384:
+            if (SHA256_Update((SHA256_CTX*)ctx, data, data_len) == 1) {
+                return true;
+            }
+            break;
+        }
+#endif
+        return false;
+    }
+
+    int32_t hash_result_length(hash_algorithm algorithm) {
+        switch (algorithm)
+        {
+        case HASH_SHA256:
+            return 32;
+        case HASH_SHA384:
+            return 48;
+        } 
+        return 0;
+    }
+
+    bool hash_result(void_ptr ctx, void_ptr result, int32_t result_len) {
+#if defined(PUMP_HAVE_OPENSSL)
+        PUMP_ASSERT(ctx);
+        hash_algorithm algorithm = hash_algorithm((uint8_t*)ctx - sizeof(hash_algorithm));
+        switch (algorithm)
+        {
+        case HASH_SHA256:
+            PUMP_ASSERT(result && result_len >= 32);
+            if (SHA256_Final((unsigned char*)result, (SHA256_CTX*)ctx) == 1) {
+                return true;
+            }
+            break;
+        case HASH_SHA384:
+            PUMP_ASSERT(result && result_len >= 48);
+            if (SHA384_Final((unsigned char*)result, (SHA512_CTX*)ctx) == 1) {
+                return true;
+            }
+            break;
+        } 
+#endif
+        return false;
+    }
+
+    hasher::hasher(hash_algorithm algorithm)
+      : hash_ctx_(hash_create_context(algorithm)),
+        result_length_(hash_result_length(algorithm)),
+        algorithm_(algorithm) {
+    }
+
+    hasher::~hasher() {
+        hash_destory_context(hash_ctx_);
+    }
+
+    bool hasher::update(void_ptr data, int32_t data_len) {
+        if (!hash_ctx_) {
+            return false;
+        }
+        return hash_update(hash_ctx_, data, data_len);
+    }
+
+    bool hasher::result(std::string &hash) {
+        if (!hash_ctx_) {
+            return false;
+        }
+        hash.resize(result_length_);
+        return hash_result(hash_ctx_, (void_ptr)hash.data(), result_length_);
+    }
+
     void_ptr create_tls_client_certificate() {
 #if defined(PUMP_HAVE_GNUTLS)
         gnutls_certificate_credentials_t xcred;
@@ -213,14 +325,14 @@ namespace ssl {
         if ((pctx = EVP_PKEY_CTX_new_id(NID_X25519, NULL)) == NULL) {
             return false;
         }
-        if (EVP_PKEY_keygen_init(pctx) <= 0) {
+        if (EVP_PKEY_keygen_init(pctx) == 0) {
             EVP_PKEY_CTX_free(pctx);
             return false;
         }
 
         // Generate the key.
         EVP_PKEY *pkey = NULL;
-        if (EVP_PKEY_keygen(pctx, &pkey) != 1) {
+        if (EVP_PKEY_keygen(pctx, &pkey) == 0) {
             EVP_PKEY_CTX_free(pctx);
             return false;
         }
@@ -230,7 +342,7 @@ namespace ssl {
         char *key = NULL;
         int32_t key_len = 0;
         BIO *mem_bio = BIO_new(BIO_s_mem());
-        if (PEM_write_bio_PrivateKey(mem_bio, pkey, NULL,NULL, 0, NULL, NULL) <= 0) {
+        if (PEM_write_bio_PrivateKey(mem_bio, pkey, NULL,NULL, 0, NULL, NULL) == 0) {
             EVP_PKEY_free(pkey);
             BIO_free(mem_bio);
             return false;
@@ -242,7 +354,7 @@ namespace ssl {
         key = NULL;
         key_len = 0;
         BIO_reset(mem_bio);
-        if (PEM_write_bio_PUBKEY(mem_bio, pkey) <= 0) {
+        if (PEM_write_bio_PUBKEY(mem_bio, pkey) == 0) {
             EVP_PKEY_free(pkey);
             BIO_free(mem_bio);
             return false;
@@ -257,6 +369,8 @@ namespace ssl {
         return false;
 #endif
     }
+
+
 
 }  // namespace ssl
 }  // namespace pump

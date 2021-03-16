@@ -42,9 +42,18 @@ namespace tls {
 
         bool __init_client_hello(config *cfg);
 
+        bool __handle_server_hello(server_hello_message *msg);
+
       private:
-        client_hello_message hello_;
+        handshaker_status status_;
+
+        ssl::hash_context hash_ctx_;
+
         ssl::ecdhe_key_pair ecdhe_keys_;
+
+        tls_cipher_suite_type selected_cipher_suite_;
+
+        client_hello_message hello_;
     };
 
 

@@ -24,6 +24,45 @@
 namespace pump {
 namespace ssl {
 
+    typedef int64_t hash_algorithm;
+    //const hash_algorithm HASH_SHA1 = 1;
+    //const hash_algorithm HASH_SHA128 = 2;
+    //const hash_algorithm HASH_SHA224 = 3;
+    const hash_algorithm HASH_SHA256 = 4;
+    const hash_algorithm HASH_SHA384 = 5;
+    //const hash_algorithm HASH_SHA512 = 6;
+
+    class hasher {
+      public:
+        /*********************************************************************************
+         * Constructor
+         ********************************************************************************/
+        hasher(hash_algorithm algorithm);
+
+        /*********************************************************************************
+         * Deconstructor
+         ********************************************************************************/
+        ~hasher();
+
+        /*********************************************************************************
+         * Update with data
+         ********************************************************************************/
+        bool update(void_ptr data, int32_t data_len);
+
+        /*********************************************************************************
+         * Get hash result
+         ********************************************************************************/
+        bool result(std::string &hash);
+
+      private:
+        // Hash context 
+        void_ptr hash_ctx_;
+        // Hash result length
+        int32_t result_length_;
+        // Hash algorithm
+        hash_algorithm algorithm_;
+    };
+
     /*********************************************************************************
      * Create tls client certificate.
      ********************************************************************************/
@@ -48,6 +87,9 @@ namespace ssl {
      ********************************************************************************/
     void destory_tls_certificate(void_ptr xcred);
 
+    /*********************************************************************************
+     * ECDHE crypto key pair.
+     ********************************************************************************/
     struct ecdhe_key_pair {
         std::string prikey;
         std::string pubkey;

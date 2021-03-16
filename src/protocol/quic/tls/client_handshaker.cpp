@@ -16,6 +16,7 @@
 
 #include <random>
 
+#include "pump/protocol/quic/tls/utils.h"
 #include "pump/protocol/quic/tls/client_handshaker.h"
 
 namespace pump {
@@ -23,7 +24,9 @@ namespace protocol {
 namespace quic {
 namespace tls {
 
-    client_handshaker::client_handshaker() {
+    client_handshaker::client_handshaker()
+      : status_(HANDSHAKER_INIT),
+        selected_cipher_suite_(TLS_CIPHER_SUITE_UNKNOWN) {
     }
 
     client_handshaker::~client_handshaker() {
@@ -45,12 +48,17 @@ namespace tls {
         }
         
         // TODO: send client hello message.
+        status_ = HANDSHAKER_CLIENT_HELLO_SENT;
 
         return true;
     }
 
     bool client_handshaker::handshake(handshake_message *msg) {
+        if (msg->type == TLS_MSG_SERVER_HELLO) {
+            return __handle_server_hello((server_hello_message*)msg->msg);
+        }
 
+        return false;
     }
 
     bool client_handshaker::__init_client_hello(config *cfg) {
@@ -65,7 +73,7 @@ namespace tls {
         hello_.legacy_version = TLS_VSERVER_12;
 
         std::default_random_engine random;
-        for (int32_t i = 0; i < sizeof(hello_.random); i++) {
+        for (int32_t i = 0; i < (int32_t)sizeof(hello_.random); i++) {
             hello_.random[i]= random();
         }
 
@@ -143,6 +151,71 @@ namespace tls {
         hello_.psk_modes.clear();
         hello_.psk_identities.clear();
         hello_.psk_binders.clear();
+
+        return true;
+    }
+
+    bool client_handshaker::__handle_server_hello(server_hello_message *msg) {
+        if (status_ != HANDSHAKER_CLIENT_HELLO_SENT || 
+            status_ != HANDSHAKER_HELLO_RETRY_SENT) {
+            // TODO: send ALERT_UNEXPECTED_MESSGAE message.
+            return false;
+        }
+
+        if (msg->legacy_version != TLS_VSERVER_12) {
+            // TODO: send ALERT_ILLEGAL_PARAMETER message.
+            return false;
+        }
+
+        if (msg->supported_version != TLS_VSERVER_13) {
+            // TODO: send ALERT_PROTOCOL_VERSION message.
+            return false;
+        }
+
+        if (msg->is_support_ocsp_stapling || 
+            msg->is_support_session_ticket || 
+            msg->is_support_renegotiation_info || 
+            !msg->renegotiation_info.empty() || 
+            !msg->alpn.empty() || 
+            !msg->scts.empty()) {
+            // TODO: send ALERT_UNSUPPORTED_EXTENSION message.
+            return false;
+        }
+
+        if (hello_.session_id != msg->session_id) {
+            // TODO: send ALERT_ILLEGAL_PARAMETER message.
+            return false;
+        }
+
+        if (msg->compression_method != TLS_COMPRESSION_METHOD_NONE) {
+            // TODO: send ALERT_ILLEGAL_PARAMETER message.
+            return false; 
+        }
+
+        if (!filter_cipher_suite_tls13(hello_.cipher_suites, msg->cipher_suite)) {
+            // TODO: send ALERT_ILLEGAL_PARAMETER message.
+            return false;
+        }
+
+        if (!msg->cookie.empty()) {
+            // TODO: send ALERT_UNSUPPORTED_EXTENSION message.
+            return false;
+        }
+
+        if (msg->selected_group != TLS_GROUP_UNKNOWN) {
+           // TODO: send ALERT_DECODE_ERROR message.
+            return false; 
+        }
+
+        if (msg->selected_key_share.group == TLS_GROUP_UNKNOWN || 
+            msg->selected_key_share.group != hello_.key_shares[0].group) {
+            // TODO: send ALERT_ILLEGAL_PARAMETER message.
+            return false;
+        }
+
+        if (!msg->has_selected_psk_identity) {
+            return true;
+        }
 
         return true;
     }
