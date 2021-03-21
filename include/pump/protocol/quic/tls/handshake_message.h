@@ -27,18 +27,57 @@ namespace protocol {
 namespace quic {
 namespace tls {
 
+    /*********************************************************************************
+     * TLS handshake message struct.
+     ********************************************************************************/
     struct handshake_message {
-        tls_message_type type;
+        message_type type;
         void *msg;
     };
 
+    /*********************************************************************************
+     * Init handshake message.
+     ********************************************************************************/
     bool init_handshake_message(handshake_message *msg);
 
+    /*********************************************************************************
+     * Uninit handshake message.
+     ********************************************************************************/
     void uninit_handshake_message(handshake_message *msg);
 
+    /*********************************************************************************
+     * Pack handshake message.
+     ********************************************************************************/
     int32_t pack_handshake_message(const handshake_message *msg, uint8_t *buf, int32_t max_size);
 
+    /*********************************************************************************
+     * Unpack handshake message.
+     ********************************************************************************/
     int32_t unpack_handshake_message(const uint8_t *buf, int32_t size, handshake_message *msg);
+
+    /*********************************************************************************
+     * TLS handshake key stare struct.
+     ********************************************************************************/
+    struct key_share {
+        curve_group_type group;
+        std::string data;
+    };
+
+    /*********************************************************************************
+     * TLS handshake psk indentity struct.
+     ********************************************************************************/
+    struct psk_identity {
+        std::string identity;
+        uint32_t obfuscated_ticket_age;
+    };
+
+    /*********************************************************************************
+     * TLS handshake extension struct.
+     ********************************************************************************/
+    struct extension {
+        uint16_t type;
+        std::string data;
+    };
 
     // The hello request message MAY be sent by the server at any time.
     // Hello request is a simple notification that the client should
@@ -80,7 +119,7 @@ namespace tls {
         // a legacy_version of 0x0303 and a supported_versions extension
         // present with 0x0304 as the highest version indicated therein.
         // https://tools.ietf.org/html/rfc5246#section-7.4.1.2
-        tls_version_type legacy_version;
+        version_type legacy_version;
         
         // A 32-bytes random structure.
         // https://tools.ietf.org/html/rfc5246#section-7.4.1.2
@@ -98,13 +137,13 @@ namespace tls {
         // order of client preference.
         // https://tools.ietf.org/html/rfc5246#appendix-A.5
         // https://tools.ietf.org/html/rfc8446#section-4.1.2
-        std::vector<tls_cipher_suite_type> cipher_suites;
+        std::vector<cipher_suite_type> cipher_suites;
         
         // This is a list of the compression methods supported by the client,
         // sorted by client preference.
         // https://tools.ietf.org/html/rfc5246#section-7.4.1.2
         // https://tools.ietf.org/html/rfc8446#section-4.1.2
-        std::vector<tls_compression_method_type> compression_methods;
+        std::vector<compression_method_type> compression_methods;
 
         // Clients MAY request extended functionality from servers by sending
         // data in the extensions field.  The actual "Extension" format is
@@ -137,7 +176,7 @@ namespace tls {
         // (see Section 4.2.3).
         // https://tools.ietf.org/html/rfc4492#section-5.1.1
         // https://tools.ietf.org/html/rfc8446#section-4.2.7
-        std::vector<tls_group_type> supported_groups;
+        std::vector<curve_group_type> supported_groups;
 
         // Extension field.
         // Three point formats are included in the definition of ECPointFormat
@@ -150,7 +189,7 @@ namespace tls {
         // where the former applies only to prime curves and the latter applies
         // only to characteristic-2 curves.
         // https://tools.ietf.org/html/rfc4492#section-5.1.2
-        std::vector<tls_point_format_type> supported_points;
+        std::vector<point_format_type> supported_points;
 
         // Extension field.
         // If the client possesses a ticket that it wants to use to resume a
@@ -173,7 +212,7 @@ namespace tls {
         // contains a "supported_signature_algorithms" value.
         // https://tools.ietf.org/html/rfc5246#section-7.4.1.4.1
         // https://tools.ietf.org/html/rfc8446#section-4.2.3
-        std::vector<tls_signature_scheme_type> supported_signature_algorithms;
+        std::vector<signature_scheme_type> supported_signature_algorithms;
 
         // Extension field.
         // The "signature_algorithms_cert" extension was added to allow
@@ -183,7 +222,7 @@ namespace tls {
         // Implementations which have the same policy in both cases MAY omit the
         // "signature_algorithms_cert" extension.
         // https://tools.ietf.org/html/rfc8446#section-4.2.3
-        std::vector<tls_signature_scheme_type> supported_signature_algorithms_certs;
+        std::vector<signature_scheme_type> supported_signature_algorithms_certs;
 
         // Extension field.
         // A new TLS extension, "renegotiation_info" (with extension type 0xff01), 
@@ -219,7 +258,7 @@ namespace tls {
         // if previous versions of TLS are allowed to be negotiated, they MUST
         // be present as well).
         // https://tools.ietf.org/html/rfc8446#section-4.2.1
-        std::vector<tls_version_type> supported_versions;
+        std::vector<version_type> supported_versions;
 
         // Extension field.
         // Cookies serve two primary purposes:
@@ -263,7 +302,7 @@ namespace tls {
         // advertised modes; however, if a server does so, the impact will just
         // be that the client's attempts at resumption fail.
         // https://tools.ietf.org/html/rfc8446#section-4.2.9
-        std::vector<tls_psk_mode_type> psk_modes;
+        std::vector<psk_mode_type> psk_modes;
 
         // Extension field.
         // Additional extensions.
@@ -299,7 +338,7 @@ namespace tls {
         // (Section 4.2.1), and the legacy_version field MUST be set to
         // 0x0303, which is the version number for TLS 1.2.  (See Appendix D
         // for details about backward compatibility.)
-        tls_version_type legacy_version;
+        version_type legacy_version;
 
         // This structure is generated by the server and MUST be
         // independently generated from the ClientHello.random.
@@ -332,14 +371,14 @@ namespace tls {
         // ClientHello.cipher_suites. For resumed sessions, this field is
         // the value from the state of the session being resumed.
         // https://tools.ietf.org/html/rfc5246#section-7.4.1.3
-        tls_cipher_suite_type cipher_suite;
+        cipher_suite_type cipher_suite;
 
         // The single compression algorithm selected by the server from the
         // list in ClientHello.compression_methods.  For resumed sessions,
         // this field is the value from the resumed session state.
         // https://tools.ietf.org/html/rfc5246#section-7.4.1.3
         // https://tools.ietf.org/html/rfc8446#section-4.1.2
-        tls_compression_method_type compression_method;
+        compression_method_type compression_method;
 
         // Extension field.
         // Servers that receive a client hello containing the "status_request"
@@ -362,7 +401,7 @@ namespace tls {
         // where the former applies only to prime curves and the latter applies
         // only to characteristic-2 curves.
         // https://tools.ietf.org/html/rfc4492#section-5.1.2
-        std::vector<tls_point_format_type> supported_points;
+        std::vector<point_format_type> supported_points;
 
         // Extension field.
         // The server uses a zero-length SessionTicket extension to indicate to
@@ -412,7 +451,7 @@ namespace tls {
         // value (0x0304). It MUST set the ServerHello.legacy_version field to
         // 0x0303 (TLS 1.2).
         // https://tools.ietf.org/html/rfc8446#section-4.2.1
-        tls_version_type supported_version;
+        version_type supported_version;
 
         // Extension field.
         //  If using (EC)DHE key establishment, servers offer exactly one
@@ -444,7 +483,7 @@ namespace tls {
         // new KeyShareEntry for the group indicated in the selected_group field
         // of the triggering HelloRetryRequest.
         // https://tools.ietf.org/html/rfc8446#section-4.2.8
-        tls_group_type selected_group;
+        curve_group_type selected_group;
 
         // Extension field.
         // Prior to accepting PSK key establishment, the server MUST validate
@@ -633,7 +672,7 @@ namespace tls {
         // https://tools.ietf.org/html/rfc8446#section-4.4.2.1
         // https://tools.ietf.org/html/rfc8446#section-4.3.2
         bool is_support_scts;
-        std::vector<std::string> signed_certificate_timestamps;
+        std::vector<std::string> scts;
     };
 
     int32_t pack_certificate(const certificate_message *msg, uint8_t *buf, int32_t max_size);
@@ -668,7 +707,7 @@ namespace tls {
         // https://tools.ietf.org/html/rfc8446#section-4.3.2
         // https://tools.ietf.org/html/rfc5246#section-7.4.1.4.1
         bool has_signature_algorithms;
-        std::vector<tls_signature_scheme_type> supported_signature_algorithms;
+        std::vector<signature_scheme_type> supported_signature_algorithms;
 
         // A list of the distinguished names of acceptable certificate
         // authorities.  These distinguished names may specify a desired
@@ -707,12 +746,12 @@ namespace tls {
         // https://tools.ietf.org/html/rfc8446#section-4.3.2
         // https://tools.ietf.org/html/rfc5246#section-7.4.1.4.1
         // https://tools.ietf.org/html/rfc8446#section-4.2.3
-        std::vector<tls_signature_scheme_type> supported_signature_algorithms;
+        std::vector<signature_scheme_type> supported_signature_algorithms;
 
         // Extension field.
         // https://tools.ietf.org/html/rfc8446#section-4.3.2
         // https://tools.ietf.org/html/rfc8446#section-4.2.3
-        std::vector<tls_signature_scheme_type> supported_signature_algorithms_certs;
+        std::vector<signature_scheme_type> supported_signature_algorithms_certs;
 
         // Extension field.
         // https://tools.ietf.org/html/rfc8446#section-4.3.2

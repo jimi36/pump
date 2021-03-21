@@ -40,23 +40,31 @@ namespace tls {
 
       private:
 
-        bool __init_client_hello(config *cfg);
+        bool __send_client_hello(config *cfg);
 
         bool __handle_server_hello(server_hello_message *msg);
+
+        bool __send_retry_hello(server_hello_message *msg);
+
+        bool __handle_encrypted_extensions(encrypted_extensions_message *msg);
+
+        bool __handle_certificate_request_tls13(certificate_request_tls13_message *msg);
+
+        bool __handle_certificate_tls13(certificate_tls13_message *msg);
 
       private:
         handshaker_status status_;
 
-        ssl::hash_context hash_ctx_;
+        ssl::key_pair ecdhe_keys_;
 
-        ssl::ecdhe_key_pair ecdhe_keys_;
-
-        tls_cipher_suite_type selected_cipher_suite_;
+        ssl::hash_context_ptr transcript_;
 
         client_hello_message hello_;
+
+        certificate_request_tls13_message certificate_request_;
+
+        connection_session session_;
     };
-
-
 
 }
 }

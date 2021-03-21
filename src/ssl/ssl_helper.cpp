@@ -21,6 +21,7 @@
 #if defined(PUMP_HAVE_OPENSSL)
 extern "C" {
 #include <openssl/ssl.h>
+#include <openssl/kdf.h>
 #include <openssl/err.h>
 }
 #endif
@@ -34,60 +35,12 @@ extern "C" {
 namespace pump {
 namespace ssl {
 
-    void_ptr hash_create_context(hash_algorithm algorithm) {
-        void_ptr ctx = nullptr;
-#if defined(PUMP_HAVE_OPENSSL)
-        switch (algorithm) {
-        case HASH_SHA256:
-            ctx = (uint8_t*)pump_malloc(sizeof(algorithm) + sizeof(SHA256_CTX)) + sizeof(algorithm);
-            if (SHA256_Init((SHA256_CTX*)ctx) == 0) {
-                pump_free(ctx);
-                return nullptr;
-            }
-            break;
-        case HASH_SHA384:
-            ctx = (uint8_t*)pump_malloc(sizeof(algorithm) + sizeof(SHA512_CTX)) + sizeof(algorithm);
-            if (SHA384_Init((SHA512_CTX*)ctx) == 0) {
-                pump_free(ctx);
-                return nullptr;
-            }
-            break;
-        }
-#endif
-        return ctx;
-    }
+    struct hash_context {
+        void_ptr ctx;
+        hash_algorithm algorithm;
+    };
 
-    void hash_destory_context(void_ptr ctx) {
-        if (ctx) {
-#if defined(PUMP_HAVE_OPENSSL)
-            pump_free((uint8_t*)ctx - sizeof(hash_algorithm));
-#endif
-        }
-    }
-
-    bool hash_update(void_ptr ctx, const void_ptr data, int32_t data_len) {
-#if defined(PUMP_HAVE_OPENSSL)
-        PUMP_ASSERT(ctx);
-        PUMP_ASSERT(data && data_len > 0);
-        hash_algorithm algorithm = hash_algorithm((uint8_t*)ctx - sizeof(hash_algorithm));
-        switch (algorithm)
-        {
-        case HASH_SHA256:
-            if (SHA256_Update((SHA256_CTX*)ctx, data, data_len) == 1) {
-                return true;
-            }
-            break;
-        case HASH_SHA384:
-            if (SHA256_Update((SHA256_CTX*)ctx, data, data_len) == 1) {
-                return true;
-            }
-            break;
-        }
-#endif
-        return false;
-    }
-
-    int32_t hash_result_length(hash_algorithm algorithm) {
+    int32_t hash_size(hash_algorithm algorithm) {
         switch (algorithm)
         {
         case HASH_SHA256:
@@ -98,52 +51,195 @@ namespace ssl {
         return 0;
     }
 
-    bool hash_result(void_ptr ctx, void_ptr result, int32_t result_len) {
+    hash_context_ptr hash_new(hash_algorithm algorithm) {
+        hash_context_ptr ctx = nullptr;
 #if defined(PUMP_HAVE_OPENSSL)
-        PUMP_ASSERT(ctx);
-        hash_algorithm algorithm = hash_algorithm((uint8_t*)ctx - sizeof(hash_algorithm));
-        switch (algorithm)
-        {
+        switch (algorithm) {
         case HASH_SHA256:
-            PUMP_ASSERT(result && result_len >= 32);
-            if (SHA256_Final((unsigned char*)result, (SHA256_CTX*)ctx) == 1) {
-                return true;
+            ctx = (hash_context_ptr)pump_malloc(sizeof(hash_context));
+            ctx->ctx = pump_malloc(sizeof(SHA256_CTX));
+            if (SHA256_Init((SHA256_CTX*)ctx) == 0) {
+                pump_free(ctx->ctx);
+                pump_free(ctx);
+                return nullptr;
             }
             break;
         case HASH_SHA384:
-            PUMP_ASSERT(result && result_len >= 48);
-            if (SHA384_Final((unsigned char*)result, (SHA512_CTX*)ctx) == 1) {
-                return true;
+            ctx = (hash_context_ptr)pump_malloc(sizeof(hash_context));
+            ctx->ctx = pump_malloc(sizeof(SHA512_CTX));
+            if (SHA384_Init((SHA512_CTX*)ctx) == 0) {
+                pump_free(ctx->ctx);
+                pump_free(ctx);
+                return nullptr;
             }
             break;
-        } 
+        defalut:
+            return nullptr;
+        }
+        ctx->algorithm = algorithm;
+#endif
+        return ctx;
+    }
+
+    void hash_delete(hash_context_ptr ctx) {
+        if (ctx) {
+#if defined(PUMP_HAVE_OPENSSL)
+            pump_free(ctx->ctx);
+            pump_free(ctx);
+#endif
+        }
+    }
+
+    bool hash_update(hash_context_ptr ctx, const void_ptr data, int32_t data_len) {
+#if defined(PUMP_HAVE_OPENSSL)
+        PUMP_ASSERT(ctx && ctx->ctx);
+        PUMP_ASSERT(data && data_len > 0);
+        switch (ctx->algorithm)
+        {
+        case HASH_SHA256:
+            return SHA256_Update((SHA256_CTX*)ctx->ctx, data, data_len) == 1;
+        case HASH_SHA384:
+            return SHA256_Update((SHA256_CTX*)ctx->ctx, data, data_len) == 1;
+        }
 #endif
         return false;
     }
 
-    hasher::hasher(hash_algorithm algorithm)
-      : hash_ctx_(hash_create_context(algorithm)),
-        result_length_(hash_result_length(algorithm)),
-        algorithm_(algorithm) {
+    bool hash_result(hash_context_ptr ctx, void_ptr out, int32_t out_len) {
+#if defined(PUMP_HAVE_OPENSSL)
+        PUMP_ASSERT(ctx && ctx->ctx);
+        PUMP_ASSERT(out && out_len >= hash_size(ctx->algorithm));
+        switch (ctx->algorithm)
+        {
+        case HASH_SHA256:
+            return SHA256_Final((unsigned char*)out, (SHA256_CTX*)ctx->ctx) == 1;
+        case HASH_SHA384:
+            return SHA384_Final((unsigned char*)out, (SHA512_CTX*)ctx->ctx) == 1;
+        }
+#endif
+        return false;
     }
 
-    hasher::~hasher() {
-        hash_destory_context(hash_ctx_);
-    }
-
-    bool hasher::update(void_ptr data, int32_t data_len) {
-        if (!hash_ctx_) {
+    bool hkdf_extract(hash_algorithm algorithm, 
+                      const std::string &salt,
+                      const std::string &key,
+                      std::string &out) {
+#if defined(PUMP_HAVE_OPENSSL)
+        const EVP_MD *(*new_md_func)(void);
+        if (algorithm == HASH_SHA256) {
+            new_md_func = EVP_sha256;
+        } else if (algorithm == HASH_SHA384) {
+            new_md_func = EVP_sha384;
+        } else {
             return false;
         }
-        return hash_update(hash_ctx_, data, data_len);
-    }
-
-    bool hasher::result(std::string &hash) {
-        if (!hash_ctx_) {
+        EVP_PKEY_CTX *pctx = EVP_PKEY_CTX_new_id(EVP_PKEY_HKDF, NULL);
+        if (!pctx) {
             return false;
         }
-        hash.resize(result_length_);
-        return hash_result(hash_ctx_, (void_ptr)hash.data(), result_length_);
+
+        if (EVP_PKEY_derive_init(pctx) <= 0 ||
+            EVP_PKEY_CTX_hkdf_mode(pctx, EVP_PKEY_HKDEF_MODE_EXTRACT_ONLY) <= 0 ||
+            EVP_PKEY_CTX_set_hkdf_md(pctx, new_md_func()) <= 0 ||
+            EVP_PKEY_CTX_set1_hkdf_salt(pctx, salt.data(), salt.size()) <= 0 ||
+            EVP_PKEY_CTX_set1_hkdf_key(pctx, key.data(), key.size()) <= 0) {
+            EVP_PKEY_CTX_free(pctx);
+            return false;
+        }
+
+        size_t out_len = 0;
+        if (EVP_PKEY_derive(pctx, NULL, &out_len) <= 0) {
+            EVP_PKEY_CTX_free(pctx);
+            return false;
+        }
+        out.resize(out_len);
+        if (EVP_PKEY_derive(pctx, (uint8_t*)out.data(), &out_len) <= 0) {
+            EVP_PKEY_CTX_free(pctx);
+            return false;
+        }
+
+        EVP_PKEY_CTX_free(pctx);
+
+        return true;
+#else
+        return false;
+#endif
+    }
+
+    bool hkdf_expand(hash_algorithm algorithm, 
+                     const std::string &key,
+                     const std::string &info,
+                     std::string &out) {
+#if defined(PUMP_HAVE_OPENSSL)
+        const EVP_MD *(*new_md_func)(void);
+        if (algorithm == HASH_SHA256) {
+            new_md_func = EVP_sha256;
+        } else if (algorithm == HASH_SHA384) {
+            new_md_func = EVP_sha384;
+        } else {
+            return false;
+        }
+        EVP_PKEY_CTX *pctx = EVP_PKEY_CTX_new_id(EVP_PKEY_HKDF, NULL);
+        if (!pctx) {
+            return false;
+        }
+
+        if (EVP_PKEY_derive_init(pctx) <= 0 ||
+            EVP_PKEY_CTX_hkdf_mode(pctx, EVP_PKEY_HKDEF_MODE_EXPAND_ONLY) <= 0 ||
+            EVP_PKEY_CTX_set_hkdf_md(pctx, new_md_func()) <= 0 ||
+            EVP_PKEY_CTX_set1_hkdf_key(pctx, key.data(), key.size()) <= 0 ||
+            EVP_PKEY_CTX_add1_hkdf_info(pctx, info.data(), info.size()) <= 0) {
+            EVP_PKEY_CTX_free(pctx);
+            return false;
+        }
+
+        size_t out_len = out.size();
+        if (EVP_PKEY_derive(pctx, (uint8_t*)out.data(), &out_len) <= 0) {
+            EVP_PKEY_CTX_free(pctx);
+            return false;
+        }
+
+        EVP_PKEY_CTX_free(pctx);
+
+        return true;
+#else
+        return false;
+#endif
+    }
+
+    void_ptr x509_certificate_new(void_ptr data, int32_t size) {
+#if defined(PUMP_HAVE_OPENSSL)
+        uint8_t *tmp = (uint8_t*)data;
+        return d2i_X509(NULL, &tmp, size);
+#else
+        return nullptr;
+#endif
+    }
+
+    void x509_certificate_delete(void_ptr cert) {
+#if defined(PUMP_HAVE_OPENSSL)
+        X509_free((X509*)cert);
+#endif
+    }
+
+    bool x509_certificate_verify(std::vector<void_ptr> &certs) {
+#if defined(PUMP_HAVE_OPENSSL)
+        X509_STORE *store = X509_STORE_new();
+        for (int32_t i = 1; i < (int32_t)certs.size(); i++) {
+            X509_STORE_add_cert(store, (X509*)certs[i]);
+        }
+
+        X509_STORE_CTX *ctx = X509_STORE_CTX_new();
+        X509_STORE_CTX_init(ctx, store, (X509*)certs[0], NULL);
+        int32_t ret = X509_verify_cert(ctx);
+
+        X509_STORE_CTX_free(ctx);
+        X509_STORE_free(store);
+
+        return ret == 1;
+#else
+        return false;
+#endif
     }
 
     void_ptr create_tls_client_certificate() {
@@ -318,7 +414,7 @@ namespace ssl {
 #endif
     }
 
-    bool generate_X25519_key_pair(ecdhe_key_pair *kp) {
+    bool X25519_init(key_pair *kp) {
 #if defined(PUMP_HAVE_OPENSSL)
         // Create and init context.
         EVP_PKEY_CTX *pctx = NULL;
@@ -370,7 +466,66 @@ namespace ssl {
 #endif
     }
 
+    bool X25519_device(key_pair *kp, const std::string &data, std::string &out) {
+#if defined(PUMP_HAVE_OPENSSL)
+        // Load peer public key.
+        BIO *pub_bio = BIO_new_mem_buf(data.data(), data.size());
+        EVP_PKEY *pub_key = PEM_read_bio_PUBKEY(pub_bio, NULL, NULL, NULL);
+        BIO_free(pub_bio);
+        if (!pub_key) {
+            return false;
+        }
 
+        // Load private key.
+        BIO *pri_bio = BIO_new_mem_buf(kp->prikey.data(), kp->prikey.size());
+        EVP_PKEY *pri_key = PEM_read_bio_PrivateKey(pri_bio, NULL, NULL, NULL);
+        BIO_free(pri_bio);
+        if (!pri_key) {
+            EVP_PKEY_free(pub_key);
+            return false;
+        }
+
+        // Create context.
+        EVP_PKEY_CTX *ctx = EVP_PKEY_CTX_new(pri_key, NULL);
+        if (!ctx) {
+            EVP_PKEY_free(pub_key);
+            EVP_PKEY_free(pri_key);
+            return false;
+        }
+        
+        if (EVP_PKEY_derive_init(ctx) <= 0 ||
+            EVP_PKEY_derive_set_peer(ctx, pub_key) <= 0) {
+            EVP_PKEY_free(pub_key);
+            EVP_PKEY_free(pri_key);
+            EVP_PKEY_CTX_free(ctx);
+            return false;
+        }
+
+        size_t out_len = 0;
+        if (EVP_PKEY_derive(ctx, NULL, &out_len) <= 0) {
+            EVP_PKEY_free(pub_key);
+            EVP_PKEY_free(pri_key);
+            EVP_PKEY_CTX_free(ctx);
+            return false;
+        }
+
+        out.resize(out_len);
+        if (EVP_PKEY_derive(ctx, (uint8_t*)out.data(), &out_len) <= 0) {
+		    EVP_PKEY_free(pub_key);
+            EVP_PKEY_free(pri_key);
+            EVP_PKEY_CTX_free(ctx);
+            return false;
+	    }
+
+        EVP_PKEY_free(pub_key);
+        EVP_PKEY_free(pri_key);
+        EVP_PKEY_CTX_free(ctx);
+
+        return true;
+#else
+        return false;
+#endif
+    }
 
 }  // namespace ssl
 }  // namespace pump

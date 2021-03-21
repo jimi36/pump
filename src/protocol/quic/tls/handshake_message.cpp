@@ -1103,7 +1103,7 @@ namespace tls {
                     uint8_t points_len = 0;
                     UNPACK_AND_RETURN_ERR( __unpack_uint8(p, end, points_len));
                     for (uint8_t i = 0; i < points_len; i++) {
-                        tls_point_format_type point_type = 0;
+                        point_format_type point_type = 0;
                         UNPACK_AND_RETURN_ERR( __unpack_uint8(p, end, point_type));
                         msg->supported_points.push_back(point_type);
                     }
@@ -1483,9 +1483,9 @@ namespace tls {
             if (msg->is_support_scts) {
                 PACK_AND_RETURN_ERR(__pack_uint16(p, end, TLS_EXTENSION_SCT));
                 uint8_t *len = p; p += 2 * 2;
-                for (int32_t ii = 0; ii < (int32_t)msg->signed_certificate_timestamps.size(); ii++) {
-                    PACK_AND_RETURN_ERR(__pack_uint16(p, end, (uint16_t)msg->signed_certificate_timestamps[i].size()));
-                    PACK_AND_RETURN_ERR(__pack_bytes(p, end, msg->signed_certificate_timestamps[i]));
+                for (int32_t ii = 0; ii < (int32_t)msg->scts.size(); ii++) {
+                    PACK_AND_RETURN_ERR(__pack_uint16(p, end, (uint16_t)msg->scts[i].size()));
+                    PACK_AND_RETURN_ERR(__pack_bytes(p, end, msg->scts[i]));
                 }
                 __pack_uint16(len, p, uint16_t(p - len - 2));
                 __pack_uint16(len + 2, p, uint16_t(p - len - 4));
@@ -1576,7 +1576,7 @@ namespace tls {
                             if (sct_len > 0) {
                                 std::string sct;
                                 UNPACK_AND_RETURN_ERR(__unpack_bytes(p, end, sct, (int32_t)sct_len));
-                                msg->signed_certificate_timestamps.push_back(std::move(sct));
+                                msg->scts.push_back(std::move(sct));
                             }
                             scts_len -= (2 + sct_len);
                         }
@@ -2040,7 +2040,7 @@ namespace tls {
         UNPACK_AND_RETURN_ERR(__unpack_uint24(p, end, payload_len));
 
         // Unpack status.
-        tls_certicate_status_type status_type;
+        certicate_status_type status_type;
         UNPACK_AND_RETURN_ERR(__unpack_uint8(p, end, status_type));
         uint32_t status_len = 0;
         UNPACK_AND_RETURN_ERR(__unpack_uint24(p, end, status_len));
