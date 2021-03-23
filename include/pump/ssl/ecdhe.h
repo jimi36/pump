@@ -13,67 +13,39 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- 
-#ifndef pump_protocol_quic_tls_types_h
-#define pump_protocol_quic_tls_types_h
+
+#ifndef pump_ssl_ecdhe_h
+#define pump_ssl_ecdhe_h
 
 #include <string>
 #include <vector>
 
-#include "pump/protocol/quic/tls/defines.h"
+#include "pump/types.h"
 
 namespace pump {
-namespace protocol {
-namespace quic {
-namespace tls {
+namespace ssl {
+
+    struct ecdhe_parameter;
+    DEFINE_RAW_POINTER_TYPE(ecdhe_parameter);
 
     /*********************************************************************************
-     * TLS config.
+     * Crypto key pair.
      ********************************************************************************/
-    struct config {
-        std::string server_name;
-        std::string alpn;
+    struct key_pair {
+        std::string prikey;
+        std::string pubkey;
     };
 
     /*********************************************************************************
-     * TLS cipher suite parameters.
+     * X25519 key pair init.
      ********************************************************************************/
-    struct cipher_suite_params {
-        ssl::hash_algorithm algo;
-        cipher_suite_type type;
-        int32_t key_len;
-    };
+    bool X25519_init(key_pair *kp);
 
     /*********************************************************************************
-     * TLS connection session.
+     * X25519 device data.
      ********************************************************************************/
-    struct connection_session {
-        // Selected tls verson by handshake
-        version_type version;
+    bool X25519_device(key_pair *kp, const std::string &data, std::string &out);
 
-        ssl::key_pair keys;
-
-        // Selected cipher cuite parameters by handshake
-        cipher_suite_params suite_params;
-
-        // Selected application protocol by handshake
-        std::string alpn;
-
-        bool enable_zero_rtt;
-
-        std::vector<std::string> scts;
-
-        std::string ocsp_staple;
-
-        std::string master_secret;
-        std::string client_secret;
-        std::string server_secret;
-
-        std::vector<void_ptr> certs;
-    };
-
-}
-}
 }
 }
 

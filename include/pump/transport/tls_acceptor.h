@@ -19,7 +19,7 @@
 
 #include <unordered_map>
 
-#include "pump/ssl/ssl_helper.h"
+#include "pump/ssl/cert.h"
 #include "pump/transport/base_acceptor.h"
 #include "pump/transport/tls_handshaker.h"
 #include "pump/transport/flow/flow_tls_acceptor.h"

@@ -19,7 +19,7 @@
 
 #include <future>
 
-#include "pump/ssl/ssl_helper.h"
+#include "pump/ssl/cert.h"
 #include "pump/transport/base_dialer.h"
 #include "pump/transport/tls_handshaker.h"
 #include "pump/transport/flow/flow_tls_dialer.h"

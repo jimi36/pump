@@ -17,7 +17,7 @@
 #ifndef pump_transport_flow_tls_h
 #define pump_transport_flow_tls_h
 
-#include "pump/ssl/tls_helper.h"
+#include "pump/ssl/tls.h"
 #include "pump/transport/flow/flow.h"
 
 namespace pump {

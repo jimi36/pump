@@ -17,6 +17,8 @@
 #include <random>
 
 #include "pump/debug.h"
+#include "pump/ssl/cert.h"
+#include "pump/ssl/ecdhe.h"
 #include "pump/protocol/quic/tls/utils.h"
 #include "pump/protocol/quic/tls/client_handshaker.h"
 
@@ -49,11 +51,24 @@ namespace tls {
     }
 
     bool client_handshaker::handshake(handshake_message *msg) {
-        if (msg->type != TLS_MSG_SERVER_HELLO) {
-            return __handle_server_hello((server_hello_message*)msg->msg);
+        alert_code code = ALERT_NONE;
+
+        switch (msg->type)
+        {
+        case TLS_MSG_SERVER_HELLO:
+            code = __handle_server_hello((server_hello_message*)msg->msg);
+            break;
+        default:
+            code = ALERT_UNEXPECTED_MESSGAE;
+            break;
         }
 
-        return false;
+        if (code != ALERT_NONE) {
+            // TODO: send alert message.
+            return false;
+        }
+
+        return true;
     }
 
     bool client_handshaker::__send_client_hello(config *cfg) {
@@ -132,12 +147,12 @@ namespace tls {
 
         hello_.key_shares.clear();
         if (hello_.supported_versions[0] == TLS_VSERVER_13) {
-            if (!ssl::X25519_init(&ecdhe_keys_)) {
+            if (!ssl::X25519_init(&session_.keys)) {
                 return false;
             }
             key_share ks;
             ks.group = TLS_GROUP_X25519;
-            ks.data = ecdhe_keys_.pubkey;
+            ks.data = session_.keys.pubkey;
             hello_.key_shares.push_back(std::move(ks));
         }
 
@@ -159,21 +174,18 @@ namespace tls {
         return true;
     }
 
-    bool client_handshaker::__handle_server_hello(server_hello_message *msg) {
+    alert_code client_handshaker::__handle_server_hello(server_hello_message *msg) {
         if (status_ != HANDSHAKER_CLIENT_HELLO_SENT &&
             status_ != HANDSHAKER_RETRY_HELLO_SENT) {
-            // TODO: send ALERT_UNEXPECTED_MESSGAE message.
-            return false;
+            return ALERT_UNEXPECTED_MESSGAE;
         }
 
         if (msg->legacy_version != TLS_VSERVER_12) {
-            // TODO: send ALERT_ILLEGAL_PARAMETER message.
-            return false;
+            return ALERT_ILLEGAL_PARAMETER;
         }
 
         if (msg->supported_version != TLS_VSERVER_13) {
-            // TODO: send ALERT_PROTOCOL_VERSION message.
-            return false;
+            return ALERT_PROTOCOL_VERSION;
         }
 
         if (msg->is_support_ocsp_stapling || 
@@ -182,67 +194,57 @@ namespace tls {
             !msg->renegotiation_info.empty() || 
             !msg->alpn.empty() || 
             !msg->scts.empty()) {
-            // TODO: send ALERT_UNSUPPORTED_EXTENSION message.
-            return false;
+            return ALERT_UNSUPPORTED_EXTENSION;
         }
 
         if (hello_.session_id != msg->session_id) {
-            // TODO: send ALERT_ILLEGAL_PARAMETER message.
-            return false;
+            return ALERT_ILLEGAL_PARAMETER;
         }
 
         if (msg->compression_method != TLS_COMPRESSION_METHOD_NONE) {
-            // TODO: send ALERT_ILLEGAL_PARAMETER message.
-            return false; 
+            return ALERT_ILLEGAL_PARAMETER; 
         }
 
-        if (!filter_tls13_cipher_suite(hello_.cipher_suites, msg->cipher_suite)) {
-            // TODO: send ALERT_ILLEGAL_PARAMETER message.
-            return false;
+        if (!is_contains(hello_.cipher_suites, msg->cipher_suite) ||
+            !load_tls13_cipher_suite_params(msg->cipher_suite, &session_.suite_params)) {
+            return ALERT_ILLEGAL_PARAMETER;
         }
-        load_tls13_cipher_suite_params(msg->cipher_suite, &session_.suite_params);
-        transcript_ = ssl::hash_new(session_.suite_params.algorithm);
+        transcript_ = ssl::create_hash_context(session_.suite_params.algo);
 
         uint8_t buffer[4096];
         int32_t size = pack_client_hello(&hello_, buffer, sizeof(buffer));
-        PUMP_DEBUG_CHECK(ssl::hash_update(transcript_, buffer, size));
+        PUMP_DEBUG_CHECK(ssl::update_hash(transcript_, buffer, size));
 
         if (memcmp(msg->random, hello_retry_request_random, 32) == 0) {
             if (status_ == HANDSHAKER_RETRY_HELLO_SENT) {
-                // TODO: send ALERT_UNEXPECTED_MESSGAE message.
-                return false;
+                return ALERT_UNEXPECTED_MESSGAE;
             }
             return __send_retry_hello(msg);
         }
 
         size = pack_server_hello(msg, buffer, sizeof(buffer));
-        PUMP_DEBUG_CHECK(ssl::hash_update(transcript_, buffer, size));
+        PUMP_DEBUG_CHECK(ssl::update_hash(transcript_, buffer, size));
 
         if (!msg->cookie.empty()) {
-            // TODO: send ALERT_UNSUPPORTED_EXTENSION message.
-            return false;
+            return ALERT_UNSUPPORTED_EXTENSION;
         }
 
         if (msg->selected_group != TLS_GROUP_UNKNOWN) {
-           // TODO: send ALERT_DECODE_ERROR message.
-            return false;
+            return ALERT_DECODE_ERROR;
         }
 
         if (msg->selected_key_share.group == TLS_GROUP_UNKNOWN || 
             msg->selected_key_share.group != hello_.key_shares[0].group) {
-            // TODO: send ALERT_ILLEGAL_PARAMETER message.
-            return false;
+            return ALERT_ILLEGAL_PARAMETER;
         }
 
         if (msg->has_selected_psk_identity) {
-            // TODO: send ALERT_ILLEGAL_PARAMETER message.
-            return false;
+            return ALERT_ILLEGAL_PARAMETER;
         }
 
         std::string shared_key;
-        if (!ssl::X25519_device(&ecdhe_keys_, msg->selected_key_share.data, shared_key)) {
-            // TODO: send ALERT_ILLEGAL_PARAMETER message.
-            return false; 
+        if (!ssl::X25519_device(&session_.keys, msg->selected_key_share.data, shared_key)) {
+            return ALERT_ILLEGAL_PARAMETER; 
         }
 
         std::string handshake_secret;
@@ -281,24 +283,52 @@ namespace tls {
         return true;
     }
 
-    bool client_handshaker::__send_retry_hello(server_hello_message *msg) {
-        return false;
+    alert_code client_handshaker::__send_retry_hello(server_hello_message *msg) {
+        if (status_ != HANDSHAKER_CLIENT_HELLO_SENT) {
+            return ALERT_UNEXPECTED_MESSGAE;
+        }
+
+        std::string hash;
+        if (!ssl::sum_hash(transcript_, hash)) {
+            return ALERT_INTERNAL_ERROR;
+        }
+        ssl::reset_hash_context(transcript_);
+
+        std::string hash_msg;
+        hash_msg.push_back(TLS_MSG_MESSAGE_HASH);
+        hash_msg.append(2, 0);
+        hash_msg.push_back((int8_t)hash.size());
+        hash_msg.append(hash);
+
+        uint8_t msg_buffer[4096];
+        int32_t size = pack_server_hello(msg, msg_buffer, 4096);
+        hash_msg.append((char*)msg_buffer, (size_t)size);
+
+        ssl::update_hash(transcript_, hash_msg);
+
+        if (msg->selected_group == TLS_GROUP_UNKNOWN && msg->cookie.empty()) {
+            return ALERT_ILLEGAL_PARAMETER;
+        }
+
+        if (!msg->cookie.empty()) {
+            hello_.cookie = msg->cookie;
+        }
+
+        if (msg->selected_key_share.group != TLS_GROUP_UNKNOWN) {
+            return ALERT_DECODE_ERROR;
+        }
+
+        return ALERT_NONE;
     }
 
-    bool client_handshaker::__handle_encrypted_extensions(encrypted_extensions_message *msg) {
+    alert_code client_handshaker::__handle_encrypted_extensions(encrypted_extensions_message *msg) {
         if (status_ != HANDSHAKER_SERVER_HELLO_RECV) {
-            // TODO: send ALERT_UNEXPECTED_MESSGAE message.
-            return false;
+            return ALERT_UNEXPECTED_MESSGAE;
         }
 
         if (!msg->alpn.empty()) {
-            if (hello_.alpns.empty()) {
-                // TODO: send ALERT_UNSUPPORTED_EXTENSION message.
-                return false; 
-            }
-            if (!filter_application_protocol(hello_.alpns, msg->alpn)) {
-                // TODO: send ALERT_UNSUPPORTED_EXTENSION message.
-                return false;
+            if (hello_.alpns.empty() || !is_contains(hello_.alpns, msg->alpn)) {
+                return ALERT_UNSUPPORTED_EXTENSION; 
             }
             session_.alpn = msg->alpn;
         }
@@ -309,44 +339,58 @@ namespace tls {
 
         status_ = HANDSHAKER_ENCRYPTED_EXTENSIONS_RECV;
 
-        return true;
+        return ALERT_NONE;
     }
 
-    bool client_handshaker::__handle_certificate_request_tls13(certificate_request_tls13_message *msg) {
+    alert_code client_handshaker::__handle_certificate_request_tls13(certificate_request_tls13_message *msg) {
         if (status_ != HANDSHAKER_ENCRYPTED_EXTENSIONS_RECV) {
-            // TODO: send ALERT_UNEXPECTED_MESSGAE message.
-            return false;
+            return ALERT_UNEXPECTED_MESSGAE;
         }
 
         certificate_request_ = *msg;
 
         status_ = HANDSHAKER_CARTIFICATE_REQUEST_RECV;
 
-        return true;
+        return ALERT_NONE;
     }
 
-    bool client_handshaker::__handle_certificate_tls13(certificate_tls13_message *msg) {
+    alert_code client_handshaker::__handle_certificate_tls13(certificate_tls13_message *msg) {
         if (status_ != HANDSHAKER_ENCRYPTED_EXTENSIONS_RECV &&
             status_ != HANDSHAKER_CARTIFICATE_REQUEST_RECV) {
-            // TODO: send ALERT_UNEXPECTED_MESSGAE message.
-            return false;
+            return ALERT_UNEXPECTED_MESSGAE;
         }
 
         if (msg->certificates.empty()) {
-            // TODO: send ALERT_UNEXPECTED_MESSGAE message.
-            return false;
+            return ALERT_ILLEGAL_PARAMETER;
         }
 
-        if (!certificate_verify(msg->certificates)) {
-            // TODO: send ALERT_BAD_CERTIFICATE message.
-            return false;
+        if (!certificate_load(msg->certificates, session_.certs)) {
+            return ALERT_ILLEGAL_PARAMETER;
         }
 
-        session_.scts_ = msg->scts;
+        if (!ssl::x509_certificate_verify(session_.certs)) {
+            return ALERT_BAD_CERTIFICATE;
+        }
+
+        session_.scts = msg->scts;
      
         session_.ocsp_staple = msg->ocsp_staple;
 
-        return true;
+        status_ = HANDSHAKER_CARTIFICATE_RECV;
+
+        return ALERT_NONE;
+    }
+
+    alert_code client_handshaker::__handle_certificate_verify(certificate_verify_message *msg) {
+        if (status_ != HANDSHAKER_CARTIFICATE_RECV) {
+            return ALERT_UNEXPECTED_MESSGAE;
+        }
+
+        if (!is_contains(hello_.supported_signature_algorithms, msg->signature_algorithm)) {
+            return ALERT_ILLEGAL_PARAMETER;
+        }
+
+        return ALERT_NONE;
     }
 
 }

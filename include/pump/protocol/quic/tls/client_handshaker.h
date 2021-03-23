@@ -17,8 +17,9 @@
 #ifndef pump_protocol_quic_tls_client_handshake_h
 #define pump_protocol_quic_tls_client_handshake_h
 
-#include "pump/ssl/ssl_helper.h"
-#include "pump/protocol/quic/tls/config.h"
+#include "pump/ssl/hash.h"
+#include "pump/protocol/quic/tls/alert.h"
+#include "pump/protocol/quic/tls/types.h"
 #include "pump/protocol/quic/tls/handshake_message.h"
 
 namespace pump {
@@ -42,28 +43,28 @@ namespace tls {
 
         bool __send_client_hello(config *cfg);
 
-        bool __handle_server_hello(server_hello_message *msg);
+        alert_code __handle_server_hello(server_hello_message *msg);
 
-        bool __send_retry_hello(server_hello_message *msg);
+        alert_code __send_retry_hello(server_hello_message *msg);
 
-        bool __handle_encrypted_extensions(encrypted_extensions_message *msg);
+        alert_code __handle_encrypted_extensions(encrypted_extensions_message *msg);
 
-        bool __handle_certificate_request_tls13(certificate_request_tls13_message *msg);
+        alert_code __handle_certificate_request_tls13(certificate_request_tls13_message *msg);
 
-        bool __handle_certificate_tls13(certificate_tls13_message *msg);
+        alert_code __handle_certificate_tls13(certificate_tls13_message *msg);
+
+        alert_code __handle_certificate_verify(certificate_verify_message *msg);
 
       private:
         handshaker_status status_;
 
-        ssl::key_pair ecdhe_keys_;
+        connection_session session_;
 
         ssl::hash_context_ptr transcript_;
 
         client_hello_message hello_;
 
         certificate_request_tls13_message certificate_request_;
-
-        connection_session session_;
     };
 
 }

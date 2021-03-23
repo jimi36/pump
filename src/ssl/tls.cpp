@@ -16,7 +16,7 @@
 
 #include "pump/debug.h"
 #include "pump/config.h"
-#include "pump/ssl/tls_helper.h"
+#include "pump/ssl/tls.h"
 
 #if defined(PUMP_HAVE_OPENSSL)
 extern "C" {

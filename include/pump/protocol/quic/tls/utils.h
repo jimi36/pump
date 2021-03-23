@@ -19,6 +19,7 @@
 
 #include <vector>
 
+#include "pump/ssl/hkdf.h"
 #include "pump/protocol/quic/tls/types.h"
 
 namespace pump {
@@ -27,31 +28,17 @@ namespace quic {
 namespace tls {
 
     /*********************************************************************************
-     * TLS cipher suite parameters.
+     * Check element array contains the element or not.
      ********************************************************************************/
-    struct cipher_suite_params {
-        ssl::hash_algorithm algorithm;
-        cipher_suite_type type;
-        int32_t key_len;
-    };
-
-    /*********************************************************************************
-     * Filter tls version.
-     ********************************************************************************/
-    bool filter_tls_version(std::vector<version_type> &versions, 
-                            version_type version);
-
-    /*********************************************************************************
-     * Filter alpn.
-     ********************************************************************************/
-    bool filter_application_protocol(std::vector<std::string> &alpns, 
-                                     std::string &version);
-
-    /*********************************************************************************
-     * Filter tls13 cipher suite.
-     ********************************************************************************/
-    bool filter_tls13_cipher_suite(std::vector<cipher_suite_type> &cipher_suites, 
-                                   cipher_suite_type cipher_suite);
+    template <typename T>
+    bool is_contains(std::vector<T> &elems, T &elem) {
+        for (int32_t i = 0; i < (int32_t)elems.size(); i++) {
+            if (elem == elems[i]) {
+                return true;
+            }
+        }
+        return false;
+    }
 
     /*********************************************************************************
      * New cipher suite hasher.
@@ -90,20 +77,31 @@ namespace tls {
     /*********************************************************************************
      * HKDF extract with hash algorithm.
      ********************************************************************************/
-    std::string hkdf_extract(ssl::hash_algorithm algorithm, 
+    std::string hkdf_extract(ssl::hash_algorithm algo, 
                              const std::string &salt, 
                              const std::string &key);
 
     /*********************************************************************************
      * HKDF expand label with hash algorithm.
      ********************************************************************************/
-    std::string hkdf_expand_label(ssl::hash_algorithm algorithm, 
+    std::string hkdf_expand_label(ssl::hash_algorithm algo, 
                                   const std::string &key,
                                   const std::string &context,
                                   const std::string &label,
                                   int32_t result_length);
 
-    bool certificate_verify(std::vector<std::string> &certificates);
+    /*********************************************************************************
+     * Certificate load.
+     ********************************************************************************/
+    bool certificate_load(std::vector<std::string> &certificates, 
+                          std::vector<void_ptr> &certs);
+
+    /*********************************************************************************
+     * Certificate verify.
+     ********************************************************************************/
+    bool certificate_verify(std::vector<void_ptr> &certs);
+
+
 
 }
 }
