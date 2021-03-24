@@ -104,18 +104,19 @@ namespace tls {
         hello_.is_support_ocsp_stapling = true;
 
         hello_.supported_groups.clear();
-        hello_.supported_groups.push_back(TLS_GROUP_X25519);
-        hello_.supported_groups.push_back(TLS_GROUP_P256);
-        hello_.supported_groups.push_back(TLS_GROUP_P384);
-        hello_.supported_groups.push_back(TLS_GROUP_P2521);
+        hello_.supported_groups.push_back(TLS_CURVE_X25519);
+        hello_.supported_groups.push_back(TLS_CURVE_P256);
+        hello_.supported_groups.push_back(TLS_CURVE_P384);
+        hello_.supported_groups.push_back(TLS_CURVE_P521);
 
         hello_.supported_points.clear();
         hello_.supported_points.push_back(TLS_POINT_FORMAT_UNCOMPRESSED);
 
+        // Not support session ticket.
         hello_.is_support_session_ticket = false;
         hello_.session_ticket.clear();
 
-        // Just include tls 13 signature algorithms.
+        // Just support tls 13 signature algorithms.
         hello_.supported_signature_algorithms.clear();
         //hello_.supported_signature_algorithms.push_back(TLS_SIGN_SCHEME_PSSWITHSHA256);
         hello_.supported_signature_algorithms.push_back(TLS_SIGN_SCHEME_ECDSAWITHP256AndSHA256);
@@ -147,15 +148,17 @@ namespace tls {
 
         hello_.key_shares.clear();
         if (hello_.supported_versions[0] == TLS_VSERVER_13) {
-            if (!ssl::X25519_init(&session_.keys)) {
+            session_.keys = ssl::create_ecdhe_parameter(TLS_CURVE_X25519);
+            if (session_.keys == nullptr) {
                 return false;
             }
             key_share ks;
-            ks.group = TLS_GROUP_X25519;
-            ks.data = session_.keys.pubkey;
+            ks.group = TLS_CURVE_X25519;
+            ks.data = ssl::get_ecdhe_pubkey(session_.keys);
             hello_.key_shares.push_back(std::move(ks));
         }
 
+        // Not support eraly data.
         hello_.is_support_early_data = false;
 
         hello_.psk_modes.clear();
@@ -169,6 +172,8 @@ namespace tls {
         }
         
         // TODO: send client hello message.
+
+        
         status_ = HANDSHAKER_CLIENT_HELLO_SENT;
 
         return true;
@@ -229,11 +234,11 @@ namespace tls {
             return ALERT_UNSUPPORTED_EXTENSION;
         }
 
-        if (msg->selected_group != TLS_GROUP_UNKNOWN) {
+        if (msg->selected_group != TLS_CURVE_UNKNOWN) {
             return ALERT_DECODE_ERROR;
         }
 
-        if (msg->selected_key_share.group == TLS_GROUP_UNKNOWN || 
+        if (msg->selected_key_share.group == TLS_CURVE_UNKNOWN || 
             msg->selected_key_share.group != hello_.key_shares[0].group) {
             return ALERT_ILLEGAL_PARAMETER;
         }
@@ -242,8 +247,8 @@ namespace tls {
             return ALERT_ILLEGAL_PARAMETER;
         }
 
-        std::string shared_key;
-        if (!ssl::X25519_device(&session_.keys, msg->selected_key_share.data, shared_key)) {
+        std::string shared_key = ssl::gen_ecdhe_shared_key(session_.keys, msg->selected_key_share.data);
+        if (shared_key.empty()) {
             return ALERT_ILLEGAL_PARAMETER; 
         }
 
@@ -306,7 +311,7 @@ namespace tls {
 
         ssl::update_hash(transcript_, hash_msg);
 
-        if (msg->selected_group == TLS_GROUP_UNKNOWN && msg->cookie.empty()) {
+        if (msg->selected_group == TLS_CURVE_UNKNOWN && msg->cookie.empty()) {
             return ALERT_ILLEGAL_PARAMETER;
         }
 
@@ -314,7 +319,7 @@ namespace tls {
             hello_.cookie = msg->cookie;
         }
 
-        if (msg->selected_key_share.group != TLS_GROUP_UNKNOWN) {
+        if (msg->selected_key_share.group != TLS_CURVE_UNKNOWN) {
             return ALERT_DECODE_ERROR;
         }
 

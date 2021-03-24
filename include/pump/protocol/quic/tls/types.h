@@ -20,6 +20,8 @@
 #include <string>
 #include <vector>
 
+#include "pump/ssl/hash.h"
+#include "pump/ssl/ecdhe.h"
 #include "pump/protocol/quic/tls/defines.h"
 
 namespace pump {
@@ -51,7 +53,7 @@ namespace tls {
         // Selected tls verson by handshake
         version_type version;
 
-        ssl::key_pair keys;
+        ssl::ecdhe_parameter_ptr keys;
 
         // Selected cipher cuite parameters by handshake
         cipher_suite_params suite_params;

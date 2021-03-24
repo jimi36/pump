@@ -25,26 +25,30 @@
 namespace pump {
 namespace ssl {
 
+    // TLS curve ecdhe types.
+    // https://tools.ietf.org/html/rfc8446#section-4.2.7
+    typedef uint16_t curve_type;
+    #define TLS_CURVE_UNKNOWN 0
+    #define TLS_CURVE_P256    0x0017 // secp256r1
+    #define TLS_CURVE_P384    0x0018 // secp384r1
+    #define TLS_CURVE_P521    0x0019 // secp521r1
+    #define TLS_CURVE_X25519  0x001D
+    #define TLS_CURVE_X448    0x001E
+
     struct ecdhe_parameter;
     DEFINE_RAW_POINTER_TYPE(ecdhe_parameter);
 
-    /*********************************************************************************
-     * Crypto key pair.
-     ********************************************************************************/
-    struct key_pair {
-        std::string prikey;
-        std::string pubkey;
-    };
+    ecdhe_parameter_ptr create_ecdhe_parameter(curve_type curve);
 
-    /*********************************************************************************
-     * X25519 key pair init.
-     ********************************************************************************/
-    bool X25519_init(key_pair *kp);
+    void free_ecdhe_parameter(ecdhe_parameter_ptr parameter);
 
-    /*********************************************************************************
-     * X25519 device data.
-     ********************************************************************************/
-    bool X25519_device(key_pair *kp, const std::string &data, std::string &out);
+    curve_type get_ecdhe_curve(ecdhe_parameter_ptr parameter);
+
+    std::string get_ecdhe_prikey(ecdhe_parameter_ptr parameter);
+
+    std::string get_ecdhe_pubkey(ecdhe_parameter_ptr parameter);
+
+    std::string gen_ecdhe_shared_key(ecdhe_parameter_ptr parameter, const std::string &pubkey);
 
 }
 }

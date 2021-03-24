@@ -93,7 +93,7 @@ namespace ssl {
                 return nullptr;
             }
             break;
-        defalut:
+        default:
             PUMP_ASSERT(false);
             return nullptr;
         }

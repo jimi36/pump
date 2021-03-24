@@ -106,7 +106,7 @@ namespace tls {
         } else {
             PUMP_DEBUG_CHECK(ssl::hkdf_extract(algo, salt, key, out));
         }
-        return std::move(out);
+        return std::forward<std::string>(out);
     }
 
     std::string hkdf_expand_label(ssl::hash_algorithm algo, 
@@ -120,24 +120,24 @@ namespace tls {
         p += 2;
         *(uint8_t*)p = uint8_t(6 + label.size());
         p += 1;
-        memcmp(p, "tls13 ", 6);
+        memcpy(p, "tls13 ", 6);
         p += 6;
-        memcmp(p, label.data(), label.size());
+        memcpy(p, label.data(), label.size());
         p += label.size();
         *(uint8_t*)p = (uint8_t)context.size();
         p += 1;
-        memcmp(p, context.data(), context.size());
+        memcpy(p, context.data(), context.size());
         p += context.size();
 
         std::string out(result_length, 0);
         PUMP_DEBUG_CHECK(ssl::hkdf_expand(algo, key, info, out));
-        return std::move(out);
+        return std::forward<std::string>(out);
     }
 
     bool certificate_load(std::vector<std::string> &certificates, 
                           std::vector<void_ptr> &certs) {
         bool ret = true;
-        for (int32_t i = 0; i < certificates.size(); i++) {
+        for (int32_t i = 0; i < (int32_t)certificates.size(); i++) {
             void_ptr cert = ssl::x509_certificate_new(
                                 (void_ptr)certificates[i].data(), 
                                 certificates[i].size());
@@ -148,7 +148,7 @@ namespace tls {
             certs.push_back(cert);
         }
         if (!ret) {
-            for (int32_t i = 0; i < certs.size(); i++) {
+            for (int32_t i = 0; i < (int32_t)certs.size(); i++) {
                 ssl::x509_certificate_delete(certs[i]);
             }
             certs.clear();

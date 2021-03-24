@@ -36,7 +36,7 @@ namespace ssl {
 
     void_ptr x509_certificate_new(void_ptr data, int32_t size) {
 #if defined(PUMP_HAVE_OPENSSL)
-        uint8_t *tmp = (uint8_t*)data;
+        const uint8_t *tmp = (const uint8_t*)data;
         return d2i_X509(NULL, &tmp, size);
 #else
         return nullptr;

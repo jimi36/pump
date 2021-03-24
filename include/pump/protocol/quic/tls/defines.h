@@ -107,14 +107,6 @@ namespace tls {
     typedef uint8_t certicate_status_type;
     #define TLS_OCSP_STATUS 1
 
-    // TLS curve group types.
-    typedef uint16_t curve_group_type;
-    #define TLS_GROUP_UNKNOWN 0
-    #define TLS_GROUP_P256    23
-    #define TLS_GROUP_P384    24
-    #define TLS_GROUP_P2521   25
-    #define TLS_GROUP_X25519  29
-
     // TLS signature scheme types
     typedef uint16_t signature_scheme_type;
     // RSASSA-PKCS1-v1_5 algorithms.

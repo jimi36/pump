@@ -26,8 +26,8 @@ namespace tls {
 
     typedef uint64_t tls_alert_code;
     #define DEFINE_TLS_ALERT(alert, code, desc) \
-        const static tls_alert_code alert = code; \
-        const static char* alert##_desc = desc;
+        const static tls_alert_code alert = code;
+        // const static char* alert##_desc = desc;
 
     // https://tools.ietf.org/html/rfc8446#section-6
     typedef uint64_t alert_code;
