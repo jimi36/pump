@@ -20,7 +20,7 @@
 #include "pump/ssl/hash.h"
 #include "pump/protocol/quic/tls/alert.h"
 #include "pump/protocol/quic/tls/types.h"
-#include "pump/protocol/quic/tls/handshake_message.h"
+#include "pump/protocol/quic/tls/message.h"
 
 namespace pump {
 namespace protocol {
@@ -43,17 +43,17 @@ namespace tls {
 
         bool __send_client_hello(config *cfg);
 
-        alert_code __handle_server_hello(server_hello_message *msg);
+        alert_code __handle_server_hello(handshake_message *msg);
 
-        alert_code __send_retry_hello(server_hello_message *msg);
+        alert_code __send_hello_retry(handshake_message *msg);
 
-        alert_code __handle_encrypted_extensions(encrypted_extensions_message *msg);
+        alert_code __handle_encrypted_extensions(handshake_message *msg);
 
-        alert_code __handle_certificate_request_tls13(certificate_request_tls13_message *msg);
+        alert_code __handle_certificate_request_tls13(handshake_message *msg);
 
-        alert_code __handle_certificate_tls13(certificate_tls13_message *msg);
+        alert_code __handle_certificate_tls13(handshake_message *msg);
 
-        alert_code __handle_certificate_verify(certificate_verify_message *msg);
+        alert_code __handle_certificate_verify(handshake_message *msg);
 
       private:
         handshaker_status status_;
@@ -62,9 +62,9 @@ namespace tls {
 
         ssl::hash_context_ptr transcript_;
 
-        client_hello_message hello_;
+        handshake_message client_hello_;
 
-        certificate_request_tls13_message certificate_request_;
+        certificate_request_tls13_message cert_request_;
     };
 
 }

@@ -14,8 +14,8 @@
  * limitations under the License.
  */
  
-#ifndef pump_protocol_quic_tls_handshake_messages_h
-#define pump_protocol_quic_tls_handshake_messages_h
+#ifndef pump_protocol_quic_tls_message_h
+#define pump_protocol_quic_tls_message_h
 
 #include <map>
 #include <vector>
@@ -31,6 +31,7 @@ namespace tls {
      * TLS handshake message struct.
      ********************************************************************************/
     struct handshake_message {
+        std::string packed_data;
         message_type type;
         void *msg;
     };
@@ -48,7 +49,7 @@ namespace tls {
     /*********************************************************************************
      * Pack handshake message.
      ********************************************************************************/
-    int32_t pack_handshake_message(const handshake_message *msg, uint8_t *buf, int32_t max_size);
+    const std::string& pack_handshake_message(handshake_message *msg);
 
     /*********************************************************************************
      * Unpack handshake message.
@@ -212,7 +213,7 @@ namespace tls {
         // contains a "supported_signature_algorithms" value.
         // https://tools.ietf.org/html/rfc5246#section-7.4.1.4.1
         // https://tools.ietf.org/html/rfc8446#section-4.2.3
-        std::vector<signature_scheme_type> supported_signature_algorithms;
+        std::vector<signature_algorithm> supported_signature_algorithms;
 
         // Extension field.
         // The "signature_algorithms_cert" extension was added to allow
@@ -222,7 +223,7 @@ namespace tls {
         // Implementations which have the same policy in both cases MAY omit the
         // "signature_algorithms_cert" extension.
         // https://tools.ietf.org/html/rfc8446#section-4.2.3
-        std::vector<signature_scheme_type> supported_signature_algorithms_certs;
+        std::vector<signature_algorithm> supported_signature_algorithms_certs;
 
         // Extension field.
         // A new TLS extension, "renegotiation_info" (with extension type 0xff01), 
@@ -707,7 +708,7 @@ namespace tls {
         // https://tools.ietf.org/html/rfc8446#section-4.3.2
         // https://tools.ietf.org/html/rfc5246#section-7.4.1.4.1
         bool has_signature_algorithms;
-        std::vector<signature_scheme_type> supported_signature_algorithms;
+        std::vector<signature_algorithm> supported_signature_algorithms;
 
         // A list of the distinguished names of acceptable certificate
         // authorities.  These distinguished names may specify a desired
@@ -746,12 +747,12 @@ namespace tls {
         // https://tools.ietf.org/html/rfc8446#section-4.3.2
         // https://tools.ietf.org/html/rfc5246#section-7.4.1.4.1
         // https://tools.ietf.org/html/rfc8446#section-4.2.3
-        std::vector<signature_scheme_type> supported_signature_algorithms;
+        std::vector<signature_algorithm> supported_signature_algorithms;
 
         // Extension field.
         // https://tools.ietf.org/html/rfc8446#section-4.3.2
         // https://tools.ietf.org/html/rfc8446#section-4.2.3
-        std::vector<signature_scheme_type> supported_signature_algorithms_certs;
+        std::vector<signature_algorithm> supported_signature_algorithms_certs;
 
         // Extension field.
         // https://tools.ietf.org/html/rfc8446#section-4.3.2

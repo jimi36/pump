@@ -34,7 +34,7 @@ extern "C" {
 namespace pump {
 namespace ssl {
 
-    void_ptr x509_certificate_new(void_ptr data, int32_t size) {
+    void_ptr load_x509_certificate(void_ptr data, int32_t size) {
 #if defined(PUMP_HAVE_OPENSSL)
         const uint8_t *tmp = (const uint8_t*)data;
         return d2i_X509(NULL, &tmp, size);
@@ -43,13 +43,13 @@ namespace ssl {
 #endif
     }
 
-    void x509_certificate_delete(void_ptr cert) {
+    void free_x509_certificate(void_ptr cert) {
 #if defined(PUMP_HAVE_OPENSSL)
         X509_free((X509*)cert);
 #endif
     }
 
-    bool x509_certificate_verify(std::vector<void_ptr> &certs) {
+    bool verify_x509_certificates(std::vector<void_ptr> &certs) {
 #if defined(PUMP_HAVE_OPENSSL)
         X509_STORE *store = X509_STORE_new();
         for (int32_t i = 1; i < (int32_t)certs.size(); i++) {

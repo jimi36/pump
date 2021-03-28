@@ -16,7 +16,7 @@
 
 #include "pump/utils.h"
 #include "pump/memory.h"
-#include "pump/protocol/quic/tls/handshake_message.h"
+#include "pump/protocol/quic/tls/message.h"
 
 namespace pump {
 namespace protocol {
@@ -137,41 +137,59 @@ namespace tls {
         }
     }
 
-    int32_t pack_handshake_message(const handshake_message *msg, uint8_t *buf, int32_t max_size) {
+    const std::string& pack_handshake_message(handshake_message *msg) {
+        if (!msg->packed_data.empty()) {
+            return msg->packed_data;
+        }
+
+        int32_t packed_data_size = 2048;
+
+#define PACK_MESSAGE(pack, msg_type) \
+    msg->packed_data.resize(packed_data_size); \
+    packed_data_size = pack((const msg_type*)msg->msg, (uint8_t*)msg->packed_data.data(), packed_data_size); \
+    break;
         switch (msg->type) {
         case TLS_MSG_HELLO_REQUEST:
-            return pack_hello_request((const hello_request_message*)msg->msg, buf, max_size);
+            PACK_MESSAGE(pack_hello_request, hello_request_message)
         case TLS_MSG_CLIENT_HELLO:
-            return pack_client_hello((const client_hello_message*)msg->msg, buf, max_size);
+            PACK_MESSAGE(pack_client_hello, client_hello_message)
         case TLS_MSG_SERVER_HELLO:
-            return pack_server_hello((const server_hello_message*)msg->msg, buf, max_size);
+            PACK_MESSAGE(pack_server_hello, server_hello_message)
         case TLS_MSG_NEW_SESSION_TICKET:
-            return pack_new_session_ticket_tls13((const new_session_ticket_tls13_message*)msg->msg, buf, max_size);
+            PACK_MESSAGE(pack_new_session_ticket_tls13, new_session_ticket_tls13_message)
         case TLS_MSG_END_OF_EARLY_DATA:
-            return pack_end_early_data((const end_early_data_message*)msg->msg, buf, max_size);
+            PACK_MESSAGE(pack_end_early_data, end_early_data_message)
         case TLS_MSG_ENCRYPTED_EXTENSIONS:
-            return pack_encrypted_extensions((const encrypted_extensions_message*)msg->msg, buf, max_size);
+            PACK_MESSAGE(pack_encrypted_extensions, encrypted_extensions_message)
         case TLS_MSG_CERTIFICATE:
-            return pack_certificate_tls13((const certificate_tls13_message*)msg->msg, buf, max_size);
+            PACK_MESSAGE(pack_certificate_tls13, certificate_tls13_message)
         case TLS_MSG_SERVER_KEY_EXCHANGE:
-            return pack_server_key_exchange((const server_key_exchange_message*)msg->msg, buf, max_size);
+            PACK_MESSAGE(pack_server_key_exchange, server_key_exchange_message)
         case TLS_MSG_CERTIFICATE_REQUEST:
-            return pack_certificate_request_tls13((const certificate_request_tls13_message*)msg->msg, buf, max_size);
+            PACK_MESSAGE(pack_certificate_request_tls13, certificate_request_tls13_message)
         case TLS_MSG_SERVER_HELLO_DONE:
-            return pack_server_hello_done((const server_hello_done_message*)msg->msg, buf, max_size);
+            PACK_MESSAGE(pack_server_hello_done, server_hello_done_message)
         case TLS_MSG_CERIFICATE_VERIFY:
-            return pack_certificate_verify((const certificate_verify_message*)msg->msg, buf, max_size);
+            PACK_MESSAGE(pack_certificate_verify, certificate_verify_message)
         case TLS_MSG_CLIENT_KEY_EXCHANGE:
-            return pack_client_key_exchange((const client_key_exchange_message*)msg->msg, buf, max_size);
+            PACK_MESSAGE(pack_client_key_exchange, client_key_exchange_message)
         case TLS_MSG_FINISHED:
-            return pack_finished((const finished_message*)msg->msg, buf, max_size);
+            PACK_MESSAGE(pack_finished, finished_message)
         case TLS_MSG_CERTIFICATE_STATUS:
-            return pack_certificate_status((const certificate_status_message*)msg->msg, buf, max_size);
+            PACK_MESSAGE(pack_certificate_status, certificate_status_message)
         case TLS_MSG_KEY_UPDATE:
-            return pack_key_update((const key_update_message*)msg->msg, buf, max_size);
+            PACK_MESSAGE(pack_key_update, key_update_message)
         default:
-            return -1;
+            return msg->packed_data;
         }
+#undef PACK_MESSAGE
+
+        if (packed_data_size < 0) {
+            packed_data_size = 0;
+        }
+        msg->packed_data.resize(packed_data_size);
+
+        return msg->packed_data;
     }
 
     int32_t unpack_handshake_message(const uint8_t *buf, int32_t size, handshake_message *msg) {

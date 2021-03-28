@@ -36,29 +36,31 @@ namespace tls {
         std::string server_name;
         std::string alpn;
     };
+    DEFINE_RAW_POINTER_TYPE(config)
 
     /*********************************************************************************
-     * TLS cipher suite parameters.
+     * TLS cipher suite parameter.
      ********************************************************************************/
-    struct cipher_suite_params {
+    struct cipher_suite_parameter {
         ssl::hash_algorithm algo;
         cipher_suite_type type;
         int32_t key_len;
     };
+    DEFINE_RAW_POINTER_TYPE(cipher_suite_parameter)
 
     /*********************************************************************************
      * TLS connection session.
      ********************************************************************************/
     struct connection_session {
-        // Selected tls verson by handshake
+        // Selected tls verson
         version_type version;
 
-        ssl::ecdhe_parameter_ptr keys;
+        ssl::ecdhe_parameter_ptr ecdhe_param;
 
-        // Selected cipher cuite parameters by handshake
-        cipher_suite_params suite_params;
+        // Selected cipher cuite parameter
+        cipher_suite_parameter suite_param;
 
-        // Selected application protocol by handshake
+        // Selected application protocol
         std::string alpn;
 
         bool enable_zero_rtt;
@@ -73,6 +75,7 @@ namespace tls {
 
         std::vector<void_ptr> certs;
     };
+    DEFINE_RAW_POINTER_TYPE(connection_session)
 
 }
 }

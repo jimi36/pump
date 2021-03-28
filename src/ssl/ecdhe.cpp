@@ -43,6 +43,7 @@ namespace ssl {
 
     static ecdhe_parameter_ptr create_x25519_parameter() {
 #if defined(PUMP_HAVE_OPENSSL)
+        bool ret = false;
         EVP_PKEY_CTX *pctx = nullptr;
         EVP_PKEY *pkey = nullptr;
         int32_t len = 0;
@@ -56,7 +57,7 @@ namespace ssl {
         parameter->curve = TLS_CURVE_X25519;
 
         if ((pctx = EVP_PKEY_CTX_new_id(NID_X25519, NULL)) == NULL) {
-            return false;
+            goto err;
         }
 
         if (EVP_PKEY_keygen_init(pctx) == 0) {
@@ -81,6 +82,8 @@ namespace ssl {
         len = BIO_get_mem_data(bio, &pb);
         parameter->pubkey.assign(pb, len);
 
+        ret = true;
+
       err:
         if (pctx) {
             EVP_PKEY_CTX_free(pctx);
@@ -90,6 +93,10 @@ namespace ssl {
         }
         if (bio) {
             BIO_free(bio);
+        }
+        if (!ret && parameter) {
+            object_delete(parameter);
+            parameter = nullptr;
         }
         
         return parameter;
@@ -160,7 +167,7 @@ namespace ssl {
 
     static ecdhe_parameter_ptr create_curve_parameter(curve_type curve) {
 #if defined(PUMP_HAVE_OPENSSL)
-        int len = 0;
+        bool ret = false;
         EC_KEY *key = nullptr;
         const EC_GROUP *group = NULL;
         const EC_POINT *point = NULL;
@@ -195,25 +202,29 @@ namespace ssl {
         }
 
         parameter->pubkey.resize(64);
-        len = EC_POINT_point2oct(group,
-                                 point,
-                                 POINT_CONVERSION_UNCOMPRESSED,
-                                 (uint8_t*)parameter->pubkey.data(),
-                                 64, 
-                                 NULL);
-        if (len != 64) {
+        if (EC_POINT_point2oct(group,
+                               point,
+                               POINT_CONVERSION_UNCOMPRESSED,
+                               (uint8_t*)parameter->pubkey.data(),
+                               64, 
+                               NULL) != 64) {
             goto err;
         }
 
         parameter->prikey.resize(32);
-        len = BN_bn2bin(EC_KEY_get0_private_key(key), (uint8_t*)parameter->prikey.data());
-        if (len != 32) {
+        if (BN_bn2bin(EC_KEY_get0_private_key(key), (uint8_t*)parameter->prikey.data()) != 32) {
             goto err;
         }
+
+        ret = true;
 
       err:
         if (key) {
             EC_KEY_free(key);
+        }
+        if (!ret && parameter) {
+            object_delete(parameter);
+            parameter = nullptr;
         }
 
         return parameter;
@@ -225,7 +236,6 @@ namespace ssl {
     static std::string gen_curve_shared_key(ecdhe_parameter_ptr parameter, const std::string &pubkey) {
         std::string shared_key;
 #if defined(PUMP_HAVE_OPENSSL)
-        int len = 0;
         EC_KEY *key = nullptr;
         const EC_GROUP *group = nullptr;
         BIGNUM *priv = nullptr;
@@ -294,7 +304,7 @@ namespace ssl {
                              shared_key.size(),
                              p_ecdh2_public,
                              key,
-                             nullptr) != shared_key.size()) {
+                             nullptr) != 32) {
             goto err;
         }
 

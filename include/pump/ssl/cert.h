@@ -26,19 +26,19 @@ namespace pump {
 namespace ssl {
 
     /*********************************************************************************
-     * X509 certificate new.
+     * Load X509 certificate.
      ********************************************************************************/
-    void_ptr x509_certificate_new(void_ptr data, int32_t size);
+    void_ptr load_x509_certificate(void_ptr data, int32_t size);
 
     /*********************************************************************************
-     * X509 certificate delete.
+     * Free X509 certificate.
      ********************************************************************************/
-    void x509_certificate_delete(void_ptr cert);
+    void free_x509_certificate(void_ptr cert);
 
     /*********************************************************************************
      * X509 certificate verify.
      ********************************************************************************/
-    bool x509_certificate_verify(std::vector<void_ptr> &certs);
+    bool verify_x509_certificates(std::vector<void_ptr> &certs);
 
     /*********************************************************************************
      * Create tls client certificate.

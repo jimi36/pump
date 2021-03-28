@@ -107,25 +107,25 @@ namespace tls {
     typedef uint8_t certicate_status_type;
     #define TLS_OCSP_STATUS 1
 
-    // TLS signature scheme types
-    typedef uint16_t signature_scheme_type;
+    // TLS signature algorithm
+    typedef uint16_t signature_algorithm;
     // RSASSA-PKCS1-v1_5 algorithms.
-    #define TLS_SIGN_SCHEME_PKCS1WITHSHA256        0x0401
-    #define TLS_SIGN_SCHEME_PKCS1WITHSHA384        0x0501
-    #define TLS_SIGN_SCHEME_PKCS1WITHSHA512        0x0601
+    #define TLS_SIGN_PKCS1WITHSHA256        0x0401
+    #define TLS_SIGN_PKCS1WITHSHA384        0x0501
+    #define TLS_SIGN_PKCS1WITHSHA512        0x0601
     // RSASSA-PSS algorithms with public key OID rsaEncryption.
-    #define TLS_SIGN_SCHEME_PSSWITHSHA256          0x0804
-    #define TLS_SIGN_SCHEME_PSSWITHSHA384          0x0805
-    #define TLS_SIGN_SCHEME_PSSWITHSHA512          0x0806
+    #define TLS_SIGN_PSSWITHSHA256          0x0804
+    #define TLS_SIGN_PSSWITHSHA384          0x0805
+    #define TLS_SIGN_PSSWITHSHA512          0x0806
     // ECDSA algorithms. Only constrained to a specific curve in TLS 1.3.
-    #define TLS_SIGN_SCHEME_ECDSAWITHP256AndSHA256 0x0403
-    #define TLS_SIGN_SCHEME_ECDSAWITHP384AndSHA384 0x0503
-    #define TLS_SIGN_SCHEME_ECDSAWITHP521AndSHA512 0x0603
+    #define TLS_SIGN_ECDSAWITHP256AndSHA256 0x0403
+    #define TLS_SIGN_ECDSAWITHP384AndSHA384 0x0503
+    #define TLS_SIGN_ECDSAWITHP521AndSHA512 0x0603
     // EdDSA algorithms.
-    #define TLS_SIGN_SCHEME_ED25519                0x0807
+    #define TLS_SIGN_ED25519                0x0807
     // Legacy signature and hash algorithms for TLS 1.2.
-    #define TLS_SIGN_SCHEME_PKCS1WITHSHA1          0x0201
-    #define TLS_SIGN_SCHEME_ECDSAWITHSHA1          0x0203
+    #define TLS_SIGN_PKCS1WITHSHA1          0x0201
+    #define TLS_SIGN_ECDSAWITHSHA1          0x0203
 
     // TLS 1.3 PSK Key Exchange Modes. See RFC 8446, Section 4.2.9.
     typedef uint8_t psk_mode_type;
@@ -174,14 +174,23 @@ namespace tls {
     #define HANDSHAKER_FINISHED_SENT             15
     #define HANDSHAKER_FINISHED_RECV             16
 
-	const char *resumptionB_binder_label         = "res binder";
-	const char *client_handshake_traffic_label   = "c hs traffic";
-	const char *server_handshake_traffic_label   = "s hs traffic";
-	const char *client_application_traffic_label = "c ap traffic";
-	const char *server_application_traffic_label = "s ap traffic";
-	const char *exporter_label                   = "exp master";
-	const char *resumption_label                 = "res master";
-	const char *traffic_update_label             = "traffic upd";
+	// downgradeCanaryTLS12 or downgradeCanaryTLS11 is embedded in the server
+	// random as a downgrade protection if the server would be capable of
+	// negotiating a higher version. See RFC 8446, Section 4.1.3.
+    #define DOWNGRRADE_CANARY_TLS11 "DOWNGRD\x00"
+	#define DOWNGRRADE_CANARY_TLS12 "DOWNGRD\x01"
+
+	#define RESUMPTION_BINDER_LABEL             "res binder"
+	#define CLIENT_HANDSHAKE_TRAFFIC_LABEL      "c hs traffic"
+	#define SERVER_HANDSHAKE_TRAFFIC_LABEL      "s hs traffic"
+	#define CLIENT_APPLICATION_TRAFFIC_LABEL    "c ap traffic"
+	#define SERVER_APPLICATION_TRAFFIC_LABEL    "s ap traffic"
+	#define EXPORTER_LABEL                      "exp master"
+	#define RESUMPTION_LABEL                    "res master"
+	#define TRAFFIC_UPDATE_LABEL                "traffic upd"
+
+	#define SERVER_SIGNATURE_CONTEXT "TLS 1.3, server CertificateVerify\x00"
+	#define CLIENT_SIGNATURE_CONTEXT "TLS 1.3, client CertificateVerify\x00"
 
     // Retry hello request fixed random.
     uint8_t hello_retry_request_random[] = {
@@ -189,6 +198,17 @@ namespace tls {
         0xBE, 0x1D, 0x8C, 0x02, 0x1E, 0x65, 0xB8, 0x91,
         0xC2, 0xA2, 0x11, 0x16, 0x7A, 0xBB, 0x8C, 0x5E,
         0x07, 0x9E, 0x09, 0xE2, 0xC8, 0xA8, 0x33, 0x9C,
+    };
+
+    uint8_t signature_padding[] = {
+        0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20,
+        0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20,
+        0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20,
+        0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20,
+        0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20,
+        0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20,
+        0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20,
+        0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20,
     };
 
 }

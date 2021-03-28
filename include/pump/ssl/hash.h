@@ -26,11 +26,11 @@ namespace ssl {
 
     typedef int64_t hash_algorithm;
     const hash_algorithm HASH_UNKNOWN = 0;
-    const hash_algorithm HASH_SHA1 =    1;
-    const hash_algorithm HASH_SHA224 = 2;
-    const hash_algorithm HASH_SHA256 = 3;
-    const hash_algorithm HASH_SHA384 = 4;
-    const hash_algorithm HASH_SHA512 = 5;
+    const hash_algorithm HASH_SHA1    = 1;
+    const hash_algorithm HASH_SHA224  = 2;
+    const hash_algorithm HASH_SHA256  = 3;
+    const hash_algorithm HASH_SHA384  = 4;
+    const hash_algorithm HASH_SHA512  = 5;
 
     struct hash_context;
     DEFINE_RAW_POINTER_TYPE(hash_context);
