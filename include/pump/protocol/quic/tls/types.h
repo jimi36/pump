@@ -72,6 +72,8 @@ namespace tls {
         std::string master_secret;
         std::string client_secret;
         std::string server_secret;
+        std::string traffic_secret; 
+        std::string export_master_secret;
 
         std::vector<void_ptr> certs;
     };

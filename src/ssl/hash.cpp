@@ -21,7 +21,7 @@
 #if defined(PUMP_HAVE_OPENSSL)
 extern "C" {
 #include <openssl/ssl.h>
-#include <openssl/kdf.h>
+#include <openssl/hmac.h>
 #include <openssl/err.h>
 }
 #endif
@@ -160,11 +160,6 @@ namespace ssl {
         return false;
     }
 
-    bool sum_hash(hash_context_ptr ctx, std::string &out) {
-        out.resize(hash_digest_length(ctx->algo));
-        return sum_hash(ctx, (void_ptr)out.data(), (int32_t)out.size());
-    }
-
     bool sum_hash(hash_context_ptr ctx, void_ptr out, int32_t out_len) {
 #if defined(PUMP_HAVE_OPENSSL)
         PUMP_ASSERT(ctx && ctx->ctx);
@@ -184,6 +179,55 @@ namespace ssl {
         }
 #endif
         return false;
+    }
+
+    std::string sum_hash(hash_context_ptr ctx) {
+        std::string output(hash_digest_length(ctx->algo), 0);
+        PUMP_DEBUG_CHECK(sum_hash(ctx, (void_ptr)output.data(), (int32_t)output.size()));
+        return std::forward<std::string>(output);
+    }
+
+
+    std::string sum_hmac(
+                    hash_algorithm algo,
+                    const std::string &key,
+                    const std::string &input) {
+        std::string output(hash_digest_length(algo), 0);
+
+#if defined(PUMP_HAVE_OPENSSL)
+        const EVP_MD *md = nullptr;
+        switch (algo)
+        {
+        case HASH_SHA1:
+            md = EVP_sha1();
+            break;
+        case HASH_SHA224:
+            md = EVP_sha224();
+            break;
+        case HASH_SHA256:
+            md = EVP_sha256();
+            break;
+        case HASH_SHA384:
+            md = EVP_sha384();
+            break;
+        case HASH_SHA512:
+            md = EVP_sha512();
+            break;
+        }
+
+        uint32_t output_len = (uint32_t)output.size();
+
+        uint8_t *ret = HMAC(
+                        md, 
+                        (c_void_ptr)key.data(), 
+                        (int32_t)key.size(),
+                        (const uint8_t*)input.data(), 
+                        input.size(),
+                        (uint8_t*)output.data(), 
+                        &output_len);
+        PUMP_ASSERT(ret);
+#endif
+        return output;
     }
 
 

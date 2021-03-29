@@ -37,23 +37,18 @@ extern "C" {
 namespace pump {
 namespace ssl {
 
-    int32_t get_signature_hash_algorithm(hash_algorithm hash_algo) {
+    static int32_t __get_hash_id(hash_algorithm algo) {
+        PUMP_ASSERT(algo > HASH_UNKNOWN && algo <= HASH_SHA512);
 #if defined(PUMP_HAVE_OPENSSL)
-        switch (hash_algo)
-        {
-        case HASH_SHA1:
-            return NID_sha1;
-        case HASH_SHA224:
-            return NID_sha224;
-        case HASH_SHA256:
-            return NID_sha256;
-        case HASH_SHA384:
-            return NID_sha384;
-        case HASH_SHA512:
-            return NID_sha512;
-        default:
-            return -1;
-        }
+        const static int32_t hash_ids[] = {
+            -1, 
+            NID_sha1,
+            NID_sha224, 
+            NID_sha256, 
+            NID_sha384, 
+            NID_sha512
+        };
+        return hash_ids[algo];
 #else
         return -1;
 #endif
@@ -69,20 +64,37 @@ namespace ssl {
 #if defined(PUMP_HAVE_OPENSSL)
         switch (sign_algo) {
         case TLS_SIGNATURE_PKCS1V15:
+        {
             EVP_PKEY *pubkey = X509_get_pubkey((X509*)cert);
             RSA *rsa = EVP_PKEY_get1_RSA(pubkey);
             ret = RSA_verify(
-                    get_signature_hash_algorithm(hash_algo), 
+                    __get_hash_id(hash_algo), 
                     (const uint8_t*)msg.data(), 
                     (int32_t)msg.size(), 
                     (const uint8_t*)sign.data(), 
                     (int32_t)sign.size(), 
-                    rsa);
+                    rsa) == 1;
             EVP_PKEY_free(pubkey);
             RSA_free(rsa);
             break;
+        }
         case TLS_SIGNATURE_RSAPSS:
+            break;
         case TLS_SIGNATURE_ECDSA:
+        {
+            EVP_PKEY *pubkey = X509_get_pubkey((X509*)cert);
+            EC_KEY *ec_key = EVP_PKEY_get0_EC_KEY(pubkey);
+            ret = ECDSA_verify(
+                    0, 
+                    (const uint8_t*)msg.data(), 
+                    (int32_t)msg.size(), 
+                    (const uint8_t*)sign.data(), 
+                    (int32_t)sign.size(), 
+                    ec_key) == 1;
+            EVP_PKEY_free(pubkey);
+            EC_KEY_free(ec_key);
+            break;
+        }
         case TLS_SIGNATURE_ED25519:
             break;
         }

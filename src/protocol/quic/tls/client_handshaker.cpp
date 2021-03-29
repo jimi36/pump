@@ -317,19 +317,14 @@ namespace tls {
         client_hello_message *client_hello = (client_hello_message*)client_hello_.msg;
         PUMP_ASSERT(client_hello);
 
-        std::string hash;
-        if (!ssl::sum_hash(transcript_, hash)) {
-            return ALERT_INTERNAL_ERROR;
-        }
-
+        std::string buffer;
+        std::string hash = ssl::sum_hash(transcript_);
+        buffer.push_back(TLS_MSG_MESSAGE_HASH);
+        buffer.append(2, 0);
+        buffer.push_back((int8_t)hash.size());
+        buffer.append(hash);
         ssl::reset_hash_context(transcript_);
-
-        std::string hash_msg;
-        hash_msg.push_back(TLS_MSG_MESSAGE_HASH);
-        hash_msg.append(2, 0);
-        hash_msg.push_back((int8_t)hash.size());
-        hash_msg.append(hash);
-        PUMP_DEBUG_CHECK(ssl::update_hash(transcript_, hash_msg));
+        PUMP_DEBUG_CHECK(ssl::update_hash(transcript_, buffer));
 
         const std::string& sh_buffer = pack_handshake_message(msg);
         ssl::update_hash(transcript_, (void_ptr)sh_buffer.data(), (int32_t)sh_buffer.size());
@@ -475,11 +470,10 @@ namespace tls {
             return ALERT_ILLEGAL_PARAMETER; 
         }
 
-        std::string sign_hash;
-        PUMP_DEBUG_CHECK(ssl::sum_hash(transcript_, sign_hash));
+        std::string sign_hash = ssl::sum_hash(transcript_);
         ssl::hash_context_ptr sign_hash_ctx = ssl::create_hash_context(sign_hash_algo);
         ssl::update_hash(sign_hash_ctx, signature_padding, (int32_t)sizeof(signature_padding));
-        ssl::update_hash(sign_hash_ctx, SERVER_SIGNATURE_CONTEXT, (int32_t)strlen(SERVER_SIGNATURE_CONTEXT));
+        ssl::update_hash(sign_hash_ctx, (const void_ptr)SERVER_SIGNATURE_CONTEXT, (int32_t)strlen(SERVER_SIGNATURE_CONTEXT));
         PUMP_DEBUG_CHECK(ssl::update_hash(sign_hash_ctx, sign_hash));
         ssl::free_hash_context(sign_hash_ctx);
 
@@ -493,6 +487,109 @@ namespace tls {
         status_ = HANDSHAKER_CARTIFICATE_VERIFY_RECV;
 
         return ALERT_NONE;
+    }
+
+    alert_code client_handshaker::__handle_finished(handshake_message *msg) {
+        if (status_ != HANDSHAKER_CARTIFICATE_VERIFY_RECV) {
+            return ALERT_UNEXPECTED_MESSGAE;
+        }
+
+        finished_message *finished = (finished_message*)msg->msg;
+        PUMP_ASSERT(finished);
+
+        // https://tools.ietf.org/html/rfc8446#section-4.4.4
+        // https://tools.ietf.org/html/rfc8446#section-4.2.11.2
+        std::string context = ssl::sum_hash(transcript_);
+        std::string finished_key = hkdf_expand_label(
+                                    session_.suite_param.algo, 
+                                    session_.server_secret, 
+                                    "", 
+                                    "finished", 
+                                    ssl::hash_digest_length(session_.suite_param.algo));
+        std::string finished_hash = ssl::sum_hmac(
+                                        session_.suite_param.algo, 
+                                        finished_key, 
+                                        ssl::sum_hash(transcript_));
+        if (finished_hash != finished->verify_data) {
+            return ALERT_DECRYPT_ERROR;
+        }
+
+        const std::string &buffer = pack_handshake_message(msg);
+        PUMP_DEBUG_CHECK(ssl::update_hash(transcript_, buffer));
+
+        session_.traffic_secret = cipher_suite_device_secret(
+                                    &session_.suite_param, 
+                                    session_.master_secret, 
+                                    CLIENT_APPLICATION_TRAFFIC_LABEL, 
+                                    transcript_);
+        session_.server_secret = cipher_suite_device_secret(
+                                    &session_.suite_param, 
+                                    session_.master_secret, 
+                                    SERVER_APPLICATION_TRAFFIC_LABEL, 
+                                    transcript_);
+        // https://tools.ietf.org/html/rfc8446#section-7.5
+        session_.export_master_secret = cipher_suite_device_secret(
+                                            &session_.suite_param, 
+                                            session_.master_secret, 
+                                            EXPORTER_LABEL, 
+                                            transcript_);
+
+        
+        return ALERT_NONE;
+    }
+
+    bool client_handshaker::__send_certificate() {
+        handshake_message msg;
+        msg.type = TLS_MSG_CERTIFICATE;
+        init_handshake_message(&msg);
+
+        certificate_tls13_message *cert = (certificate_tls13_message*)msg.msg;
+
+        cert->certificates.push_back(ssl::generate_x509_certificate());
+        cert->is_support_scts = cert_request_.is_support_scts && !cert_request_.supported_signature_algorithms.empty();
+        cert->is_support_ocsp_stapling = false; // false ?
+
+        const std::string &buffer = pack_handshake_message(&msg);
+        PUMP_DEBUG_CHECK(ssl::update_hash(transcript_, buffer));
+
+        // TODO: send certificate message.
+
+        // TODO: send certificate verify message
+
+        uninit_handshake_message(&msg);
+
+        return true;
+    }
+
+    bool client_handshaker::__send_finished() {
+        handshake_message msg;
+        msg.type = TLS_MSG_FINISHED;
+        init_handshake_message(&msg);
+
+        finished_message *finished = (finished_message*)msg.msg;
+
+        // https://tools.ietf.org/html/rfc8446#section-4.4.4
+        // https://tools.ietf.org/html/rfc8446#section-4.2.11.2
+        std::string context = ssl::sum_hash(transcript_);
+        std::string finished_key = hkdf_expand_label(
+                                    session_.suite_param.algo, 
+                                    session_.client_secret, 
+                                    "", 
+                                    "finished", 
+                                    ssl::hash_digest_length(session_.suite_param.algo));
+        finished->verify_data = ssl::sum_hmac(
+                                    session_.suite_param.algo, 
+                                    finished_key, 
+                                    ssl::sum_hash(transcript_));
+
+        const std::string &buffer = pack_handshake_message(&msg);
+        PUMP_DEBUG_CHECK(ssl::update_hash(transcript_, buffer));
+
+        // TODO: send finished message.
+
+        uninit_handshake_message(&msg);
+
+        return true;
     }
 
 }

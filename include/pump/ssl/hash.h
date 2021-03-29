@@ -64,8 +64,16 @@ namespace ssl {
     /*********************************************************************************
      * Sum hash
      ********************************************************************************/
-    bool sum_hash(hash_context_ptr ctx, std::string &out);
     bool sum_hash(hash_context_ptr ctx, void_ptr out, int32_t out_len);
+    std::string sum_hash(hash_context_ptr ctx);
+
+    /*********************************************************************************
+     * Sum hmac
+     ********************************************************************************/
+    std::string sum_hmac(
+          hash_algorithm algo,
+          const std::string &key,
+          const std::string &input);
 
 }
 }

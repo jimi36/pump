@@ -25,7 +25,7 @@
 namespace pump {
 namespace ssl {
 
-    typedef uint8_t signature_algorithm;
+    typedef uint16_t signature_algorithm;
     const signature_algorithm TLS_SIGNATURE_UNKNOWN  =  0;
 	const signature_algorithm TLS_SIGNATURE_PKCS1V15 = 225;
 	const signature_algorithm TLS_SIGNATURE_RSAPSS   = 256;

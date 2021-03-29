@@ -41,6 +41,17 @@ namespace ssl {
         std::string pubkey;
     };
 
+    static int32_t __get_curve_id(curve_type curve) {
+        if (curve == TLS_CURVE_P256) {
+            return NID_X9_62_prime256v1;
+        } else if (curve == TLS_CURVE_P384) {
+            return NID_secp384r1;
+        } else if (curve == TLS_CURVE_P521) {
+            return NID_secp521r1;
+        }
+        return -1;
+    }
+
     static ecdhe_parameter_ptr create_x25519_parameter() {
 #if defined(PUMP_HAVE_OPENSSL)
         bool ret = false;
@@ -178,15 +189,8 @@ namespace ssl {
         }
         parameter->curve = curve;
 
-        if (curve == TLS_CURVE_P256) {
-            key = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1);
-        } else if (curve == TLS_CURVE_P384) {
-            key = EC_KEY_new_by_curve_name(NID_secp384r1);
-        } else if (curve == TLS_CURVE_P521) {
-            key = EC_KEY_new_by_curve_name(NID_secp521r1);
-        }
-        if (key == nullptr) {
-            return nullptr;
+        if ((key = EC_KEY_new_by_curve_name(__get_curve_id(curve))) == nullptr) {
+            goto err;
         }
 
         if (EC_KEY_generate_key(key) <= 0) {
@@ -242,15 +246,7 @@ namespace ssl {
         EC_POINT *p_ecdh1_public = nullptr;
         EC_POINT *p_ecdh2_public = nullptr;
 
-
-        if (parameter->curve == TLS_CURVE_P256) {
-            key = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1);
-        } else if (parameter->curve == TLS_CURVE_P384) {
-            key = EC_KEY_new_by_curve_name(NID_secp384r1);
-        } else if (parameter->curve == TLS_CURVE_P521) {
-            key = EC_KEY_new_by_curve_name(NID_secp521r1);
-        }
-        if (key == nullptr) {
+        if ((key = EC_KEY_new_by_curve_name(__get_curve_id(parameter->curve))) == nullptr) {
             return shared_key;
         }
 
@@ -309,14 +305,18 @@ namespace ssl {
         }
 
       err:
-        if (priv)
+        if (priv) {
             BN_free(priv);
-        if (key)
+        }
+        if (key) {
             EC_KEY_free(key);
-        if (p_ecdh1_public)
+        }
+        if (p_ecdh1_public) {
             EC_POINT_free(p_ecdh1_public);
-        if (p_ecdh2_public)
+        }
+        if (p_ecdh2_public) {
             EC_POINT_free(p_ecdh2_public);
+        }
 #endif
         return shared_key;
     }

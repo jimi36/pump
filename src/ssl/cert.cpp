@@ -34,6 +34,19 @@ extern "C" {
 namespace pump {
 namespace ssl {
 
+    std::string generate_x509_certificate() {
+        std::string cert;
+#if defined(PUMP_HAVE_OPENSSL)
+        X509 *x509_cert = X509_new();
+        //ASN1_INTEGER_set(X509_get_serialNumber(cert), 1);
+        cert.resize(i2d_X509(x509_cert, nullptr));
+        uint8_t *data = (uint8_t*)cert.data();
+        i2d_X509(x509_cert, &data);
+        X509_free(x509_cert);
+#endif
+        return std::forward<std::string>(cert);
+    }
+
     void_ptr load_x509_certificate(void_ptr data, int32_t size) {
 #if defined(PUMP_HAVE_OPENSSL)
         const uint8_t *tmp = (const uint8_t*)data;

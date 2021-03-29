@@ -55,6 +55,12 @@ namespace tls {
 
         alert_code __handle_certificate_verify(handshake_message *msg);
 
+        alert_code __handle_finished(handshake_message *msg);
+
+        bool __send_certificate();
+
+        bool __send_finished();
+
       private:
         handshaker_status status_;
 
