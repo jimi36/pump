@@ -89,10 +89,10 @@ namespace tls {
         std::string context;
         if (!transcript) {
             transcript = ssl::create_hash_context(suite_param->algo);
-            PUMP_DEBUG_CHECK(ssl::sum_hash(transcript, context));
+            context = ssl::sum_hash(transcript);
             ssl::free_hash_context(transcript);
         } else {
-            PUMP_DEBUG_CHECK(ssl::sum_hash(transcript, context));
+            context = ssl::sum_hash(transcript);
         }
         return hkdf_expand_label(
                 suite_param->algo, 
@@ -168,49 +168,49 @@ namespace tls {
         return ret;
     }
 
-    ssl::hash_algorithm get_hash_algo_for_sign_algo(signature_algorithm sign_algo) {
-        switch (sign_algo) {
-        case TLS_SIGN_PKCS1WITHSHA1:
-        case TLS_SIGN_ECDSAWITHSHA1:
+    ssl::hash_algorithm transform_to_hash_algo(ssl::signature_scheme scheme) {
+        switch (scheme) {
+        case ssl::TLS_SIGN_SCHE_PKCS1WITHSHA1:
+        case ssl::TLS_SIGN_SCHE_ECDSAWITHSHA1:
             return ssl::HASH_SHA1;
-        case TLS_SIGN_PKCS1WITHSHA256:
-        case TLS_SIGN_PSSWITHSHA256:
-        case TLS_SIGN_ECDSAWITHP256AndSHA256:
+        case ssl::TLS_SIGN_SCHE_PKCS1WITHSHA256:
+        case ssl::TLS_SIGN_SCHE_PSSWITHSHA256:
+        case ssl::TLS_SIGN_SCHE_ECDSAWITHP256AndSHA256:
             return ssl::HASH_SHA256;
-        case TLS_SIGN_PKCS1WITHSHA384:
-        case TLS_SIGN_PSSWITHSHA384:
-        case TLS_SIGN_ECDSAWITHP384AndSHA384:
+        case ssl::TLS_SIGN_SCHE_PKCS1WITHSHA384:
+        case ssl::TLS_SIGN_SCHE_PSSWITHSHA384:
+        case ssl::TLS_SIGN_SCHE_ECDSAWITHP384AndSHA384:
             return ssl::HASH_SHA384;
-        case TLS_SIGN_PKCS1WITHSHA512:
-        case TLS_SIGN_PSSWITHSHA512:
-        case TLS_SIGN_ECDSAWITHP521AndSHA512:
+        case ssl::TLS_SIGN_SCHE_PKCS1WITHSHA512:
+        case ssl::TLS_SIGN_SCHE_PSSWITHSHA512:
+        case ssl::TLS_SIGN_SCHE_ECDSAWITHP521AndSHA512:
             return ssl::HASH_SHA512;
-        case TLS_SIGN_ED25519:
+        case ssl::TLS_SIGN_SCHE_ED25519:
         default:
             return ssl::HASH_UNKNOWN;
         }
     }
 
-    ssl::signature_algorithm transfor_sign_algo(signature_algorithm sign_algo) {
-        switch (sign_algo) {
-        case TLS_SIGN_PKCS1WITHSHA1:
-        case TLS_SIGN_PKCS1WITHSHA256:
-        case TLS_SIGN_PKCS1WITHSHA384:
-        case TLS_SIGN_PKCS1WITHSHA512:
-            return ssl::TLS_SIGNATURE_PKCS1V15;
-        case TLS_SIGN_PSSWITHSHA256:
-        case TLS_SIGN_PSSWITHSHA384:
-        case TLS_SIGN_PSSWITHSHA512:
-            return ssl::TLS_SIGNATURE_RSAPSS;
-        case TLS_SIGN_ECDSAWITHSHA1:
-        case TLS_SIGN_ECDSAWITHP256AndSHA256:
-        case TLS_SIGN_ECDSAWITHP384AndSHA384:
-        case TLS_SIGN_ECDSAWITHP521AndSHA512:
-            return ssl::TLS_SIGNATURE_ECDSA;
-        case TLS_SIGN_ED25519:
-            return ssl::TLS_SIGNATURE_ED25519;
+    ssl::signature_algorithm transform_to_sign_algo(ssl::signature_scheme scheme) {
+        switch (scheme) {
+        case ssl::TLS_SIGN_SCHE_PKCS1WITHSHA1:
+        case ssl::TLS_SIGN_SCHE_PKCS1WITHSHA256:
+        case ssl::TLS_SIGN_SCHE_PKCS1WITHSHA384:
+        case ssl::TLS_SIGN_SCHE_PKCS1WITHSHA512:
+            return ssl::TLS_SIGN_ALGO_PKCS1V15;
+        case ssl::TLS_SIGN_SCHE_PSSWITHSHA256:
+        case ssl::TLS_SIGN_SCHE_PSSWITHSHA384:
+        case ssl::TLS_SIGN_SCHE_PSSWITHSHA512:
+            return ssl::TLS_SIGN_ALGO_RSAPSS;
+        case ssl::TLS_SIGN_SCHE_ECDSAWITHSHA1:
+        case ssl::TLS_SIGN_SCHE_ECDSAWITHP256AndSHA256:
+        case ssl::TLS_SIGN_SCHE_ECDSAWITHP384AndSHA384:
+        case ssl::TLS_SIGN_SCHE_ECDSAWITHP521AndSHA512:
+            return ssl::TLS_SIGN_ALGO_ECDSA;
+        case ssl::TLS_SIGN_SCHE_ED25519:
+            return ssl::TLS_SIGN_ALGO_ED25519;
         default:
-            return ssl::TLS_SIGNATURE_UNKNOWN;
+            return ssl::TLS_SIGN_ALGO_UNKNOWN;
         }
     }
 

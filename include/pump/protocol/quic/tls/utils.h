@@ -111,14 +111,14 @@ namespace tls {
     bool certificate_verify(std::vector<void_ptr> &certs);
 
     /*********************************************************************************
-     * Get hash algorithm for signature algorithm.
+     * Transform tp hash algorithm.
      ********************************************************************************/
-    ssl::hash_algorithm get_hash_algo_for_sign_algo(signature_algorithm sign_algo);
+    ssl::hash_algorithm transform_to_hash_algo(ssl::signature_scheme scheme);
 
     /*********************************************************************************
-     * Transfor signature algorithm.
+     * Transform to signature algorithm.
      ********************************************************************************/
-    ssl::signature_algorithm transfor_sign_algo(signature_algorithm sign_algo);
+    ssl::signature_algorithm transform_to_sign_algo(ssl::signature_scheme scheme);
 
 }
 }

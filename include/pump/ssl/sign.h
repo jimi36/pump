@@ -26,18 +26,46 @@ namespace pump {
 namespace ssl {
 
     typedef uint16_t signature_algorithm;
-    const signature_algorithm TLS_SIGNATURE_UNKNOWN  =  0;
-	const signature_algorithm TLS_SIGNATURE_PKCS1V15 = 225;
-	const signature_algorithm TLS_SIGNATURE_RSAPSS   = 256;
-	const signature_algorithm TLS_SIGNATURE_ECDSA    = 257;
-	const signature_algorithm TLS_SIGNATURE_ED25519  = 258;
+    const signature_algorithm TLS_SIGN_ALGO_UNKNOWN  =  0;
+	const signature_algorithm TLS_SIGN_ALGO_PKCS1V15 = 225;
+	const signature_algorithm TLS_SIGN_ALGO_RSAPSS   = 256;
+	const signature_algorithm TLS_SIGN_ALGO_ECDSA    = 257;
+	const signature_algorithm TLS_SIGN_ALGO_ED25519  = 258;
+
+    // TLS signature scheme
+    typedef uint16_t signature_scheme;
+    const signature_scheme TLS_SIGN_SCHE_UNKNOWN                = 0x0000;
+    // RSASSA-PKCS1-v1_5 algorithms.
+    const signature_scheme TLS_SIGN_SCHE_PKCS1WITHSHA256        = 0x0401;
+    const signature_scheme TLS_SIGN_SCHE_PKCS1WITHSHA384        = 0x0501;
+    const signature_scheme TLS_SIGN_SCHE_PKCS1WITHSHA512        = 0x0601;
+    // RSASSA-PSS algorithms with public key OID rsaEncryption.
+    const signature_scheme TLS_SIGN_SCHE_PSSWITHSHA256          = 0x0804;
+    const signature_scheme TLS_SIGN_SCHE_PSSWITHSHA384          = 0x0805;
+    const signature_scheme TLS_SIGN_SCHE_PSSWITHSHA512          = 0x0806;
+    // ECDSA algorithms. Only constrained to a specific curve in TLS 1.3.
+    const signature_scheme TLS_SIGN_SCHE_ECDSAWITHP256AndSHA256 = 0x0403;
+    const signature_scheme TLS_SIGN_SCHE_ECDSAWITHP384AndSHA384 = 0x0503;
+    const signature_scheme TLS_SIGN_SCHE_ECDSAWITHP521AndSHA512 = 0x0603;
+    // EdDSA algorithms.
+    const signature_scheme TLS_SIGN_SCHE_ED25519                = 0x0807;
+    // Legacy signature and hash algorithms for TLS 1.2.
+    const signature_scheme TLS_SIGN_SCHE_PKCS1WITHSHA1          = 0x0201;
+    const signature_scheme TLS_SIGN_SCHE_ECDSAWITHSHA1          = 0x0203;
+
+    bool do_signature(
+        void_ptr cert, 
+        signature_algorithm sign_algo, 
+        hash_algorithm hash_algo,
+        const std::string &msg,
+        std::string &sign);
 
     bool verify_signature(
-            signature_algorithm sign_algo, 
-            hash_algorithm hash_algo,
-            void_ptr cert, 
-            const std::string &msg, 
-            const std::string &sign);
+        void_ptr cert, 
+        signature_algorithm sign_algo, 
+        hash_algorithm hash_algo,            
+        const std::string &msg, 
+        const std::string &sign);
 
 }
 }

@@ -19,6 +19,9 @@
 
 #include <string>
 
+#include "pump/ssl/sign.h"
+#include "pump/ssl/ecdhe.h"
+
 namespace pump {
 namespace protocol {
 namespace quic {
@@ -44,7 +47,7 @@ namespace tls {
     #define TLS_MSG_SERVER_KEY_EXCHANGE  12
     #define TLS_MSG_CERTIFICATE_REQUEST  13
     #define TLS_MSG_SERVER_HELLO_DONE    14
-    #define TLS_MSG_CERIFICATE_VERIFY    15
+    #define TLS_MSG_CERTIFICATE_VERIFY   15
     #define TLS_MSG_CLIENT_KEY_EXCHANGE  16
     #define TLS_MSG_FINISHED             20
     #define TLS_MSG_CERTIFICATE_STATUS   22
@@ -102,30 +105,39 @@ namespace tls {
     #define TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305           TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256
     #define TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305         TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256
 
+    // TLS 1.3 supported cipher suites
+    const int32_t supported_cipher_suites_count = 3;
+    const cipher_suite_type supported_cipher_suites[] = {
+        TLS_AES_128_GCM_SHA256,
+        TLS_AES_256_GCM_SHA384,
+        TLS_CHACHA20_POLY1305_SHA256
+    };
+
+    // TLS 1.3 supported curve groups
+    const int32_t supported_curve_groups_count = 4;
+    const ssl::curve_type supported_curve_groups[] = {
+        ssl::TLS_CURVE_X25519,
+        ssl::TLS_CURVE_P256,
+        ssl::TLS_CURVE_P384,
+        ssl::TLS_CURVE_P521
+    };
+
+    // TLS 1.3 supported signature schemes
+    const int32_t supported_signature_schemes_count = 7;
+    const ssl::signature_scheme supported_signature_schemes[] = {
+        ssl::TLS_SIGN_SCHE_PSSWITHSHA256,
+        ssl::TLS_SIGN_SCHE_ECDSAWITHP256AndSHA256,
+        ssl::TLS_SIGN_SCHE_PSSWITHSHA384,
+        ssl::TLS_SIGN_SCHE_ECDSAWITHP384AndSHA384,
+        ssl::TLS_SIGN_SCHE_PSSWITHSHA512,
+        ssl::TLS_SIGN_SCHE_ECDSAWITHP521AndSHA512,
+        ssl::TLS_SIGN_SCHE_ED25519
+    };
+
     // TLS Certificate Status Type
     // https://tools.ietf.org/html/rfc3546
     typedef uint8_t certicate_status_type;
     #define TLS_OCSP_STATUS 1
-
-    // TLS signature algorithm
-    typedef uint16_t signature_algorithm;
-    // RSASSA-PKCS1-v1_5 algorithms.
-    #define TLS_SIGN_PKCS1WITHSHA256        0x0401
-    #define TLS_SIGN_PKCS1WITHSHA384        0x0501
-    #define TLS_SIGN_PKCS1WITHSHA512        0x0601
-    // RSASSA-PSS algorithms with public key OID rsaEncryption.
-    #define TLS_SIGN_PSSWITHSHA256          0x0804
-    #define TLS_SIGN_PSSWITHSHA384          0x0805
-    #define TLS_SIGN_PSSWITHSHA512          0x0806
-    // ECDSA algorithms. Only constrained to a specific curve in TLS 1.3.
-    #define TLS_SIGN_ECDSAWITHP256AndSHA256 0x0403
-    #define TLS_SIGN_ECDSAWITHP384AndSHA384 0x0503
-    #define TLS_SIGN_ECDSAWITHP521AndSHA512 0x0603
-    // EdDSA algorithms.
-    #define TLS_SIGN_ED25519                0x0807
-    // Legacy signature and hash algorithms for TLS 1.2.
-    #define TLS_SIGN_PKCS1WITHSHA1          0x0201
-    #define TLS_SIGN_ECDSAWITHSHA1          0x0203
 
     // TLS 1.3 PSK Key Exchange Modes. See RFC 8446, Section 4.2.9.
     typedef uint8_t psk_mode_type;
@@ -155,24 +167,25 @@ namespace tls {
     #define TLS_EXTENSION_QUIC                      0xffa5
 
     // TLS handshaker status.
-    typedef int32_t handshaker_status;
-    #define HANDSHAKER_INIT                      0
-    #define HANDSHAKER_CLIENT_HELLO_SENT         1
-    #define HANDSHAKER_CLIENT_HELLO_RECV         2
-    #define HANDSHAKER_SERVER_HELLO_SENT         3
-    #define HANDSHAKER_SERVER_HELLO_RECV         4
-    #define HANDSHAKER_RETRY_HELLO_SENT          5
-    #define HANDSHAKER_RETRY_HELLO_RECV          6
-    #define HANDSHAKER_ENCRYPTED_EXTENSIONS_SENT 7
-    #define HANDSHAKER_ENCRYPTED_EXTENSIONS_RECV 8
-    #define HANDSHAKER_CARTIFICATE_REQUEST_SENT  9
-    #define HANDSHAKER_CARTIFICATE_REQUEST_RECV  10
-    #define HANDSHAKER_CARTIFICATE_SENT          11
-    #define HANDSHAKER_CARTIFICATE_RECV          12
-    #define HANDSHAKER_CARTIFICATE_VERIFY_SENT   13
-    #define HANDSHAKER_CARTIFICATE_VERIFY_RECV   14
-    #define HANDSHAKER_FINISHED_SENT             15
-    #define HANDSHAKER_FINISHED_RECV             16
+    typedef int32_t handshake_status;
+    #define HANDSHAKE_INIT                      0
+    #define HANDSHAKE_CLIENT_HELLO_SENT         1
+    #define HANDSHAKE_CLIENT_HELLO_RECV         2
+    #define HANDSHAKE_SERVER_HELLO_SENT         3
+    #define HANDSHAKE_SERVER_HELLO_RECV         4
+    #define HANDSHAKE_RETRY_HELLO_SENT          5
+    #define HANDSHAKE_RETRY_HELLO_RECV          6
+    #define HANDSHAKE_ENCRYPTED_EXTENSIONS_SENT 7
+    #define HANDSHAKE_ENCRYPTED_EXTENSIONS_RECV 8
+    #define HANDSHAKE_CARTIFICATE_REQUEST_SENT  9
+    #define HANDSHAKE_CARTIFICATE_REQUEST_RECV  10
+    #define HANDSHAKE_CARTIFICATE_SENT          11
+    #define HANDSHAKE_CARTIFICATE_RECV          12
+    #define HANDSHAKE_CARTIFICATE_VERIFY_SENT   13
+    #define HANDSHAKE_CARTIFICATE_VERIFY_RECV   14
+    #define HANDSHAKE_FINISHED_SENT             15
+    #define HANDSHAKE_FINISHED_RECV             16
+    #define HANDSHAKE_SUCCESS                   100
 
 	// downgradeCanaryTLS12 or downgradeCanaryTLS11 is embedded in the server
 	// random as a downgrade protection if the server would be capable of

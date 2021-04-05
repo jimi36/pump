@@ -225,7 +225,9 @@ namespace ssl {
                         input.size(),
                         (uint8_t*)output.data(), 
                         &output_len);
-        PUMP_ASSERT(ret);
+        if (ret == nullptr) {
+            PUMP_ASSERT(false);
+        }
 #endif
         return output;
     }

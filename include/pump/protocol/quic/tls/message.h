@@ -39,7 +39,7 @@ namespace tls {
     /*********************************************************************************
      * Init handshake message.
      ********************************************************************************/
-    bool init_handshake_message(handshake_message *msg);
+    bool init_handshake_message(message_type type, handshake_message *msg);
 
     /*********************************************************************************
      * Uninit handshake message.
@@ -213,7 +213,7 @@ namespace tls {
         // contains a "supported_signature_algorithms" value.
         // https://tools.ietf.org/html/rfc5246#section-7.4.1.4.1
         // https://tools.ietf.org/html/rfc8446#section-4.2.3
-        std::vector<signature_algorithm> supported_signature_algorithms;
+        std::vector<ssl::signature_scheme> supported_signature_algorithms;
 
         // Extension field.
         // The "signature_algorithms_cert" extension was added to allow
@@ -223,7 +223,7 @@ namespace tls {
         // Implementations which have the same policy in both cases MAY omit the
         // "signature_algorithms_cert" extension.
         // https://tools.ietf.org/html/rfc8446#section-4.2.3
-        std::vector<signature_algorithm> supported_signature_algorithms_certs;
+        std::vector<ssl::signature_scheme> supported_signature_algorithms_certs;
 
         // Extension field.
         // A new TLS extension, "renegotiation_info" (with extension type 0xff01), 
@@ -708,7 +708,7 @@ namespace tls {
         // https://tools.ietf.org/html/rfc8446#section-4.3.2
         // https://tools.ietf.org/html/rfc5246#section-7.4.1.4.1
         bool has_signature_algorithms;
-        std::vector<signature_algorithm> supported_signature_algorithms;
+        std::vector<ssl::signature_scheme> supported_signature_algorithms;
 
         // A list of the distinguished names of acceptable certificate
         // authorities.  These distinguished names may specify a desired
@@ -747,12 +747,12 @@ namespace tls {
         // https://tools.ietf.org/html/rfc8446#section-4.3.2
         // https://tools.ietf.org/html/rfc5246#section-7.4.1.4.1
         // https://tools.ietf.org/html/rfc8446#section-4.2.3
-        std::vector<signature_algorithm> supported_signature_algorithms;
+        std::vector<ssl::signature_scheme> supported_signature_schemes;
 
         // Extension field.
         // https://tools.ietf.org/html/rfc8446#section-4.3.2
         // https://tools.ietf.org/html/rfc8446#section-4.2.3
-        std::vector<signature_algorithm> supported_signature_algorithms_certs;
+        std::vector<ssl::signature_scheme> supported_signature_algorithms_certs;
 
         // Extension field.
         // https://tools.ietf.org/html/rfc8446#section-4.3.2
@@ -787,8 +787,8 @@ namespace tls {
     // sent, it MUST immediately follow the client key exchange message.
     // https://tools.ietf.org/html/rfc4346#section-7.4.8
     struct certificate_verify_message {
-        bool has_signature_algorithm;
-        uint16_t signature_algorithm;
+        bool has_signature_scheme;
+        ssl::signature_scheme signature_scheme;
         std::string signature;
     };
 

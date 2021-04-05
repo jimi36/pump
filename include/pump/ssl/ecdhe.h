@@ -28,12 +28,12 @@ namespace ssl {
     // TLS curve ecdhe types.
     // https://tools.ietf.org/html/rfc8446#section-4.2.7
     typedef uint16_t curve_type;
-    #define TLS_CURVE_UNKNOWN 0
-    #define TLS_CURVE_P256    0x0017 // secp256r1
-    #define TLS_CURVE_P384    0x0018 // secp384r1
-    #define TLS_CURVE_P521    0x0019 // secp521r1
-    #define TLS_CURVE_X25519  0x001D
-    #define TLS_CURVE_X448    0x001E
+    const curve_type TLS_CURVE_UNKNOWN = 0;
+    const curve_type TLS_CURVE_P256    = 0x0017; // secp256r1
+    const curve_type TLS_CURVE_P384    = 0x0018; // secp384r1
+    const curve_type TLS_CURVE_P521    = 0x0019; // secp521r1
+    const curve_type TLS_CURVE_X25519  = 0x001D;
+    const curve_type TLS_CURVE_X448    = 0x001E;
 
     struct ecdhe_parameter;
     DEFINE_RAW_POINTER_TYPE(ecdhe_parameter);

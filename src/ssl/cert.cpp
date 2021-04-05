@@ -35,19 +35,29 @@ namespace pump {
 namespace ssl {
 
     std::string generate_x509_certificate() {
-        std::string cert;
+        std::string data;
 #if defined(PUMP_HAVE_OPENSSL)
-        X509 *x509_cert = X509_new();
+        X509 *cert = X509_new();
         //ASN1_INTEGER_set(X509_get_serialNumber(cert), 1);
-        cert.resize(i2d_X509(x509_cert, nullptr));
-        uint8_t *data = (uint8_t*)cert.data();
-        i2d_X509(x509_cert, &data);
-        X509_free(x509_cert);
+        data.resize(i2d_X509(cert, nullptr));
+        uint8_t *buffer = (uint8_t*)data.data();
+        i2d_X509(cert, &buffer);
+        X509_free(cert);
 #endif
-        return std::forward<std::string>(cert);
+        return std::forward<std::string>(data);
     }
 
-    void_ptr load_x509_certificate(void_ptr data, int32_t size) {
+    std::string get_x509_certificate_data(x509_certificate_ptr cert) {
+        std::string data;
+#if defined(PUMP_HAVE_OPENSSL)
+        data.resize(i2d_X509((X509*)cert, nullptr));
+        uint8_t *buffer = (uint8_t*)data.data();
+        i2d_X509((X509*)cert, &buffer);
+        return std::forward<std::string>(data);
+#endif   
+    }
+
+    x509_certificate_ptr load_x509_certificate(void_ptr data, int32_t size) {
 #if defined(PUMP_HAVE_OPENSSL)
         const uint8_t *tmp = (const uint8_t*)data;
         return d2i_X509(NULL, &tmp, size);
@@ -56,13 +66,49 @@ namespace ssl {
 #endif
     }
 
-    void free_x509_certificate(void_ptr cert) {
+    void free_x509_certificate(x509_certificate_ptr cert) {
 #if defined(PUMP_HAVE_OPENSSL)
         X509_free((X509*)cert);
 #endif
     }
 
-    bool verify_x509_certificates(std::vector<void_ptr> &certs) {
+    signature_scheme get_x509_signature_scheme(x509_certificate_ptr cert) {
+#if defined(PUMP_HAVE_OPENSSL)
+        EVP_PKEY *pkey = X509_get_pubkey((X509*)cert);
+        switch (EVP_PKEY_base_id(pkey)) {
+        case EVP_PKEY_RSA:
+        {
+            int32_t pkey_size = EVP_PKEY_size(pkey);
+            if (pkey_size == 32) {
+                return TLS_SIGN_SCHE_PSSWITHSHA256;
+            } else if (pkey_size == 42) {
+                return TLS_SIGN_SCHE_PSSWITHSHA384;
+            } else if (pkey_size == 64) {
+                return TLS_SIGN_SCHE_PSSWITHSHA512;
+            }
+            break;
+        }
+        case EVP_PKEY_EC:
+        {
+            EC_KEY *key = EVP_PKEY_get1_EC_KEY(pkey);
+            int32_t curve = EC_GROUP_get_curve_name(EC_KEY_get0_group(key));
+            if (curve == NID_X9_62_prime256v1) {
+                return TLS_SIGN_SCHE_ECDSAWITHP256AndSHA256;
+            } else if (curve == NID_secp384r1) {
+                return TLS_SIGN_SCHE_ECDSAWITHP384AndSHA384;
+            } else if (curve == NID_secp521r1) {
+                return TLS_SIGN_SCHE_ECDSAWITHP521AndSHA512;
+            }
+            break;
+        }
+        case EVP_PKEY_ED25519:
+            return TLS_SIGN_SCHE_ED25519;
+        }
+#endif
+        return TLS_SIGN_SCHE_UNKNOWN;
+    }
+
+    bool verify_x509_certificates(std::vector<x509_certificate_ptr> &certs) {
 #if defined(PUMP_HAVE_OPENSSL)
         X509_STORE *store = X509_STORE_new();
         for (int32_t i = 1; i < (int32_t)certs.size(); i++) {

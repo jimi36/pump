@@ -33,6 +33,7 @@ namespace tls {
      * TLS config.
      ********************************************************************************/
     struct config {
+        std::string cert;
         std::string server_name;
         std::string alpn;
     };
@@ -52,30 +53,36 @@ namespace tls {
      * TLS connection session.
      ********************************************************************************/
     struct connection_session {
-        // Selected tls verson
+        // TLS verson
         version_type version;
 
+        // TLS server name
+        std::string server_name;
+
+        // TLS ecdhe parameter
         ssl::ecdhe_parameter_ptr ecdhe_param;
 
-        // Selected cipher cuite parameter
+        // TLS cipher cuite parameter
         cipher_suite_parameter suite_param;
 
-        // Selected application protocol
-        std::string alpn;
-
+        // 0-RTT enable status
         bool enable_zero_rtt;
+
+        // Application protocol
+        std::string alpn;
 
         std::vector<std::string> scts;
 
         std::string ocsp_staple;
 
+        std::string handshake_secret;
         std::string master_secret;
         std::string client_secret;
         std::string server_secret;
         std::string traffic_secret; 
         std::string export_master_secret;
 
-        std::vector<void_ptr> certs;
+        std::vector<ssl::x509_certificate_ptr> certs;
     };
     DEFINE_RAW_POINTER_TYPE(connection_session)
 

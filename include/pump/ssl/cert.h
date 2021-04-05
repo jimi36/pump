@@ -20,10 +20,12 @@
 #include <string>
 #include <vector>
 
-#include "pump/types.h"
+#include "pump/ssl/sign.h"
 
 namespace pump {
 namespace ssl {
+
+    typedef void_ptr x509_certificate_ptr;
 
     /*********************************************************************************
      * Generate X509 certificate.
@@ -31,19 +33,29 @@ namespace ssl {
     std::string generate_x509_certificate();
 
     /*********************************************************************************
+     * Get X509 certificate data.
+     ********************************************************************************/
+    std::string get_x509_certificate_data(x509_certificate_ptr cert);
+
+    /*********************************************************************************
      * Load X509 certificate.
      ********************************************************************************/
-    void_ptr load_x509_certificate(void_ptr data, int32_t size);
+    x509_certificate_ptr load_x509_certificate(void_ptr data, int32_t size);
 
     /*********************************************************************************
      * Free X509 certificate.
      ********************************************************************************/
-    void free_x509_certificate(void_ptr cert);
+    void free_x509_certificate(x509_certificate_ptr cert);
+
+    /*********************************************************************************
+     * Get X509 certificate signature scheme.
+     ********************************************************************************/
+    signature_scheme get_x509_signature_scheme(x509_certificate_ptr cert);
 
     /*********************************************************************************
      * X509 certificate verify.
      ********************************************************************************/
-    bool verify_x509_certificates(std::vector<void_ptr> &certs);
+    bool verify_x509_certificates(std::vector<x509_certificate_ptr> &certs);
 
     /*********************************************************************************
      * Create tls client certificate.

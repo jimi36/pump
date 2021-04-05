@@ -23,8 +23,8 @@ namespace protocol {
 namespace quic {
 namespace tls {
     
-    bool init_handshake_message(handshake_message *msg) {
-        switch (msg->type) {
+    bool init_handshake_message(message_type type, handshake_message *msg) {
+        switch (type) {
         case TLS_MSG_HELLO_REQUEST:
             msg->msg = (void*)object_create<hello_request_message>();
             break;
@@ -55,7 +55,7 @@ namespace tls {
         case TLS_MSG_SERVER_HELLO_DONE:
             msg->msg = (void*)object_create<server_hello_done_message>();
             break;
-        case TLS_MSG_CERIFICATE_VERIFY:
+        case TLS_MSG_CERTIFICATE_VERIFY:
             msg->msg = (void*)object_create<certificate_verify_message>();
             break;
         case TLS_MSG_CLIENT_KEY_EXCHANGE:
@@ -77,6 +77,8 @@ namespace tls {
         if (msg->msg == NULL) {
             return false;
         }
+
+        msg->type = type;
 
         return true;
     }
@@ -117,7 +119,7 @@ namespace tls {
         case TLS_MSG_SERVER_HELLO_DONE:
             object_delete((server_hello_done_message*)msg->msg);
             break;
-        case TLS_MSG_CERIFICATE_VERIFY:
+        case TLS_MSG_CERTIFICATE_VERIFY:
             object_delete((certificate_verify_message*)msg->msg);
             break;
         case TLS_MSG_CLIENT_KEY_EXCHANGE:
@@ -169,7 +171,7 @@ namespace tls {
             PACK_MESSAGE(pack_certificate_request_tls13, certificate_request_tls13_message)
         case TLS_MSG_SERVER_HELLO_DONE:
             PACK_MESSAGE(pack_server_hello_done, server_hello_done_message)
-        case TLS_MSG_CERIFICATE_VERIFY:
+        case TLS_MSG_CERTIFICATE_VERIFY:
             PACK_MESSAGE(pack_certificate_verify, certificate_verify_message)
         case TLS_MSG_CLIENT_KEY_EXCHANGE:
             PACK_MESSAGE(pack_client_key_exchange, client_key_exchange_message)
@@ -214,7 +216,7 @@ namespace tls {
             return unpack_certificate_request_tls13(buf, size, (certificate_request_tls13_message*)msg->msg);
         case TLS_MSG_SERVER_HELLO_DONE:
             return unpack_server_hello_done(buf, size, (server_hello_done_message*)msg->msg);
-        case TLS_MSG_CERIFICATE_VERIFY:
+        case TLS_MSG_CERTIFICATE_VERIFY:
             return unpack_certificate_verify(buf, size, (certificate_verify_message*)msg->msg);
         case TLS_MSG_CLIENT_KEY_EXCHANGE:
             return unpack_client_key_exchange(buf, size, (client_key_exchange_message*)msg->msg);
@@ -1761,12 +1763,12 @@ namespace tls {
         }
 
         // Pack signature algorithms extension.
-        if (!msg->supported_signature_algorithms.empty()) {
+        if (!msg->supported_signature_schemes.empty()) {
             PACK_AND_RETURN_ERR(__pack_uint16(p, end, TLS_EXTENSION_SIGNATURE_ALGORITHMS));
-            PACK_AND_RETURN_ERR(__pack_uint16(p, end, uint16_t(2 + msg->supported_signature_algorithms.size() * 2)));
-            PACK_AND_RETURN_ERR(__pack_uint16(p, end, uint16_t(msg->supported_signature_algorithms.size() * 2)));
-            for (int32_t i = 0; i < (int32_t)msg->supported_signature_algorithms.size(); i++) {
-                PACK_AND_RETURN_ERR(__pack_uint16(p, end, msg->supported_signature_algorithms[i]));
+            PACK_AND_RETURN_ERR(__pack_uint16(p, end, uint16_t(2 + msg->supported_signature_schemes.size() * 2)));
+            PACK_AND_RETURN_ERR(__pack_uint16(p, end, uint16_t(msg->supported_signature_schemes.size() * 2)));
+            for (int32_t i = 0; i < (int32_t)msg->supported_signature_schemes.size(); i++) {
+                PACK_AND_RETURN_ERR(__pack_uint16(p, end, msg->supported_signature_schemes[i]));
             }
         }
 
@@ -1840,12 +1842,12 @@ namespace tls {
                 break;
             case TLS_EXTENSION_SIGNATURE_ALGORITHMS:
                 {
-                    uint16_t signature_algorithms_len = 0;
-                    UNPACK_AND_RETURN_ERR(__unpack_uint16(p, end, signature_algorithms_len));
-                    for (uint16_t i = signature_algorithms_len / 2; i > 0; i--) {
-                        uint16_t signature_algorithms = 0;
-                        UNPACK_AND_RETURN_ERR(__unpack_uint16(p, end, signature_algorithms));
-                        msg->supported_signature_algorithms.push_back(signature_algorithms);
+                    uint16_t signature_schemes_len = 0;
+                    UNPACK_AND_RETURN_ERR(__unpack_uint16(p, end, signature_schemes_len));
+                    for (uint16_t i = signature_schemes_len / 2; i > 0; i--) {
+                        ssl::signature_scheme scheme = ssl::TLS_SIGN_SCHE_UNKNOWN;
+                        UNPACK_AND_RETURN_ERR(__unpack_uint16(p, end, scheme));
+                        msg->supported_signature_schemes.push_back(scheme);
                     }
                 }
                 break;
@@ -1916,17 +1918,17 @@ namespace tls {
         uint8_t *end = p + max_size;
 
         // Pack message type with 1 bytes.
-        PACK_AND_RETURN_ERR(__pack_uint8(p, end, TLS_MSG_CERIFICATE_VERIFY));
+        PACK_AND_RETURN_ERR(__pack_uint8(p, end, TLS_MSG_CERTIFICATE_VERIFY));
 
         // Pack payload length.
-        if (msg->has_signature_algorithm) {
+        if (msg->has_signature_scheme) {
             PACK_AND_RETURN_ERR(__pack_uint24(p, end, uint16_t(2 + 2 + msg->signature.size())));
         } else {
             PACK_AND_RETURN_ERR(__pack_uint24(p, end, uint16_t(2 + msg->signature.size())));
         }
         
-        if (msg->has_signature_algorithm) {
-            PACK_AND_RETURN_ERR(__pack_uint16(p, end, msg->signature_algorithm));
+        if (msg->has_signature_scheme) {
+            PACK_AND_RETURN_ERR(__pack_uint16(p, end, msg->signature_scheme));
         }
 
         // Pack signature data.
@@ -1939,7 +1941,7 @@ namespace tls {
     int32_t unpack_certificate_verify(const uint8_t *buf, int32_t size, certificate_verify_message *msg) {
         const uint8_t *p = buf;
         const uint8_t *end = buf + size;
-        if (p[0] != TLS_MSG_CERIFICATE_VERIFY) {
+        if (p[0] != TLS_MSG_CERTIFICATE_VERIFY) {
             return -1;
         }
         p += 1;
@@ -1948,8 +1950,8 @@ namespace tls {
         uint32_t payload_len = 0; 
         UNPACK_AND_RETURN_ERR(__unpack_uint24(p, end, payload_len));
 
-        if (msg->has_signature_algorithm) {
-            UNPACK_AND_RETURN_ERR(__unpack_uint16(p, end, msg->signature_algorithm));
+        if (msg->has_signature_scheme) {
+            UNPACK_AND_RETURN_ERR(__unpack_uint16(p, end, msg->signature_scheme));
         }
 
         uint16_t signature_len = 0;
