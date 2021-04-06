@@ -22,6 +22,9 @@
 extern "C" {
 #include <openssl/ssl.h>
 #include <openssl/err.h>
+#include <openssl/evp.h>
+#include <openssl/pem.h>
+#include <openssl/x509.h>
 }
 #endif
 
@@ -34,33 +37,102 @@ extern "C" {
 namespace pump {
 namespace ssl {
 
-    std::string generate_x509_certificate() {
-        std::string data;
+    std::string generate_x509_certificate(signature_scheme scheme) {
+        std::string out;
 #if defined(PUMP_HAVE_OPENSSL)
-        X509 *cert = X509_new();
-        //ASN1_INTEGER_set(X509_get_serialNumber(cert), 1);
-        data.resize(i2d_X509(cert, nullptr));
-        uint8_t *buffer = (uint8_t*)data.data();
-        i2d_X509(cert, &buffer);
-        X509_free(cert);
+        X509* cert = nullptr;
+        switch (scheme) {
+        case TLS_SIGN_SCHE_ECDSAWITHP256AndSHA256:
+        case TLS_SIGN_SCHE_ECDSAWITHP384AndSHA384:
+        case TLS_SIGN_SCHE_ECDSAWITHP521AndSHA512:
+            {
+                EC_KEY *eckey = nullptr;
+                if (scheme == TLS_SIGN_SCHE_ECDSAWITHP256AndSHA256) {
+                    eckey = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1);
+                } else if (scheme == TLS_SIGN_SCHE_ECDSAWITHP384AndSHA384) {
+                    eckey = EC_KEY_new_by_curve_name(NID_secp384r1);
+                } else if (scheme == TLS_SIGN_SCHE_ECDSAWITHP521AndSHA512) {
+                    eckey = EC_KEY_new_by_curve_name(NID_secp521r1);
+                }
+                PUMP_ASSERT(eckey != nullptr);
+                EC_KEY_set_asn1_flag(eckey, OPENSSL_EC_NAMED_CURVE);
+                PUMP_DEBUG_EQUAL_CHECK(EC_KEY_generate_key(eckey), 1);
+
+                EVP_PKEY* pkey = EVP_PKEY_new();
+                PUMP_DEBUG_EQUAL_CHECK(EVP_PKEY_assign_EC_KEY(pkey, eckey), 1);
+                
+                cert = X509_new();
+                PUMP_ASSERT(cert != nullptr);
+                /* REALLY shouldn't use fixed serial if DN isn't unique */
+                PUMP_DEBUG_EQUAL_CHECK(ASN1_INTEGER_set(X509_get_serialNumber(cert), 1), 1);
+                PUMP_DEBUG_NOEQUAL_CHECK(X509_gmtime_adj(X509_get_notBefore(cert), 0), nullptr);
+                PUMP_DEBUG_NOEQUAL_CHECK(X509_gmtime_adj(X509_get_notAfter(cert), 365L * 86400), nullptr);
+                PUMP_DEBUG_EQUAL_CHECK(X509_set_pubkey(cert, pkey), 1);
+
+                X509_NAME* name = X509_get_subject_name(cert);
+                X509_NAME_add_entry_by_txt(name, "C", MBSTRING_ASC, (uint8_t*)"CA", -1, -1, 0);
+                X509_NAME_add_entry_by_txt(name, "O", MBSTRING_ASC, (uint8_t*)"MyCompany Inc.", -1, -1, 0);
+                X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC, (uint8_t*)"localhost", -1, -1, 0);
+                X509_set_issuer_name(cert, name);
+
+                //EC_KEY_free(eckey);
+                EVP_PKEY_free(pkey);
+            }
+            break;
+        default:
+            break;
+        }
+
+        if (cert) {
+            out = read_x509_certificate_pem(cert);
+            //out_cert.resize(i2d_X509(cert, nullptr));
+            //uint8_t* data = (uint8_t*)out_cert.data();
+            //PUMP_DEBUG_EQUAL_CHECK(i2d_X509(cert, &data), (int32_t)out_cert.size());
+            X509_free(cert);
+        }
 #endif
-        return std::forward<std::string>(data);
+        return std::forward<std::string>(out);
     }
 
-    std::string get_x509_certificate_data(x509_certificate_ptr cert) {
-        std::string data;
+    std::string read_x509_certificate_pem(x509_certificate_ptr cert) {
+        std::string out;
 #if defined(PUMP_HAVE_OPENSSL)
-        data.resize(i2d_X509((X509*)cert, nullptr));
-        uint8_t *buffer = (uint8_t*)data.data();
+        BIO *bio = BIO_new(BIO_s_mem());
+        PUMP_ASSERT(bio != nullptr);
+        //PEM_read_bio_X509(bio, (X509**)&cert, NULL, NULL);
+        PEM_write_bio_X509(bio, (X509*)cert);
+        BUF_MEM *buf = nullptr;
+        BIO_get_mem_ptr(bio, &buf);
+        out.assign(buf->data, buf->length);
+        BIO_free(bio);
+#endif
+        return std::forward<std::string>(out);
+    }
+
+    std::string read_x509_certificate_raw(x509_certificate_ptr cert) {
+        std::string out;
+#if defined(PUMP_HAVE_OPENSSL)
+        out.resize(i2d_X509((X509*)cert, nullptr));
+        uint8_t *buffer = (uint8_t*)out.data();
         i2d_X509((X509*)cert, &buffer);
-        return std::forward<std::string>(data);
-#endif   
+#endif
+        return std::forward<std::string>(out);
     }
 
-    x509_certificate_ptr load_x509_certificate(void_ptr data, int32_t size) {
+    x509_certificate_ptr load_x509_certificate(const std::string &data) {
+        return load_x509_certificate((const uint8_t*)data.data(), (int32_t)data.size());
+    }
+
+    x509_certificate_ptr load_x509_certificate(const uint8_t *data, int32_t size) {
 #if defined(PUMP_HAVE_OPENSSL)
-        const uint8_t *tmp = (const uint8_t*)data;
-        return d2i_X509(NULL, &tmp, size);
+        BIO *bio = BIO_new_mem_buf((c_void_ptr)data, size);
+        if (bio == nullptr) {
+            return nullptr;
+        }
+        X509* cert = PEM_read_bio_X509(bio, NULL, NULL, NULL);
+        BIO_free(bio);
+        return cert;
+        //return d2i_X509(NULL, &data, size);
 #else
         return nullptr;
 #endif
@@ -79,11 +151,11 @@ namespace ssl {
         case EVP_PKEY_RSA:
         {
             int32_t pkey_size = EVP_PKEY_size(pkey);
-            if (pkey_size == 32) {
+            if (pkey_size == 256) {
                 return TLS_SIGN_SCHE_PSSWITHSHA256;
-            } else if (pkey_size == 42) {
+            } else if (pkey_size == 384) {
                 return TLS_SIGN_SCHE_PSSWITHSHA384;
-            } else if (pkey_size == 64) {
+            } else if (pkey_size == 512) {
                 return TLS_SIGN_SCHE_PSSWITHSHA512;
             }
             break;
@@ -151,9 +223,10 @@ namespace ssl {
 #endif
     }
 
-    void_ptr create_tls_certificate_by_file(bool client,
-                                            const std::string &cert,
-                                            const std::string &key) {
+    void_ptr create_tls_certificate_by_file(
+        bool client,
+        const std::string &cert,
+        const std::string &key) {
 #if defined(PUMP_HAVE_GNUTLS)
         gnutls_certificate_credentials_t xcred;
         int32_t ret = gnutls_certificate_allocate_credentials(&xcred);
@@ -205,9 +278,10 @@ namespace ssl {
 #endif
     }
 
-    void_ptr create_tls_certificate_by_buffer(bool client,
-                                              const std::string &cert,
-                                              const std::string &key) {
+    void_ptr create_tls_certificate_by_buffer(
+        bool client,
+        const std::string &cert,
+        const std::string &key) {
 #if defined(PUMP_HAVE_GNUTLS)
         gnutls_certificate_credentials_t xcred;
         int32_t ret = gnutls_certificate_allocate_credentials(&xcred);

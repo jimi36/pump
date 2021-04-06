@@ -59,12 +59,12 @@ namespace ssl {
      * Update ash 
      ********************************************************************************/
     bool update_hash(hash_context_ptr ctx, const std::string &data);
-    bool update_hash(hash_context_ptr ctx, const void_ptr data, int32_t data_len);
+    bool update_hash(hash_context_ptr ctx, const uint8_t *data, int32_t data_len);
 
     /*********************************************************************************
      * Sum hash
      ********************************************************************************/
-    bool sum_hash(hash_context_ptr ctx, void_ptr out, int32_t out_len);
+    bool sum_hash(hash_context_ptr ctx, uint8_t *out, int32_t out_len);
     std::string sum_hash(hash_context_ptr ctx);
 
     /*********************************************************************************

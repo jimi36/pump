@@ -33,18 +33,18 @@ namespace tls {
     struct handshake_message {
         std::string packed_data;
         message_type type;
-        void *msg;
+        void_ptr msg;
     };
 
     /*********************************************************************************
-     * Init handshake message.
+     * New handshake message.
      ********************************************************************************/
-    bool init_handshake_message(message_type type, handshake_message *msg);
+    handshake_message* new_handshake_message(message_type type);
 
     /*********************************************************************************
      * Uninit handshake message.
      ********************************************************************************/
-    void uninit_handshake_message(handshake_message *msg);
+    void delete_handshake_message(handshake_message *msg);
 
     /*********************************************************************************
      * Pack handshake message.
@@ -54,7 +54,10 @@ namespace tls {
     /*********************************************************************************
      * Unpack handshake message.
      ********************************************************************************/
-    int32_t unpack_handshake_message(const uint8_t *buf, int32_t size, handshake_message *msg);
+    int32_t unpack_handshake_message(
+        const uint8_t *buf, 
+        int32_t size, 
+        handshake_message *msg);
 
     /*********************************************************************************
      * TLS handshake key stare struct.
@@ -213,7 +216,7 @@ namespace tls {
         // contains a "supported_signature_algorithms" value.
         // https://tools.ietf.org/html/rfc5246#section-7.4.1.4.1
         // https://tools.ietf.org/html/rfc8446#section-4.2.3
-        std::vector<ssl::signature_scheme> supported_signature_algorithms;
+        std::vector<ssl::signature_scheme> supported_signature_schemes;
 
         // Extension field.
         // The "signature_algorithms_cert" extension was added to allow
@@ -223,7 +226,7 @@ namespace tls {
         // Implementations which have the same policy in both cases MAY omit the
         // "signature_algorithms_cert" extension.
         // https://tools.ietf.org/html/rfc8446#section-4.2.3
-        std::vector<ssl::signature_scheme> supported_signature_algorithms_certs;
+        std::vector<ssl::signature_scheme> supported_signature_scheme_certs;
 
         // Extension field.
         // A new TLS extension, "renegotiation_info" (with extension type 0xff01), 
@@ -881,6 +884,7 @@ namespace tls {
 
     int32_t unpack_key_update(const uint8_t *buf, int32_t size, key_update_message *msg);
 
+    std::string pack_message_hash(const std::string &hash);
 }
 }
 }

@@ -20,6 +20,7 @@
 #include <string>
 #include <vector>
 
+#include "pump/ssl/cert.h"
 #include "pump/ssl/hash.h"
 #include "pump/ssl/ecdhe.h"
 #include "pump/protocol/quic/tls/defines.h"

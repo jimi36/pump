@@ -55,7 +55,7 @@ namespace ssl {
     }
 
     bool do_signature(
-        void_ptr cert, 
+        x509_certificate_ptr cert, 
         signature_algorithm sign_algo, 
         hash_algorithm hash_algo,
         const std::string &msg,
@@ -125,7 +125,7 @@ namespace ssl {
     }
 
     bool verify_signature(
-        void_ptr cert, 
+        x509_certificate_ptr cert, 
         signature_algorithm sign_algo, 
         hash_algorithm hash_algo,        
         const std::string &msg, 

@@ -17,6 +17,7 @@
 #ifndef pump_protocol_quic_tls_server_h
 #define pump_protocol_quic_tls_server_h
 
+#include "pump/fncb.h"
 #include "pump/ssl/hash.h"
 #include "pump/protocol/quic/tls/alert.h"
 #include "pump/protocol/quic/tls/types.h"
@@ -56,6 +57,13 @@ namespace tls {
          ********************************************************************************/
         PUMP_INLINE bool is_handshaked() {
             return status_ == HANDSHAKE_SUCCESS;
+        }
+
+        /*********************************************************************************
+         * Set send callback for debug
+         ********************************************************************************/
+        void set_send_callback(const pump_function<void (const std::string&)> cb) {
+            send_callback_ = cb;
         }
 
       private:
@@ -104,7 +112,19 @@ namespace tls {
          ********************************************************************************/
         bool __send_finished();
 
+        /*********************************************************************************
+         * Write transcript
+         ********************************************************************************/
         void __write_transcript(const std::string &data);
+
+        /*********************************************************************************
+         * Send data
+         ********************************************************************************/
+        void __send(const std::string &data) {
+            if (send_callback_) {
+              send_callback_(data);
+            }
+        }
 
       private:
         //  Handshake status
@@ -117,13 +137,16 @@ namespace tls {
         connection_session session_;
 
         // Server hello message
-        server_hello_message server_hello_;
+        server_hello_message *hello_;
 
         // Client hello message
         client_hello_message client_hello_;
 
         // Handshake hash transcript
         ssl::hash_context_ptr transcript_;
+
+        // For test
+        pump_function<void (const std::string&)> send_callback_;
     };
 
 }

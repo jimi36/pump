@@ -23,7 +23,15 @@ namespace protocol {
 namespace quic {
 namespace tls {
     
-    bool init_handshake_message(message_type type, handshake_message *msg) {
+    handshake_message* new_handshake_message(message_type type) {
+        handshake_message *msg = object_create<handshake_message>();
+        if (msg == nullptr) {
+            return nullptr;
+        }
+
+        msg->type = type;
+        msg->msg = nullptr;
+
         switch (type) {
         case TLS_MSG_HELLO_REQUEST:
             msg->msg = (void*)object_create<hello_request_message>();
@@ -71,72 +79,75 @@ namespace tls {
             msg->msg = (void*)object_create<key_update_message>();
             break;
         default:
-            return false;
+            break;
         }
 
-        if (msg->msg == NULL) {
-            return false;
+        if (msg->msg == nullptr) {
+            object_delete(msg);
+            return nullptr;
         }
 
-        msg->type = type;
-
-        return true;
+        return msg;
     }
 
-    void uninit_handshake_message(handshake_message *msg) {
-        if (msg->msg == NULL) {
+    void delete_handshake_message(handshake_message *msg) {
+        if (msg == nullptr) {
             return;
         }
 
-        switch (msg->type) {
-        case TLS_MSG_HELLO_REQUEST:
-            object_delete((hello_request_message*)msg->msg);
-            break;
-        case TLS_MSG_CLIENT_HELLO:
-            object_delete((client_hello_message*)msg->msg);
-            break;
-        case TLS_MSG_SERVER_HELLO:
-            object_delete((server_hello_message*)msg->msg);
-            break;
-        case TLS_MSG_NEW_SESSION_TICKET:
-            object_delete((new_session_ticket_tls13_message*)msg->msg);
-            break;
-        case TLS_MSG_END_OF_EARLY_DATA:
-            object_delete((end_early_data_message*)msg->msg);
-            break;
-        case TLS_MSG_ENCRYPTED_EXTENSIONS:
-            object_delete((encrypted_extensions_message*)msg->msg);
-            break;
-        case TLS_MSG_CERTIFICATE:
-            object_delete((certificate_tls13_message*)msg->msg);
-            break;
-        case TLS_MSG_SERVER_KEY_EXCHANGE:
-            object_delete((server_key_exchange_message*)msg->msg);
-            break;
-        case TLS_MSG_CERTIFICATE_REQUEST:
-            object_delete((certificate_request_tls13_message*)msg->msg);
-            break;
-        case TLS_MSG_SERVER_HELLO_DONE:
-            object_delete((server_hello_done_message*)msg->msg);
-            break;
-        case TLS_MSG_CERTIFICATE_VERIFY:
-            object_delete((certificate_verify_message*)msg->msg);
-            break;
-        case TLS_MSG_CLIENT_KEY_EXCHANGE:
-            object_delete((client_key_exchange_message*)msg->msg);
-            break;
-        case TLS_MSG_FINISHED:
-            object_delete((finished_message*)msg->msg);
-            break;
-        case TLS_MSG_CERTIFICATE_STATUS:
-            object_delete((certificate_status_message*)msg->msg);
-            break;
-        case TLS_MSG_KEY_UPDATE:
-            object_delete((key_update_message*)msg->msg);
-            break;
-        default:
-            break;
+        if (msg->msg != nullptr) {
+            switch (msg->type) {
+            case TLS_MSG_HELLO_REQUEST:
+                object_delete((hello_request_message*)msg->msg);
+                break;
+            case TLS_MSG_CLIENT_HELLO:
+                object_delete((client_hello_message*)msg->msg);
+                break;
+            case TLS_MSG_SERVER_HELLO:
+                object_delete((server_hello_message*)msg->msg);
+                break;
+            case TLS_MSG_NEW_SESSION_TICKET:
+                object_delete((new_session_ticket_tls13_message*)msg->msg);
+                break;
+            case TLS_MSG_END_OF_EARLY_DATA:
+                object_delete((end_early_data_message*)msg->msg);
+                break;
+            case TLS_MSG_ENCRYPTED_EXTENSIONS:
+                object_delete((encrypted_extensions_message*)msg->msg);
+                break;
+            case TLS_MSG_CERTIFICATE:
+                object_delete((certificate_tls13_message*)msg->msg);
+                break;
+            case TLS_MSG_SERVER_KEY_EXCHANGE:
+                object_delete((server_key_exchange_message*)msg->msg);
+                break;
+            case TLS_MSG_CERTIFICATE_REQUEST:
+                object_delete((certificate_request_tls13_message*)msg->msg);
+                break;
+            case TLS_MSG_SERVER_HELLO_DONE:
+                object_delete((server_hello_done_message*)msg->msg);
+                break;
+            case TLS_MSG_CERTIFICATE_VERIFY:
+                object_delete((certificate_verify_message*)msg->msg);
+                break;
+            case TLS_MSG_CLIENT_KEY_EXCHANGE:
+                object_delete((client_key_exchange_message*)msg->msg);
+                break;
+            case TLS_MSG_FINISHED:
+                object_delete((finished_message*)msg->msg);
+                break;
+            case TLS_MSG_CERTIFICATE_STATUS:
+                object_delete((certificate_status_message*)msg->msg);
+                break;
+            case TLS_MSG_KEY_UPDATE:
+                object_delete((key_update_message*)msg->msg);
+                break;
+            default:
+                break;
+            }
         }
+
+        object_delete(msg);
     }
 
     const std::string& pack_handshake_message(handshake_message *msg) {
@@ -150,6 +161,7 @@ namespace tls {
     msg->packed_data.resize(packed_data_size); \
     packed_data_size = pack((const msg_type*)msg->msg, (uint8_t*)msg->packed_data.data(), packed_data_size); \
     break;
+    
         switch (msg->type) {
         case TLS_MSG_HELLO_REQUEST:
             PACK_MESSAGE(pack_hello_request, hello_request_message)
@@ -184,6 +196,7 @@ namespace tls {
         default:
             return msg->packed_data;
         }
+
 #undef PACK_MESSAGE
 
         if (packed_data_size < 0) {
@@ -194,7 +207,14 @@ namespace tls {
         return msg->packed_data;
     }
 
-    int32_t unpack_handshake_message(const uint8_t *buf, int32_t size, handshake_message *msg) {
+    int32_t unpack_handshake_message(
+        const uint8_t *buf, 
+        int32_t size, 
+        handshake_message *msg) {
+        if (msg == nullptr || msg->msg == nullptr) {
+            return -1; 
+        }
+
         switch (buf[0]) {
         case TLS_MSG_HELLO_REQUEST:
             return unpack_hello_request(buf, size, (hello_request_message*)msg->msg);
@@ -309,9 +329,9 @@ namespace tls {
         if (end < p + 3) {
             return nullptr;
         }
-        val = uint32_t(*(p + 0) >> 16) |
-            uint32_t(*(p + 1) >> 8) |
-            uint32_t(*(p + 2)) ;
+        val = (uint32_t(*(p + 0)) >> 16) |
+              (uint32_t(*(p + 1)) >> 8) |
+              (uint32_t(*(p + 2))) ;
         return p + 3;
     }
 
@@ -438,7 +458,7 @@ namespace tls {
         // Pack supported point formats extenion.
         if (!msg->supported_points.empty()) {
             PACK_AND_RETURN_ERR(__pack_uint16(p, end, TLS_EXTENSION_SUPPORTED_POINTS));
-            PACK_AND_RETURN_ERR(__pack_uint16(p, end, uint16_t(1 + msg->supported_points.size() * 2)));
+            PACK_AND_RETURN_ERR(__pack_uint16(p, end, uint16_t(1 + msg->supported_points.size())));
             PACK_AND_RETURN_ERR(__pack_uint8(p, end, (uint8_t)msg->supported_points.size()));
             for (int32_t i = 0; i < (int32_t)msg->supported_points.size(); i++) {
                 PACK_AND_RETURN_ERR(__pack_uint8(p, end, msg->supported_points[i]));
@@ -453,29 +473,29 @@ namespace tls {
         }
 
         // Pack supported signature algorithms extenion.
-        if (!msg->supported_signature_algorithms.empty()) {
+        if (!msg->supported_signature_schemes.empty()) {
             PACK_AND_RETURN_ERR(__pack_uint16(p, end, TLS_EXTENSION_SIGNATURE_ALGORITHMS));
-            PACK_AND_RETURN_ERR(__pack_uint16(p, end, uint16_t(2 + msg->supported_signature_algorithms.size() * 2)));
-            PACK_AND_RETURN_ERR(__pack_uint16(p, end, uint16_t(msg->supported_signature_algorithms.size() * 2)));
-            for (int32_t i = 0; i < (int32_t)msg->supported_signature_algorithms.size(); i++) {
-                PACK_AND_RETURN_ERR(__pack_uint16(p, end, msg->supported_signature_algorithms[i]));
+            PACK_AND_RETURN_ERR(__pack_uint16(p, end, uint16_t(2 + msg->supported_signature_schemes.size() * 2)));
+            PACK_AND_RETURN_ERR(__pack_uint16(p, end, uint16_t(msg->supported_signature_schemes.size() * 2)));
+            for (int32_t i = 0; i < (int32_t)msg->supported_signature_schemes.size(); i++) {
+                PACK_AND_RETURN_ERR(__pack_uint16(p, end, msg->supported_signature_schemes[i]));
             }
         }
 
         // Pack supported signature algorithms certs extenion.
-        if (!msg->supported_signature_algorithms_certs.empty()) {
+        if (!msg->supported_signature_scheme_certs.empty()) {
             PACK_AND_RETURN_ERR(__pack_uint16(p, end, TLS_EXTENSION_SIGNATURE_ALGORITHMS_CERT));
-            PACK_AND_RETURN_ERR(__pack_uint16(p, end, uint16_t(2 + msg->supported_signature_algorithms_certs.size() * 2)));
-            PACK_AND_RETURN_ERR(__pack_uint16(p, end, uint16_t(msg->supported_signature_algorithms_certs.size() * 2)));
-            for (int32_t i = 0; i < (int32_t)msg->supported_signature_algorithms_certs.size(); i++) {
-                PACK_AND_RETURN_ERR(__pack_uint16(p, end, msg->supported_signature_algorithms_certs[i]));
+            PACK_AND_RETURN_ERR(__pack_uint16(p, end, uint16_t(2 + msg->supported_signature_scheme_certs.size() * 2)));
+            PACK_AND_RETURN_ERR(__pack_uint16(p, end, uint16_t(msg->supported_signature_scheme_certs.size() * 2)));
+            for (int32_t i = 0; i < (int32_t)msg->supported_signature_scheme_certs.size(); i++) {
+                PACK_AND_RETURN_ERR(__pack_uint16(p, end, msg->supported_signature_scheme_certs[i]));
             }
         }
 
         // Pack renegotiation info extenion.
         if (msg->is_support_renegotiation_info) {
             PACK_AND_RETURN_ERR(__pack_uint16(p, end, TLS_EXTENSION_RENEGOTIATION_INFO));
-            PACK_AND_RETURN_ERR(__pack_uint16(p, end, uint16_t(2 + msg->renegotiation_info.size())));
+            PACK_AND_RETURN_ERR(__pack_uint16(p, end, uint16_t(1 + msg->renegotiation_info.size())));
             PACK_AND_RETURN_ERR(__pack_uint8(p, end, (uint8_t)msg->renegotiation_info.size()));
             PACK_AND_RETURN_ERR(__pack_bytes(p, end, msg->renegotiation_info));
         }
@@ -526,7 +546,7 @@ namespace tls {
                 PACK_AND_RETURN_ERR(__pack_bytes(p, end, msg->key_shares[i].data));
             }
             __pack_uint16(len, p, uint16_t(p - len - 2));
-            __pack_uint16(len + 2, p, uint16_t(p - len - 2));
+            __pack_uint16(len + 2, p, uint16_t(p - len - 4));
         }
 
         // Pack early data extenion.
@@ -606,7 +626,7 @@ namespace tls {
         // Unpack session id.
         do {
             uint8_t len = 0; 
-        UNPACK_AND_RETURN_ERR(__unpack_uint8(p, end, len));
+            UNPACK_AND_RETURN_ERR(__unpack_uint8(p, end, len));
             if (len > 0) {
                 UNPACK_AND_RETURN_ERR(__unpack_bytes(p, end, msg->session_id, (int32_t)len));
             }
@@ -617,7 +637,7 @@ namespace tls {
             uint16_t len = 0; 
             UNPACK_AND_RETURN_ERR(__unpack_uint16(p, end, len));
             for (uint16_t i = 0; i < len; i += 2) {
-                uint16_t cipher_suite = 0; 
+                cipher_suite_type cipher_suite = TLS_CIPHER_SUITE_UNKNOWN; 
                 UNPACK_AND_RETURN_ERR(__unpack_uint16(p, end, cipher_suite));
                 msg->cipher_suites.push_back(cipher_suite);
             }
@@ -628,7 +648,7 @@ namespace tls {
             uint8_t len = 0;
             UNPACK_AND_RETURN_ERR(__unpack_uint8(p, end, len));
             for (uint8_t i = 0; i < len; i++) {
-                uint8_t compression_method = 0;
+                compression_method_type compression_method = 0;
                 UNPACK_AND_RETURN_ERR(__unpack_uint8(p, end, compression_method));
                 msg->compression_methods.push_back(compression_method);
             }
@@ -643,13 +663,15 @@ namespace tls {
 
         const uint8_t *extensions_end = p + extensions_len;
         while (p < extensions_end) {
-            uint16_t extension_type = -1;
+            extension_type extension_type = -1;
             UNPACK_AND_RETURN_ERR(__unpack_uint16(p, end, extension_type));
             uint16_t extension_len = 0; 
             UNPACK_AND_RETURN_ERR( __unpack_uint16(p, end, extension_len));
             switch (extension_type) {
             case TLS_EXTENSION_SERVER_NAME:
                 for (const uint8_t *end = p + extension_len; p < end;) {
+                    uint16_t len = 0;
+                    UNPACK_AND_RETURN_ERR(__unpack_uint16(p, end, len));
                     uint8_t name_type = 0;
                     UNPACK_AND_RETURN_ERR(__unpack_uint8(p, end, name_type));
                     uint16_t name_len = 0;
@@ -661,7 +683,6 @@ namespace tls {
                     UNPACK_AND_RETURN_ERR(__unpack_bytes(p, end, name, name_len));
                     if (name_type == 0) {
                         msg->server_name = std::move(name);
-                        break;
                     }
                 }
                 break;
@@ -693,7 +714,7 @@ namespace tls {
                         return -1;
                     }
                     for (uint16_t i = groups_len; i > 0; i -= 2) {
-                        uint16_t group_type = 0;
+                        ssl::curve_type group_type = ssl::TLS_CURVE_UNKNOWN;
                         UNPACK_AND_RETURN_ERR(__unpack_uint16(p, end, group_type));
                         msg->supported_groups.push_back(group_type);
                     }
@@ -706,8 +727,8 @@ namespace tls {
                     if (extension_len != points_len + 1) {
                         return -1;
                     }
-                    for (uint8_t i = points_len; i > 0; i -= 2) {
-                        uint8_t point_type = 0;
+                    for (uint8_t i = points_len; i > 0; i--) {
+                        point_format_type point_type = TLS_POINT_FORMAT_UNCOMPRESSED;
                         UNPACK_AND_RETURN_ERR(__unpack_uint8(p, end, point_type));
                         msg->supported_points.push_back(point_type);
                     }
@@ -721,15 +742,15 @@ namespace tls {
                 break;
             case TLS_EXTENSION_SIGNATURE_ALGORITHMS:
                 {
-                    uint16_t algorithms_len = 0;
-                    UNPACK_AND_RETURN_ERR(__unpack_uint16(p, end, algorithms_len));
-                    if (extension_len != algorithms_len + 2) {
+                    uint16_t schemes_len = 0;
+                    UNPACK_AND_RETURN_ERR(__unpack_uint16(p, end, schemes_len));
+                    if (extension_len != schemes_len + 2) {
                         return -1;
                     }
-                    for (uint16_t i = algorithms_len; i > 0; i -= 2) {
-                        uint16_t algorithms_type = 0;
-                        UNPACK_AND_RETURN_ERR(__unpack_uint16(p, end, algorithms_type));
-                        msg->supported_signature_algorithms.push_back(algorithms_type);
+                    for (uint16_t i = schemes_len; i > 0; i -= 2) {
+                        ssl::signature_scheme scheme = ssl::TLS_SIGN_SCHE_UNKNOWN;
+                        UNPACK_AND_RETURN_ERR(__unpack_uint16(p, end, scheme));
+                        msg->supported_signature_schemes.push_back(scheme);
                     }
                 }
                 break;
@@ -743,15 +764,15 @@ namespace tls {
                     for (uint16_t i = certs_len; i > 0; i -= 2) {
                         uint16_t cert_type = 0;
                         UNPACK_AND_RETURN_ERR(__unpack_uint16(p, end, cert_type));
-                        msg->supported_signature_algorithms_certs.push_back(cert_type);
+                        msg->supported_signature_scheme_certs.push_back(cert_type);
                     }
                 }
                 break;
             case TLS_EXTENSION_RENEGOTIATION_INFO:
                 {
-                    uint16_t info_len = 0;
-                    UNPACK_AND_RETURN_ERR(__unpack_uint16(p, end, info_len));
-                    if (extension_len != info_len + 2) {
+                    uint8_t info_len = 0;
+                    UNPACK_AND_RETURN_ERR(__unpack_uint8(p, end, info_len));
+                    if (extension_len != info_len + 1) {
                         return -1;
                     }
                     if (info_len > 0) {
@@ -790,10 +811,10 @@ namespace tls {
                     if (extension_len != uint16_t(versions_len + 1)) {
                         return -1;
                     }
-                    for (uint8_t i = 0; i > versions_len; i++) {
-                        uint16_t version_type = 0;
-                        UNPACK_AND_RETURN_ERR(__unpack_uint16(p, end, version_type));
-                        msg->supported_versions.push_back(version_type);
+                    for (uint8_t i = 0; i < versions_len; i += 2) {
+                        version_type version = TLS_VERSION_UNKNOWN;
+                        UNPACK_AND_RETURN_ERR(__unpack_uint16(p, end, version));
+                        msg->supported_versions.push_back(version);
                     }
                 }
                 break;
@@ -2112,6 +2133,15 @@ namespace tls {
         msg->update_requested = (update_requested == 1);
 
         return int32_t(p - buf);
+    }
+
+    std::string pack_message_hash(const std::string &hash) {
+        std::string data;
+        data.push_back(TLS_MSG_MESSAGE_HASH);
+        data.append(2, 0);
+        data.push_back((int8_t)hash.size());
+        data.append(hash);
+        return std::forward<std::string>(data);
     }
 
 #undef PACK_AND_RETURN_ERR

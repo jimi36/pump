@@ -25,22 +25,26 @@
 namespace pump {
 namespace ssl {
 
-    typedef void_ptr x509_certificate_ptr;
-
     /*********************************************************************************
      * Generate X509 certificate.
      ********************************************************************************/
-    std::string generate_x509_certificate();
+    std::string generate_x509_certificate(signature_scheme scheme);
 
     /*********************************************************************************
-     * Get X509 certificate data.
+     * Read X509 certificate pem cert.
      ********************************************************************************/
-    std::string get_x509_certificate_data(x509_certificate_ptr cert);
+    std::string read_x509_certificate_pem(x509_certificate_ptr cert);
+
+    /*********************************************************************************
+     * Read X509 certificate raw cert.
+     ********************************************************************************/
+    std::string read_x509_certificate_raw(x509_certificate_ptr cert);
 
     /*********************************************************************************
      * Load X509 certificate.
      ********************************************************************************/
-    x509_certificate_ptr load_x509_certificate(void_ptr data, int32_t size);
+    x509_certificate_ptr load_x509_certificate(const std::string &data);
+    x509_certificate_ptr load_x509_certificate(const uint8_t *data, int32_t size);
 
     /*********************************************************************************
      * Free X509 certificate.
@@ -65,16 +69,18 @@ namespace ssl {
     /*********************************************************************************
      * Create tls certificate by file.
      ********************************************************************************/
-    void_ptr create_tls_certificate_by_file(bool client,
-                                            const std::string &cert,
-                                            const std::string &key);
+    void_ptr create_tls_certificate_by_file(
+        bool client,
+        const std::string &cert,
+        const std::string &key);
 
     /*********************************************************************************
      * Create tls certificate by buffer.
      ********************************************************************************/
-    void_ptr create_tls_certificate_by_buffer(bool client,
-                                              const std::string &cert,
-                                              const std::string &key);
+    void_ptr create_tls_certificate_by_buffer(
+        bool client,
+        const std::string &cert,
+        const std::string &key);
 
     /*********************************************************************************
      * Destory tls certificate.

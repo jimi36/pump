@@ -35,10 +35,11 @@ extern "C" {
 namespace pump {
 namespace ssl {
 
-    bool hkdf_extract(hash_algorithm algo, 
-                      const std::string &salt,
-                      const std::string &key,
-                      std::string &out) {
+    bool hkdf_extract(
+        hash_algorithm algo, 
+        const std::string &salt,
+        const std::string &key,
+        std::string &out) {
 #if defined(PUMP_HAVE_OPENSSL)
         const EVP_MD *(*new_md_func)() = nullptr;
         if (algo == HASH_SHA256) {
@@ -82,10 +83,11 @@ namespace ssl {
 #endif
     }
 
-    bool hkdf_expand(hash_algorithm algo, 
-                     const std::string &key,
-                     const std::string &info,
-                     std::string &out) {
+    bool hkdf_expand(
+        hash_algorithm algo, 
+        const std::string &key,
+        const std::string &info,
+        std::string &out) {
 #if defined(PUMP_HAVE_OPENSSL)
         const EVP_MD *(*new_md_func)() = nullptr;
         if (algo == HASH_SHA256) {

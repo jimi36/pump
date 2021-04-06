@@ -40,6 +40,20 @@
 #define PUMP_DEBUG_CHECK(x) PUMP_ASSERT(x)
 #endif
 
+// Pump debug equal check
+#if defined(NDEBUG)
+#define PUMP_DEBUG_EQUAL_CHECK(x, val) x
+#else
+#define PUMP_DEBUG_EQUAL_CHECK(x, val) PUMP_ASSERT((x) == val)
+#endif
+
+// Pump debug not equal check
+#if defined(NDEBUG)
+#define PUMP_DEBUG_NOEQUAL_CHECK(x, val) x
+#else
+#define PUMP_DEBUG_NOEQUAL_CHECK(x, val) PUMP_ASSERT((x) != val)
+#endif
+
 // Pump static assert
 #define PUMP_STATIC_ASSERT(x, msg) static_assert((x), msg)
 

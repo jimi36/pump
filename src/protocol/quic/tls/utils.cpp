@@ -147,9 +147,7 @@ namespace tls {
             std::vector<void_ptr> &certs) {
         bool ret = true;
         for (int32_t i = 0; i < (int32_t)certificates.size(); i++) {
-            void_ptr cert = ssl::load_x509_certificate(
-                                (void_ptr)certificates[i].data(), 
-                                certificates[i].size());
+            ssl::x509_certificate_ptr cert = ssl::load_x509_certificate(certificates[i]);
             if (!cert) {
                 ret = false;
                 break;

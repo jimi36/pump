@@ -28,7 +28,9 @@ namespace quic {
 namespace tls {
 
     client_handshaker::client_handshaker()
-      : status_(HANDSHAKE_INIT) {
+      : status_(HANDSHAKE_INIT), 
+        transcript_(nullptr),
+        hello_(nullptr) {
     }
 
     client_handshaker::~client_handshaker() {
@@ -86,7 +88,7 @@ namespace tls {
     }
 
     bool client_handshaker::__send_client_hello(config *cfg) {
-        if (!cfg->server_name.empty()) {
+        if (cfg->server_name.empty()) {
             return false;
         }
 
@@ -94,8 +96,10 @@ namespace tls {
             return false;
         }
 
-        PUMP_DEBUG_CHECK(init_handshake_message(TLS_MSG_CLIENT_HELLO, &client_hello_));
-        client_hello_message *hello = (client_hello_message*)client_hello_.msg;
+        if ((hello_ = new_handshake_message(TLS_MSG_CLIENT_HELLO)) == nullptr) {
+            return false;
+        }
+        client_hello_message *hello = (client_hello_message*)hello_->msg;
 
         hello->legacy_version = TLS_VSERVER_12;
 
@@ -134,21 +138,21 @@ namespace tls {
         hello->session_ticket.clear();
 
         // Just support tls 13 signature algorithms.
-        hello->supported_signature_algorithms.clear();
+        hello->supported_signature_schemes.clear();
         //hello->supported_signature_algorithms.push_back(ssl::TLS_SIGN_SCHEME_PSSWITHSHA256);
-        hello->supported_signature_algorithms.push_back(ssl::TLS_SIGN_SCHE_ECDSAWITHP256AndSHA256);
+        hello->supported_signature_schemes.push_back(ssl::TLS_SIGN_SCHE_ECDSAWITHP256AndSHA256);
         //hello->supported_signature_algorithms.push_back(ssl::TLS_SIGN_SCHEME_ED25519);
         //hello->supported_signature_algorithms.push_back(ssl::TLS_SIGN_SCHEME_PSSWITHSHA384);
         //hello->supported_signature_algorithms.push_back(ssl::TLS_SIGN_SCHEME_PSSWITHSHA512);
         //hello->supported_signature_algorithms.push_back(ssl::TLS_SIGN_SCHEME_PKCS1WITHSHA256);
         //hello->supported_signature_algorithms.push_back(ssl::TLS_SIGN_SCHEME_PKCS1WITHSHA384);
         //hello->supported_signature_algorithms.push_back(ssl::TLS_SIGN_SCHEME_PKCS1WITHSHA512);
-        hello->supported_signature_algorithms.push_back(ssl::TLS_SIGN_SCHE_ECDSAWITHP384AndSHA384);
-        hello->supported_signature_algorithms.push_back(ssl::TLS_SIGN_SCHE_ECDSAWITHP521AndSHA512);
+        hello->supported_signature_schemes.push_back(ssl::TLS_SIGN_SCHE_ECDSAWITHP384AndSHA384);
+        hello->supported_signature_schemes.push_back(ssl::TLS_SIGN_SCHE_ECDSAWITHP521AndSHA512);
         //hello->supported_signature_algorithms.push_back(ssl::TLS_SIGN_SCHEME_PKCS1WITHSHA1);
         //hello->supported_signature_algorithms.push_back(ssl::TLS_SIGN_SCHEME_ECDSAWITHSHA1);
 
-        hello->supported_signature_algorithms_certs.clear();
+        hello->supported_signature_scheme_certs.clear();
 
         hello->is_support_renegotiation_info = true;
         hello->renegotiation_info.clear();
@@ -182,11 +186,8 @@ namespace tls {
         hello->psk_identities.clear();
         hello->psk_binders.clear();
 
-        const std::string& buffer = pack_handshake_message(&client_hello_);
-        if (buffer.empty()) {
-            return false;
-        }        
         // TODO: send client hello message.
+        __send(pack_handshake_message(hello_));
         
         status_ = HANDSHAKE_CLIENT_HELLO_SENT;
 
@@ -202,7 +203,7 @@ namespace tls {
         server_hello_message *server_hello = (server_hello_message*)msg->msg;
         PUMP_ASSERT(server_hello);
 
-        client_hello_message *client_hello = (client_hello_message*)client_hello_.msg;
+        client_hello_message *client_hello = (client_hello_message*)hello_->msg;
         PUMP_ASSERT(client_hello);
 
         if (memcmp(server_hello->random + 24, DOWNGRRADE_CANARY_TLS11, 8) == 0 || 
@@ -241,13 +242,7 @@ namespace tls {
             return ALERT_ILLEGAL_PARAMETER;
         }
 
-        if (transcript_ == nullptr) {
-            transcript_ = ssl::create_hash_context(session_.suite_param.algo);
-            PUMP_ASSERT(transcript_);
-        }
-
-        const std::string &ch_buffer = pack_handshake_message(&client_hello_);
-        PUMP_DEBUG_CHECK(ssl::update_hash(transcript_, (void_ptr)ch_buffer.data(), (int32_t)ch_buffer.size()));
+        __write_transcript(pack_handshake_message(hello_));
 
         if (memcmp(server_hello->random, hello_retry_request_random, 32) == 0) {
             if (status_ == HANDSHAKE_RETRY_HELLO_SENT) {
@@ -256,8 +251,7 @@ namespace tls {
             return __send_hello_retry(msg);
         }
 
-        const std::string &sh_buffer = pack_handshake_message(msg);
-        PUMP_DEBUG_CHECK(ssl::update_hash(transcript_, (void_ptr)sh_buffer.data(), (int32_t)sh_buffer.size()));
+        __write_transcript(pack_handshake_message(msg));
 
         if (!server_hello->cookie.empty()) {
             return ALERT_UNSUPPORTED_EXTENSION;
@@ -329,20 +323,15 @@ namespace tls {
         server_hello_message *server_hello = (server_hello_message*)msg->msg;
         PUMP_ASSERT(server_hello);
 
-        client_hello_message *client_hello = (client_hello_message*)client_hello_.msg;
+        client_hello_message *client_hello = (client_hello_message*)hello_->msg;
         PUMP_ASSERT(client_hello);
 
-        std::string buffer;
-        std::string hash = ssl::sum_hash(transcript_);
-        buffer.push_back(TLS_MSG_MESSAGE_HASH);
-        buffer.append(2, 0);
-        buffer.push_back((int8_t)hash.size());
-        buffer.append(hash);
+        std::string buffer = pack_message_hash(ssl::sum_hash(transcript_));
+  
         ssl::reset_hash_context(transcript_);
-        PUMP_DEBUG_CHECK(ssl::update_hash(transcript_, buffer));
 
-        const std::string& sh_buffer = pack_handshake_message(msg);
-        ssl::update_hash(transcript_, (void_ptr)sh_buffer.data(), (int32_t)sh_buffer.size());
+        __write_transcript(buffer);
+        __write_transcript(pack_handshake_message(msg));
 
         // The only HelloRetryRequest extensions we support are key_share and
 	    // cookie, and clients must abort the handshake if the HRR would not result
@@ -381,6 +370,7 @@ namespace tls {
         client_hello->is_support_early_data = false;
 
         // TODO: send client hello message.
+        __send(pack_handshake_message(hello_));
 
         status_ = HANDSHAKE_RETRY_HELLO_SENT;
 
@@ -395,7 +385,7 @@ namespace tls {
         encrypted_extensions_message *encrypted_extensions = (encrypted_extensions_message*)msg->msg;
         PUMP_ASSERT(encrypted_extensions);
 
-        client_hello_message *client_hello = (client_hello_message*)client_hello_.msg;
+        client_hello_message *client_hello = (client_hello_message*)hello_->msg;
         PUMP_ASSERT(client_hello);
 
         if (!is_contains(client_hello->alpns, encrypted_extensions->alpn)) {
@@ -422,8 +412,7 @@ namespace tls {
 
         cert_request_ = *cert_request;
 
-        const std::string &buffer = pack_handshake_message(msg);
-        ssl::update_hash(transcript_, (void_ptr)buffer.data(), (int32_t)buffer.size());
+        PUMP_DEBUG_CHECK(ssl::update_hash(transcript_, pack_handshake_message(msg)));
 
         status_ = HANDSHAKE_CARTIFICATE_REQUEST_RECV;
 
@@ -468,10 +457,10 @@ namespace tls {
         certificate_verify_message *cert_verify = (certificate_verify_message*)msg->msg;
         PUMP_ASSERT(cert_verify);
 
-        client_hello_message *client_hello = (client_hello_message*)client_hello_.msg;
+        client_hello_message *client_hello = (client_hello_message*)hello_->msg;
         PUMP_ASSERT(client_hello);
 
-        if (!is_contains(client_hello->supported_signature_algorithms, cert_verify->signature_scheme)) {
+        if (!is_contains(client_hello->supported_signature_schemes, cert_verify->signature_scheme)) {
             return ALERT_ILLEGAL_PARAMETER;
         }
 
@@ -486,8 +475,8 @@ namespace tls {
         }
 
         ssl::hash_context_ptr sign_hash_ctx = ssl::create_hash_context(hash_algo);
-        ssl::update_hash(sign_hash_ctx, signature_padding, (int32_t)sizeof(signature_padding));
-        ssl::update_hash(sign_hash_ctx, (const void_ptr)SERVER_SIGNATURE_CONTEXT, (int32_t)strlen(SERVER_SIGNATURE_CONTEXT));
+        PUMP_DEBUG_CHECK(ssl::update_hash(sign_hash_ctx, signature_padding, (int32_t)sizeof(signature_padding)));
+        PUMP_DEBUG_CHECK(ssl::update_hash(sign_hash_ctx, SERVER_SIGNATURE_CONTEXT));
         PUMP_DEBUG_CHECK(ssl::update_hash(sign_hash_ctx, ssl::sum_hash(transcript_)));
         std::string sign_hash = ssl::sum_hash(sign_hash_ctx);
         ssl::free_hash_context(sign_hash_ctx);
@@ -496,8 +485,7 @@ namespace tls {
             return ALERT_DECRYPT_ERROR;
         }
 
-        const std::string &buffer = pack_handshake_message(msg);
-        ssl::update_hash(transcript_, (void_ptr)buffer.data(), (int32_t)buffer.size());
+        PUMP_DEBUG_CHECK(ssl::update_hash(transcript_, pack_handshake_message(msg)));
 
         status_ = HANDSHAKE_CARTIFICATE_VERIFY_RECV;
 
@@ -548,37 +536,40 @@ namespace tls {
                                             EXPORTER_LABEL, 
                                             transcript_);
 
-        
         return ALERT_NONE;
     }
 
     bool client_handshaker::__send_certificate_tls13() {
-        handshake_message msg;
-        init_handshake_message(TLS_MSG_CERTIFICATE, &msg);
+        handshake_message *msg = new_handshake_message(TLS_MSG_CERTIFICATE);
+        if (msg == nullptr) {
+            return false;
+        }
 
-        certificate_tls13_message *cert = (certificate_tls13_message*)msg.msg;
+        certificate_tls13_message *cert = (certificate_tls13_message*)msg->msg;
 
-        cert->certificates.push_back(ssl::generate_x509_certificate());
+        cert->certificates.push_back(ssl::generate_x509_certificate(cert_request_.supported_signature_schemes[0]));
         cert->is_support_scts = cert_request_.is_support_scts && !cert_request_.supported_signature_schemes.empty();
         cert->is_support_ocsp_stapling = false; // false ?
 
-        const std::string &buffer = pack_handshake_message(&msg);
-        PUMP_DEBUG_CHECK(ssl::update_hash(transcript_, buffer));
+        PUMP_DEBUG_CHECK(ssl::update_hash(transcript_, pack_handshake_message(msg)));
 
         // TODO: send certificate message.
+        __send(pack_handshake_message(msg));
 
         // TODO: send certificate verify message
 
-        uninit_handshake_message(&msg);
+        delete_handshake_message(msg);
 
         return true;
     }
 
     bool client_handshaker::__send_finished() {
-        handshake_message msg;
-        init_handshake_message(TLS_MSG_FINISHED, &msg);
+        handshake_message *msg = new_handshake_message(TLS_MSG_FINISHED);
+        if (msg == nullptr) {
+            return false;
+        }
 
-        finished_message *finished = (finished_message*)msg.msg;
+        finished_message *finished = (finished_message*)msg->msg;
 
         // https://tools.ietf.org/html/rfc8446#section-4.4.4
         // https://tools.ietf.org/html/rfc8446#section-4.2.11.2
@@ -593,14 +584,22 @@ namespace tls {
                                     finished_key, 
                                     ssl::sum_hash(transcript_));
 
-        const std::string &buffer = pack_handshake_message(&msg);
-        PUMP_DEBUG_CHECK(ssl::update_hash(transcript_, buffer));
+        PUMP_DEBUG_CHECK(ssl::update_hash(transcript_, pack_handshake_message(msg)));
 
         // TODO: send finished message.
+        __send(pack_handshake_message(msg));
 
-        uninit_handshake_message(&msg);
+        delete_handshake_message(msg);
 
         return true;
+    }
+
+        void client_handshaker::__write_transcript(const std::string &data) {
+        if (transcript_ == nullptr) {
+            transcript_ = ssl::create_hash_context(session_.suite_param.algo);
+            PUMP_ASSERT(transcript_);
+        }
+        PUMP_DEBUG_CHECK(ssl::update_hash(transcript_, data));
     }
 
 }

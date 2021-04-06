@@ -136,10 +136,10 @@ namespace ssl {
     }
 
     bool update_hash(hash_context_ptr ctx, const std::string &data) {
-        return update_hash(ctx, (const void_ptr)data.data(), (int32_t)data.size());
+        return update_hash(ctx, (const uint8_t*)data.data(), (int32_t)data.size());
     }
 
-    bool update_hash(hash_context_ptr ctx, const void_ptr data, int32_t data_len) {
+    bool update_hash(hash_context_ptr ctx, const uint8_t *data, int32_t data_len) {
 #if defined(PUMP_HAVE_OPENSSL)
         PUMP_ASSERT(ctx && ctx->ctx);
         PUMP_ASSERT(data && data_len > 0);
@@ -160,22 +160,22 @@ namespace ssl {
         return false;
     }
 
-    bool sum_hash(hash_context_ptr ctx, void_ptr out, int32_t out_len) {
+    bool sum_hash(hash_context_ptr ctx, uint8_t *out, int32_t out_len) {
 #if defined(PUMP_HAVE_OPENSSL)
         PUMP_ASSERT(ctx && ctx->ctx);
         PUMP_ASSERT(out && out_len >= hash_digest_length(ctx->algo));
         switch (ctx->algo)
         {
         case HASH_SHA1:
-            return SHA1_Final((unsigned char*)out, (SHA_CTX*)ctx->ctx) == 1;
+            return SHA1_Final((uint8_t*)out, (SHA_CTX*)ctx->ctx) == 1;
         case HASH_SHA224:
-            return SHA224_Final((unsigned char*)out, (SHA256_CTX*)ctx->ctx) == 1;
+            return SHA224_Final((uint8_t*)out, (SHA256_CTX*)ctx->ctx) == 1;
         case HASH_SHA256:
-            return SHA256_Final((unsigned char*)out, (SHA256_CTX*)ctx->ctx) == 1;
+            return SHA256_Final((uint8_t*)out, (SHA256_CTX*)ctx->ctx) == 1;
         case HASH_SHA384:
-            return SHA384_Final((unsigned char*)out, (SHA512_CTX*)ctx->ctx) == 1;
+            return SHA384_Final((uint8_t*)out, (SHA512_CTX*)ctx->ctx) == 1;
         case HASH_SHA512:
-            return SHA512_Final((unsigned char*)out, (SHA512_CTX*)ctx->ctx) == 1;
+            return SHA512_Final((uint8_t*)out, (SHA512_CTX*)ctx->ctx) == 1;
         }
 #endif
         return false;
@@ -183,7 +183,7 @@ namespace ssl {
 
     std::string sum_hash(hash_context_ptr ctx) {
         std::string output(hash_digest_length(ctx->algo), 0);
-        PUMP_DEBUG_CHECK(sum_hash(ctx, (void_ptr)output.data(), (int32_t)output.size()));
+        PUMP_DEBUG_CHECK(sum_hash(ctx, (uint8_t*)output.data(), (int32_t)output.size()));
         return std::forward<std::string>(output);
     }
 

@@ -25,6 +25,8 @@
 namespace pump {
 namespace ssl {
 
+    typedef void_ptr x509_certificate_ptr;
+
     typedef uint16_t signature_algorithm;
     const signature_algorithm TLS_SIGN_ALGO_UNKNOWN  =  0;
 	const signature_algorithm TLS_SIGN_ALGO_PKCS1V15 = 225;
@@ -54,14 +56,14 @@ namespace ssl {
     const signature_scheme TLS_SIGN_SCHE_ECDSAWITHSHA1          = 0x0203;
 
     bool do_signature(
-        void_ptr cert, 
+        x509_certificate_ptr cert, 
         signature_algorithm sign_algo, 
         hash_algorithm hash_algo,
         const std::string &msg,
         std::string &sign);
 
     bool verify_signature(
-        void_ptr cert, 
+        x509_certificate_ptr cert, 
         signature_algorithm sign_algo, 
         hash_algorithm hash_algo,            
         const std::string &msg, 
