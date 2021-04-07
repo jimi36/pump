@@ -28,7 +28,7 @@ namespace ssl {
     /*********************************************************************************
      * Generate X509 certificate.
      ********************************************************************************/
-    std::string generate_x509_certificate(signature_scheme scheme);
+    x509_certificate_ptr generate_x509_certificate(signature_scheme scheme);
 
     /*********************************************************************************
      * Read X509 certificate pem cert.
@@ -41,15 +41,26 @@ namespace ssl {
     std::string read_x509_certificate_raw(x509_certificate_ptr cert);
 
     /*********************************************************************************
-     * Load X509 certificate.
+     * Load X509 certificate pem.
      ********************************************************************************/
-    x509_certificate_ptr load_x509_certificate(const std::string &data);
-    x509_certificate_ptr load_x509_certificate(const uint8_t *data, int32_t size);
+    x509_certificate_ptr load_x509_certificate_pem(const std::string &data);
+    x509_certificate_ptr load_x509_certificate_pem(const uint8_t *data, int32_t size);
+
+    /*********************************************************************************
+     * Load X509 certificate raw.
+     ********************************************************************************/
+    x509_certificate_ptr load_x509_certificate_raw(const std::string &data);
+    x509_certificate_ptr load_x509_certificate_raw(const uint8_t *data, int32_t size);
 
     /*********************************************************************************
      * Free X509 certificate.
      ********************************************************************************/
     void free_x509_certificate(x509_certificate_ptr cert);
+
+    /*********************************************************************************
+     * Check X509 certificate scts exists or not.
+     ********************************************************************************/
+    bool has_x509_scts(x509_certificate_ptr cert);
 
     /*********************************************************************************
      * Get X509 certificate signature scheme.

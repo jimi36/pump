@@ -37,8 +37,8 @@ namespace tls {
     }
 
     bool load_tls13_cipher_suite_params(
-            cipher_suite_type suite_type, 
-            cipher_suite_parameter_ptr suite_param) {
+        cipher_suite_type suite_type, 
+        cipher_suite_parameter_ptr suite_param) {
         switch (suite_type)
         {
         case TLS_AES_128_GCM_SHA256:
@@ -61,31 +61,26 @@ namespace tls {
     }
 
     std::string cipher_suite_extract(
-                    cipher_suite_parameter_ptr suite_param, 
-                    const std::string &salt, 
-                    const std::string &key) {
+        cipher_suite_parameter_ptr suite_param, 
+        const std::string &salt, 
+        const std::string &key) {
         return hkdf_extract(suite_param->algo, salt, key);
     }
 
     std::string cipher_suite_expand_label(
-                    cipher_suite_parameter_ptr suite_param,
-                    const std::string &key, 
-                    const std::string &context,
-                    const std::string &label,
-                    int32_t length) {
-        return hkdf_expand_label(
-                suite_param->algo, 
-                key, 
-                context, 
-                label, 
-                length);
+        cipher_suite_parameter_ptr suite_param,
+        const std::string &key, 
+        const std::string &context,
+        const std::string &label,
+        int32_t length) {
+        return hkdf_expand_label(suite_param->algo, key, context, label, length);
     }
 
     std::string cipher_suite_device_secret(
-                    cipher_suite_parameter_ptr suite_param,
-                    const std::string &key,
-                    const std::string &label,
-                    ssl::hash_context_ptr transcript) {                    
+        cipher_suite_parameter_ptr suite_param,
+        const std::string &key,
+        const std::string &label,
+        ssl::hash_context_ptr transcript) {                    
         std::string context;
         if (!transcript) {
             transcript = ssl::create_hash_context(suite_param->algo);
@@ -94,18 +89,13 @@ namespace tls {
         } else {
             context = ssl::sum_hash(transcript);
         }
-        return hkdf_expand_label(
-                suite_param->algo, 
-                key, 
-                context, 
-                label, 
-                (int32_t)context.size());
+        return hkdf_expand_label(suite_param->algo, key, context, label, (int32_t)context.size());
     }
 
     std::string hkdf_extract(
-                    ssl::hash_algorithm algo, 
-                    const std::string &salt, 
-                    const std::string &key) {
+        ssl::hash_algorithm algo, 
+        const std::string &salt, 
+        const std::string &key) {
         std::string out;
         if (key.empty()) {
             std::string new_key(ssl::hash_digest_length(algo), 0);
@@ -117,11 +107,11 @@ namespace tls {
     }
 
     std::string hkdf_expand_label(
-                    ssl::hash_algorithm algo, 
-                    const std::string &key, 
-                    const std::string &context,
-                    const std::string &label,
-                    int32_t result_length) {
+        ssl::hash_algorithm algo, 
+        const std::string &key, 
+        const std::string &context,
+        const std::string &label,
+        int32_t length) {
         std::string info(10 + label.size() + context.size(), 0);
         uint8_t *p = (uint8_t*)info.data();
         *(uint16_t*)p = pump::change_endian((uint16_t)ssl::hash_digest_length(algo));
@@ -137,25 +127,22 @@ namespace tls {
         memcpy(p, context.data(), context.size());
         p += context.size();
 
-        std::string out(result_length, 0);
+        std::string out(length, 0);
         PUMP_DEBUG_CHECK(ssl::hkdf_expand(algo, key, info, out));
         return std::forward<std::string>(out);
     }
 
     bool certificate_load(
-            std::vector<std::string> &certificates, 
-            std::vector<void_ptr> &certs) {
+        std::vector<std::string> &certificates, 
+        std::vector<ssl::x509_certificate_ptr> &certs) {
         bool ret = true;
         for (int32_t i = 0; i < (int32_t)certificates.size(); i++) {
-            ssl::x509_certificate_ptr cert = ssl::load_x509_certificate(certificates[i]);
-            if (!cert) {
+            ssl::x509_certificate_ptr cert = ssl::load_x509_certificate_pem(certificates[i]);
+            if (cert == nullptr) {
                 ret = false;
                 break;
             }
             certs.push_back(cert);
-        }
-        if (ret) {
-
         }
         if (!ret) {
             for (int32_t i = 0; i < (int32_t)certs.size(); i++) {
@@ -210,6 +197,19 @@ namespace tls {
         default:
             return ssl::TLS_SIGN_ALGO_UNKNOWN;
         }
+    }
+
+    std::string sign_message(
+        ssl::hash_algorithm algo,
+        const std::string &context,
+        const std::string &msg) {
+        ssl::hash_context_ptr hash_ctx = ssl::create_hash_context(algo);
+        PUMP_DEBUG_CHECK(ssl::update_hash(hash_ctx, signature_padding, (int32_t)sizeof(signature_padding)));
+        PUMP_DEBUG_CHECK(ssl::update_hash(hash_ctx, context));
+        PUMP_DEBUG_CHECK(ssl::update_hash(hash_ctx, msg));
+        std::string sign = ssl::sum_hash(hash_ctx);
+        ssl::free_hash_context(hash_ctx);
+        return std::forward<std::string>(sign);
     }
 
 }

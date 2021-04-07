@@ -130,10 +130,10 @@ namespace ssl {
         if ((pub_key = PEM_read_bio_PUBKEY(bio, NULL, NULL, NULL)) == nullptr) {
             goto err;
         }
+        BIO_free(bio);
 
         // Load private key.
-        BIO_reset(bio);
-        BIO_set_mem_buf(bio, parameter->prikey.data(), parameter->prikey.size());
+        bio = BIO_new_mem_buf(parameter->prikey.data(), parameter->prikey.size());
         if ((pri_key = PEM_read_bio_PrivateKey(bio, NULL, NULL, NULL)) == nullptr) {
             goto err;
         }

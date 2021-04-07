@@ -34,7 +34,7 @@ namespace tls {
      * TLS config.
      ********************************************************************************/
     struct config {
-        std::string cert;
+        std::string cert_pem;
         std::string server_name;
         std::string alpn;
     };
@@ -84,6 +84,8 @@ namespace tls {
         std::string export_master_secret;
 
         std::vector<ssl::x509_certificate_ptr> certs;
+
+        std::vector<ssl::x509_certificate_ptr> peer_certs;
     };
     DEFINE_RAW_POINTER_TYPE(connection_session)
 

@@ -19,6 +19,7 @@
 #include "pump/debug.h"
 #include "pump/ssl/cert.h"
 #include "pump/ssl/ecdhe.h"
+#include "pump/codec/base64.h"
 #include "pump/protocol/quic/tls/utils.h"
 #include "pump/protocol/quic/tls/server.h"
 
@@ -36,16 +37,12 @@ namespace tls {
     server_handshaker::~server_handshaker() {
     }
 
-    bool server_handshaker::handshake(config *cfg) {
-        if (cfg == nullptr) {
-            return false;
-        }
-
+    bool server_handshaker::handshake(const config &cfg) {
         if (status_ != HANDSHAKE_INIT) {
             return false;
         }
 
-        cfg_ = *cfg;
+        cfg_ = cfg;
 
         return true;
     }
@@ -71,7 +68,8 @@ namespace tls {
     }
 
     alert_code server_handshaker::__handle_client_hello(handshake_message *msg) {
-        if (status_ != HANDSHAKE_INIT) {
+        if (status_ != HANDSHAKE_INIT && 
+            status_ != HANDSHAKE_HELLO_REQUEST_SEND) {
             return ALERT_UNEXPECTED_MESSGAE;
         }
 
@@ -82,9 +80,9 @@ namespace tls {
             return ALERT_ILLEGAL_PARAMETER;
         }
         
-        version_type ver = TLS_VSERVER_13;
+        version_type version13 = TLS_VSERVER_13;
         if (client_hello->supported_versions.empty() || 
-            !is_contains(client_hello->supported_versions, ver)) {
+            !is_contains(client_hello->supported_versions, version13)) {
             return ALERT_PROTOCOL_VERSION;
         }
 
@@ -105,6 +103,7 @@ namespace tls {
         if (!is_contains(client_hello->alpns, cfg_.alpn)) {
             return ALERT_ILLEGAL_PARAMETER;
         }
+        session_.alpn = cfg_.alpn;
 
         // Check cipher suite.
         cipher_suite_type selected_cipher_suite = TLS_CIPHER_SUITE_UNKNOWN;
@@ -157,11 +156,13 @@ namespace tls {
             return __send_hello_retry_request(selected_cipher_suite, selected_curve);
         }
 
-        // Check certificate and signature scheme.
-        if (cfg_.cert.empty()) {
-            cfg_.cert = ssl::generate_x509_certificate(client_hello->supported_signature_schemes[0]);
+        // Load certificate and certificate signature scheme.
+        ssl::x509_certificate_ptr cert = nullptr;
+        if (cfg_.cert_pem.empty()) {
+            cert = ssl::generate_x509_certificate(client_hello->supported_signature_schemes[0]);
+        } else {
+            cert = ssl::load_x509_certificate_pem(cfg_.cert_pem);
         }
-        ssl::x509_certificate_ptr cert = ssl::load_x509_certificate(cfg_.cert);
         if (cert == nullptr) {
             return ALERT_INTERNAL_ERROR;
         }
@@ -179,28 +180,18 @@ namespace tls {
             return ALERT_INTERNAL_ERROR;
         }
 
-        session_.server_name = client_hello->server_name;
-
-        __write_transcript(pack_handshake_message(msg));
-
-        if (!__send_server_hello(selected_cipher_suite, selected_curve, scheme)) {
-            return ALERT_HANDSHAKE_FAILURE;
+        if (!client_hello->server_name.empty()) {
+            session_.server_name = client_hello->server_name;
         }
 
-        if (!__send_encrypted_extensions()) {
-            return ALERT_HANDSHAKE_FAILURE;
-        }
+        status_ = HANDSHAKE_CLIENT_HELLO_RECV;
 
-        if (!__send_certificate_request()) {
-            return ALERT_HANDSHAKE_FAILURE;
-        }
-
-        if (!__send_certificate()) {
-            return ALERT_HANDSHAKE_FAILURE;
-        }
-
-        if (!__send_finished()) {
-            return ALERT_HANDSHAKE_FAILURE;
+        alert_code code = ALERT_NONE;
+        if ((code = __send_server_hello(selected_cipher_suite, selected_curve, scheme)) != ALERT_NONE || 
+            (code = __send_encrypted_extensions()) != ALERT_NONE ||
+            (code = __send_certificate()) != ALERT_NONE ||
+            (code = __send_finished()) != ALERT_NONE) {
+            return code;
         }
 
         {
@@ -209,8 +200,9 @@ namespace tls {
                                     session_.handshake_secret, 
                                     "derived", 
                                     nullptr);
-            PUMP_ASSERT(!secret.empty());
             session_.master_secret = cipher_suite_extract(&session_.suite_param, secret, "");
+            std::string master_secret_base64 = codec::base64_encode(session_.master_secret);
+            PUMP_DEBUG_LOG("server handshaker master_secret_base64: %s", master_secret_base64.c_str());
         }
 
         session_.traffic_secret = cipher_suite_device_secret(
@@ -218,12 +210,16 @@ namespace tls {
                                     session_.master_secret,
                                     CLIENT_APPLICATION_TRAFFIC_LABEL, 
                                     transcript_);
+        std::string traffic_secret_base64 = codec::base64_encode(session_.traffic_secret);
+        PUMP_DEBUG_LOG("server handshaker traffic_secret_base64: %s", traffic_secret_base64.c_str());
 
         session_.server_secret = cipher_suite_device_secret(
                                     &session_.suite_param, 
                                     session_.master_secret,
                                     SERVER_APPLICATION_TRAFFIC_LABEL, 
                                     transcript_);
+        std::string server_secret_base64 = codec::base64_encode(session_.server_secret);
+        PUMP_DEBUG_LOG("server handshaker server_secret_base64: %s", server_secret_base64.c_str());
 
         // https://tools.ietf.org/html/rfc8446#section-7.5
         session_.export_master_secret = cipher_suite_device_secret(
@@ -231,6 +227,8 @@ namespace tls {
                                             session_.master_secret, 
                                             EXPORTER_LABEL, 
                                             transcript_);
+        std::string export_master_secret_base64 = codec::base64_encode(session_.export_master_secret);
+        PUMP_DEBUG_LOG("server handshaker export_master_secret_base64: %s", export_master_secret_base64.c_str());
 
         return ALERT_NONE;
     }
@@ -238,18 +236,16 @@ namespace tls {
     alert_code server_handshaker::__send_hello_retry_request(
         cipher_suite_type selected_cipher_suite,
         ssl::curve_type selected_curve) {
+        if (status_ != HANDSHAKE_INIT) {
+            return ALERT_UNEXPECTED_MESSGAE;
+        }
 
-        std::string buffer = pack_message_hash(ssl::sum_hash(transcript_));
-  
-        ssl::reset_hash_context(transcript_);
-        
-        __write_transcript(buffer);
-                
         handshake_message *msg = new_handshake_message(TLS_MSG_SERVER_HELLO);
         if (msg == nullptr) {
             return ALERT_INTERNAL_ERROR;
         }
         server_hello_message *server_hello = (server_hello_message*)msg->msg;
+        PUMP_ASSERT(server_hello);
 
         server_hello->legacy_version = TLS_VSERVER_12;
 
@@ -265,52 +261,66 @@ namespace tls {
 
         memcpy(server_hello->random, hello_retry_request_random, 32);
 
-        __write_transcript(pack_handshake_message(msg));
+        status_ = HANDSHAKE_HELLO_REQUEST_SEND;
+  
+        __write_transcript(pack_message_hash(__reset_transcript()));
 
-        // TODO: send server hello message
+        __send_handshake_message(msg);
+        
+        delete_handshake_message(msg);
 
         return ALERT_NONE;
     }
 
-    bool server_handshaker::__send_server_hello(
-            cipher_suite_type selected_cipher_suite,
-            ssl::curve_type selected_curve, 
-            ssl::signature_scheme selected_scheme) {
-        hello_->legacy_version = TLS_VSERVER_12;
+    alert_code server_handshaker::__send_server_hello(
+        cipher_suite_type selected_cipher_suite,
+        ssl::curve_type selected_curve, 
+        ssl::signature_scheme selected_scheme) {
+        if (status_ != HANDSHAKE_CLIENT_HELLO_RECV) {
+            return ALERT_INTERNAL_ERROR;
+        }
 
-        hello_->supported_version = TLS_VSERVER_13;
+        hello_ = new_handshake_message(TLS_MSG_SERVER_HELLO);
+        if (hello_ == nullptr) {
+            return ALERT_INTERNAL_ERROR;
+        }
+        server_hello_message *server_hello = (server_hello_message*)hello_->msg;
+        PUMP_ASSERT(server_hello);
 
-        hello_->compression_method = TLS_COMPRESSION_METHOD_NONE;
+        server_hello->legacy_version = TLS_VSERVER_12;
 
-        hello_->cipher_suite = selected_cipher_suite;
+        server_hello->supported_version = TLS_VSERVER_13;
 
-        hello_->session_id = client_hello_.session_id;
+        server_hello->compression_method = TLS_COMPRESSION_METHOD_NONE;
 
-        hello_->alpn = cfg_.alpn;
-            
-        memcpy(hello_->random, client_hello_.random, 32);
+        server_hello->cipher_suite = selected_cipher_suite;
 
-        hello_->selected_key_share.group = selected_curve;
-        hello_->selected_key_share.data = ssl::get_ecdhe_pubkey(session_.ecdhe_param);
+        server_hello->session_id = client_hello_.session_id;
 
-        std::string buffer(2048, 0);
-        int32_t size = pack_server_hello(hello_, (uint8_t*)buffer.data(), (int32_t)buffer.size());
-        buffer.resize(size);
+        server_hello->has_selected_key_share = true;
+        server_hello->selected_key_share.group = selected_curve;
+        server_hello->selected_key_share.data = ssl::get_ecdhe_pubkey(session_.ecdhe_param);
 
-        __write_transcript(buffer);
+        memcpy(server_hello->random, client_hello_.random, 32);
 
-        // TODO: send server hello message        
-        __send(buffer);
+        status_ = HANDSHAKE_SERVER_HELLO_SENT;
+   
+        __send_handshake_message(hello_);
 
-        return true;
+        return ALERT_NONE;
     }
 
-    bool server_handshaker::__send_encrypted_extensions() {
+    alert_code server_handshaker::__send_encrypted_extensions() {
+        if (status_ != HANDSHAKE_SERVER_HELLO_SENT) {
+            return ALERT_INTERNAL_ERROR;
+        }
+
         handshake_message *msg = new_handshake_message(TLS_MSG_ENCRYPTED_EXTENSIONS);
         if (msg == nullptr) {
-            return false;
+            return ALERT_INTERNAL_ERROR;
         }
         encrypted_extensions_message *encrypted_extensions = (encrypted_extensions_message*)msg->msg;
+        PUMP_ASSERT(encrypted_extensions);
 
         encrypted_extensions->is_support_early_data = false;
 
@@ -325,8 +335,9 @@ namespace tls {
             std::string shared_key = ssl::gen_ecdhe_shared_key(
                                         session_.ecdhe_param, 
                                         client_hello_.key_shares[0].data);
-            PUMP_ASSERT(!shared_key.empty());
             session_.handshake_secret = cipher_suite_extract(&session_.suite_param, secret, shared_key);
+            std::string handshake_secret_base64 = codec::base64_encode(session_.handshake_secret);
+            PUMP_DEBUG_LOG("server handshaker handshake_secret_base64: %s", handshake_secret_base64.c_str());
         }
 
         session_.client_secret = cipher_suite_device_secret(
@@ -334,30 +345,37 @@ namespace tls {
                                     session_.handshake_secret,
                                     CLIENT_HANDSHAKE_TRAFFIC_LABEL, 
                                     transcript_);
+        std::string client_secret_base64 = codec::base64_encode(session_.client_secret);
+        PUMP_DEBUG_LOG("server handshaker client_secret_base64: %s", client_secret_base64.c_str());
 
         session_.server_secret = cipher_suite_device_secret(
                                     &session_.suite_param, 
                                     session_.handshake_secret,
                                     SERVER_HANDSHAKE_TRAFFIC_LABEL, 
                                     transcript_);
+        std::string server_secret_base64 = codec::base64_encode(session_.server_secret);
+        PUMP_DEBUG_LOG("server handshaker server_secret_base64: %s", server_secret_base64.c_str());
 
-        __write_transcript(pack_handshake_message(msg));
+        status_ = HANDSHAKE_ENCRYPTED_EXTENSIONS_SENT;
 
-        // TODO: send encrypted extensions message
-        __send(pack_handshake_message(msg));
+        __send_handshake_message(msg);
 
         delete_handshake_message(msg);
 
-        return true;
+        return ALERT_NONE;
     }
 
-    bool server_handshaker::__send_certificate_request() {
+    alert_code server_handshaker::__send_certificate_request() {
+        if (status_ != HANDSHAKE_ENCRYPTED_EXTENSIONS_SENT) {
+            return ALERT_INTERNAL_ERROR;
+        }
+
         handshake_message *msg = new_handshake_message(TLS_MSG_CERTIFICATE_REQUEST);
         if (msg == nullptr) {
             return false;
         }
-
         certificate_request_tls13_message *certificate_request = (certificate_request_tls13_message*)msg->msg;
+        PUMP_ASSERT(certificate_request);
 
         certificate_request->is_support_scts = true;
 
@@ -367,110 +385,155 @@ namespace tls {
             supported_signature_schemes, 
             supported_signature_schemes + supported_signature_schemes_count);
 
-        __write_transcript(pack_handshake_message(msg));
+        status_ = HANDSHAKE_CARTIFICATE_REQUEST_SENT;
 
-        // TODO: send certificate request message
-        __send(pack_handshake_message(msg));
+        __send_handshake_message(msg);
 
         delete_handshake_message(msg);
 
-        return true;
+        return ALERT_NONE;
     }
 
-    bool server_handshaker::__send_certificate() {
+    alert_code server_handshaker::__send_certificate() {
+        if (status_ != HANDSHAKE_CARTIFICATE_REQUEST_SENT) {
+            return ALERT_INTERNAL_ERROR;
+        }
+
         handshake_message *msg = new_handshake_message(TLS_MSG_CERTIFICATE);
         if (msg == nullptr) {
             return false;
         }
+        certificate_tls13_message *cert_tls13 = (certificate_tls13_message*)msg->msg;
+        PUMP_ASSERT(cert_tls13);
 
-        certificate_tls13_message *certificate = (certificate_tls13_message*)msg->msg;
+        cert_tls13->certificates.push_back(cfg_.cert_pem);
 
-        certificate->certificates.push_back(cfg_.cert);
+        cert_tls13->is_support_scts = client_hello_.is_support_scts;
 
-        certificate->is_support_scts = client_hello_.is_support_scts;
+        cert_tls13->is_support_ocsp_stapling = client_hello_.is_support_ocsp_stapling;
 
-        certificate->is_support_ocsp_stapling = client_hello_.is_support_ocsp_stapling;
+        status_ = HANDSHAKE_CARTIFICATE_SENT;
 
-        __write_transcript(pack_handshake_message(msg));
-
-        // TODO: send certificate message
-        __send(pack_handshake_message(msg));
+        __send_handshake_message(msg);
 
         delete_handshake_message(msg);
 
-        return true;
+        return ALERT_NONE;
     }
 
-    bool server_handshaker::__send_certificate_verify() {
+    alert_code server_handshaker::__send_certificate_verify() {
+        if (status_ != HANDSHAKE_CARTIFICATE_SENT) {
+            return ALERT_INTERNAL_ERROR;
+        }
+
         handshake_message *msg = new_handshake_message(TLS_MSG_CERTIFICATE_VERIFY);
         if (msg == nullptr) {
             return false;
         }
+        certificate_verify_message *cert_verify = (certificate_verify_message*)msg->msg;
+        PUMP_ASSERT(cert_verify);
 
-        certificate_verify_message *certificate_verify = (certificate_verify_message*)msg->msg;
+        cert_verify->has_signature_scheme = true;
 
-        certificate_verify->has_signature_scheme = true;
+        cert_verify->signature_scheme = ssl::get_x509_signature_scheme(session_.certs[0]);
 
-        certificate_verify->signature_scheme = ssl::get_x509_signature_scheme(session_.certs[0]);
-
-        ssl::hash_algorithm hash_algo = transform_to_hash_algo(certificate_verify->signature_scheme);
+        ssl::hash_algorithm hash_algo = transform_to_hash_algo(cert_verify->signature_scheme);
         if (hash_algo == ssl::HASH_UNKNOWN) {
-            return false; 
+            return ALERT_INTERNAL_ERROR;
         }
 
-        ssl::signature_algorithm sign_algo = transform_to_sign_algo(certificate_verify->signature_scheme);
+        ssl::signature_algorithm sign_algo = transform_to_sign_algo(cert_verify->signature_scheme);
         if (sign_algo == ssl::TLS_SIGN_ALGO_UNKNOWN) {
-            return false; 
+            return ALERT_INTERNAL_ERROR;
         }
 
-        ssl::hash_context_ptr sign_hash_ctx = ssl::create_hash_context(hash_algo);
-        PUMP_DEBUG_CHECK(ssl::update_hash(sign_hash_ctx, signature_padding, (int32_t)sizeof(signature_padding)));
-        PUMP_DEBUG_CHECK(ssl::update_hash(sign_hash_ctx, SERVER_SIGNATURE_CONTEXT));
-        PUMP_DEBUG_CHECK(ssl::update_hash(sign_hash_ctx, ssl::sum_hash(transcript_)));
-        std::string sign_hash = ssl::sum_hash(sign_hash_ctx);
-        ssl::free_hash_context(sign_hash_ctx);
-
-        if (!ssl::do_signature(session_.certs[0], sign_algo, sign_algo, sign_hash, certificate_verify->signature)) {
-            return false;
+        std::string sign = sign_message(hash_algo, SERVER_SIGNATURE_CONTEXT, ssl::sum_hash(transcript_));
+        if (!ssl::do_signature(session_.certs[0], sign_algo, sign_algo, sign, cert_verify->signature)) {
+            return ALERT_INTERNAL_ERROR;
         }
 
-        __write_transcript(pack_handshake_message(msg));
+        status_ = HANDSHAKE_CARTIFICATE_VERIFY_SENT;
 
-        // TODO: send certificate verify message
-        __send(pack_handshake_message(msg));
+        __send_handshake_message(msg);
+
+        delete_handshake_message(msg);
+
+        return ALERT_NONE;
+    }
+
+    alert_code server_handshaker::__send_finished() {
+        if (status_ != HANDSHAKE_CARTIFICATE_SENT && 
+            status_ != HANDSHAKE_CARTIFICATE_VERIFY_SENT) {
+            return ALERT_INTERNAL_ERROR;
+        }
+
+        handshake_message *msg = new_handshake_message(TLS_MSG_FINISHED);
+        if (msg == nullptr) {
+            return ALERT_INTERNAL_ERROR;
+        }
+        finished_message *finished = (finished_message*)msg->msg;
+        PUMP_ASSERT(finished);
+
+        std::string finished_key = hkdf_expand_label(
+                                    session_.suite_param.algo, 
+                                    session_.server_secret, 
+                                    "", 
+                                    "finished", 
+                                    ssl::hash_digest_length(session_.suite_param.algo));
+        std::string finished_key_base64 = codec::base64_encode(finished_key);
+        PUMP_DEBUG_LOG("server handshaker finished_key_base64: %s", finished_key_base64.c_str());
+
+        finished->verify_data = ssl::sum_hmac(
+                                    session_.suite_param.algo, 
+                                    finished_key, 
+                                    ssl::sum_hash(transcript_));
+        std::string verify_data_base64 = codec::base64_encode(finished->verify_data);
+        PUMP_DEBUG_LOG("server handshaker verify_data_base64: %s", verify_data_base64.c_str());
+
+        status_ = HANDSHAKE_FINISHED_SENT;
+
+        __send_handshake_message(msg);
 
         delete_handshake_message(msg);
 
         return true;
     }
 
-    bool server_handshaker::__send_finished() {
-        handshake_message *msg = new_handshake_message(TLS_MSG_FINISHED);
-        if (msg == nullptr) {
-            return false;
+    alert_code server_handshaker::__handle_certificate_tls13(handshake_message *msg) {
+        if (status_ != HANDSHAKE_FINISHED_SENT) {
+            return ALERT_INTERNAL_ERROR;
         }
 
-        finished_message *finished = (finished_message*)msg->msg;
+        certificate_tls13_message *cert_tls13 = (certificate_tls13_message*)msg->msg;
+        PUMP_ASSERT(cert_tls13);
 
-        std::string finished_key = hkdf_expand_label(
-                                    session_.suite_param.algo, 
-                                    session_.client_secret, 
-                                    "", 
-                                    "finished", 
-                                    ssl::hash_digest_length(session_.suite_param.algo));
-        finished->verify_data = ssl::sum_hmac(
-                                    session_.suite_param.algo, 
-                                    finished_key, 
-                                    ssl::sum_hash(transcript_));
+        if (!cert_tls13->certificates.empty()) {
+            if (!certificate_load(cert_tls13->certificates, session_.peer_certs)) {
+                return ALERT_ILLEGAL_PARAMETER;
+            }
 
-        __write_transcript(pack_handshake_message(msg));
+            if (!ssl::verify_x509_certificates(session_.peer_certs)) {
+                return ALERT_BAD_CERTIFICATE;
+            }
 
-        // TODO: send finished message
-        __send(pack_handshake_message(msg));
+            if (!cert_tls13->scts.empty()) {
+                session_.scts = cert_tls13->scts;
+            }
 
-        delete_handshake_message(msg);
+            
+        }
+    
 
-        return true;
+        return ALERT_NONE;
+    }
+
+    std::string server_handshaker::__reset_transcript() {
+        PUMP_ASSERT(transcript_);
+        std::string hash = ssl::sum_hash(transcript_);
+        ssl::free_hash_context(transcript_);
+        transcript_ = ssl::create_hash_context(session_.suite_param.algo);
+        PUMP_ASSERT(transcript_);
+        return std::forward<std::string>(hash);
     }
 
     void server_handshaker::__write_transcript(const std::string &data) {

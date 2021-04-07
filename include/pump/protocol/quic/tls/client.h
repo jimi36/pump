@@ -45,7 +45,7 @@ namespace tls {
          * Start handshake
          * Client hello message will be sent to server.
          ********************************************************************************/
-        bool handshake(config *cfg);
+        bool handshake(const config &cfg);
 
         /*********************************************************************************
          * Handshake
@@ -70,7 +70,7 @@ namespace tls {
         /*********************************************************************************
          * Send client hello message
          ********************************************************************************/
-        bool __send_client_hello(config *cfg);
+        bool __send_client_hello();
 
         /*********************************************************************************
          * Handle server hello message
@@ -110,12 +110,17 @@ namespace tls {
         /*********************************************************************************
          * Send certificate tls13 message
          ********************************************************************************/
-        bool __send_certificate_tls13();
+        alert_code __send_certificate_tls13();
 
         /*********************************************************************************
          * Send finished message
          ********************************************************************************/
-        bool __send_finished();
+        alert_code __send_finished();
+
+        /*********************************************************************************
+         * Reset transcript
+         ********************************************************************************/
+        std::string __reset_transcript();
 
         /*********************************************************************************
          * Write transcript
@@ -123,15 +128,21 @@ namespace tls {
         void __write_transcript(const std::string &data);
 
         /*********************************************************************************
-         * Send data
+         * Send handshake message
          ********************************************************************************/
-        void __send(const std::string &data) {
+        void __send_handshake_message(handshake_message *msg, bool transcript = true) {
+            if (transcript) {
+                __write_transcript(pack_handshake_message(msg));
+            }
             if (send_callback_) {
-              send_callback_(data);
+                send_callback_(pack_handshake_message(msg));
             }
         }
 
       private:
+        // TLS config
+        config cfg_;
+
         //  Handshake status
         handshake_status status_;
 

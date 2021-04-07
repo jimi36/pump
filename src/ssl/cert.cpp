@@ -25,6 +25,7 @@ extern "C" {
 #include <openssl/evp.h>
 #include <openssl/pem.h>
 #include <openssl/x509.h>
+#include <openssl/ocsp.h>
 }
 #endif
 
@@ -37,21 +38,24 @@ extern "C" {
 namespace pump {
 namespace ssl {
 
-    std::string generate_x509_certificate(signature_scheme scheme) {
-        std::string out;
+    x509_certificate_ptr generate_x509_certificate(signature_scheme scheme) {
+        x509_certificate_ptr cert = nullptr;
 #if defined(PUMP_HAVE_OPENSSL)
-        X509* cert = nullptr;
         switch (scheme) {
         case TLS_SIGN_SCHE_ECDSAWITHP256AndSHA256:
         case TLS_SIGN_SCHE_ECDSAWITHP384AndSHA384:
         case TLS_SIGN_SCHE_ECDSAWITHP521AndSHA512:
             {
                 EC_KEY *eckey = nullptr;
+                const EVP_MD *md = nullptr;
                 if (scheme == TLS_SIGN_SCHE_ECDSAWITHP256AndSHA256) {
+                    md = EVP_sha256();
                     eckey = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1);
                 } else if (scheme == TLS_SIGN_SCHE_ECDSAWITHP384AndSHA384) {
+                    md = EVP_sha384();
                     eckey = EC_KEY_new_by_curve_name(NID_secp384r1);
                 } else if (scheme == TLS_SIGN_SCHE_ECDSAWITHP521AndSHA512) {
+                    md = EVP_sha512();
                     eckey = EC_KEY_new_by_curve_name(NID_secp521r1);
                 }
                 PUMP_ASSERT(eckey != nullptr);
@@ -61,34 +65,28 @@ namespace ssl {
                 EVP_PKEY* pkey = EVP_PKEY_new();
                 PUMP_DEBUG_EQUAL_CHECK(EVP_PKEY_assign_EC_KEY(pkey, eckey), 1);
                 
-                cert = X509_new();
+                X509 *x509 = X509_new();
                 PUMP_ASSERT(cert != nullptr);
-                /* REALLY shouldn't use fixed serial if DN isn't unique */
-                PUMP_DEBUG_EQUAL_CHECK(ASN1_INTEGER_set(X509_get_serialNumber(cert), 1), 1);
-                PUMP_DEBUG_NOEQUAL_CHECK(X509_gmtime_adj(X509_get_notBefore(cert), 0), nullptr);
-                PUMP_DEBUG_NOEQUAL_CHECK(X509_gmtime_adj(X509_get_notAfter(cert), 365L * 86400), nullptr);
-                PUMP_DEBUG_EQUAL_CHECK(X509_set_pubkey(cert, pkey), 1);
+                X509_set_version(cert, 2);
+                PUMP_DEBUG_EQUAL_CHECK(ASN1_INTEGER_set(X509_get_serialNumber(x509), 3), 1);
+                PUMP_DEBUG_NOEQUAL_CHECK(X509_gmtime_adj(X509_get_notBefore(x509), 0), nullptr);
+                PUMP_DEBUG_NOEQUAL_CHECK(X509_gmtime_adj(X509_get_notAfter(x509), 365L * 86400), nullptr);
+                PUMP_DEBUG_EQUAL_CHECK(X509_set_pubkey(x509, pkey), 1);
 
-                X509_NAME* name = X509_get_subject_name(cert);
+                X509_NAME *name = X509_get_subject_name(x509);
                 X509_NAME_add_entry_by_txt(name, "C", MBSTRING_ASC, (uint8_t*)"CA", -1, -1, 0);
                 X509_NAME_add_entry_by_txt(name, "O", MBSTRING_ASC, (uint8_t*)"MyCompany Inc.", -1, -1, 0);
                 X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC, (uint8_t*)"localhost", -1, -1, 0);
                 X509_set_issuer_name(cert, name);
 
-                //EC_KEY_free(eckey);
+                PUMP_DEBUG_NOEQUAL_CHECK(X509_sign(x509, pkey, md), 0);
                 EVP_PKEY_free(pkey);
+
+                cert = x509;
             }
             break;
         default:
             break;
-        }
-
-        if (cert) {
-            out = read_x509_certificate_pem(cert);
-            //out_cert.resize(i2d_X509(cert, nullptr));
-            //uint8_t* data = (uint8_t*)out_cert.data();
-            //PUMP_DEBUG_EQUAL_CHECK(i2d_X509(cert, &data), (int32_t)out_cert.size());
-            X509_free(cert);
         }
 #endif
         return std::forward<std::string>(out);
@@ -99,7 +97,6 @@ namespace ssl {
 #if defined(PUMP_HAVE_OPENSSL)
         BIO *bio = BIO_new(BIO_s_mem());
         PUMP_ASSERT(bio != nullptr);
-        //PEM_read_bio_X509(bio, (X509**)&cert, NULL, NULL);
         PEM_write_bio_X509(bio, (X509*)cert);
         BUF_MEM *buf = nullptr;
         BIO_get_mem_ptr(bio, &buf);
@@ -119,20 +116,30 @@ namespace ssl {
         return std::forward<std::string>(out);
     }
 
-    x509_certificate_ptr load_x509_certificate(const std::string &data) {
-        return load_x509_certificate((const uint8_t*)data.data(), (int32_t)data.size());
+    x509_certificate_ptr load_x509_certificate_pem(const std::string &data) {
+        return load_x509_certificate_pem((const uint8_t*)data.data(), (int32_t)data.size());
     }
 
-    x509_certificate_ptr load_x509_certificate(const uint8_t *data, int32_t size) {
+    x509_certificate_ptr load_x509_certificate_pem(const uint8_t *data, int32_t size) {
 #if defined(PUMP_HAVE_OPENSSL)
         BIO *bio = BIO_new_mem_buf((c_void_ptr)data, size);
-        if (bio == nullptr) {
-            return nullptr;
-        }
-        X509* cert = PEM_read_bio_X509(bio, NULL, NULL, NULL);
+        PUMP_ASSERT(bio != nullptr);
+        X509 *cert = PEM_read_bio_X509(bio, NULL, NULL, NULL);
+        PUMP_ASSERT(cert != nullptr);
         BIO_free(bio);
         return cert;
-        //return d2i_X509(NULL, &data, size);
+#else
+        return nullptr;
+#endif
+    }
+
+    x509_certificate_ptr load_x509_certificate_raw(const std::string &data) {
+        return load_x509_certificate_raw((const uint8_t*)data.data(), (int32_t)data.size());
+    }
+
+    x509_certificate_ptr load_x509_certificate_raw(const uint8_t *data, int32_t size) {
+#if defined(PUMP_HAVE_OPENSSL)
+        return d2i_X509(NULL, &data, size);
 #else
         return nullptr;
 #endif
@@ -142,6 +149,26 @@ namespace ssl {
 #if defined(PUMP_HAVE_OPENSSL)
         X509_free((X509*)cert);
 #endif
+    }
+
+    bool has_x509_scts(x509_certificate_ptr cert) {
+#if defined(PUMP_HAVE_OPENSSL)
+        int32_t idx = X509_get_ext_by_NID((const X509*)cert, NID_ct_precert_scts, -1);
+        if (idx >= 0) {
+            return true;
+        }
+        /*
+        int32_t ext_count = X509_get_ext_count((X509*)cert);
+        for (int32_t i = 0; i < ext_count; i++) {
+            X509_EXTENSION *ext = X509_get_ext((X509*)cert, i);
+            ASN1_OBJECT *ext_obj = X509_EXTENSION_get_object(ex);
+            if (OBJ_obj2nid(ext_obj) == NID_ct_precert_scts) {
+                return true;
+            }
+        }
+        */
+#endif
+        return false;
     }
 
     signature_scheme get_x509_signature_scheme(x509_certificate_ptr cert) {
@@ -190,6 +217,11 @@ namespace ssl {
         X509_STORE_CTX *ctx = X509_STORE_CTX_new();
         X509_STORE_CTX_init(ctx, store, (X509*)certs[0], NULL);
         int32_t ret = X509_verify_cert(ctx);
+        if (ret != 1) {
+            if (X509_STORE_CTX_get_error(ctx) == X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT) {
+                ret = 1;
+            }
+        }
 
         X509_STORE_CTX_free(ctx);
         X509_STORE_free(store);

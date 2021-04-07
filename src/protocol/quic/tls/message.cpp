@@ -215,40 +215,62 @@ namespace tls {
             return -1; 
         }
 
+        int32_t unpack_size = 0;
         switch (buf[0]) {
         case TLS_MSG_HELLO_REQUEST:
-            return unpack_hello_request(buf, size, (hello_request_message*)msg->msg);
+            unpack_size = unpack_hello_request(buf, size, (hello_request_message*)msg->msg);
+            break;
         case TLS_MSG_CLIENT_HELLO:
-            return unpack_client_hello(buf, size, (client_hello_message*)msg->msg);
+            unpack_size = unpack_client_hello(buf, size, (client_hello_message*)msg->msg);
+            break;
         case TLS_MSG_SERVER_HELLO:
-            return unpack_server_hello(buf, size, (server_hello_message*)msg->msg);
+            unpack_size = unpack_server_hello(buf, size, (server_hello_message*)msg->msg);
+            break;
         case TLS_MSG_NEW_SESSION_TICKET:
-            return unpack_new_session_ticket_tls13(buf, size, (new_session_ticket_tls13_message*)msg->msg);
+            unpack_size = unpack_new_session_ticket_tls13(buf, size, (new_session_ticket_tls13_message*)msg->msg);
+            break;
         case TLS_MSG_END_OF_EARLY_DATA:
-            return unpack_end_early_data(buf, size, (end_early_data_message*)msg->msg);
+            unpack_size = unpack_end_early_data(buf, size, (end_early_data_message*)msg->msg);
+            break;
         case TLS_MSG_ENCRYPTED_EXTENSIONS:
-            return unpack_encrypted_extensions(buf, size, (encrypted_extensions_message*)msg->msg);
+            unpack_size = unpack_encrypted_extensions(buf, size, (encrypted_extensions_message*)msg->msg);
+            break;
         case TLS_MSG_CERTIFICATE:
-            return unpack_certificate_tls13(buf, size, (certificate_tls13_message*)msg->msg);
+            unpack_size = unpack_certificate_tls13(buf, size, (certificate_tls13_message*)msg->msg);
+            break;
         case TLS_MSG_SERVER_KEY_EXCHANGE:
-            return unpack_server_key_exchange(buf, size, (server_key_exchange_message*)msg->msg);
+            unpack_size = unpack_server_key_exchange(buf, size, (server_key_exchange_message*)msg->msg);
+            break;
         case TLS_MSG_CERTIFICATE_REQUEST:
-            return unpack_certificate_request_tls13(buf, size, (certificate_request_tls13_message*)msg->msg);
+            unpack_size = unpack_certificate_request_tls13(buf, size, (certificate_request_tls13_message*)msg->msg);
+            break;
         case TLS_MSG_SERVER_HELLO_DONE:
-            return unpack_server_hello_done(buf, size, (server_hello_done_message*)msg->msg);
+            unpack_size = unpack_server_hello_done(buf, size, (server_hello_done_message*)msg->msg);
+            break;
         case TLS_MSG_CERTIFICATE_VERIFY:
-            return unpack_certificate_verify(buf, size, (certificate_verify_message*)msg->msg);
+            unpack_size = unpack_certificate_verify(buf, size, (certificate_verify_message*)msg->msg);
+            break;
         case TLS_MSG_CLIENT_KEY_EXCHANGE:
-            return unpack_client_key_exchange(buf, size, (client_key_exchange_message*)msg->msg);
+            unpack_size = unpack_client_key_exchange(buf, size, (client_key_exchange_message*)msg->msg);
+            break;
         case TLS_MSG_FINISHED:
-            return unpack_finished(buf, size, (finished_message*)msg->msg);
+            unpack_size = unpack_finished(buf, size, (finished_message*)msg->msg);
+            break;
         case TLS_MSG_CERTIFICATE_STATUS:
-            return unpack_certificate_status(buf, size, (certificate_status_message*)msg->msg);
+            unpack_size = unpack_certificate_status(buf, size, (certificate_status_message*)msg->msg);
+            break;
         case TLS_MSG_KEY_UPDATE:
-            return unpack_key_update(buf, size, (key_update_message*)msg->msg);
+            unpack_size = unpack_key_update(buf, size, (key_update_message*)msg->msg);
+            break;
         default:
             return -1;
         }
+
+        if (unpack_size > 0) {
+            msg->packed_data.assign((char*)buf, unpack_size);
+        }
+
+        return unpack_size;
     }
 
     PUMP_INLINE uint8_t* __pack_bytes(uint8_t *des, uint8_t *end, const uint8_t *src, int32_t size) {
@@ -329,8 +351,8 @@ namespace tls {
         if (end < p + 3) {
             return nullptr;
         }
-        val = (uint32_t(*(p + 0)) >> 16) |
-              (uint32_t(*(p + 1)) >> 8) |
+        val = (uint32_t(*(p + 0)) << 16) |
+              (uint32_t(*(p + 1)) << 8) |
               (uint32_t(*(p + 2))) ;
         return p + 3;
     }
@@ -1442,10 +1464,10 @@ namespace tls {
         }
 
         // Pack certificates length.
-        __pack_uint16(certificates_len, p, uint16_t(p - certificates_len - 3));
+        __pack_uint24(certificates_len, p, uint32_t(p - certificates_len - 3));
 
         // Pack payload length.
-        __pack_uint16(payload_len, p, uint16_t(p - payload_len - 3));
+        __pack_uint24(payload_len, p, uint32_t(p - payload_len - 3));
 
         return int32_t(p - buf);
     }
@@ -1537,10 +1559,10 @@ namespace tls {
         }
 
         // Pack certificates length.
-        __pack_uint16(certificates_len, p, uint16_t(p - certificates_len - 3));
+        __pack_uint24(certificates_len, p, uint32_t(p - certificates_len - 3));
 
         // Pack payload length.
-        __pack_uint16(payload_len, p, uint16_t(p - payload_len - 3));
+        __pack_uint24(payload_len, p, uint32_t(p - payload_len - 3));
 
         return int32_t(p - buf);
     }
@@ -1572,7 +1594,7 @@ namespace tls {
         const uint8_t *certificates_end = p + certificates_len;
         while (p < certificates_end) {
             uint32_t certificate_len = 0;
-            UNPACK_AND_RETURN_ERR(__unpack_uint24(p, certificates_end, certificates_len));
+            UNPACK_AND_RETURN_ERR(__unpack_uint24(p, certificates_end, certificate_len));
             std::string certificate;
             UNPACK_AND_RETURN_ERR(__unpack_bytes(p, certificates_end, certificate, (int32_t)certificate_len));
 
@@ -1602,7 +1624,7 @@ namespace tls {
                         uint32_t ocsp_staple_len = 0;
                         UNPACK_AND_RETURN_ERR(__unpack_uint24(p, end, ocsp_staple_len));
                         if (ocsp_staple_len > 0) {
-                        UNPACK_AND_RETURN_ERR(__unpack_bytes(p, end, msg->ocsp_staple, (int32_t)ocsp_staple_len)); 
+                            UNPACK_AND_RETURN_ERR(__unpack_bytes(p, end, msg->ocsp_staple, (int32_t)ocsp_staple_len)); 
                         }
                         msg->is_support_ocsp_stapling = true;
                     }

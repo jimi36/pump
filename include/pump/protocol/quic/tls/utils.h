@@ -51,64 +51,64 @@ namespace tls {
      * Load tls13 cipher suite params.
      ********************************************************************************/
     bool load_tls13_cipher_suite_params(
-            cipher_suite_type suite_type, 
-            cipher_suite_parameter_ptr suite_param);
+        cipher_suite_type suite_type, 
+        cipher_suite_parameter_ptr suite_param);
 
     /*********************************************************************************
      * Cipher suite extract.
      ********************************************************************************/
     std::string cipher_suite_extract(
-                    cipher_suite_parameter_ptr suite_param, 
-                    const std::string &salt, 
-                    const std::string &key);
+        cipher_suite_parameter_ptr suite_param, 
+        const std::string &salt, 
+        const std::string &key);
 
     /*********************************************************************************
      * Cipher suite expand label.
      ********************************************************************************/
     std::string cipher_suite_expand_label(
-                    cipher_suite_parameter_ptr suite_param,
-                    const std::string &key, 
-                    const std::string &context,
-                    const std::string &label);
+        cipher_suite_parameter_ptr suite_param,
+        const std::string &key, 
+        const std::string &context,
+        const std::string &label);
 
     /*********************************************************************************
      * Cipher suite device secret.
      ********************************************************************************/
     std::string cipher_suite_device_secret(
-                    cipher_suite_parameter_ptr suite_param,
-                    const std::string &key,
-                    const std::string &label,
-                    ssl::hash_context_ptr transcript);
+        cipher_suite_parameter_ptr suite_param,
+        const std::string &key,
+        const std::string &label,
+        ssl::hash_context_ptr transcript);
 
     /*********************************************************************************
      * HKDF extract with hash algorithm.
      ********************************************************************************/
     std::string hkdf_extract(
-                    ssl::hash_algorithm algo, 
-                    const std::string &salt, 
-                    const std::string &key);
+        ssl::hash_algorithm algo, 
+        const std::string &salt, 
+        const std::string &key);
 
     /*********************************************************************************
      * HKDF expand label with hash algorithm.
      ********************************************************************************/
     std::string hkdf_expand_label(
-                    ssl::hash_algorithm algo, 
-                    const std::string &key,
-                    const std::string &context,
-                    const std::string &label,
-                    int32_t length);
+        ssl::hash_algorithm algo, 
+        const std::string &key,
+        const std::string &context,
+        const std::string &label,
+        int32_t length);
 
     /*********************************************************************************
      * Certificate load.
      ********************************************************************************/
     bool certificate_load(
-            std::vector<std::string> &certificates, 
-            std::vector<void_ptr> &certs);
+        std::vector<std::string> &certificates, 
+        std::vector<ssl::x509_certificate_ptr> &certs);
 
     /*********************************************************************************
      * Certificate verify.
      ********************************************************************************/
-    bool certificate_verify(std::vector<void_ptr> &certs);
+    bool certificate_verify(std::vector<ssl::x509_certificate_ptr> &certs);
 
     /*********************************************************************************
      * Transform tp hash algorithm.
@@ -119,6 +119,14 @@ namespace tls {
      * Transform to signature algorithm.
      ********************************************************************************/
     ssl::signature_algorithm transform_to_sign_algo(ssl::signature_scheme scheme);
+
+    /*********************************************************************************
+     * Sign message.
+     ********************************************************************************/
+    std::string sign_message(
+        ssl::hash_algorithm algo, 
+        const std::string &context, 
+        const std::string &msg);
 
 }
 }
