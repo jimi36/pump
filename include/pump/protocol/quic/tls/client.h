@@ -18,10 +18,9 @@
 #define pump_protocol_quic_tls_client_h
 
 #include "pump/fncb.h"
-#include "pump/ssl/hash.h"
 #include "pump/protocol/quic/tls/alert.h"
 #include "pump/protocol/quic/tls/types.h"
-#include "pump/protocol/quic/tls/message.h"
+#include "pump/protocol/quic/tls/messages.h"
 
 namespace pump {
 namespace protocol {
@@ -62,8 +61,11 @@ namespace tls {
         /*********************************************************************************
          * Set send callback for debug
          ********************************************************************************/
-        void set_send_callback(const pump_function<void (const std::string&)> cb) {
-            send_callback_ = cb;
+        void set_callbacks(
+            const pump_function<void (const std::string&)> send_cb,
+            const pump_function<void (const connection_session&)> finished_cb) {
+            send_callback_ = send_cb;
+            finished_callback_ = finished_cb;
         }
 
       private:
@@ -113,6 +115,11 @@ namespace tls {
         alert_code __send_certificate_tls13();
 
         /*********************************************************************************
+         * Send certificate verify message
+         ********************************************************************************/
+        alert_code __send_certificate_verify();
+
+        /*********************************************************************************
          * Send finished message
          ********************************************************************************/
         alert_code __send_finished();
@@ -140,17 +147,8 @@ namespace tls {
         }
 
       private:
-        // TLS config
-        config cfg_;
-
         //  Handshake status
         handshake_status status_;
-
-        // Connection session
-        connection_session session_;
-
-        // Handshake hash transcript
-        ssl::hash_context_ptr transcript_;
 
         // Client hello message
         handshake_message *hello_;
@@ -158,8 +156,17 @@ namespace tls {
         // Certificate request message
         certificate_request_tls13_message cert_request_;
 
-        // For test
+        // Handshake hash transcript
+        ssl::hash_context_ptr transcript_;
+
+        // Connection session
+        connection_session session_;
+
+        // Send callback
         pump_function<void (const std::string&)> send_callback_;
+
+        // Finished callback
+        pump_function<void (const connection_session&)> finished_callback_;
     };
 
 }

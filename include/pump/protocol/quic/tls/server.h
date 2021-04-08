@@ -18,10 +18,9 @@
 #define pump_protocol_quic_tls_server_h
 
 #include "pump/fncb.h"
-#include "pump/ssl/hash.h"
 #include "pump/protocol/quic/tls/alert.h"
 #include "pump/protocol/quic/tls/types.h"
-#include "pump/protocol/quic/tls/message.h"
+#include "pump/protocol/quic/tls/messages.h"
 
 namespace pump {
 namespace protocol {
@@ -60,10 +59,13 @@ namespace tls {
         }
 
         /*********************************************************************************
-         * Set send callback for debug
+         * Set callbacks
          ********************************************************************************/
-        void set_send_callback(const pump_function<void (const std::string&)> cb) {
-            send_callback_ = cb;
+        void set_callbacks(
+            const pump_function<void (const std::string&)> send_cb,
+            const pump_function<void (const connection_session&)> finished_cb) {
+            send_callback_ = send_cb;
+            finished_callback_ = finished_cb;
         }
 
       private:
@@ -76,16 +78,13 @@ namespace tls {
          * Send hello retry request message
          ********************************************************************************/
         alert_code __send_hello_retry_request(
-            cipher_suite_type selected_cipher_suite,
-            ssl::curve_type selected_curve);
+            cipher_suite_type cipher_suite,
+            ssl::curve_type curve_group);
 
         /*********************************************************************************
          * Send server hello message
          ********************************************************************************/
-        alert_code __send_server_hello(
-            cipher_suite_type selected_cipher_suite,
-            ssl::curve_type selected_curve, 
-            ssl::signature_scheme selected_scheme);
+        alert_code __send_server_hello();
 
         /*********************************************************************************
          * Send encrypted extensions message
@@ -118,6 +117,16 @@ namespace tls {
         alert_code __handle_certificate_tls13(handshake_message *msg);
 
         /*********************************************************************************
+         * Handle certificate verify message
+         ********************************************************************************/
+        alert_code __handle_certificate_verify(handshake_message *msg);
+
+        /*********************************************************************************
+         * Handle finished message
+         ********************************************************************************/
+        alert_code __handle_finished(handshake_message *msg);
+
+        /*********************************************************************************
          * Reset transcript
          ********************************************************************************/
         std::string __reset_transcript();
@@ -130,22 +139,18 @@ namespace tls {
         /*********************************************************************************
          * Send handshake message
          ********************************************************************************/
-        void __send_handshake_message(handshake_message *msg) {
-            __write_transcript(pack_handshake_message(msg));
+        void __send_handshake_message(handshake_message *msg, bool transcript = true) {
+            if (transcript) {
+                __write_transcript(pack_handshake_message(msg));
+            }
             if (send_callback_) {
                 send_callback_(pack_handshake_message(msg));
             }
         }
 
       private:
-        // TLS config
-        config cfg_;
-
         //  Handshake status
         handshake_status status_;
-
-        // Connection session
-        connection_session session_;
 
         // Server hello message
         handshake_message *hello_;
@@ -156,8 +161,14 @@ namespace tls {
         // Handshake hash transcript
         ssl::hash_context_ptr transcript_;
 
-        // For test
+        // Connection session
+        connection_session session_;
+
+        // Send callback
         pump_function<void (const std::string&)> send_callback_;
+
+        // Finished callback
+        pump_function<void (const connection_session&)> finished_callback_;
     };
 
 }

@@ -30,22 +30,49 @@ namespace quic {
 namespace tls {
 
     /*********************************************************************************
+     * Pack and unpack bytes.
+     ********************************************************************************/
+    uint8_t* pack_bytes(uint8_t *des, uint8_t *end, const std::string &src);
+    uint8_t* pack_bytes(uint8_t *des, uint8_t *end, const uint8_t *src, int32_t size);
+    const uint8_t* unpack_bytes(const uint8_t *src, const uint8_t *end, uint8_t *des, int32_t size);
+    const uint8_t* unpack_bytes(const uint8_t *src, const uint8_t *end, std::string &des, int32_t size);
+
+    /*********************************************************************************
+     * Pack and unpack uint8.
+     ********************************************************************************/
+    uint8_t* pack_uint8(uint8_t *p, uint8_t *end, uint8_t val);
+    const uint8_t* unpack_uint8(const uint8_t *p, const uint8_t *end, uint8_t &val);
+
+    /*********************************************************************************
+     * Pack and unpack uint16.
+     ********************************************************************************/
+    uint8_t* pack_uint16(uint8_t *p, uint8_t *end, uint16_t val);
+    const uint8_t* unpack_uint16(const uint8_t *p, const uint8_t *end, uint16_t &val);
+
+    /*********************************************************************************
+     * Pack and unpack uint24.
+     ********************************************************************************/
+    uint8_t* pack_uint24(uint8_t *p, uint8_t *end, uint32_t val);
+    const uint8_t* unpack_uint24(const uint8_t *p, const uint8_t *end, uint32_t &val);
+
+    /*********************************************************************************
+     * Pack and unpack uint32.
+     ********************************************************************************/
+    uint8_t* pack_uint32(uint8_t *p, uint8_t *end, uint32_t val);
+    const uint8_t* unpack_uint32(const uint8_t *p, const uint8_t *end, uint32_t &val);
+
+    /*********************************************************************************
      * Check element array contains the element or not.
      ********************************************************************************/
     template <typename T>
-    bool is_contains(std::vector<T> &elems, T &elem) {
-        for (int32_t i = 0; i < (int32_t)elems.size(); i++) {
-            if (elem == elems[i]) {
+    bool is_contains(const std::vector<T> &elems, T &elem) {
+        for (auto &the_elem : elems) {
+            if (elem == the_elem) {
                 return true;
             }
         }
         return false;
     }
-
-    /*********************************************************************************
-     * New cipher suite hasher.
-     ********************************************************************************/
-    ssl::hash_context_ptr new_cipher_suite_hasher(cipher_suite_type cipher_suite);
 
     /*********************************************************************************
      * Load tls13 cipher suite params.
@@ -69,7 +96,8 @@ namespace tls {
         cipher_suite_parameter_ptr suite_param,
         const std::string &key, 
         const std::string &context,
-        const std::string &label);
+        const std::string &label,
+        int32_t length);
 
     /*********************************************************************************
      * Cipher suite device secret.
@@ -102,13 +130,8 @@ namespace tls {
      * Certificate load.
      ********************************************************************************/
     bool certificate_load(
-        std::vector<std::string> &certificates, 
+        const std::vector<std::string> &certificates, 
         std::vector<ssl::x509_certificate_ptr> &certs);
-
-    /*********************************************************************************
-     * Certificate verify.
-     ********************************************************************************/
-    bool certificate_verify(std::vector<ssl::x509_certificate_ptr> &certs);
 
     /*********************************************************************************
      * Transform tp hash algorithm.

@@ -29,40 +29,40 @@ namespace tls {
 
     // TLS verison.
     typedef uint16_t version_type;
-    #define TLS_VERSION_UNKNOWN 0x0000
-    #define TLS_VERSION_10      0x0301
-    #define TLS_VSERVER_11      0x0302
-    #define TLS_VSERVER_12      0x0303
-    #define TLS_VSERVER_13      0x0304
+    const version_type TLS_VERSION_UNKNOWN = 0x0000;
+    const version_type TLS_VERSION_10      = 0x0301;
+    const version_type TLS_VSERVER_11      = 0x0302;
+    const version_type TLS_VSERVER_12      = 0x0303;
+    const version_type TLS_VSERVER_13      = 0x0304;
 
     // TLS handshake message types.
     typedef uint8_t message_type;
-    #define TLS_MSG_HELLO_REQUEST        0
-    #define TLS_MSG_CLIENT_HELLO         1
-    #define TLS_MSG_SERVER_HELLO         2
-    #define TLS_MSG_NEW_SESSION_TICKET   4
-    #define TLS_MSG_END_OF_EARLY_DATA    5
-    #define TLS_MSG_ENCRYPTED_EXTENSIONS 8
-    #define TLS_MSG_CERTIFICATE          11
-    #define TLS_MSG_SERVER_KEY_EXCHANGE  12
-    #define TLS_MSG_CERTIFICATE_REQUEST  13
-    #define TLS_MSG_SERVER_HELLO_DONE    14
-    #define TLS_MSG_CERTIFICATE_VERIFY   15
-    #define TLS_MSG_CLIENT_KEY_EXCHANGE  16
-    #define TLS_MSG_FINISHED             20
-    #define TLS_MSG_CERTIFICATE_STATUS   22
-    #define TLS_MSG_KEY_UPDATE           24
-    #define TLS_NSG_NEXT_PROTOCOL        67  // Not IANA assigned
-    #define TLS_MSG_MESSAGE_HASH         254 // synthetic message
+    const message_type TLS_MSG_HELLO_REQUEST        = 0;
+    const message_type TLS_MSG_CLIENT_HELLO         = 1;
+    const message_type TLS_MSG_SERVER_HELLO         = 2;
+    const message_type TLS_MSG_NEW_SESSION_TICKET   = 4;
+    const message_type TLS_MSG_END_OF_EARLY_DATA    = 5;
+    const message_type TLS_MSG_ENCRYPTED_EXTENSIONS = 8;
+    const message_type TLS_MSG_CERTIFICATE          = 11;
+    const message_type TLS_MSG_SERVER_KEY_EXCHANGE  = 12;
+    const message_type TLS_MSG_CERTIFICATE_REQUEST  = 13;
+    const message_type TLS_MSG_SERVER_HELLO_DONE    = 14;
+    const message_type TLS_MSG_CERTIFICATE_VERIFY   = 15;
+    const message_type TLS_MSG_CLIENT_KEY_EXCHANGE  = 16;
+    const message_type TLS_MSG_FINISHED             = 20;
+    const message_type TLS_MSG_CERTIFICATE_STATUS   = 22;
+    const message_type TLS_MSG_KEY_UPDATE           = 24;
+    const message_type TLS_NSG_NEXT_PROTOCOL        = 67;  // Not IANA assigned
+    const message_type TLS_MSG_MESSAGE_HASH         = 254; // synthetic message
 
     // TLS compression types.
     typedef uint8_t compression_method_type;
-    #define TLS_COMPRESSION_METHOD_NONE 0
+    const compression_method_type TLS_COMPRESSION_METHOD_NONE = 0;
 
     // TLS Elliptic Curve Point Formats
     // https://tools.ietf.org/html/rfc4492#section-5.1.2
     typedef uint8_t point_format_type;
-    #define TLS_POINT_FORMAT_UNCOMPRESSED 0
+    const point_format_type TLS_POINT_FORMAT_UNCOMPRESSED = 0;
 
     // TLS cipher suites
     // A list of cipher suite IDs that are, or have been, implemented by this
@@ -70,52 +70,50 @@ namespace tls {
     // https://www.iana.org/assignments/tls-parameters/tls-parameters.xml
     typedef uint16_t cipher_suite_type;
     // TLS 1.0 - 1.2 cipher suites.
-    #define TLS_CIPHER_SUITE_UNKNOWN                       0x0000
-    #define TLS_RSA_WITH_RC4_128_SHA                       0x0005
-    #define TLS_RSA_WITH_3DES_EDE_CBC_SHA                  0x000a
-    #define TLS_RSA_WITH_AES_128_CBC_SHA                   0x002f
-    #define TLS_RSA_WITH_AES_256_CBC_SHA                   0x0035
-    #define TLS_RSA_WITH_AES_128_CBC_SHA256                0x003c
-    #define TLS_RSA_WITH_AES_128_GCM_SHA256                0x009c
-    #define TLS_RSA_WITH_AES_256_GCM_SHA384                0x009d
-    #define TLS_ECDHE_ECDSA_WITH_RC4_128_SHA               0xc007
-    #define TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA           0xc009
-    #define TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA           0xc00a
-    #define TLS_ECDHE_RSA_WITH_RC4_128_SHA                 0xc011
-    #define TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA            0xc012
-    #define TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA             0xc013
-    #define TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA             0xc014
-    #define TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256        0xc023
-    #define TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256          0xc027
-    #define TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256          0xc02f
-    #define TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256        0xc02b
-    #define TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384          0xc030
-    #define TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384        0xc02c
-    #define TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256    0xcca8
-    #define TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256  0xcca9
+    const cipher_suite_type TLS_CIPHER_SUITE_UNKNOWN                      = 0x0000;
+    const cipher_suite_type TLS_RSA_WITH_RC4_128_SHA                      = 0x0005;
+    const cipher_suite_type TLS_RSA_WITH_3DES_EDE_CBC_SHA                 = 0x000a;
+    const cipher_suite_type TLS_RSA_WITH_AES_128_CBC_SHA                  = 0x002f;
+    const cipher_suite_type TLS_RSA_WITH_AES_256_CBC_SHA                  = 0x0035;
+    const cipher_suite_type TLS_RSA_WITH_AES_128_CBC_SHA256               = 0x003c;
+    const cipher_suite_type TLS_RSA_WITH_AES_128_GCM_SHA256               = 0x009c;
+    const cipher_suite_type TLS_RSA_WITH_AES_256_GCM_SHA384               = 0x009d;
+    const cipher_suite_type TLS_ECDHE_ECDSA_WITH_RC4_128_SHA              = 0xc007;
+    const cipher_suite_type TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA          = 0xc009;
+    const cipher_suite_type TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA          = 0xc00a;
+    const cipher_suite_type TLS_ECDHE_RSA_WITH_RC4_128_SHA                = 0xc011;
+    const cipher_suite_type TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA           = 0xc012;
+    const cipher_suite_type TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA            = 0xc013;
+    const cipher_suite_type TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA            = 0xc014;
+    const cipher_suite_type TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256       = 0xc023;
+    const cipher_suite_type TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256         = 0xc027;
+    const cipher_suite_type TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256         = 0xc02f;
+    const cipher_suite_type TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256       = 0xc02b;
+    const cipher_suite_type TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384         = 0xc030;
+    const cipher_suite_type TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384       = 0xc02c;
+    const cipher_suite_type TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256   = 0xcca8;
+    const cipher_suite_type TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256 = 0xcca9;
     // TLS 1.3 cipher suites.
-    #define TLS_AES_128_GCM_SHA256                         0x1301
-    #define TLS_AES_256_GCM_SHA384                         0x1302
-    #define TLS_CHACHA20_POLY1305_SHA256                   0x1303
+    const cipher_suite_type TLS_AES_128_GCM_SHA256                        = 0x1301;
+    const cipher_suite_type TLS_AES_256_GCM_SHA384                        = 0x1302;
+    const cipher_suite_type TLS_CHACHA20_POLY1305_SHA256                  = 0x1303;
     // TLS_FALLBACK_SCSV isn't a standard cipher suite but an indicator
     // that the client is doing version fallback. See RFC 7507.
-    #define TLS_FALLBACK_SCSV                              0x5600
+    const cipher_suite_type TLS_FALLBACK_SCSV                             = 0x5600;
     // Legacy names for the corresponding cipher suites with the correct _SHA256
     // suffix, retained for backward compatibility.
-    #define TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305           TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256
-    #define TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305         TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256
+    const cipher_suite_type TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305          = TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256;
+    const cipher_suite_type TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305        = TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256;
 
     // TLS 1.3 supported cipher suites
-    const int32_t supported_cipher_suites_count = 3;
-    const cipher_suite_type supported_cipher_suites[] = {
+    const std::vector<cipher_suite_type> supported_cipher_suites = {
         TLS_AES_128_GCM_SHA256,
         TLS_AES_256_GCM_SHA384,
         TLS_CHACHA20_POLY1305_SHA256
     };
 
     // TLS 1.3 supported curve groups
-    const int32_t supported_curve_groups_count = 4;
-    const ssl::curve_type supported_curve_groups[] = {
+    const std::vector<ssl::curve_type> supported_curve_groups = {
         ssl::TLS_CURVE_X25519,
         ssl::TLS_CURVE_P256,
         ssl::TLS_CURVE_P384,
@@ -123,8 +121,7 @@ namespace tls {
     };
 
     // TLS 1.3 supported signature schemes
-    const int32_t supported_signature_schemes_count = 7;
-    const ssl::signature_scheme supported_signature_schemes[] = {
+    const std::vector<ssl::signature_scheme> supported_signature_schemes = {
         ssl::TLS_SIGN_SCHE_PSSWITHSHA256,
         ssl::TLS_SIGN_SCHE_ECDSAWITHP256AndSHA256,
         ssl::TLS_SIGN_SCHE_PSSWITHSHA384,
@@ -137,56 +134,56 @@ namespace tls {
     // TLS Certificate Status Type
     // https://tools.ietf.org/html/rfc3546
     typedef uint8_t certicate_status_type;
-    #define TLS_OCSP_STATUS 1
+    const certicate_status_type TLS_OCSP_STATUS = 1;
 
     // TLS 1.3 PSK Key Exchange Modes. See RFC 8446, Section 4.2.9.
     typedef uint8_t psk_mode_type;
-    #define TLS_PSK_MODE_PLAIN 0
-    #define TLS_PSK_MODE_DHE   1
+    const psk_mode_type TLS_PSK_MODE_PLAIN = 0;
+    const psk_mode_type TLS_PSK_MODE_DHE   = 1;
 
     // TLS extension types.
     typedef uint16_t extension_type;
-    #define TLS_EXTENSION_SERVER_NAME               0  // https://tools.ietf.org/html/rfc6066#section-3
-    #define TLS_EXTENSION_MAX_FRAGMENT_LENGTH       1  // https://tools.ietf.org/html/rfc6066
-    #define TLS_EXTENSION_STATUS_REQUEST            5  // https://tools.ietf.org/html/rfc4366#section-3.6
-    #define TLS_EXTENSION_SUPPORTED_GROUPS          10 // https://tools.ietf.org/html/rfc4492#section-5.1.1 https://tools.ietf.org/html/rfc8446#section-4.2.7
-    #define TLS_EXTENSION_SUPPORTED_POINTS          11 // https://tools.ietf.org/html/rfc4492#section-5.1.2
-    #define TLS_EXTENSION_SIGNATURE_ALGORITHMS      13 // https://tools.ietf.org/html/rfc5246#section-7.4.1.4.1 https://tools.ietf.org/html/rfc8446#section-4.2.3
-    #define TLS_EXTENSION_ALPN                      16 // https://tools.ietf.org/html/rfc7301#section-3.1
-    #define TLS_EXTENSION_SCT                       18 // https://tools.ietf.org/html/rfc6962#section-3.3.1
-    #define TLS_EXTENSION_SESSION_TICKET            35 // https://tools.ietf.org/html/rfc5077#section-3.2
-    #define TLS_EXTENSION_PRE_SHARED_KEY            41 // https://tools.ietf.org/html/rfc8446#section-4.2.11
-    #define TLS_EXTENSION_EARLY_DATA                42 // https://tools.ietf.org/html/rfc8446#section-4.2.10
-    #define TLS_EXTENSION_SUPPORTED_VERSIONS        43 // https://tools.ietf.org/html/rfc8446#section-4.2.1
-    #define TLS_EXTENSION_COOKIE                    44 // https://tools.ietf.org/html/rfc8446#section-4.2.2
-    #define TLS_EXTENSION_PSK_MODES                 45 // https://tools.ietf.org/html/rfc8446#section-4.2.9
-    #define TLS_EXTENSION_CERTIFICATE_AUTHORITIES   47 // https://tools.ietf.org/html/rfc8446
-    #define TLS_EXTENSION_SIGNATURE_ALGORITHMS_CERT 50 // https://tools.ietf.org/html/rfc8446#section-4.2.3
-    #define TLS_EXTENSION_KEY_SHARE                 51 // https://tools.ietf.org/html/rfc8446#section-4.2.8
-    #define TLS_EXTENSION_RENEGOTIATION_INFO        0xff01 // https://tools.ietf.org/html/rfc5746#section-3.2
-    #define TLS_EXTENSION_QUIC                      0xffa5
+    const extension_type TLS_EXTENSION_SERVER_NAME               = 0;  // https://tools.ietf.org/html/rfc6066#section-3
+    const extension_type TLS_EXTENSION_MAX_FRAGMENT_LENGTH       = 1;  // https://tools.ietf.org/html/rfc6066
+    const extension_type TLS_EXTENSION_STATUS_REQUEST            = 5;  // https://tools.ietf.org/html/rfc4366#section-3.6
+    const extension_type TLS_EXTENSION_SUPPORTED_GROUPS          = 10; // https://tools.ietf.org/html/rfc4492#section-5.1.1 https://tools.ietf.org/html/rfc8446#section-4.2.7
+    const extension_type TLS_EXTENSION_SUPPORTED_POINTS          = 11; // https://tools.ietf.org/html/rfc4492#section-5.1.2
+    const extension_type TLS_EXTENSION_SIGNATURE_ALGORITHMS      = 13; // https://tools.ietf.org/html/rfc5246#section-7.4.1.4.1 https://tools.ietf.org/html/rfc8446#section-4.2.3
+    const extension_type TLS_EXTENSION_ALPN                      = 16; // https://tools.ietf.org/html/rfc7301#section-3.1
+    const extension_type TLS_EXTENSION_SCT                       = 18; // https://tools.ietf.org/html/rfc6962#section-3.3.1
+    const extension_type TLS_EXTENSION_SESSION_TICKET            = 35; // https://tools.ietf.org/html/rfc5077#section-3.2
+    const extension_type TLS_EXTENSION_PRE_SHARED_KEY            = 41; // https://tools.ietf.org/html/rfc8446#section-4.2.11
+    const extension_type TLS_EXTENSION_EARLY_DATA                = 42; // https://tools.ietf.org/html/rfc8446#section-4.2.10
+    const extension_type TLS_EXTENSION_SUPPORTED_VERSIONS        = 43; // https://tools.ietf.org/html/rfc8446#section-4.2.1
+    const extension_type TLS_EXTENSION_COOKIE                    = 44; // https://tools.ietf.org/html/rfc8446#section-4.2.2
+    const extension_type TLS_EXTENSION_PSK_MODES                 = 45; // https://tools.ietf.org/html/rfc8446#section-4.2.9
+    const extension_type TLS_EXTENSION_CERTIFICATE_AUTHORITIES   = 47; // https://tools.ietf.org/html/rfc8446
+    const extension_type TLS_EXTENSION_SIGNATURE_ALGORITHMS_CERT = 50; // https://tools.ietf.org/html/rfc8446#section-4.2.3
+    const extension_type TLS_EXTENSION_KEY_SHARE                 = 51; // https://tools.ietf.org/html/rfc8446#section-4.2.8
+    const extension_type TLS_EXTENSION_RENEGOTIATION_INFO        = 0xff01; // https://tools.ietf.org/html/rfc5746#section-3.2
+    const extension_type TLS_EXTENSION_QUIC                      = 0xffa5;
 
     // TLS handshaker status.
     typedef int32_t handshake_status;
-    #define HANDSHAKE_INIT                      0
-    #define HANDSHAKE_CLIENT_HELLO_SENT         1
-    #define HANDSHAKE_CLIENT_HELLO_RECV         2
-    #define HANDSHAKE_SERVER_HELLO_SENT         3
-    #define HANDSHAKE_SERVER_HELLO_RECV         4
-    #define HANDSHAKE_HELLO_REQUEST_SEND        5
-    #define HANDSHAKE_RETRY_HELLO_SENT          7
-    #define HANDSHAKE_RETRY_HELLO_RECV          8
-    #define HANDSHAKE_ENCRYPTED_EXTENSIONS_SENT 9
-    #define HANDSHAKE_ENCRYPTED_EXTENSIONS_RECV 10
-    #define HANDSHAKE_CARTIFICATE_REQUEST_SENT  11
-    #define HANDSHAKE_CARTIFICATE_REQUEST_RECV  12
-    #define HANDSHAKE_CARTIFICATE_SENT          13
-    #define HANDSHAKE_CARTIFICATE_RECV          14
-    #define HANDSHAKE_CARTIFICATE_VERIFY_SENT   15
-    #define HANDSHAKE_CARTIFICATE_VERIFY_RECV   16
-    #define HANDSHAKE_FINISHED_SENT             17
-    #define HANDSHAKE_FINISHED_RECV             18
-    #define HANDSHAKE_SUCCESS                   100
+    const handshake_status HANDSHAKE_INIT                      = 0;
+    const handshake_status HANDSHAKE_CLIENT_HELLO_SENT         = 1;
+    const handshake_status HANDSHAKE_CLIENT_HELLO_RECV         = 2;
+    const handshake_status HANDSHAKE_SERVER_HELLO_SENT         = 3;
+    const handshake_status HANDSHAKE_SERVER_HELLO_RECV         = 4;
+    const handshake_status HANDSHAKE_HELLO_REQUEST_SEND        = 5;
+    const handshake_status HANDSHAKE_RETRY_HELLO_SENT          = 7;
+    const handshake_status HANDSHAKE_RETRY_HELLO_RECV          = 8;
+    const handshake_status HANDSHAKE_ENCRYPTED_EXTENSIONS_SENT = 9;
+    const handshake_status HANDSHAKE_ENCRYPTED_EXTENSIONS_RECV = 10;
+    const handshake_status HANDSHAKE_CARTIFICATE_REQUEST_SENT  = 11;
+    const handshake_status HANDSHAKE_CARTIFICATE_REQUEST_RECV  = 12;
+    const handshake_status HANDSHAKE_CARTIFICATE_SENT          = 13;
+    const handshake_status HANDSHAKE_CARTIFICATE_RECV          = 14;
+    const handshake_status HANDSHAKE_CARTIFICATE_VERIFY_SENT   = 15;
+    const handshake_status HANDSHAKE_CARTIFICATE_VERIFY_RECV   = 16;
+    const handshake_status HANDSHAKE_FINISHED_SENT             = 17;
+    const handshake_status HANDSHAKE_FINISHED_RECV             = 18;
+    const handshake_status HANDSHAKE_SUCCESS                   = 100;
 
 	// downgradeCanaryTLS12 or downgradeCanaryTLS11 is embedded in the server
 	// random as a downgrade protection if the server would be capable of

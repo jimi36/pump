@@ -24,16 +24,104 @@ namespace protocol {
 namespace quic {
 namespace tls {
 
-    ssl::hash_context_ptr new_cipher_suite_hasher(cipher_suite_type cipher_suite) {
-        switch (cipher_suite)
-        {
-        case TLS_AES_128_GCM_SHA256:
-        case TLS_CHACHA20_POLY1305_SHA256:
-            return ssl::create_hash_context(ssl::HASH_SHA256);
-        case TLS_AES_256_GCM_SHA384:
-            return ssl::create_hash_context(ssl::HASH_SHA384);
+    uint8_t* pack_bytes(uint8_t *des, uint8_t *end, const uint8_t *src, int32_t size) {
+        if (end < des + size) {
+            return nullptr;
         }
-        return nullptr;
+        memcpy(des, src, size);
+        return des + size;
+    }
+
+    uint8_t* pack_bytes(uint8_t *des, uint8_t *end, const std::string &src) {
+        if (end < des + (int32_t)src.size()) {
+            return nullptr;
+        }
+        memcpy(des, src.c_str(), (int32_t)src.size());
+        return des + (int32_t)src.size();
+    }
+
+    const uint8_t* unpack_bytes(const uint8_t *src, const uint8_t *end, uint8_t *des, int32_t size) {
+        if (end < src + size) {
+            return nullptr;
+        }
+        memcpy(des, src, size);
+        return src + size;
+    }
+
+    const uint8_t* unpack_bytes(const uint8_t *src, const uint8_t *end, std::string &des, int32_t size) {
+        if (end < src + size) {
+            return nullptr;
+        }
+        des.assign((const char*)src, size);
+        return src + size;
+    }
+
+    uint8_t* pack_uint8(uint8_t *p, uint8_t *end, uint8_t val) {
+        if (end < p + 1) {
+            return nullptr;
+        }
+        *(p++) = val;
+        return p;
+    }
+
+    const uint8_t* unpack_uint8(const uint8_t *p, const uint8_t *end, uint8_t &val) {
+        if (end < p + 1) {
+            return nullptr;
+        }
+        val = *(p++);
+        return p;
+    }
+
+    uint8_t* pack_uint16(uint8_t *p, uint8_t *end, uint16_t val) {
+        if (end < p + 2) {
+            return nullptr;
+        }
+        *((uint16_t*)p) = pump::change_endian(val);
+        return p + 2;
+    }
+
+    const uint8_t* unpack_uint16(const uint8_t *p, const uint8_t *end, uint16_t &val) {
+        if (end < p + 2) {
+            return nullptr;
+        }
+        val = pump::change_endian(*((uint16_t*)p));
+        return p + 2;
+    }
+
+    uint8_t* pack_uint24(uint8_t *p, uint8_t *end, uint32_t val) {
+        if (end < p + 3) {
+            return nullptr;
+        }
+        *(p + 0) = int8_t(val >> 16);
+        *(p + 1) = int8_t(val >> 8);
+        *(p + 2) = int8_t(val);
+        return p + 3;
+    }
+
+    const uint8_t* unpack_uint24(const uint8_t *p, const uint8_t *end, uint32_t &val) {
+        if (end < p + 3) {
+            return nullptr;
+        }
+        val = (uint32_t(*(p + 0)) << 16) |
+              (uint32_t(*(p + 1)) << 8) |
+              (uint32_t(*(p + 2))) ;
+        return p + 3;
+    }
+
+    uint8_t* pack_uint32(uint8_t *p, uint8_t *end, uint32_t val) {
+        if (end <  p + 4) {
+            return nullptr;
+        }
+        *((uint32_t*)p) = pump::change_endian(val);
+        return p + 4;
+    }
+
+    const uint8_t* unpack_uint32(const uint8_t *p, const uint8_t *end, uint32_t &val) {
+        if (end < p + 4) {
+            return nullptr;
+        }
+        val = pump::change_endian(*((uint32_t*)p));
+        return p + 4;
     }
 
     bool load_tls13_cipher_suite_params(
@@ -82,8 +170,9 @@ namespace tls {
         const std::string &label,
         ssl::hash_context_ptr transcript) {                    
         std::string context;
-        if (!transcript) {
+        if (transcript == nullptr) {
             transcript = ssl::create_hash_context(suite_param->algo);
+            PUMP_ASSERT(transcript);
             context = ssl::sum_hash(transcript);
             ssl::free_hash_context(transcript);
         } else {
@@ -133,11 +222,11 @@ namespace tls {
     }
 
     bool certificate_load(
-        std::vector<std::string> &certificates, 
+        const std::vector<std::string> &certificates, 
         std::vector<ssl::x509_certificate_ptr> &certs) {
         bool ret = true;
         for (int32_t i = 0; i < (int32_t)certificates.size(); i++) {
-            ssl::x509_certificate_ptr cert = ssl::load_x509_certificate_pem(certificates[i]);
+            ssl::x509_certificate_ptr cert = ssl::load_x509_certificate_raw(certificates[i]);
             if (cert == nullptr) {
                 ret = false;
                 break;

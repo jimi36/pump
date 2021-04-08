@@ -66,8 +66,8 @@ namespace ssl {
                 PUMP_DEBUG_EQUAL_CHECK(EVP_PKEY_assign_EC_KEY(pkey, eckey), 1);
                 
                 X509 *x509 = X509_new();
-                PUMP_ASSERT(cert != nullptr);
-                X509_set_version(cert, 2);
+                PUMP_ASSERT(x509 != nullptr);
+                X509_set_version(x509, 2);
                 PUMP_DEBUG_EQUAL_CHECK(ASN1_INTEGER_set(X509_get_serialNumber(x509), 3), 1);
                 PUMP_DEBUG_NOEQUAL_CHECK(X509_gmtime_adj(X509_get_notBefore(x509), 0), nullptr);
                 PUMP_DEBUG_NOEQUAL_CHECK(X509_gmtime_adj(X509_get_notAfter(x509), 365L * 86400), nullptr);
@@ -77,7 +77,7 @@ namespace ssl {
                 X509_NAME_add_entry_by_txt(name, "C", MBSTRING_ASC, (uint8_t*)"CA", -1, -1, 0);
                 X509_NAME_add_entry_by_txt(name, "O", MBSTRING_ASC, (uint8_t*)"MyCompany Inc.", -1, -1, 0);
                 X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC, (uint8_t*)"localhost", -1, -1, 0);
-                X509_set_issuer_name(cert, name);
+                X509_set_issuer_name(x509, name);
 
                 PUMP_DEBUG_NOEQUAL_CHECK(X509_sign(x509, pkey, md), 0);
                 EVP_PKEY_free(pkey);
@@ -89,7 +89,7 @@ namespace ssl {
             break;
         }
 #endif
-        return std::forward<std::string>(out);
+        return cert;
     }
 
     std::string read_x509_certificate_pem(x509_certificate_ptr cert) {

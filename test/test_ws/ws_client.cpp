@@ -15,7 +15,7 @@ void on_data(websocket::client_ptr cli,
              bool msg_end) {
     std::string data(b, size);
     std::string msg = pump::utf8_to_gbk(data);
-    printf("dara %s msg %s\n", data.c_str(), msg.c_str());
+    printf("dara %s raw_msg %s\n", data.c_str(), msg.c_str());
 }
 
 void start_ws_client(pump::service_ptr sv, const std::string &url) {

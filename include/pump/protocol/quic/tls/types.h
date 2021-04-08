@@ -60,6 +60,9 @@ namespace tls {
         // TLS server name
         std::string server_name;
 
+        // TLS signature scheme
+        ssl::signature_scheme sign_scheme;
+
         // TLS ecdhe parameter
         ssl::ecdhe_parameter_ptr ecdhe_param;
 
@@ -72,19 +75,23 @@ namespace tls {
         // Application protocol
         std::string alpn;
 
-        std::vector<std::string> scts;
-
+        // TLS ocsp staple
         std::string ocsp_staple;
 
-        std::string handshake_secret;
+        // TLS signed certificate timestamp
+        std::vector<std::string> scts;
+
         std::string master_secret;
         std::string client_secret;
         std::string server_secret;
-        std::string traffic_secret; 
+        std::string traffic_secret;
+        std::string handshake_secret;
         std::string export_master_secret;
 
+        // Certificates
         std::vector<ssl::x509_certificate_ptr> certs;
 
+        // Peer certificates
         std::vector<ssl::x509_certificate_ptr> peer_certs;
     };
     DEFINE_RAW_POINTER_TYPE(connection_session)

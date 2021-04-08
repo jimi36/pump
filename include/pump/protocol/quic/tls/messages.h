@@ -14,8 +14,8 @@
  * limitations under the License.
  */
  
-#ifndef pump_protocol_quic_tls_message_h
-#define pump_protocol_quic_tls_message_h
+#ifndef pump_protocol_quic_tls_messages_h
+#define pump_protocol_quic_tls_messages_h
 
 #include <map>
 #include <vector>
@@ -33,7 +33,7 @@ namespace tls {
     struct handshake_message {
         std::string packed_data;
         message_type type;
-        void_ptr msg;
+        void_ptr raw_msg;
     };
 
     /*********************************************************************************
@@ -79,7 +79,7 @@ namespace tls {
      * TLS handshake extension struct.
      ********************************************************************************/
     struct extension {
-        uint16_t type;
+        extension_type type;
         std::string data;
     };
 
@@ -100,9 +100,11 @@ namespace tls {
     struct hello_request_message {
     };
 
-    int32_t pack_hello_request(const hello_request_message *msg, uint8_t *buf, int32_t max_size);
+    hello_request_message* new_hello_request();
 
-    int32_t unpack_hello_request(const uint8_t *buf, int32_t size, hello_request_message *msg);
+    int32_t pack_hello_request(c_void_ptr msg, uint8_t *buf, int32_t max_size);
+
+    int32_t unpack_hello_request(const uint8_t *buf, int32_t size, void_ptr msg);
 
     // When a client first connects to a server, it is REQUIRED to send the
     // ClientHello as its first TLS message. The client will also send a
@@ -325,9 +327,11 @@ namespace tls {
         std::vector<std::string> psk_binders;
     };
 
-    int32_t pack_client_hello(const client_hello_message *msg, uint8_t *buf, int32_t max_size);
+    client_hello_message* new_client_hello();
 
-    int32_t unpack_client_hello(const uint8_t *buf, int32_t max_size, client_hello_message *msg);
+    int32_t pack_client_hello(c_void_ptr msg, uint8_t *buf, int32_t max_size);
+
+    int32_t unpack_client_hello(const uint8_t *buf, int32_t max_size, void_ptr msg);
 
     // The server will send this message in response to a ClientHello
     // message to proceed with the handshake if it is able to negotiate an
@@ -513,9 +517,11 @@ namespace tls {
         std::string cookie;
     };
 
-    int32_t pack_server_hello(const server_hello_message *msg, uint8_t *buf, int32_t max_size);
+    server_hello_message* new_server_hello();
 
-    int32_t unpack_server_hello(const uint8_t *buf, int32_t size, server_hello_message *msg);
+    int32_t pack_server_hello(c_void_ptr msg, uint8_t *buf, int32_t max_size);
+
+    int32_t unpack_server_hello(const uint8_t *buf, int32_t size, void_ptr msg);
 
     // This message is sent by the server during the TLS handshake before
     // the ChangeCipherSpec message.  This message MUST be sent if the
@@ -536,9 +542,11 @@ namespace tls {
         std::string ticket;
     };
 
-    int32_t pack_new_session_ticket(const new_session_ticket_message *msg, uint8_t *buf, int32_t max_size);
+    new_session_ticket_message* new_new_session_ticket();
 
-    int32_t unpack_new_session_ticket(const uint8_t *buf, int32_t size, new_session_ticket_message *msg);
+    int32_t pack_new_session_ticket(c_void_ptr msg, uint8_t *buf, int32_t max_size);
+
+    int32_t unpack_new_session_ticket(const uint8_t *buf, int32_t size, void_ptr msg);
 
     // At any time after the server has received the client Finished
     // message, it MAY send a NewSessionTicket message. This message
@@ -588,9 +596,11 @@ namespace tls {
         uint32_t max_early_data_size;
     };
 
-    int32_t pack_new_session_ticket_tls13(const new_session_ticket_tls13_message *msg, uint8_t *buf, int32_t max_size);
+    new_session_ticket_tls13_message* new_new_session_ticket_tls13();
 
-    int32_t unpack_new_session_ticket_tls13(const uint8_t *buf, int32_t size, new_session_ticket_tls13_message *msg);
+    int32_t pack_new_session_ticket_tls13(c_void_ptr msg, uint8_t *buf, int32_t max_size);
+
+    int32_t unpack_new_session_ticket_tls13(const uint8_t *buf, int32_t size, void_ptr msg);
 
     // If the server sent an "early_data" extension in EncryptedExtensions,
     // the client MUST send an EndOfEarlyData message after receiving the
@@ -607,9 +617,11 @@ namespace tls {
     struct end_early_data_message {
     };
 
-    int32_t pack_end_early_data(const end_early_data_message *msg, uint8_t *buf, int32_t max_size);
+    end_early_data_message* new_end_early_data();
 
-    int32_t unpack_end_early_data(const uint8_t *buf, int32_t size, end_early_data_message *msg);
+    int32_t pack_end_early_data(c_void_ptr msg, uint8_t *buf, int32_t max_size);
+
+    int32_t unpack_end_early_data(const uint8_t *buf, int32_t size, void_ptr msg);
 
     // In all handshakes, the server MUST send the EncryptedExtensions
     // message immediately after the ServerHello message.  This is the first
@@ -636,9 +648,11 @@ namespace tls {
         std::vector<extension> additional_extensions;
     };
 
-    int32_t pack_encrypted_extensions(const encrypted_extensions_message *msg, uint8_t *buf, int32_t max_size);
+    encrypted_extensions_message* new_encrypted_extensions();
 
-    int32_t unpack_encrypted_extensions(const uint8_t *buf, int32_t size, encrypted_extensions_message *msg);
+    int32_t pack_encrypted_extensions(c_void_ptr msg, uint8_t *buf, int32_t max_size);
+
+    int32_t unpack_encrypted_extensions(const uint8_t *buf, int32_t size, void_ptr msg);
 
     // This message conveys the endpoint's certificate chain to the peer.
     // The server MUST send a Certificate message whenever the agreed-upon
@@ -679,13 +693,17 @@ namespace tls {
         std::vector<std::string> scts;
     };
 
-    int32_t pack_certificate(const certificate_message *msg, uint8_t *buf, int32_t max_size);
+    certificate_message* new_certificate();
 
-    int32_t unpack_certificate(const uint8_t *buf, int32_t size, certificate_message *msg);
+    int32_t pack_certificate(c_void_ptr msg, uint8_t *buf, int32_t max_size);
 
-    int32_t pack_certificate_tls13(const certificate_tls13_message *msg, uint8_t *buf, int32_t max_size);
+    int32_t unpack_certificate(const uint8_t *buf, int32_t size, void_ptr msg);
 
-    int32_t unpack_certificate_tls13(const uint8_t *buf, int32_t size, certificate_tls13_message *msg);
+    certificate_tls13_message* new_certificate_tls13();
+
+    int32_t pack_certificate_tls13(c_void_ptr msg, uint8_t *buf, int32_t max_size);
+
+    int32_t unpack_certificate_tls13(const uint8_t *buf, int32_t size, void_ptr msg);
 
     // This message will be sent immediately after the server certificate
     // message (or the server hello message, if this is an anonymous
@@ -698,9 +716,11 @@ namespace tls {
         std::string key;
     };
 
-    int32_t pack_server_key_exchange(const server_key_exchange_message *msg, uint8_t *buf, int32_t max_size);
+    server_key_exchange_message* new_server_key_exchange();
 
-    int32_t unpack_server_key_exchange(const uint8_t *buf, int32_t size, server_key_exchange_message *msg);
+    int32_t pack_server_key_exchange(c_void_ptr msg, uint8_t *buf, int32_t max_size);
+
+    int32_t unpack_server_key_exchange(const uint8_t *buf, int32_t size, void_ptr msg);
 
     // https://tools.ietf.org/html/rfc4346#section-7.4.4
     struct certificate_request_message {
@@ -725,9 +745,11 @@ namespace tls {
         std::vector<std::string> certificate_authorities;
     };
 
-    int32_t pack_certificate_request(const certificate_request_message *msg, uint8_t *buf, int32_t max_size);
+    certificate_request_message* new_certificate_request();
 
-    int32_t unpack_certificate_request(const uint8_t *buf, int32_t size, certificate_request_message *msg);
+    int32_t pack_certificate_request(c_void_ptr msg, uint8_t *buf, int32_t max_size);
+
+    int32_t unpack_certificate_request(const uint8_t *buf, int32_t size, void_ptr msg);
 
     // A server which is authenticating with a certificate MAY optionally
     // request a certificate from the client.  This message, if sent, MUST
@@ -762,9 +784,11 @@ namespace tls {
         std::vector<std::string> certificate_authorities;
     };
 
-    int32_t pack_certificate_request_tls13(const certificate_request_tls13_message *msg, uint8_t *buf, int32_t max_size);
+    certificate_request_tls13_message* new_certificate_request_tls13();
 
-    int32_t unpack_certificate_request_tls13(const uint8_t *buf, int32_t size, certificate_request_tls13_message *msg);
+    int32_t pack_certificate_request_tls13(c_void_ptr msg, uint8_t *buf, int32_t max_size);
+
+    int32_t unpack_certificate_request_tls13(const uint8_t *buf, int32_t size, void_ptr msg);
 
     // The server hello done message is sent by the server to indicate
     // the end of the server hello and associated messages.  After
@@ -779,9 +803,11 @@ namespace tls {
     struct server_hello_done_message {
     };
 
-    int32_t pack_server_hello_done(const server_hello_done_message *msg, uint8_t *buf, int32_t max_size);
+    server_hello_done_message* new_server_hello_done();
 
-    int32_t unpack_server_hello_done(const uint8_t *buf, int32_t size, server_hello_done_message *msg);
+    int32_t pack_server_hello_done(c_void_ptr msg, uint8_t *buf, int32_t max_size);
+
+    int32_t unpack_server_hello_done(const uint8_t *buf, int32_t size, void_ptr msg);
 
     // This message is used to provide explicit verification of a client
     // certificate.  This message is only sent following a client
@@ -795,9 +821,11 @@ namespace tls {
         std::string signature;
     };
 
-    int32_t pack_certificate_verify(const certificate_verify_message *msg, uint8_t *buf, int32_t max_size);
+    certificate_verify_message* new_certificate_verify();
 
-    int32_t unpack_certificate_verify(const uint8_t *buf, int32_t size, certificate_verify_message *msg);
+    int32_t pack_certificate_verify(c_void_ptr msg, uint8_t *buf, int32_t max_size);
+
+    int32_t unpack_certificate_verify(const uint8_t *buf, int32_t size, void_ptr msg);
 
     // This message is always sent by the client.  It MUST immediately
     // follow the client certificate message, if it is sent.  Otherwise
@@ -817,9 +845,11 @@ namespace tls {
         std::string ciphertext;
     };
 
-    int32_t pack_client_key_exchange(const client_key_exchange_message *msg, uint8_t *buf, int32_t max_size);
+    client_key_exchange_message* new_client_key_exchange();
 
-    int32_t unpack_client_key_exchange(const uint8_t *buf, int32_t size, client_key_exchange_message *msg);
+    int32_t pack_client_key_exchange(c_void_ptr msg, uint8_t *buf, int32_t max_size);
+
+    int32_t unpack_client_key_exchange(const uint8_t *buf, int32_t size, void_ptr msg);
 
     // A finished message is always sent immediately after a change
     // cipher spec message to verify that the key exchange and
@@ -837,9 +867,11 @@ namespace tls {
         std::string verify_data;
     };
 
-    int32_t pack_finished(const finished_message *msg, uint8_t *buf, int32_t max_size);
+    finished_message* new_finished();
 
-    int32_t unpack_finished(const uint8_t *buf, int32_t size, finished_message *msg);
+    int32_t pack_finished(c_void_ptr msg, uint8_t *buf, int32_t max_size);
+
+    int32_t unpack_finished(const uint8_t *buf, int32_t size, void_ptr msg);
 
     // Servers that receive a client hello containing the "status_request"
     // extension MAY return a suitable certificate status response to the
@@ -859,9 +891,11 @@ namespace tls {
         std::string response;
     };
 
-    int32_t pack_certificate_status(const certificate_status_message *msg, uint8_t *buf, int32_t max_size);
+    certificate_status_message* new_certificate_status();
 
-    int32_t unpack_certificate_status(const uint8_t *buf, int32_t size, certificate_status_message *msg);
+    int32_t pack_certificate_status(c_void_ptr msg, uint8_t *buf, int32_t max_size);
+
+    int32_t unpack_certificate_status(const uint8_t *buf, int32_t size, void_ptr msg);
 
     // The KeyUpdate handshake message is used to indicate that the sender
     //  is updating its sending cryptographic keys.  This message can be sent
@@ -880,9 +914,11 @@ namespace tls {
         bool update_requested;
     };
 
-    int32_t pack_key_update(const key_update_message *msg, uint8_t *buf, int32_t max_size);
+    key_update_message* new_key_update();
 
-    int32_t unpack_key_update(const uint8_t *buf, int32_t size, key_update_message *msg);
+    int32_t pack_key_update(c_void_ptr msg, uint8_t *buf, int32_t max_size);
+
+    int32_t unpack_key_update(const uint8_t *buf, int32_t size, void_ptr msg);
 
     std::string pack_message_hash(const std::string &hash);
 }
