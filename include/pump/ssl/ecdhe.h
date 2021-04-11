@@ -27,28 +27,26 @@ namespace ssl {
 
     // TLS curve ecdhe types.
     // https://tools.ietf.org/html/rfc8446#section-4.2.7
-    typedef uint16_t curve_type;
-    const curve_type TLS_CURVE_UNKNOWN = 0;
-    const curve_type TLS_CURVE_P256    = 0x0017; // secp256r1
-    const curve_type TLS_CURVE_P384    = 0x0018; // secp384r1
-    const curve_type TLS_CURVE_P521    = 0x0019; // secp521r1
-    const curve_type TLS_CURVE_X25519  = 0x001D;
-    const curve_type TLS_CURVE_X448    = 0x001E;
+    typedef uint16_t curve_group_type;
+    const curve_group_type TLS_CURVE_UNKNOWN = 0;
+    const curve_group_type TLS_CURVE_P256    = 0x0017; // secp256r1
+    const curve_group_type TLS_CURVE_P384    = 0x0018; // secp384r1
+    const curve_group_type TLS_CURVE_P521    = 0x0019; // secp521r1
+    const curve_group_type TLS_CURVE_X25519  = 0x001D;
+    const curve_group_type TLS_CURVE_X448    = 0x001E;
 
-    struct ecdhe_parameter;
-    DEFINE_RAW_POINTER_TYPE(ecdhe_parameter);
+    struct ecdhe_context {
+        curve_group_type group;
+        std::string prikey;
+        std::string pubkey;
+    };
+    DEFINE_RAW_POINTER_TYPE(ecdhe_context);
 
-    ecdhe_parameter_ptr create_ecdhe_parameter(curve_type curve);
+    ecdhe_context_ptr new_ecdhe_context(curve_group_type curve);
 
-    void free_ecdhe_parameter(ecdhe_parameter_ptr parameter);
+    void delete_ecdhe_context(ecdhe_context_ptr ctx);
 
-    curve_type get_ecdhe_curve(ecdhe_parameter_ptr parameter);
-
-    std::string get_ecdhe_prikey(ecdhe_parameter_ptr parameter);
-
-    std::string get_ecdhe_pubkey(ecdhe_parameter_ptr parameter);
-
-    std::string gen_ecdhe_shared_key(ecdhe_parameter_ptr parameter, const std::string &pubkey);
+    std::string gen_ecdhe_shared_key(ecdhe_context_ptr ctx, const std::string &pubkey);
 
 }
 }

@@ -104,13 +104,11 @@ namespace tls {
         }
         
         version_type version13 = TLS_VSERVER_13;
-        if (client_hello->supported_versions.empty() || 
-            !is_contains(client_hello->supported_versions, version13)) {
+        if (!is_contains(client_hello->supported_versions, version13)) {
             return ALERT_PROTOCOL_VERSION;
         }
 
-        if (client_hello->compression_methods.empty() ||
-            client_hello->compression_methods.size() != 1 || 
+        if (client_hello->compression_methods.size() != 1 || 
             client_hello->compression_methods[0] != TLS_COMPRESSION_METHOD_NONE) {
             return ALERT_ILLEGAL_PARAMETER;
         }
@@ -127,11 +125,16 @@ namespace tls {
             return ALERT_ILLEGAL_PARAMETER;
         }
         
-        // Check cipher suite.
+        // Load cipher suite.
+        if (session_.cipher_suite_ctx) {
+            delete_cipher_suite_context(session_.cipher_suite_ctx);
+            session_.cipher_suite_ctx = nullptr;
+        }
         cipher_suite_type selected_cipher_suite = TLS_CIPHER_SUITE_UNKNOWN;
         for (auto cs : supported_cipher_suites) {
             if (is_contains(client_hello->cipher_suites, cs)) {
-                if (!load_tls13_cipher_suite_params(cs, &session_.suite_param)) {
+                session_.cipher_suite_ctx = new_cipher_suite_context(cs);
+                if (session_.cipher_suite_ctx == nullptr) {
                     return ALERT_ILLEGAL_PARAMETER;
                 }
                 selected_cipher_suite = cs;
@@ -144,7 +147,7 @@ namespace tls {
 
         // Check curve group.
         key_share *client_ks = nullptr;
-        ssl::curve_type selected_group = ssl::TLS_CURVE_UNKNOWN;
+        ssl::curve_group_type selected_group = ssl::TLS_CURVE_UNKNOWN;
         for (auto supported_group : supported_curve_groups) {
             for (auto &ks : client_hello->key_shares) {
                 if (ks.group == supported_group) {
@@ -183,8 +186,8 @@ namespace tls {
             return ALERT_HANDSHAKE_FAILURE;
         }
 
-        session_.ecdhe_param = ssl::create_ecdhe_parameter(selected_group);
-        if (session_.ecdhe_param == nullptr) {
+        session_.ecdhe_ctx = ssl::new_ecdhe_context(selected_group);
+        if (session_.ecdhe_ctx == nullptr) {
             return ALERT_INTERNAL_ERROR;
         }
 
@@ -208,7 +211,7 @@ namespace tls {
 
     alert_code server_handshaker::__send_hello_retry_request(
         cipher_suite_type cipher_suite,
-        ssl::curve_type curve_group) {
+        ssl::curve_group_type curve_group) {
         if (status_ != HANDSHAKE_INIT) {
             return ALERT_UNEXPECTED_MESSGAE;
         }
@@ -262,13 +265,13 @@ namespace tls {
 
         server_hello->compression_method = TLS_COMPRESSION_METHOD_NONE;
 
-        server_hello->cipher_suite = session_.suite_param.type;
+        server_hello->cipher_suite = session_.cipher_suite_ctx->type;
 
         server_hello->session_id = client_hello_.session_id;
 
         server_hello->has_selected_key_share = true;
-        server_hello->selected_key_share.group = ssl::get_ecdhe_curve(session_.ecdhe_param);
-        server_hello->selected_key_share.data = ssl::get_ecdhe_pubkey(session_.ecdhe_param);
+        server_hello->selected_key_share.group = session_.ecdhe_ctx->group;
+        server_hello->selected_key_share.data = session_.ecdhe_ctx->pubkey;
 
         memcpy(server_hello->random, client_hello_.random, 32);
    
@@ -276,20 +279,20 @@ namespace tls {
 
         {
             auto secret = cipher_suite_device_secret(
-                            &session_.suite_param, 
-                            cipher_suite_extract(&session_.suite_param, "", ""), 
+                            session_.cipher_suite_ctx, 
+                            cipher_suite_extract(session_.cipher_suite_ctx, "", ""), 
                             "derived", 
                             nullptr);
             auto shared_key = ssl::gen_ecdhe_shared_key(
-                                session_.ecdhe_param, 
+                                session_.ecdhe_ctx, 
                                 client_hello_.key_shares[0].data);
-            session_.handshake_secret = cipher_suite_extract(&session_.suite_param, secret, shared_key);
+            session_.handshake_secret = cipher_suite_extract(session_.cipher_suite_ctx, secret, shared_key);
             auto handshake_secret_base64 = codec::base64_encode(session_.handshake_secret);
             PUMP_DEBUG_LOG("server handshaker handshake_secret_base64: %s", handshake_secret_base64.c_str());
         }
 
         session_.client_secret = cipher_suite_device_secret(
-                                    &session_.suite_param, 
+                                    session_.cipher_suite_ctx, 
                                     session_.handshake_secret,
                                     CLIENT_HANDSHAKE_TRAFFIC_LABEL, 
                                     transcript_);
@@ -297,7 +300,7 @@ namespace tls {
         PUMP_DEBUG_LOG("server handshaker client_secret_base64: %s", client_secret_base64.c_str());
 
         session_.server_secret = cipher_suite_device_secret(
-                                    &session_.suite_param, 
+                                    session_.cipher_suite_ctx, 
                                     session_.handshake_secret,
                                     SERVER_HANDSHAKE_TRAFFIC_LABEL, 
                                     transcript_);
@@ -455,13 +458,13 @@ namespace tls {
         auto finished = (finished_message*)msg->raw_msg;
 
         auto finished_key = hkdf_expand_label(
-                                session_.suite_param.algo, 
+                                session_.cipher_suite_ctx->algo, 
                                 session_.server_secret, 
                                 "", 
                                 "finished", 
-                                ssl::hash_digest_length(session_.suite_param.algo));
+                                ssl::hash_digest_length(session_.cipher_suite_ctx->algo));
         finished->verify_data = ssl::sum_hmac(
-                                    session_.suite_param.algo, 
+                                    session_.cipher_suite_ctx->algo, 
                                     finished_key, 
                                     ssl::sum_hash(transcript_));
         auto verify_data_base64 = codec::base64_encode(finished->verify_data);
@@ -471,17 +474,17 @@ namespace tls {
 
         {
             auto secret = cipher_suite_device_secret(
-                            &session_.suite_param, 
+                            session_.cipher_suite_ctx, 
                             session_.handshake_secret, 
                             "derived", 
                             nullptr);
-            session_.master_secret = cipher_suite_extract(&session_.suite_param, secret, "");
+            session_.master_secret = cipher_suite_extract(session_.cipher_suite_ctx, secret, "");
             auto master_secret_base64 = codec::base64_encode(session_.master_secret);
             PUMP_DEBUG_LOG("server handshaker master_secret_base64: %s", master_secret_base64.c_str());
         }
 
         session_.traffic_secret = cipher_suite_device_secret(
-                                    &session_.suite_param, 
+                                    session_.cipher_suite_ctx, 
                                     session_.master_secret,
                                     CLIENT_APPLICATION_TRAFFIC_LABEL, 
                                     transcript_);
@@ -489,7 +492,7 @@ namespace tls {
         PUMP_DEBUG_LOG("server handshaker traffic_secret_base64: %s", traffic_secret_base64.c_str());
 
         session_.server_secret = cipher_suite_device_secret(
-                                    &session_.suite_param, 
+                                    session_.cipher_suite_ctx, 
                                     session_.master_secret,
                                     SERVER_APPLICATION_TRAFFIC_LABEL, 
                                     transcript_);
@@ -498,7 +501,7 @@ namespace tls {
 
         // https://tools.ietf.org/html/rfc8446#section-7.5
         session_.export_master_secret = cipher_suite_device_secret(
-                                            &session_.suite_param, 
+                                            session_.cipher_suite_ctx, 
                                             session_.master_secret, 
                                             EXPORTER_LABEL, 
                                             transcript_);
@@ -521,15 +524,17 @@ namespace tls {
         PUMP_ASSERT(cert_tls13);
 
         if (!cert_tls13->certificates.empty()) {
-            if (!certificate_load(cert_tls13->certificates, session_.peer_certs)) {
-                return ALERT_ILLEGAL_PARAMETER;
+            for (auto &certificate : cert_tls13->certificates) {
+                auto cert = ssl::load_x509_certificate_raw(certificate);
+                if (cert == nullptr) {
+                    return ALERT_ILLEGAL_PARAMETER;
+                }
+                session_.peer_certs.push_back(cert);
             }
-
             if (!ssl::verify_x509_certificates(session_.peer_certs)) {
                 return ALERT_BAD_CERTIFICATE;
             }
  
-
             if (cert_tls13->is_support_scts && !cert_tls13->scts.empty()) {
                 session_.scts = cert_tls13->scts;
             }
@@ -596,13 +601,13 @@ namespace tls {
         // https://tools.ietf.org/html/rfc8446#section-4.4.4
         // https://tools.ietf.org/html/rfc8446#section-4.2.11.2
         auto finished_key = hkdf_expand_label(
-                                session_.suite_param.algo, 
+                                session_.cipher_suite_ctx->algo, 
                                 session_.client_secret, 
                                 "", 
                                 "finished", 
-                                ssl::hash_digest_length(session_.suite_param.algo));
+                                ssl::hash_digest_length(session_.cipher_suite_ctx->algo));
         auto verify_data = ssl::sum_hmac(
-                            session_.suite_param.algo, 
+                            session_.cipher_suite_ctx->algo, 
                             finished_key, 
                             ssl::sum_hash(transcript_));
         auto verify_data_base64 = codec::base64_encode(verify_data);
@@ -626,14 +631,14 @@ namespace tls {
         PUMP_ASSERT(transcript_);
         std::string hash = ssl::sum_hash(transcript_);
         ssl::free_hash_context(transcript_);
-        transcript_ = ssl::create_hash_context(session_.suite_param.algo);
+        transcript_ = ssl::create_hash_context(session_.cipher_suite_ctx->algo);
         PUMP_ASSERT(transcript_);
         return std::forward<std::string>(hash);
     }
 
     void server_handshaker::__write_transcript(const std::string &data) {
         if (transcript_ == nullptr) {
-            transcript_ = ssl::create_hash_context(session_.suite_param.algo);
+            transcript_ = ssl::create_hash_context(session_.cipher_suite_ctx->algo);
             PUMP_ASSERT(transcript_);
         }
         PUMP_DEBUG_CHECK(ssl::update_hash(transcript_, data));

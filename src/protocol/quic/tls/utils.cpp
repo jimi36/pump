@@ -124,61 +124,69 @@ namespace tls {
         return p + 4;
     }
 
-    bool load_tls13_cipher_suite_params(
-        cipher_suite_type suite_type, 
-        cipher_suite_parameter_ptr suite_param) {
+    cipher_suite_context_ptr new_cipher_suite_context(cipher_suite_type suite_type) {
+        cipher_suite_context_ptr ctx = nullptr;
         switch (suite_type)
         {
         case TLS_AES_128_GCM_SHA256:
-            suite_param->algo = ssl::HASH_SHA256;
-            suite_param->type = suite_type;
-            suite_param->key_len = 16;
-            return true;
+            ctx = object_create<cipher_suite_context>();
+            ctx->algo = ssl::HASH_SHA256;
+            ctx->type = suite_type;
+            ctx->key_len = 16;
+            break;
         case TLS_AES_256_GCM_SHA384:
-            suite_param->algo = ssl::HASH_SHA384;
-            suite_param->type = suite_type;
-            suite_param->key_len = 32;
-            return true;
+            ctx = object_create<cipher_suite_context>();
+            ctx->algo = ssl::HASH_SHA384;
+            ctx->type = suite_type;
+            ctx->key_len = 32;
+            break;
         case TLS_CHACHA20_POLY1305_SHA256:
-            suite_param->algo = ssl::HASH_SHA256;
-            suite_param->type = suite_type;
-            suite_param->key_len = 32;
-            return true;
+            ctx = object_create<cipher_suite_context>();
+            ctx->algo = ssl::HASH_SHA256;
+            ctx->type = suite_type;
+            ctx->key_len = 32;
+            break;
         }
-        return false;
+        return ctx;
+    }
+
+    void delete_cipher_suite_context(cipher_suite_context_ptr ctx) {
+        if (ctx) {
+            object_delete(ctx);
+        }
     }
 
     std::string cipher_suite_extract(
-        cipher_suite_parameter_ptr suite_param, 
+        cipher_suite_context_ptr ctx, 
         const std::string &salt, 
         const std::string &key) {
-        return hkdf_extract(suite_param->algo, salt, key);
+        return hkdf_extract(ctx->algo, salt, key);
     }
 
     std::string cipher_suite_expand_label(
-        cipher_suite_parameter_ptr suite_param,
+        cipher_suite_context_ptr ctx,
         const std::string &key, 
         const std::string &context,
         const std::string &label,
         int32_t length) {
-        return hkdf_expand_label(suite_param->algo, key, context, label, length);
+        return hkdf_expand_label(ctx->algo, key, context, label, length);
     }
 
     std::string cipher_suite_device_secret(
-        cipher_suite_parameter_ptr suite_param,
+        cipher_suite_context_ptr ctx,
         const std::string &key,
         const std::string &label,
         ssl::hash_context_ptr transcript) {                    
         std::string context;
         if (transcript == nullptr) {
-            transcript = ssl::create_hash_context(suite_param->algo);
+            transcript = ssl::create_hash_context(ctx->algo);
             PUMP_ASSERT(transcript);
             context = ssl::sum_hash(transcript);
             ssl::free_hash_context(transcript);
         } else {
             context = ssl::sum_hash(transcript);
         }
-        return hkdf_expand_label(suite_param->algo, key, context, label, (int32_t)context.size());
+        return hkdf_expand_label(ctx->algo, key, context, label, (int32_t)context.size());
     }
 
     std::string hkdf_extract(
@@ -219,27 +227,6 @@ namespace tls {
         std::string out(length, 0);
         PUMP_DEBUG_CHECK(ssl::hkdf_expand(algo, key, info, out));
         return std::forward<std::string>(out);
-    }
-
-    bool certificate_load(
-        const std::vector<std::string> &certificates, 
-        std::vector<ssl::x509_certificate_ptr> &certs) {
-        bool ret = true;
-        for (int32_t i = 0; i < (int32_t)certificates.size(); i++) {
-            ssl::x509_certificate_ptr cert = ssl::load_x509_certificate_raw(certificates[i]);
-            if (cert == nullptr) {
-                ret = false;
-                break;
-            }
-            certs.push_back(cert);
-        }
-        if (!ret) {
-            for (int32_t i = 0; i < (int32_t)certs.size(); i++) {
-                ssl::free_x509_certificate(certs[i]);
-            }
-            certs.clear();
-        }
-        return ret;
     }
 
     ssl::hash_algorithm transform_to_hash_algo(ssl::signature_scheme scheme) {

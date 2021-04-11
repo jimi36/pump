@@ -171,6 +171,26 @@ namespace ssl {
         return false;
     }
 
+    bool get_x509_scts(x509_certificate_ptr cert, std::vector<std::string> &scts) {
+#if defined(PUMP_HAVE_OPENSSL)
+        int32_t idx = X509_get_ext_by_NID((const X509*)cert, NID_ct_precert_scts, -1);
+        if (idx < 0) {
+            return true;
+        }
+
+        X509_EXTENSION *ext = X509_get_ext((X509*)cert, idx);
+        ASN1_OBJECT *ext_obj = X509_EXTENSION_get_object(ext);
+        if (OBJ_obj2nid(ext_obj) != NID_ct_precert_scts) {
+            return false;
+        }
+        //ASN1_OCTET_STRING *data = X509_EXTENSION_get_data(ext);
+
+        return true;
+#else
+        return false;
+#endif
+    }
+
     signature_scheme get_x509_signature_scheme(x509_certificate_ptr cert) {
 #if defined(PUMP_HAVE_OPENSSL)
         EVP_PKEY *pkey = X509_get_pubkey((X509*)cert);

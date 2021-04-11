@@ -35,13 +35,7 @@ extern "C" {
 namespace pump {
 namespace ssl {
 
-    struct ecdhe_parameter {
-        curve_type curve;
-        std::string prikey;
-        std::string pubkey;
-    };
-
-    static int32_t __get_curve_id(curve_type curve) {
+    static int32_t __get_curve_id(curve_group_type curve) {
         if (curve == TLS_CURVE_P256) {
             return NID_X9_62_prime256v1;
         } else if (curve == TLS_CURVE_P384) {
@@ -52,7 +46,7 @@ namespace ssl {
         return -1;
     }
 
-    static ecdhe_parameter_ptr create_x25519_parameter() {
+    static ecdhe_context_ptr __new_X25519_context() {
 #if defined(PUMP_HAVE_OPENSSL)
         bool ret = false;
         EVP_PKEY_CTX *pctx = nullptr;
@@ -60,38 +54,37 @@ namespace ssl {
         int32_t len = 0;
         char *pb = nullptr;
         BIO *bio = nullptr;
-        ecdhe_parameter_ptr parameter = nullptr;
+        ecdhe_context_ptr ctx = nullptr;
 
-        if ((parameter = object_create<ecdhe_parameter>()) == nullptr) {
+        if ((ctx = object_create<ecdhe_context>()) == nullptr) {
             return nullptr;
         }
-        parameter->curve = TLS_CURVE_X25519;
+        ctx->group = TLS_CURVE_X25519;
 
-        if ((pctx = EVP_PKEY_CTX_new_id(NID_X25519, NULL)) == NULL) {
+        if ((pctx = EVP_PKEY_CTX_new_id(NID_X25519, nullptr)) == nullptr) {
             goto err;
         }
-
         if (EVP_PKEY_keygen_init(pctx) == 0) {
             goto err;
         }
-        
         if (EVP_PKEY_keygen(pctx, &pkey) == 0) {
             goto err;
         }
 
         bio = BIO_new(BIO_s_mem());
-        if (PEM_write_bio_PrivateKey(bio, pkey, NULL,NULL, 0, NULL, NULL) == 0) {
+        if (PEM_write_bio_PrivateKey(bio, pkey, nullptr, nullptr, 0, nullptr, nullptr) == 0) {
             goto err;
         }
         len = BIO_get_mem_data(bio, &pb);
-        parameter->prikey.assign(pb, len);
+        ctx->prikey.assign(pb, len);
+        BIO_free(bio);
 
-        BIO_reset(bio);
+        bio = BIO_new(BIO_s_mem());
         if (PEM_write_bio_PUBKEY(bio, pkey) == 0) {
             goto err;
         }
         len = BIO_get_mem_data(bio, &pb);
-        parameter->pubkey.assign(pb, len);
+        ctx->pubkey.assign(pb, len);
 
         ret = true;
 
@@ -105,18 +98,18 @@ namespace ssl {
         if (bio) {
             BIO_free(bio);
         }
-        if (!ret && parameter) {
-            object_delete(parameter);
-            parameter = nullptr;
+        if (!ret && ctx) {
+            object_delete(ctx);
+            ctx = nullptr;
         }
         
-        return parameter;
+        return ctx;
 #else
         return nullptr;
 #endif
     }
 
-    static std::string gen_x25519_shared_key(ecdhe_parameter_ptr parameter, const std::string &pubkey) {
+    static std::string __gen_X25519_shared_key(ecdhe_context_ptr ctx, const std::string &pubkey) {
         std::string shared_key;
 #if defined(PUMP_HAVE_OPENSSL)
         BIO *bio = nullptr;
@@ -127,33 +120,28 @@ namespace ssl {
 
         // Load peer public key.
         bio = BIO_new_mem_buf(pubkey.data(), pubkey.size());
-        if ((pub_key = PEM_read_bio_PUBKEY(bio, NULL, NULL, NULL)) == nullptr) {
+        if ((pub_key = PEM_read_bio_PUBKEY(bio, nullptr, nullptr, nullptr)) == nullptr) {
             goto err;
         }
         BIO_free(bio);
 
         // Load private key.
-        bio = BIO_new_mem_buf(parameter->prikey.data(), parameter->prikey.size());
-        if ((pri_key = PEM_read_bio_PrivateKey(bio, NULL, NULL, NULL)) == nullptr) {
+        bio = BIO_new_mem_buf(ctx->prikey.data(), ctx->prikey.size());
+        if ((pri_key = PEM_read_bio_PrivateKey(bio, nullptr, nullptr, nullptr)) == nullptr) {
             goto err;
         }
 
-        // Create context.
-        if ((pctx = EVP_PKEY_CTX_new(pri_key, NULL)) == nullptr) {
-            EVP_PKEY_free(pub_key);
-            EVP_PKEY_free(pri_key);
+        if ((pctx = EVP_PKEY_CTX_new(pri_key, nullptr)) == nullptr) {
             goto err;
         }
-        
         if (EVP_PKEY_derive_init(pctx) <= 0 ||
             EVP_PKEY_derive_set_peer(pctx, pub_key) <= 0) {
             goto err;
         }
 
-        if (EVP_PKEY_derive(pctx, NULL, &shared_key_len) <= 0) {
+        if (EVP_PKEY_derive(pctx, nullptr, &shared_key_len) <= 0) {
             goto err;
         }
-
         shared_key.resize(shared_key_len);
         if (EVP_PKEY_derive(pctx, (uint8_t*)shared_key.data(), &shared_key_len) <= 0) {
             goto err;
@@ -176,18 +164,18 @@ namespace ssl {
         return shared_key;
     }
 
-    static ecdhe_parameter_ptr create_curve_parameter(curve_type curve) {
+    static ecdhe_context_ptr __new_curve_context(curve_group_type curve) {
 #if defined(PUMP_HAVE_OPENSSL)
         bool ret = false;
         EC_KEY *key = nullptr;
-        const EC_GROUP *group = NULL;
-        const EC_POINT *point = NULL;
-        ecdhe_parameter_ptr parameter = nullptr;
+        const EC_GROUP *group = nullptr;
+        const EC_POINT *point = nullptr;
+        ecdhe_context_ptr ctx = nullptr;
 
-        if ((parameter = object_create<ecdhe_parameter>()) == nullptr) {
+        if ((ctx = object_create<ecdhe_context>()) == nullptr) {
             return nullptr;
         }
-        parameter->curve = curve;
+        ctx->group = curve;
 
         if ((key = EC_KEY_new_by_curve_name(__get_curve_id(curve))) == nullptr) {
             goto err;
@@ -205,18 +193,19 @@ namespace ssl {
             goto err;
         }
 
-        parameter->pubkey.resize(64);
-        if (EC_POINT_point2oct(group,
-                               point,
-                               POINT_CONVERSION_UNCOMPRESSED,
-                               (uint8_t*)parameter->pubkey.data(),
-                               64, 
-                               NULL) != 64) {
+        ctx->pubkey.resize(64);
+        if (EC_POINT_point2oct(
+                group,
+                point,
+                POINT_CONVERSION_UNCOMPRESSED,
+                (uint8_t*)ctx->pubkey.data(),
+                64, 
+                nullptr) != 64) {
             goto err;
         }
 
-        parameter->prikey.resize(32);
-        if (BN_bn2bin(EC_KEY_get0_private_key(key), (uint8_t*)parameter->prikey.data()) != 32) {
+        ctx->prikey.resize(32);
+        if (BN_bn2bin(EC_KEY_get0_private_key(key), (uint8_t*)ctx->prikey.data()) != 32) {
             goto err;
         }
 
@@ -226,18 +215,18 @@ namespace ssl {
         if (key) {
             EC_KEY_free(key);
         }
-        if (!ret && parameter) {
-            object_delete(parameter);
-            parameter = nullptr;
+        if (!ret && ctx) {
+            object_delete(ctx);
+            ctx = nullptr;
         }
 
-        return parameter;
+        return ctx;
 #else
         return nullptr;
 #endif
     }
 
-    static std::string gen_curve_shared_key(ecdhe_parameter_ptr parameter, const std::string &pubkey) {
+    static std::string __gen_curve_shared_key(ecdhe_context_ptr ctx, const std::string &pubkey) {
         std::string shared_key;
 #if defined(PUMP_HAVE_OPENSSL)
         EC_KEY *key = nullptr;
@@ -246,7 +235,7 @@ namespace ssl {
         EC_POINT *p_ecdh1_public = nullptr;
         EC_POINT *p_ecdh2_public = nullptr;
 
-        if ((key = EC_KEY_new_by_curve_name(__get_curve_id(parameter->curve))) == nullptr) {
+        if ((key = EC_KEY_new_by_curve_name(__get_curve_id(ctx->group))) == nullptr) {
             return shared_key;
         }
 
@@ -259,10 +248,12 @@ namespace ssl {
             goto err;
         }
 
-        if (EC_POINT_oct2point(group,
-                               p_ecdh1_public,
-                               (const uint8_t*)parameter->pubkey.data(),
-                               parameter->pubkey.size(), nullptr) <= 0) {
+        if (EC_POINT_oct2point(
+                group,
+                p_ecdh1_public,
+                (const uint8_t*)ctx->pubkey.data(),
+                ctx->pubkey.size(), 
+                nullptr) <= 0) {
             goto err;
         }
 
@@ -270,9 +261,10 @@ namespace ssl {
             goto err;
         }
 
-        priv = BN_bin2bn((const uint8_t*)parameter->prikey.data(),
-                         parameter->prikey.size(),
-                         nullptr);
+        priv = BN_bin2bn(
+                (const uint8_t*)ctx->prikey.data(),
+                ctx->prikey.size(),
+                nullptr);
         if (!EC_KEY_set_private_key(key, priv)) {
             goto err;
         }
@@ -282,11 +274,12 @@ namespace ssl {
             goto err;
         }
 
-        if (EC_POINT_oct2point(group,
-                               p_ecdh2_public,
-                               (const uint8_t*)pubkey.data(),
-                               pubkey.size(),
-                               nullptr) <= 0) {
+        if (EC_POINT_oct2point(
+                group,
+                p_ecdh2_public,
+                (const uint8_t*)pubkey.data(),
+                pubkey.size(),
+                nullptr) <= 0) {
             goto err;
         }
 
@@ -296,11 +289,12 @@ namespace ssl {
 
         /* 3==> Calculate the shared key of ecdh1 and ecdh2 */
         shared_key.resize(32);
-        if (ECDH_compute_key((void_ptr)shared_key.data(),
-                             shared_key.size(),
-                             p_ecdh2_public,
-                             key,
-                             nullptr) != 32) {
+        if (ECDH_compute_key(
+                (void_ptr)shared_key.data(),
+                shared_key.size(),
+                p_ecdh2_public,
+                key,
+                nullptr) != 32) {
             goto err;
         }
 
@@ -321,46 +315,25 @@ namespace ssl {
         return shared_key;
     }
 
-    ecdhe_parameter_ptr create_ecdhe_parameter(curve_type curve) {
+    ecdhe_context_ptr new_ecdhe_context(curve_group_type curve) {
         if (curve == TLS_CURVE_X25519) {
-            return create_x25519_parameter();
+            return __new_X25519_context();
         } else {
-            return create_curve_parameter(curve);
+            return __new_curve_context(curve);
         }
     }
 
-    void free_ecdhe_parameter(ecdhe_parameter_ptr parameter) {
-        if (parameter) {
-            object_delete(parameter);
+    void delete_ecdhe_context(ecdhe_context_ptr ctx) {
+        if (ctx) {
+            object_delete(ctx);
         }
     }
 
-    curve_type get_ecdhe_curve(ecdhe_parameter_ptr parameter) {
-        if (parameter) {
-            return parameter->curve;
-        }
-        return TLS_CURVE_UNKNOWN;
-    }
-
-    std::string get_ecdhe_prikey(ecdhe_parameter_ptr parameter) {
-        if (parameter) {
-            return parameter->prikey;
-        }
-        return "";
-    }
-
-    std::string get_ecdhe_pubkey(ecdhe_parameter_ptr parameter) {
-        if (parameter) {
-            return parameter->pubkey;
-        }
-        return "";
-    }
-
-    std::string gen_ecdhe_shared_key(ecdhe_parameter_ptr parameter, const std::string &pubkey) {
-        if (parameter->curve == TLS_CURVE_X25519) {
-            return gen_x25519_shared_key(parameter, pubkey);
+    std::string gen_ecdhe_shared_key(ecdhe_context_ptr ctx, const std::string &pubkey) {
+        if (ctx->group == TLS_CURVE_X25519) {
+            return __gen_X25519_shared_key(ctx, pubkey);
         } else {
-            return gen_curve_shared_key(parameter, pubkey);
+            return __gen_curve_shared_key(ctx, pubkey);
         }
     }
 

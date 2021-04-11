@@ -63,7 +63,7 @@ namespace tls {
      * TLS handshake key stare struct.
      ********************************************************************************/
     struct key_share {
-        ssl::curve_type group;
+        ssl::curve_group_type group;
         std::string data;
     };
 
@@ -182,7 +182,7 @@ namespace tls {
         // (see Section 4.2.3).
         // https://tools.ietf.org/html/rfc4492#section-5.1.1
         // https://tools.ietf.org/html/rfc8446#section-4.2.7
-        std::vector<ssl::curve_type> supported_groups;
+        std::vector<ssl::curve_group_type> supported_groups;
 
         // Extension field.
         // Three point formats are included in the definition of ECPointFormat
@@ -491,7 +491,7 @@ namespace tls {
         // new KeyShareEntry for the group indicated in the selected_group field
         // of the triggering HelloRetryRequest.
         // https://tools.ietf.org/html/rfc8446#section-4.2.8
-        ssl::curve_type selected_group;
+        ssl::curve_group_type selected_group;
 
         // Extension field.
         // Prior to accepting PSK key establishment, the server MUST validate

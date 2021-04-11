@@ -113,7 +113,7 @@ namespace tls {
     };
 
     // TLS 1.3 supported curve groups
-    const std::vector<ssl::curve_type> supported_curve_groups = {
+    const std::vector<ssl::curve_group_type> supported_curve_groups = {
         ssl::TLS_CURVE_X25519,
         ssl::TLS_CURVE_P256,
         ssl::TLS_CURVE_P384,

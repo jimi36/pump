@@ -555,7 +555,7 @@ namespace tls {
                         return -1;
                     }
                     for (uint16_t i = groups_len; i > 0; i -= 2) {
-                        ssl::curve_type group_type = ssl::TLS_CURVE_UNKNOWN;
+                        ssl::curve_group_type group_type = ssl::TLS_CURVE_UNKNOWN;
                         UNPACK_AND_RETURN_ERR(unpack_uint16(p, end, group_type));
                         raw->supported_groups.push_back(group_type);
                     }

@@ -79,7 +79,7 @@ namespace tls {
          ********************************************************************************/
         alert_code __send_hello_retry_request(
             cipher_suite_type cipher_suite,
-            ssl::curve_type curve_group);
+            ssl::curve_group_type curve_group);
 
         /*********************************************************************************
          * Send server hello message

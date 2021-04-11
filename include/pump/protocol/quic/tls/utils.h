@@ -75,17 +75,20 @@ namespace tls {
     }
 
     /*********************************************************************************
-     * Load tls13 cipher suite params.
+     * New cipher suite context.
      ********************************************************************************/
-    bool load_tls13_cipher_suite_params(
-        cipher_suite_type suite_type, 
-        cipher_suite_parameter_ptr suite_param);
+    cipher_suite_context_ptr new_cipher_suite_context(cipher_suite_type suite_type);
+
+    /*********************************************************************************
+     * Delete cipher suite context.
+     ********************************************************************************/
+    void delete_cipher_suite_context(cipher_suite_context_ptr ctx);
 
     /*********************************************************************************
      * Cipher suite extract.
      ********************************************************************************/
     std::string cipher_suite_extract(
-        cipher_suite_parameter_ptr suite_param, 
+        cipher_suite_context_ptr ctx, 
         const std::string &salt, 
         const std::string &key);
 
@@ -93,7 +96,7 @@ namespace tls {
      * Cipher suite expand label.
      ********************************************************************************/
     std::string cipher_suite_expand_label(
-        cipher_suite_parameter_ptr suite_param,
+        cipher_suite_context_ptr ctx,
         const std::string &key, 
         const std::string &context,
         const std::string &label,
@@ -103,7 +106,7 @@ namespace tls {
      * Cipher suite device secret.
      ********************************************************************************/
     std::string cipher_suite_device_secret(
-        cipher_suite_parameter_ptr suite_param,
+        cipher_suite_context_ptr suite_param,
         const std::string &key,
         const std::string &label,
         ssl::hash_context_ptr transcript);
@@ -125,13 +128,6 @@ namespace tls {
         const std::string &context,
         const std::string &label,
         int32_t length);
-
-    /*********************************************************************************
-     * Certificate load.
-     ********************************************************************************/
-    bool certificate_load(
-        const std::vector<std::string> &certificates, 
-        std::vector<ssl::x509_certificate_ptr> &certs);
 
     /*********************************************************************************
      * Transform tp hash algorithm.

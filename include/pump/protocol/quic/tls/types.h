@@ -41,14 +41,14 @@ namespace tls {
     DEFINE_RAW_POINTER_TYPE(config)
 
     /*********************************************************************************
-     * TLS cipher suite parameter.
+     * TLS cipher suite context.
      ********************************************************************************/
-    struct cipher_suite_parameter {
+    struct cipher_suite_context {
         ssl::hash_algorithm algo;
         cipher_suite_type type;
         int32_t key_len;
     };
-    DEFINE_RAW_POINTER_TYPE(cipher_suite_parameter)
+    DEFINE_RAW_POINTER_TYPE(cipher_suite_context)
 
     /*********************************************************************************
      * TLS connection session.
@@ -63,11 +63,11 @@ namespace tls {
         // TLS signature scheme
         ssl::signature_scheme sign_scheme;
 
-        // TLS ecdhe parameter
-        ssl::ecdhe_parameter_ptr ecdhe_param;
+        // TLS ecdhe context
+        ssl::ecdhe_context_ptr ecdhe_ctx;
 
-        // TLS cipher cuite parameter
-        cipher_suite_parameter suite_param;
+        // TLS cipher suite context
+        cipher_suite_context_ptr cipher_suite_ctx;
 
         // 0-RTT enable status
         bool enable_zero_rtt;

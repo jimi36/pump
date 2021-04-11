@@ -63,6 +63,11 @@ namespace ssl {
     bool has_x509_scts(x509_certificate_ptr cert);
 
     /*********************************************************************************
+     * Get X509 certificate scts.
+     ********************************************************************************/
+    bool get_x509_scts(x509_certificate_ptr cert, std::vector<std::string> &scts);
+
+    /*********************************************************************************
      * Get X509 certificate signature scheme.
      ********************************************************************************/
     signature_scheme get_x509_signature_scheme(x509_certificate_ptr cert);
