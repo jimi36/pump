@@ -104,8 +104,10 @@ namespace tls {
     }
 
     bool client_handshaker::__send_client_hello() {
-        // Change handshake status to HANDSHAKE_CLIENT_HELLO_SENT.
-        status_ = HANDSHAKE_CLIENT_HELLO_SENT;
+        if (status_ != HANDSHAKE_INIT) {
+            return false;
+        }
+        status_ = HANDSHAKE_CLIENT_HELLO_SEND;
 
         if ((hello_ = new_handshake_message(TLS_MSG_CLIENT_HELLO)) == nullptr) {
             return false;
@@ -128,10 +130,10 @@ namespace tls {
         // Set server name.
         hello->server_name = session_.server_name;
 
-        // Support ocsp staple? Default not.
+        // TODO: Support ocsp staple? Default not.
         //hello->is_support_ocsp_stapling = true;
 
-        // Support scts? Default not.
+        // TODO: Support scts? Default not.
         //hello->is_support_scts = true;
 
         // Set supported curve groups.
@@ -140,14 +142,14 @@ namespace tls {
         // Set supported point formats.
         hello->supported_points.push_back(TLS_POINT_FORMAT_UNCOMPRESSED);
 
-        // Support session ticket? Default not.
-        //hello->is_support_session_ticket = false;
+        // TODO: Support session ticket? Default not.
+        //hello->is_support_session_ticket = true;
 
         // Set supported signature algorithms.
         hello->supported_signature_schemes = supported_signature_schemes;
 
-        // Support renegotiation_info? Default not.
-        //hello->is_support_renegotiation_info = false;
+        // TODO: Support renegotiation_info? Default not.
+        //hello->is_support_renegotiation_info = true;
 
         // Set application protocol negotiation.
         hello->alpns.push_back(session_.alpn);
@@ -165,8 +167,8 @@ namespace tls {
             hello->key_shares[0].group = session_.ecdhe_ctx->group;
         }
 
-        // Support eraly data? Default not.
-        //hello->is_support_early_data = false;
+        // TODO: support eraly data? Default not.
+        //hello->is_support_early_data = true;
 
         __send_handshake_message(hello_, false);
 
@@ -174,8 +176,8 @@ namespace tls {
     }
 
     alert_code client_handshaker::__handle_server_hello(handshake_message *msg) {
-        if (status_ != HANDSHAKE_CLIENT_HELLO_SENT &&
-            status_ != HANDSHAKE_RETRY_HELLO_SENT) {
+        if (status_ != HANDSHAKE_CLIENT_HELLO_SEND &&
+            status_ != HANDSHAKE_RETRY_HELLO_SEND) {
             return ALERT_UNEXPECTED_MESSGAE;
         }
 
@@ -230,6 +232,8 @@ namespace tls {
             return __send_hello_retry(msg);
         }
 
+        status_ = HANDSHAKE_SERVER_HELLO_RECV;
+
         if (!server_hello->cookie.empty()) {
             return ALERT_UNSUPPORTED_EXTENSION;
         }
@@ -259,8 +263,8 @@ namespace tls {
                             "derived", 
                             nullptr);
             session_.handshake_secret = cipher_suite_extract(session_.cipher_suite_ctx, secret, shared_key);
-            auto handshake_secret_base64 = codec::base64_encode(session_.handshake_secret);
-            PUMP_DEBUG_LOG("client handshaker handshake_secret_base64: %s", handshake_secret_base64.c_str());
+            //auto handshake_secret_base64 = codec::base64_encode(session_.handshake_secret);
+            //PUMP_DEBUG_LOG("client handshaker handshake_secret_base64: %s", handshake_secret_base64.c_str());
         }
 
         session_.client_secret = cipher_suite_device_secret(
@@ -268,16 +272,16 @@ namespace tls {
                                     session_.handshake_secret,
                                     CLIENT_HANDSHAKE_TRAFFIC_LABEL, 
                                     transcript_);
-        auto client_secret_base64 = codec::base64_encode(session_.client_secret);
-        PUMP_DEBUG_LOG("client handshaker client_secret_base64: %s", client_secret_base64.c_str());
+        //auto client_secret_base64 = codec::base64_encode(session_.client_secret);
+        //PUMP_DEBUG_LOG("client handshaker client_secret_base64: %s", client_secret_base64.c_str());
 
         session_.server_secret = cipher_suite_device_secret(
                                     session_.cipher_suite_ctx, 
                                     session_.handshake_secret,
                                     SERVER_HANDSHAKE_TRAFFIC_LABEL, 
                                     transcript_);
-        auto server_secret_base64 = codec::base64_encode(session_.server_secret);
-        PUMP_DEBUG_LOG("client handshaker server_secret_base64: %s", server_secret_base64.c_str());
+        //auto server_secret_base64 = codec::base64_encode(session_.server_secret);
+        //PUMP_DEBUG_LOG("client handshaker server_secret_base64: %s", server_secret_base64.c_str());
 
         {
             auto secret = cipher_suite_device_secret(
@@ -286,20 +290,18 @@ namespace tls {
                             "derived", 
                             nullptr);
             session_.master_secret = cipher_suite_extract(session_.cipher_suite_ctx, secret, "");
-            auto master_secret_base64 = codec::base64_encode(session_.master_secret);
-            PUMP_DEBUG_LOG("client handshaker master_secret_base64: %s", master_secret_base64.c_str());
+            //auto master_secret_base64 = codec::base64_encode(session_.master_secret);
+            //PUMP_DEBUG_LOG("client handshaker master_secret_base64: %s", master_secret_base64.c_str());
         }
-        
-        status_ = HANDSHAKE_SERVER_HELLO_RECV;
 
         return ALERT_NONE;
     }
 
     alert_code client_handshaker::__send_hello_retry(handshake_message *msg) {
-        if (status_ == HANDSHAKE_RETRY_HELLO_SENT) {
+        if (status_ == HANDSHAKE_RETRY_HELLO_SEND) {
             return ALERT_UNEXPECTED_MESSGAE;
         }
-        status_ = HANDSHAKE_RETRY_HELLO_SENT;
+        status_ = HANDSHAKE_RETRY_HELLO_SEND;
 
         auto server_hello = (server_hello_message*)msg->raw_msg;
         PUMP_ASSERT(server_hello);
@@ -341,8 +343,8 @@ namespace tls {
         client_hello->key_shares[0].group = session_.ecdhe_ctx->group;
         client_hello->key_shares[0].data = session_.ecdhe_ctx->pubkey;
 
-        // Not support early data.
-        //client_hello->is_support_early_data = false;
+        // TODO: Support early data? Default not.
+        //client_hello->is_support_early_data = true;
 
         __write_transcript(pack_message_hash(__reset_transcript()));
         __write_transcript(pack_handshake_message(msg));
@@ -373,7 +375,7 @@ namespace tls {
         }
 
         if (encrypted_extensions->additional_extensions.empty()) {
-            // TODO: callback quic parameter extensions.
+            // TODO: Callback quic parameter extensions.
         }
 
         __write_transcript(pack_handshake_message(msg));
@@ -493,8 +495,8 @@ namespace tls {
                             session_.cipher_suite_ctx->algo, 
                             finished_key, 
                             ssl::sum_hash(transcript_));
-        auto verify_data_base64 = codec::base64_encode(verify_data);
-        PUMP_DEBUG_LOG("client handshaker server verify_data_base64: %s", verify_data_base64.c_str());
+        //auto verify_data_base64 = codec::base64_encode(verify_data);
+        //PUMP_DEBUG_LOG("client handshaker server verify_data_base64: %s", verify_data_base64.c_str());
         if (verify_data != finished->verify_data) {
             return ALERT_DECRYPT_ERROR;
         }
@@ -506,16 +508,16 @@ namespace tls {
                                     session_.master_secret, 
                                     CLIENT_APPLICATION_TRAFFIC_LABEL, 
                                     transcript_);
-        auto traffic_secret_base64 = codec::base64_encode(session_.traffic_secret);
-        PUMP_DEBUG_LOG("client handshaker traffic_secret_base64: %s", traffic_secret_base64.c_str());
+        //auto traffic_secret_base64 = codec::base64_encode(session_.traffic_secret);
+        //PUMP_DEBUG_LOG("client handshaker traffic_secret_base64: %s", traffic_secret_base64.c_str());
 
         session_.server_secret = cipher_suite_device_secret(
                                     session_.cipher_suite_ctx, 
                                     session_.master_secret, 
                                     SERVER_APPLICATION_TRAFFIC_LABEL, 
                                     transcript_);
-        auto server_secret_base64 = codec::base64_encode(session_.server_secret);
-        PUMP_DEBUG_LOG("client handshaker server_secret_base64: %s", server_secret_base64.c_str());
+        //auto server_secret_base64 = codec::base64_encode(session_.server_secret);
+        //PUMP_DEBUG_LOG("client handshaker server_secret_base64: %s", server_secret_base64.c_str());
 
         // https://tools.ietf.org/html/rfc8446#section-7.5
         session_.export_master_secret = cipher_suite_device_secret(
@@ -523,8 +525,8 @@ namespace tls {
                                             session_.master_secret, 
                                             EXPORTER_LABEL, 
                                             transcript_);
-        auto export_master_secret_base64 = codec::base64_encode(session_.export_master_secret);
-        PUMP_DEBUG_LOG("client handshaker export_master_secret_base64: %s", export_master_secret_base64.c_str());
+        //auto export_master_secret_base64 = codec::base64_encode(session_.export_master_secret);
+        //PUMP_DEBUG_LOG("client handshaker export_master_secret_base64: %s", export_master_secret_base64.c_str());
 
         alert_code code = ALERT_NONE;
         if ((code = __send_certificate_tls13()) != ALERT_NONE ||
@@ -539,7 +541,7 @@ namespace tls {
         if (status_ != HANDSHAKE_FINISHED_RECV) {
             return ALERT_INTERNAL_ERROR;
         }
-        status_ = HANDSHAKE_CARTIFICATE_SENT;
+        status_ = HANDSHAKE_CARTIFICATE_SEND;
 
         auto msg = new_handshake_message(TLS_MSG_CERTIFICATE);
         if (msg == nullptr) {
@@ -554,7 +556,7 @@ namespace tls {
             cert_tls13->is_support_scts = false;
             cert_tls13->is_support_ocsp_stapling = false;
         } else {
-            // TODO: not support ocsp staple ?
+            // TODO: not support ocsp staple?
             cert_tls13->is_support_ocsp_stapling = false;
             cert_tls13->is_support_scts = cert_request_.is_support_scts && ssl::has_x509_scts(session_.certs[0]);
             cert_tls13->certificates.push_back(ssl::read_x509_certificate_raw(session_.certs[0]));
@@ -566,12 +568,12 @@ namespace tls {
     }
 
     alert_code client_handshaker::__send_certificate_verify() {
-        if (status_ != HANDSHAKE_CARTIFICATE_SENT) {
+        if (status_ != HANDSHAKE_CARTIFICATE_SEND) {
             return ALERT_INTERNAL_ERROR;
         }
 
         if (!session_.certs.empty()) {
-            status_ = HANDSHAKE_CARTIFICATE_VERIFY_SENT;
+            status_ = HANDSHAKE_CARTIFICATE_VERIFY_SEND;
 
             auto msg = new_handshake_message(TLS_MSG_CERTIFICATE_VERIFY);
             if (msg == nullptr) {
@@ -607,10 +609,11 @@ namespace tls {
     }
 
     alert_code client_handshaker::__send_finished() {
-        if (status_ != HANDSHAKE_CARTIFICATE_SENT &&
-            status_ != HANDSHAKE_CARTIFICATE_VERIFY_SENT) {
+        if (status_ != HANDSHAKE_CARTIFICATE_SEND &&
+            status_ != HANDSHAKE_CARTIFICATE_VERIFY_SEND) {
             return ALERT_INTERNAL_ERROR;
         }
+        status_ = HANDSHAKE_FINISHED_SEND;
 
         auto msg = new_handshake_message(TLS_MSG_FINISHED);
         if (msg == nullptr) {
@@ -633,8 +636,8 @@ namespace tls {
                                     session_.cipher_suite_ctx->algo, 
                                     finished_key, 
                                     ssl::sum_hash(transcript_));
-        auto verify_data_base64 = codec::base64_encode(finished->verify_data);
-        PUMP_DEBUG_LOG("client handshaker client verify_data_base64: %s", verify_data_base64.c_str());
+        //auto verify_data_base64 = codec::base64_encode(finished->verify_data);
+        //PUMP_DEBUG_LOG("client handshaker client verify_data_base64: %s", verify_data_base64.c_str());
 
         __send_handshake_message(msg);
 

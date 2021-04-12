@@ -166,22 +166,22 @@ namespace tls {
     // TLS handshaker status.
     typedef int32_t handshake_status;
     const handshake_status HANDSHAKE_INIT                      = 0;
-    const handshake_status HANDSHAKE_CLIENT_HELLO_SENT         = 1;
+    const handshake_status HANDSHAKE_CLIENT_HELLO_SEND         = 1;
     const handshake_status HANDSHAKE_CLIENT_HELLO_RECV         = 2;
-    const handshake_status HANDSHAKE_SERVER_HELLO_SENT         = 3;
+    const handshake_status HANDSHAKE_SERVER_HELLO_SEND         = 3;
     const handshake_status HANDSHAKE_SERVER_HELLO_RECV         = 4;
     const handshake_status HANDSHAKE_HELLO_REQUEST_SEND        = 5;
-    const handshake_status HANDSHAKE_RETRY_HELLO_SENT          = 7;
+    const handshake_status HANDSHAKE_RETRY_HELLO_SEND          = 7;
     const handshake_status HANDSHAKE_RETRY_HELLO_RECV          = 8;
-    const handshake_status HANDSHAKE_ENCRYPTED_EXTENSIONS_SENT = 9;
+    const handshake_status HANDSHAKE_ENCRYPTED_EXTENSIONS_SEND = 9;
     const handshake_status HANDSHAKE_ENCRYPTED_EXTENSIONS_RECV = 10;
-    const handshake_status HANDSHAKE_CARTIFICATE_REQUEST_SENT  = 11;
+    const handshake_status HANDSHAKE_CARTIFICATE_REQUEST_SEND  = 11;
     const handshake_status HANDSHAKE_CARTIFICATE_REQUEST_RECV  = 12;
-    const handshake_status HANDSHAKE_CARTIFICATE_SENT          = 13;
+    const handshake_status HANDSHAKE_CARTIFICATE_SEND          = 13;
     const handshake_status HANDSHAKE_CARTIFICATE_RECV          = 14;
-    const handshake_status HANDSHAKE_CARTIFICATE_VERIFY_SENT   = 15;
+    const handshake_status HANDSHAKE_CARTIFICATE_VERIFY_SEND   = 15;
     const handshake_status HANDSHAKE_CARTIFICATE_VERIFY_RECV   = 16;
-    const handshake_status HANDSHAKE_FINISHED_SENT             = 17;
+    const handshake_status HANDSHAKE_FINISHED_SEND             = 17;
     const handshake_status HANDSHAKE_FINISHED_RECV             = 18;
     const handshake_status HANDSHAKE_SUCCESS                   = 100;
 
