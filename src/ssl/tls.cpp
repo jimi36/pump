@@ -33,6 +33,180 @@ extern "C" {
 namespace pump {
 namespace ssl {
 
+        void_ptr create_tls_client_certificate() {
+#if defined(PUMP_HAVE_GNUTLS)
+        gnutls_certificate_credentials_t xcred;
+        if (gnutls_certificate_allocate_credentials(&xcred) != 0) {
+            PUMP_ERR_LOG(
+                "ssl_helper: create tls client certificate failed for gnutls_certificate_allocate_credentials failed");
+            return nullptr;
+        }
+        return xcred;
+#elif defined(PUMP_HAVE_OPENSSL)
+        SSL_CTX *xcred = SSL_CTX_new(TLS_client_method());
+        if (!xcred) {
+            PUMP_ERR_LOG(
+                "ssl_helper: create tls_client certificate failed for SSL_CTX_new failed");
+            return nullptr;
+        }
+        SSL_CTX_set_options(xcred, SSL_EXT_TLS1_3_ONLY);
+        return xcred;
+#else
+        return nullptr;
+#endif
+    }
+
+    void_ptr create_tls_certificate_by_file(
+        bool client,
+        const std::string &cert,
+        const std::string &key) {
+#if defined(PUMP_HAVE_GNUTLS)
+        gnutls_certificate_credentials_t xcred;
+        int32_t ret = gnutls_certificate_allocate_credentials(&xcred);
+        if (ret != 0) {
+            PUMP_ERR_LOG(
+                "ssl_helper: create tls certificate by file failed for gnutls_certificate_allocate_credentials failed");
+            return nullptr;
+        }
+
+        ret = gnutls_certificate_set_x509_key_file(
+            xcred, cert.c_str(), key.c_str(), GNUTLS_X509_FMT_PEM);
+        if (ret != 0) {
+            PUMP_ERR_LOG(
+                "ssl_helper: create tls certificate by file failed for gnutls_certificate_set_x509_key_file failed");
+            gnutls_certificate_free_credentials(xcred);
+            return nullptr;
+        }
+
+        return xcred;
+#elif defined(PUMP_HAVE_OPENSSL)
+        SSL_CTX *xcred = nullptr;
+        if (client) {
+            xcred = SSL_CTX_new(TLS_client_method());
+        } else {
+            xcred = SSL_CTX_new(TLS_server_method());
+        }
+        if (!xcred) {
+            PUMP_ERR_LOG(
+                "ssl_helper: create tls certificate by file failed for SSL_CTX_new failed");
+            return nullptr;
+        }
+
+        /* Set the key and cert */
+        if (SSL_CTX_use_certificate_file(xcred, cert.c_str(), SSL_FILETYPE_PEM) <= 0) {
+            SSL_CTX_free(xcred);
+            PUMP_ERR_LOG(
+                "ssl_helper: create tls certificate by file failed for SSL_CTX_use_certificate_file failed");
+            return nullptr;
+        }
+        if (SSL_CTX_use_PrivateKey_file(xcred, key.c_str(), SSL_FILETYPE_PEM) <= 0) {
+            SSL_CTX_free(xcred);
+            PUMP_ERR_LOG(
+                "ssl_helper: create tls certificate by file failed for SSL_CTX_use_PrivateKey_file failed");
+            return nullptr;
+        }
+        return xcred;
+#else
+        return nullptr;
+#endif
+    }
+
+    void_ptr create_tls_certificate_by_buffer(
+        bool client,
+        const std::string &cert,
+        const std::string &key) {
+#if defined(PUMP_HAVE_GNUTLS)
+        gnutls_certificate_credentials_t xcred;
+        int32_t ret = gnutls_certificate_allocate_credentials(&xcred);
+        if (ret != 0) {
+            PUMP_ERR_LOG(
+                "ssl_helper: create tls certificate by buffer failed for gnutls_certificate_allocate_credentials failed");
+            return nullptr;
+        }
+
+        gnutls_datum_t gnutls_cert;
+        gnutls_cert.data = (uint8_t*)cert.data();
+        gnutls_cert.size = (uint32_t)cert.size();
+
+        gnutls_datum_t gnutls_key;
+        gnutls_key.data = (uint8_t*)key.data();
+        gnutls_key.size = (uint32_t)key.size();
+
+        int32_t ret2 = gnutls_certificate_set_x509_key_mem(xcred, &gnutls_cert, &gnutls_key, GNUTLS_X509_FMT_PEM);
+        if (ret2 != 0) {
+            PUMP_ERR_LOG(
+                "ssl_helper: create tls certificate by buffer failed for gnutls_certificate_set_x509_key_mem failed");
+            gnutls_certificate_free_credentials(xcred);
+            return nullptr;
+        }
+
+        return xcred;
+#elif defined(PUMP_HAVE_OPENSSL)
+        SSL_CTX *xcred = nullptr;
+        if (client) {
+            xcred = SSL_CTX_new(TLS_client_method());
+        } else {
+            xcred = SSL_CTX_new(TLS_server_method());
+        }
+        if (!xcred) {
+            PUMP_ERR_LOG(
+                "ssl_helper: create tls certificate by buffer failed for SSL_CTX_new failed");
+            return nullptr;
+        }
+
+        BIO *cert_bio = BIO_new_mem_buf((void_ptr)cert.c_str(), -1);
+        X509 *x509_cert = PEM_read_bio_X509(cert_bio, NULL, NULL, NULL);
+        BIO_free(cert_bio);
+        if (!x509_cert) {
+            PUMP_ERR_LOG(
+                "ssl_helper: create tls certificate by buffer failed for PEM_read_bio_X509 failed");
+            SSL_CTX_free(xcred);
+            return nullptr;
+        }
+
+        BIO *key_bio = BIO_new_mem_buf((void_ptr)key.c_str(), -1);
+        EVP_PKEY *evp_key = PEM_read_bio_PrivateKey(key_bio, NULL, 0, NULL);
+        BIO_free(key_bio);
+        if (!evp_key) {
+            PUMP_ERR_LOG(
+                "ssl_helper: create tls certificate by buffer failed for PEM_read_bio_PrivateKey failed");
+            SSL_CTX_free(xcred);
+            X509_free(x509_cert);
+            return nullptr;
+        }
+
+        /* Set the key and cert */
+        if (SSL_CTX_use_certificate(xcred, x509_cert) <= 0 ||
+            SSL_CTX_use_PrivateKey(xcred, evp_key) <= 0) {
+            PUMP_ERR_LOG(
+                "ssl_helper: create tls certificate by buffer failed for SSL_CTX_use_PrivateKey failed");
+            SSL_CTX_free(xcred);
+            X509_free(x509_cert);
+            EVP_PKEY_free(evp_key);
+            return nullptr;
+        }
+
+        X509_free(x509_cert);
+        EVP_PKEY_free(evp_key);
+
+        return xcred;
+#else
+        return nullptr;
+#endif
+    }
+
+    void destory_tls_certificate(void_ptr xcred) {
+#if defined(PUMP_HAVE_GNUTLS)
+        if (xcred) {
+            gnutls_certificate_free_credentials((gnutls_certificate_credentials_t)xcred);
+        }
+#elif defined(PUMP_HAVE_OPENSSL)
+        if (xcred) {
+            SSL_CTX_free((SSL_CTX*)xcred);
+        }
+#endif
+    }
+
     tls_session_ptr create_tls_session(void_ptr xcred, int32_t fd, bool client) {
 #if defined(PUMP_HAVE_GNUTLS)
         tls_session_ptr session = object_create<tls_session>();

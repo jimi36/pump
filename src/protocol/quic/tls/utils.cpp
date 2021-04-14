@@ -24,7 +24,11 @@ namespace protocol {
 namespace quic {
 namespace tls {
 
-    uint8_t* pack_bytes(uint8_t *des, uint8_t *end, const uint8_t *src, int32_t size) {
+    uint8_t* pack_bytes(
+        uint8_t *des, 
+        uint8_t *end, 
+        const uint8_t *src, 
+        int32_t size) {
         if (end < des + size) {
             return nullptr;
         }
@@ -32,7 +36,10 @@ namespace tls {
         return des + size;
     }
 
-    uint8_t* pack_bytes(uint8_t *des, uint8_t *end, const std::string &src) {
+    uint8_t* pack_bytes(
+        uint8_t *des, 
+        uint8_t *end, 
+        const std::string &src) {
         if (end < des + (int32_t)src.size()) {
             return nullptr;
         }
@@ -40,7 +47,11 @@ namespace tls {
         return des + (int32_t)src.size();
     }
 
-    const uint8_t* unpack_bytes(const uint8_t *src, const uint8_t *end, uint8_t *des, int32_t size) {
+    const uint8_t* unpack_bytes(
+        const uint8_t *src, 
+        const uint8_t *end, 
+        uint8_t *des, 
+        int32_t size) {
         if (end < src + size) {
             return nullptr;
         }
@@ -48,7 +59,11 @@ namespace tls {
         return src + size;
     }
 
-    const uint8_t* unpack_bytes(const uint8_t *src, const uint8_t *end, std::string &des, int32_t size) {
+    const uint8_t* unpack_bytes(
+        const uint8_t *src, 
+        const uint8_t *end, 
+        std::string &des, 
+        int32_t size) {
         if (end < src + size) {
             return nullptr;
         }
@@ -56,7 +71,10 @@ namespace tls {
         return src + size;
     }
 
-    uint8_t* pack_uint8(uint8_t *p, uint8_t *end, uint8_t val) {
+    uint8_t* pack_uint8(
+        uint8_t *p, 
+        uint8_t *end, 
+        uint8_t val) {
         if (end < p + 1) {
             return nullptr;
         }
@@ -64,7 +82,10 @@ namespace tls {
         return p;
     }
 
-    const uint8_t* unpack_uint8(const uint8_t *p, const uint8_t *end, uint8_t &val) {
+    const uint8_t* unpack_uint8(
+        const uint8_t *p, 
+        const uint8_t *end, 
+        uint8_t &val) {
         if (end < p + 1) {
             return nullptr;
         }
@@ -72,7 +93,10 @@ namespace tls {
         return p;
     }
 
-    uint8_t* pack_uint16(uint8_t *p, uint8_t *end, uint16_t val) {
+    uint8_t* pack_uint16(
+        uint8_t *p, 
+        uint8_t *end, 
+        uint16_t val) {
         if (end < p + 2) {
             return nullptr;
         }
@@ -80,7 +104,10 @@ namespace tls {
         return p + 2;
     }
 
-    const uint8_t* unpack_uint16(const uint8_t *p, const uint8_t *end, uint16_t &val) {
+    const uint8_t* unpack_uint16(
+        const uint8_t *p, 
+        const uint8_t *end, 
+        uint16_t &val) {
         if (end < p + 2) {
             return nullptr;
         }
@@ -88,7 +115,10 @@ namespace tls {
         return p + 2;
     }
 
-    uint8_t* pack_uint24(uint8_t *p, uint8_t *end, uint32_t val) {
+    uint8_t* pack_uint24(
+        uint8_t *p, 
+        uint8_t *end, 
+        uint32_t val) {
         if (end < p + 3) {
             return nullptr;
         }
@@ -98,7 +128,10 @@ namespace tls {
         return p + 3;
     }
 
-    const uint8_t* unpack_uint24(const uint8_t *p, const uint8_t *end, uint32_t &val) {
+    const uint8_t* unpack_uint24(
+        const uint8_t *p, 
+        const uint8_t *end, 
+        uint32_t &val) {
         if (end < p + 3) {
             return nullptr;
         }
@@ -108,7 +141,10 @@ namespace tls {
         return p + 3;
     }
 
-    uint8_t* pack_uint32(uint8_t *p, uint8_t *end, uint32_t val) {
+    uint8_t* pack_uint32(
+        uint8_t *p, 
+        uint8_t *end, 
+        uint32_t val) {
         if (end <  p + 4) {
             return nullptr;
         }
@@ -116,7 +152,10 @@ namespace tls {
         return p + 4;
     }
 
-    const uint8_t* unpack_uint32(const uint8_t *p, const uint8_t *end, uint32_t &val) {
+    const uint8_t* unpack_uint32(
+        const uint8_t *p, 
+        const uint8_t *end, 
+        uint32_t &val) {
         if (end < p + 4) {
             return nullptr;
         }
@@ -275,7 +314,7 @@ namespace tls {
         }
     }
 
-    std::string sign_message(
+    std::string signature_message(
         ssl::hash_algorithm algo,
         const std::string &context,
         const std::string &msg) {

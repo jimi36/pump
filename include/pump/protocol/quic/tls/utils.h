@@ -19,9 +19,7 @@
 
 #include <vector>
 
-#include "pump/ssl/sign.h"
 #include "pump/ssl/hkdf.h"
-#include "pump/ssl/ecdhe.h"
 #include "pump/protocol/quic/tls/types.h"
 
 namespace pump {
@@ -32,34 +30,80 @@ namespace tls {
     /*********************************************************************************
      * Pack and unpack bytes.
      ********************************************************************************/
-    uint8_t* pack_bytes(uint8_t *des, uint8_t *end, const std::string &src);
-    uint8_t* pack_bytes(uint8_t *des, uint8_t *end, const uint8_t *src, int32_t size);
-    const uint8_t* unpack_bytes(const uint8_t *src, const uint8_t *end, uint8_t *des, int32_t size);
-    const uint8_t* unpack_bytes(const uint8_t *src, const uint8_t *end, std::string &des, int32_t size);
+    uint8_t* pack_bytes(
+        uint8_t *des, 
+        uint8_t *end, 
+        const std::string &src);
+
+    uint8_t* pack_bytes(
+        uint8_t *des, 
+        uint8_t *end, 
+        const uint8_t *src, 
+        int32_t size);
+
+    const uint8_t* unpack_bytes(
+        const uint8_t *src, 
+        const uint8_t *end, 
+        uint8_t *des, 
+        int32_t size);
+
+    const uint8_t* unpack_bytes(
+        const uint8_t *src, 
+        const uint8_t *end, 
+        std::string &des, 
+        int32_t size);
 
     /*********************************************************************************
      * Pack and unpack uint8.
      ********************************************************************************/
-    uint8_t* pack_uint8(uint8_t *p, uint8_t *end, uint8_t val);
-    const uint8_t* unpack_uint8(const uint8_t *p, const uint8_t *end, uint8_t &val);
+    uint8_t* pack_uint8(
+        uint8_t *p, 
+        uint8_t *end, 
+        uint8_t val);
+
+    const uint8_t* unpack_uint8(
+        const uint8_t *p, 
+        const uint8_t *end, 
+        uint8_t &val);
 
     /*********************************************************************************
      * Pack and unpack uint16.
      ********************************************************************************/
-    uint8_t* pack_uint16(uint8_t *p, uint8_t *end, uint16_t val);
-    const uint8_t* unpack_uint16(const uint8_t *p, const uint8_t *end, uint16_t &val);
+    uint8_t* pack_uint16(
+        uint8_t *p, 
+        uint8_t *end, 
+        uint16_t val);
+
+    const uint8_t* unpack_uint16(
+        const uint8_t *p, 
+        const uint8_t *end, 
+        uint16_t &val);
 
     /*********************************************************************************
      * Pack and unpack uint24.
      ********************************************************************************/
-    uint8_t* pack_uint24(uint8_t *p, uint8_t *end, uint32_t val);
-    const uint8_t* unpack_uint24(const uint8_t *p, const uint8_t *end, uint32_t &val);
+    uint8_t* pack_uint24(
+        uint8_t *p, 
+        uint8_t *end, 
+        uint32_t val);
+
+    const uint8_t* unpack_uint24(
+        const uint8_t *p, 
+        const uint8_t *end, 
+        uint32_t &val);
 
     /*********************************************************************************
      * Pack and unpack uint32.
      ********************************************************************************/
-    uint8_t* pack_uint32(uint8_t *p, uint8_t *end, uint32_t val);
-    const uint8_t* unpack_uint32(const uint8_t *p, const uint8_t *end, uint32_t &val);
+    uint8_t* pack_uint32(
+        uint8_t *p, 
+        uint8_t *end, 
+        uint32_t val);
+        
+    const uint8_t* unpack_uint32(
+        const uint8_t *p, 
+        const uint8_t *end, 
+        uint32_t &val);
 
     /*********************************************************************************
      * Check element array contains the element or not.
@@ -140,9 +184,9 @@ namespace tls {
     ssl::signature_algorithm transform_to_sign_algo(ssl::signature_scheme scheme);
 
     /*********************************************************************************
-     * Sign message.
+     * Signature message.
      ********************************************************************************/
-    std::string sign_message(
+    std::string signature_message(
         ssl::hash_algorithm algo, 
         const std::string &context, 
         const std::string &msg);

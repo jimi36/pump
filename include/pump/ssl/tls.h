@@ -17,7 +17,7 @@
 #ifndef pump_ssl_tls_h
 #define pump_ssl_tls_h
 
-// Import "memcpy" function
+#include <string>
 #include <string.h>
 
 #include "pump/types.h"
@@ -26,10 +26,36 @@
 namespace pump {
 namespace ssl {
 
-    const int32_t TLS_HANDSHAKE_OK = 0;
-    const int32_t TLS_HANDSHAKE_READ = 1;
-    const int32_t TLS_HANDSHAKE_SEND = 2;
+    const int32_t TLS_HANDSHAKE_OK    = 0;
+    const int32_t TLS_HANDSHAKE_READ  = 1;
+    const int32_t TLS_HANDSHAKE_SEND  = 2;
     const int32_t TLS_HANDSHAKE_ERROR = 3;
+
+    /*********************************************************************************
+     * Create tls client certificate.
+     ********************************************************************************/
+    void_ptr create_tls_client_certificate();
+
+    /*********************************************************************************
+     * Create tls certificate by file.
+     ********************************************************************************/
+    void_ptr create_tls_certificate_by_file(
+        bool client,
+        const std::string &cert,
+        const std::string &key);
+
+    /*********************************************************************************
+     * Create tls certificate by buffer.
+     ********************************************************************************/
+    void_ptr create_tls_certificate_by_buffer(
+        bool client,
+        const std::string &cert,
+        const std::string &key);
+
+    /*********************************************************************************
+     * Destory tls certificate.
+     ********************************************************************************/
+    void destory_tls_certificate(void_ptr xcred);
 
     struct tls_session {
         // SSL Context

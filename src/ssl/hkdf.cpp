@@ -22,7 +22,6 @@
 extern "C" {
 #include <openssl/ssl.h>
 #include <openssl/kdf.h>
-#include <openssl/err.h>
 }
 #endif
 
@@ -40,8 +39,12 @@ namespace ssl {
         const std::string &salt,
         const std::string &key,
         std::string &out) {
+        bool ret = false;
 #if defined(PUMP_HAVE_OPENSSL)
+        size_t out_len = 0;
+        EVP_PKEY_CTX *pctx = nullptr;
         const EVP_MD *(*new_md_func)() = nullptr;
+        
         if (algo == HASH_SHA256) {
             new_md_func = EVP_sha256;
         } else if (algo == HASH_SHA384) {
@@ -50,37 +53,34 @@ namespace ssl {
             return false;
         }
 
-        EVP_PKEY_CTX *pctx = EVP_PKEY_CTX_new_id(EVP_PKEY_HKDF, NULL);
-        if (!pctx) {
-            return false;
+        if ((pctx = EVP_PKEY_CTX_new_id(EVP_PKEY_HKDF, nullptr)) == nullptr) {
+            goto end;
         }
 
-        if (EVP_PKEY_derive_init(pctx) <= 0 ||
-            EVP_PKEY_CTX_hkdf_mode(pctx, EVP_PKEY_HKDEF_MODE_EXTRACT_ONLY) <= 0 ||
-            EVP_PKEY_CTX_set_hkdf_md(pctx, new_md_func()) <= 0 ||
-            EVP_PKEY_CTX_set1_hkdf_salt(pctx, salt.data(), salt.size()) <= 0 ||
-            EVP_PKEY_CTX_set1_hkdf_key(pctx, key.data(), key.size()) <= 0) {
-            EVP_PKEY_CTX_free(pctx);
-            return false;
+        if (EVP_PKEY_derive_init(pctx) != 1 ||
+            EVP_PKEY_CTX_hkdf_mode(pctx, EVP_PKEY_HKDEF_MODE_EXTRACT_ONLY) != 1 ||
+            EVP_PKEY_CTX_set_hkdf_md(pctx, new_md_func()) != 1 ||
+            EVP_PKEY_CTX_set1_hkdf_salt(pctx, salt.data(), salt.size()) != 1 ||
+            EVP_PKEY_CTX_set1_hkdf_key(pctx, key.data(), key.size()) != 1) {
+            goto end;
         }
 
-        size_t out_len = 0;
-        if (EVP_PKEY_derive(pctx, NULL, &out_len) <= 0) {
-            EVP_PKEY_CTX_free(pctx);
-            return false;
+        if (EVP_PKEY_derive(pctx, nullptr, &out_len) != 1) {
+            goto end;
         }
         out.resize(out_len);
-        if (EVP_PKEY_derive(pctx, (uint8_t*)out.data(), &out_len) <= 0) {
-            EVP_PKEY_CTX_free(pctx);
-            return false;
+        if (EVP_PKEY_derive(pctx, (uint8_t*)out.data(), &out_len) != 1) {
+            goto end;
         }
 
-        EVP_PKEY_CTX_free(pctx);
+        ret = true;
 
-        return true;
-#else
-        return false;
+      end:
+        if (pctx) {
+            EVP_PKEY_CTX_free(pctx);
+        }
 #endif
+        return ret;
     }
 
     bool hkdf_expand(
@@ -88,8 +88,12 @@ namespace ssl {
         const std::string &key,
         const std::string &info,
         std::string &out) {
+        bool ret = false;
 #if defined(PUMP_HAVE_OPENSSL)
+        size_t out_len = 0;
+        EVP_PKEY_CTX *pctx = nullptr;
         const EVP_MD *(*new_md_func)() = nullptr;
+
         if (algo == HASH_SHA256) {
             new_md_func = EVP_sha256;
         } else if (algo == HASH_SHA384) {
@@ -98,32 +102,31 @@ namespace ssl {
             return false;
         }
         
-        EVP_PKEY_CTX *pctx = EVP_PKEY_CTX_new_id(EVP_PKEY_HKDF, NULL);
-        if (!pctx) {
+        if ((pctx = EVP_PKEY_CTX_new_id(EVP_PKEY_HKDF, NULL)) == nullptr) {
             return false;
         }
 
-        if (EVP_PKEY_derive_init(pctx) <= 0 ||
-            EVP_PKEY_CTX_hkdf_mode(pctx, EVP_PKEY_HKDEF_MODE_EXPAND_ONLY) <= 0 ||
-            EVP_PKEY_CTX_set_hkdf_md(pctx, new_md_func()) <= 0 ||
-            EVP_PKEY_CTX_set1_hkdf_key(pctx, key.data(), key.size()) <= 0 ||
-            EVP_PKEY_CTX_add1_hkdf_info(pctx, info.data(), info.size()) <= 0) {
-            EVP_PKEY_CTX_free(pctx);
-            return false;
+        if (EVP_PKEY_derive_init(pctx) != 1 ||
+            EVP_PKEY_CTX_hkdf_mode(pctx, EVP_PKEY_HKDEF_MODE_EXPAND_ONLY) != 1 ||
+            EVP_PKEY_CTX_set_hkdf_md(pctx, new_md_func()) != 1 ||
+            EVP_PKEY_CTX_set1_hkdf_key(pctx, key.data(), key.size()) != 1 ||
+            EVP_PKEY_CTX_add1_hkdf_info(pctx, info.data(), info.size()) != 1) {
+            goto end;
         }
 
-        size_t out_len = out.size();
+        out_len = out.size();
         if (EVP_PKEY_derive(pctx, (uint8_t*)out.data(), &out_len) <= 0) {
-            EVP_PKEY_CTX_free(pctx);
-            return false;
+            goto end;
         }
 
-        EVP_PKEY_CTX_free(pctx);
+        ret = true;
 
-        return true;
-#else
-        return false;
+      end:
+        if (pctx) {
+            EVP_PKEY_CTX_free(pctx);
+        }
 #endif
+        return ret;
     }
 
 }

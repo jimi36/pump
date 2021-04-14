@@ -22,7 +22,6 @@
 extern "C" {
 #include <openssl/ssl.h>
 #include <openssl/hmac.h>
-#include <openssl/err.h>
 }
 #endif
 
@@ -187,13 +186,11 @@ namespace ssl {
         return std::forward<std::string>(output);
     }
 
-
     std::string sum_hmac(
-                    hash_algorithm algo,
-                    const std::string &key,
-                    const std::string &input) {
-        std::string output(hash_digest_length(algo), 0);
-
+        hash_algorithm algo,
+        const std::string &key,
+        const std::string &input) {
+        std::string out;
 #if defined(PUMP_HAVE_OPENSSL)
         const EVP_MD *md = nullptr;
         switch (algo)
@@ -215,7 +212,8 @@ namespace ssl {
             break;
         }
 
-        uint32_t output_len = (uint32_t)output.size();
+        uint32_t out_len = (uint32_t)hash_digest_length(algo);
+        out.resize(out_len);
 
         uint8_t *ret = HMAC(
                         md, 
@@ -223,13 +221,11 @@ namespace ssl {
                         (int32_t)key.size(),
                         (const uint8_t*)input.data(), 
                         input.size(),
-                        (uint8_t*)output.data(), 
-                        &output_len);
-        if (ret == nullptr) {
-            PUMP_ASSERT(false);
-        }
+                        (uint8_t*)out.data(), 
+                        &out_len);
+        PUMP_ASSERT(ret != nullptr);
 #endif
-        return output;
+        return std::forward<std::string>(out);
     }
 
 

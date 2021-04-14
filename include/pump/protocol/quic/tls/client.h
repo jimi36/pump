@@ -154,9 +154,9 @@ namespace tls {
         handshake_message *hello_;
 
         // Certificate request message
-        certificate_request_tls13_message cert_request_;
+        certificate_request_tls13_message *cert_request_;
 
-        // Handshake hash transcript
+        // Handshake transcript hash context
         ssl::hash_context_ptr transcript_;
 
         // Connection session

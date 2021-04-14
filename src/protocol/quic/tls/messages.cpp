@@ -1884,7 +1884,7 @@ namespace tls {
     certificate_verify_message* new_certificate_verify() {
         auto msg = object_create<certificate_verify_message>();
         if (msg) {
-            msg->has_signature_scheme = false;
+            msg->has_signature_scheme = true;
         }
         return msg;
     }
@@ -1900,9 +1900,9 @@ namespace tls {
 
         // Pack payload length.
         if (raw->has_signature_scheme) {
-            PACK_AND_RETURN_ERR(pack_uint24(p, end, uint16_t(2 + 2 + raw->signature.size())));
+            PACK_AND_RETURN_ERR(pack_uint24(p, end, uint32_t(2 + 2 + raw->signature.size())));
         } else {
-            PACK_AND_RETURN_ERR(pack_uint24(p, end, uint16_t(2 + raw->signature.size())));
+            PACK_AND_RETURN_ERR(pack_uint24(p, end, uint32_t(2 + raw->signature.size())));
         }
         
         if (raw->has_signature_scheme) {

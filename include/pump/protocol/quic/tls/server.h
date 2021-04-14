@@ -156,9 +156,9 @@ namespace tls {
         handshake_message *hello_;
 
         // Client hello message
-        client_hello_message client_hello_;
+        client_hello_message *client_hello_;
 
-        // Handshake hash transcript
+        // Handshake transcript hash context
         ssl::hash_context_ptr transcript_;
 
         // Connection session

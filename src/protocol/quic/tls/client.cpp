@@ -21,6 +21,7 @@
 #include "pump/ssl/ecdhe.h"
 #include "pump/codec/base64.h"
 #include "pump/toolkit/features.h"
+#include "pump/protocol/quic/tls/types.h"
 #include "pump/protocol/quic/tls/utils.h"
 #include "pump/protocol/quic/tls/client.h"
 
@@ -32,10 +33,19 @@ namespace tls {
     client_handshaker::client_handshaker()
       : status_(HANDSHAKE_INIT), 
         hello_(nullptr), 
+        cert_request_(nullptr),
         transcript_(nullptr) {
+        init_connection_session(&session_);
     }
 
     client_handshaker::~client_handshaker() {
+        if (hello_) {
+            delete_handshake_message(hello_);
+        }
+        if (cert_request_) {
+            object_delete(cert_request_);
+        }
+        reset_connection_session(&session_);
     }
 
     bool client_handshaker::handshake(const config &cfg) {
@@ -54,7 +64,7 @@ namespace tls {
         session_.alpn = cfg.alpn;
 
         if (!cfg.cert_pem.empty()) {
-            auto cert = ssl::load_x509_certificate_pem(cfg.cert_pem);
+            auto cert = ssl::load_x509_certificate_by_pem(cfg.cert_pem);
             if (cert == nullptr) {
                 return false;
             }
@@ -392,7 +402,8 @@ namespace tls {
         auto cert_request = (certificate_request_tls13_message*)msg->raw_msg;
         PUMP_ASSERT(cert_request);
 
-        cert_request_ = *cert_request;
+        cert_request_ = cert_request;
+        msg->raw_msg = nullptr;
 
         __write_transcript(pack_handshake_message(msg));
 
@@ -413,7 +424,7 @@ namespace tls {
             return ALERT_ILLEGAL_PARAMETER;
         }
         for (auto &certificate : cert_tls13->certificates) {
-            auto cert = ssl::load_x509_certificate_raw(certificate);
+            auto cert = ssl::load_x509_certificate_by_raw(certificate);
             if (cert == nullptr) {
                 return ALERT_ILLEGAL_PARAMETER;
             }
@@ -463,8 +474,11 @@ namespace tls {
             return ALERT_ILLEGAL_PARAMETER; 
         }
 
-        auto sign = sign_message(hash_algo, SERVER_SIGNATURE_CONTEXT, ssl::sum_hash(transcript_));
-        if (!ssl::verify_signature(session_.certs[0], sign_algo, hash_algo, sign, cert_verify->signature)) {
+        if (session_.peer_certs.empty()) {
+            return ALERT_ILLEGAL_PARAMETER;
+        }
+        auto sign = signature_message(hash_algo, SERVER_SIGNATURE_CONTEXT, ssl::sum_hash(transcript_));
+        if (!ssl::verify_x509_signature(session_.peer_certs[0], sign_algo, hash_algo, sign, cert_verify->signature)) {
             return ALERT_DECRYPT_ERROR;
         }
 
@@ -529,8 +543,15 @@ namespace tls {
         //PUMP_DEBUG_LOG("client handshaker export_master_secret_base64: %s", export_master_secret_base64.c_str());
 
         alert_code code = ALERT_NONE;
-        if ((code = __send_certificate_tls13()) != ALERT_NONE ||
-            (code = __send_finished()) != ALERT_NONE) {
+        if (cert_request_) {
+            if ((code = __send_certificate_tls13()) != ALERT_NONE) {
+                return code;
+            }
+            if ((code = __send_certificate_verify()) != ALERT_NONE) {
+                return code;
+            }
+        }
+        if ((code = __send_finished()) != ALERT_NONE) {
             return code;
         }
 
@@ -552,14 +573,19 @@ namespace tls {
         });
         auto cert_tls13 = (certificate_tls13_message*)msg->raw_msg;
 
-        if (session_.certs.empty()) {
-            cert_tls13->is_support_scts = false;
-            cert_tls13->is_support_ocsp_stapling = false;
-        } else {
-            // TODO: not support ocsp staple?
-            cert_tls13->is_support_ocsp_stapling = false;
-            cert_tls13->is_support_scts = cert_request_.is_support_scts && ssl::has_x509_scts(session_.certs[0]);
-            cert_tls13->certificates.push_back(ssl::read_x509_certificate_raw(session_.certs[0]));
+        if (!session_.certs.empty()) {
+            for (auto cert : session_.certs) {
+                cert_tls13->certificates.push_back(ssl::to_x509_certificate_raw(cert));
+            }
+
+            // TODO: Support ocsp staple? Default false.
+            //cert_tls13->is_support_ocsp_stapling = true;
+
+            // TODO: Support scts? Default not.
+            PUMP_DEBUG_CHECK(ssl::get_x509_scts(session_.certs[0], cert_tls13->scts));
+            if (cert_request_->is_support_scts && !cert_tls13->scts.empty()) {
+                cert_tls13->is_support_scts = true;
+            }
         }
 
         __send_handshake_message(msg);
@@ -597,8 +623,8 @@ namespace tls {
                 return ALERT_INTERNAL_ERROR;
             }
 
-            auto sign = sign_message(hash_algo, SERVER_SIGNATURE_CONTEXT, ssl::sum_hash(transcript_));
-            if (!ssl::do_signature(session_.certs[0], sign_algo, sign_algo, sign, cert_verify->signature)) {
+            auto sign = signature_message(hash_algo, SERVER_SIGNATURE_CONTEXT, ssl::sum_hash(transcript_));
+            if (!ssl::do_x509_signature(session_.certs[0], sign_algo, sign_algo, sign, cert_verify->signature)) {
                 return ALERT_INTERNAL_ERROR;
             }
 

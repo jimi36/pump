@@ -71,9 +71,9 @@ namespace ssl {
      * Sum hmac
      ********************************************************************************/
     std::string sum_hmac(
-          hash_algorithm algo,
-          const std::string &key,
-          const std::string &input);
+        hash_algorithm algo,
+        const std::string &key,
+        const std::string &input);
 
 }
 }
