@@ -27,20 +27,22 @@ namespace transport {
       : base_channel(TLS_HANDSHAKER, nullptr, -1) {
     }
 
-    void tls_handshaker::init(pump_socket fd,
-                              bool client,
-                              void_ptr xcred,
-                              const address &local_address,
-                              const address &remote_address) {
+    void tls_handshaker::init(
+        pump_socket fd,
+        bool client,
+        void_ptr xcred,
+        const address &local_address,
+        const address &remote_address) {
         local_address_ = local_address;
         remote_address_ = remote_address;
 
         PUMP_DEBUG_CHECK(__open_flow(fd, xcred, client));
     }
 
-    bool tls_handshaker::start(service_ptr sv,
-                               int64_t timeout,
-                               const tls_handshaker_callbacks &cbs) {
+    bool tls_handshaker::start(
+        service_ptr sv,
+        int64_t timeout,
+        const tls_handshaker_callbacks &cbs) {
         if (!flow_) {
             PUMP_ERR_LOG("tls_handshaker: start failed with invalid flow");
             return false;
@@ -94,10 +96,6 @@ namespace transport {
         // If this is server side, we will start to read handshake data.
         // If this is client side, there is handshake data to send at first time.
         if (ret == ssl::TLS_HANDSHAKE_SEND) {
-            //if (flow_->want_to_send() != flow::FLOW_ERR_NO) {
-            //    PUMP_WARN_LOG("tls_handshaker: start failed for flow want to send failed");
-            //    return false;
-            //}
             tracker_->set_expected_event(poll::TRACK_SEND);
         } else {
             tracker_->set_expected_event(poll::TRACK_READ);
@@ -146,7 +144,9 @@ namespace transport {
     bool tls_handshaker::__open_flow(pump_socket fd, void_ptr xcred, bool is_client) {
         // Setup flow
         PUMP_ASSERT(!flow_);
-        flow_.reset(object_create<flow::flow_tls>(), object_delete<flow::flow_tls>);
+        flow_.reset(
+            object_create<flow::flow_tls>(), 
+            object_delete<flow::flow_tls>);
 
         poll::channel_sptr ch = shared_from_this();
         if (flow_->init(ch, fd, xcred, is_client) != flow::FLOW_ERR_NO) {

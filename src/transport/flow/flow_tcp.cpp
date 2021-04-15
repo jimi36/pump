@@ -27,7 +27,9 @@ namespace flow {
     flow_tcp::~flow_tcp() {
     }
 
-    int32_t flow_tcp::init(poll::channel_sptr &&ch, pump_socket fd) {
+    int32_t flow_tcp::init(
+        poll::channel_sptr &&ch, 
+        pump_socket fd) {
         PUMP_DEBUG_ASSIGN(ch, ch_, ch);
         PUMP_DEBUG_ASSIGN(fd > 0, fd_, fd);
         return FLOW_ERR_NO;

@@ -28,8 +28,9 @@ namespace transport {
             return false;
         }
 
-        tracker_.reset(object_create<poll::channel_tracker>(ch, poll::TRACK_SEND),
-                       object_delete<poll::channel_tracker>);
+        tracker_.reset(
+            object_create<poll::channel_tracker>(ch, poll::TRACK_SEND),
+            object_delete<poll::channel_tracker>);
         if (!get_service()->add_channel_tracker(tracker_, SEND_POLLER)) {
             PUMP_WARN_LOG("base_dialer: start tracker failed");
             return false;

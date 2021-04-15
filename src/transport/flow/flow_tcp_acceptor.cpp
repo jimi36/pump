@@ -31,7 +31,9 @@ namespace flow {
         }
     }
 
-    int32_t flow_tcp_acceptor::init(poll::channel_sptr &&ch, const address &listen_address) {
+    int32_t flow_tcp_acceptor::init(
+        poll::channel_sptr &&ch, 
+        const address &listen_address) {
         PUMP_DEBUG_ASSIGN(ch, ch_, ch);
 
         is_ipv6_ = listen_address.is_ipv6();
@@ -70,7 +72,9 @@ namespace flow {
         return FLOW_ERR_NO;
     }
 
-    pump_socket flow_tcp_acceptor::accept(address_ptr local_address, address_ptr remote_address) {
+    pump_socket flow_tcp_acceptor::accept(
+        address_ptr local_address, 
+        address_ptr remote_address) {
         int32_t addrlen = ADDRESS_MAX_LEN;
         pump_socket client_fd = net::accept(fd_, (struct sockaddr*)iob_->buffer(), &addrlen);
         if (client_fd == INVALID_SOCKET) {

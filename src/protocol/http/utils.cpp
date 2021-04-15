@@ -21,7 +21,9 @@ namespace pump {
 namespace protocol {
 namespace http {
 
-    const block_t* find_http_line_end(const block_t *src, int32_t len) {
+    const block_t* find_http_line_end(
+        const block_t *src, 
+        int32_t len) {
         len = std::min<int32_t>(len, HTTP_LINE_MAX_LEN);
         if (len < HTTP_LINE_MIN_LEN) {
             return nullptr;
@@ -42,7 +44,9 @@ namespace http {
         return nullptr;
     }
 
-    bool url_decode(const std::string &src, std::string &des) {
+    bool url_decode(
+        const std::string &src, 
+        std::string &des) {
         uint32_t len = (uint32_t)src.length();
         for (uint32_t i = 0; i < len; i++) {
             uint8_t ch = src[i];
@@ -60,7 +64,9 @@ namespace http {
         return true;
     }
 
-    bool url_encode(const std::string &src, std::string &des) {
+    bool url_encode(
+        const std::string &src, 
+        std::string &des) {
         uint8_t val = 0;
         const block_t *beg = src.c_str();
         const block_t *end = beg + src.size();
@@ -80,7 +86,9 @@ namespace http {
         return true;
     }
 
-    transport::address host_to_address(bool https, const std::string &host) {
+    transport::address host_to_address(
+        bool https, 
+        const std::string &host) {
         auto results = split_string(host, "[:]");
         if (results.empty()) {
             PUMP_ASSERT(false);

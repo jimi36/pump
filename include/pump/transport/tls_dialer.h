@@ -38,10 +38,11 @@ namespace transport {
         /*********************************************************************************
          * Create instance
          ********************************************************************************/
-        PUMP_INLINE static tls_dialer_sptr create(const address &local_address,
-                                                  const address &remote_address,
-                                                  int64_t dial_timeout = 0,
-                                                  int64_t handshake_timeout = 0) {
+        PUMP_INLINE static tls_dialer_sptr create(
+            const address &local_address,
+            const address &remote_address,
+            int64_t dial_timeout = 0,
+            int64_t handshake_timeout = 0) {
             INLINE_OBJECT_CREATE(
                 obj,
                 tls_dialer, 
@@ -49,11 +50,12 @@ namespace transport {
             return tls_dialer_sptr(obj, object_delete<tls_dialer>);
         }
 
-        PUMP_INLINE static tls_dialer_sptr create_with_cred(void_ptr xcred,
-                                                  const address &local_address,
-                                                  const address &remote_address,
-                                                  int64_t dial_timeout = 0,
-                                                  int64_t handshake_timeout = 0) {
+        PUMP_INLINE static tls_dialer_sptr create_with_cred(
+            void_ptr xcred,
+            const address &local_address,
+            const address &remote_address,
+            int64_t dial_timeout = 0,
+            int64_t handshake_timeout = 0) {
             INLINE_OBJECT_CREATE(
                 obj,
                 tls_dialer, 
@@ -69,7 +71,9 @@ namespace transport {
         /*********************************************************************************
          * Start
          ********************************************************************************/
-        virtual int32_t start(service_ptr sv, const dialer_callbacks &cbs) override;
+        virtual int32_t start(
+            service_ptr sv, 
+            const dialer_callbacks &cbs) override;
 
         /*********************************************************************************
          * Stop
@@ -90,15 +94,17 @@ namespace transport {
         /*********************************************************************************
          * TLS handshake success callback
          ********************************************************************************/
-        static void on_handshaked(tls_dialer_wptr wptr,
-                                  tls_handshaker_ptr handshaker,
-                                  bool succ);
+        static void on_handshaked(
+            tls_dialer_wptr wptr,
+            tls_handshaker_ptr handshaker,
+            bool succ);
 
         /*********************************************************************************
          * Tls handskake stopped callback
          ********************************************************************************/
-        static void on_handshake_stopped(tls_dialer_wptr wptr,
-                                         tls_handshaker_ptr handshaker);
+        static void on_handshake_stopped(
+            tls_dialer_wptr wptr,
+            tls_handshaker_ptr handshaker);
 
       protected:
         /*********************************************************************************
@@ -118,11 +124,12 @@ namespace transport {
         /*********************************************************************************
          * Constructor
          ********************************************************************************/
-        tls_dialer(void_ptr xcred,
-                   const address &local_address,
-                   const address &remote_address,
-                   int64_t dial_timeout,
-                   int64_t handshake_timeout) noexcept;
+        tls_dialer(
+            void_ptr xcred,
+            const address &local_address,
+            const address &remote_address,
+            int64_t dial_timeout,
+            int64_t handshake_timeout) noexcept;
 
 
       private:
@@ -163,19 +170,21 @@ namespace transport {
         /*********************************************************************************
          * Dial by synchronization
          ********************************************************************************/
-        base_transport_sptr dial(service_ptr sv,
-                                 const address &local_address,
-                                 const address &remote_address,
-                                 int64_t connect_timeout,
-                                 int64_t handshake_timeout);
+        base_transport_sptr dial(
+            service_ptr sv,
+            const address &local_address,
+            const address &remote_address,
+            int64_t connect_timeout,
+            int64_t handshake_timeout);
 
       protected:
         /*********************************************************************************
          * Dialed callback
          ********************************************************************************/
-        static void on_dialed(tls_sync_dialer_wptr wptr,
-                              base_transport_sptr &transp,
-                              bool succ);
+        static void on_dialed(
+            tls_sync_dialer_wptr wptr,
+            base_transport_sptr &transp,
+            bool succ);
 
         /*********************************************************************************
          * Dial timeouted callback

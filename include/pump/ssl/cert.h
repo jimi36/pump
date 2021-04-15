@@ -76,13 +76,17 @@ namespace ssl {
      * Load X509 certificate by pem.
      ********************************************************************************/
     x509_certificate load_x509_certificate_by_pem(const std::string &data);
-    x509_certificate load_x509_certificate_by_pem(const uint8_t *data, int32_t size);
+    x509_certificate load_x509_certificate_by_pem(
+        const uint8_t *data, 
+        int32_t size);
 
     /*********************************************************************************
      * Load X509 certificate by raw.
      ********************************************************************************/
     x509_certificate load_x509_certificate_by_raw(const std::string &data);
-    x509_certificate load_x509_certificate_by_raw(const uint8_t *data, int32_t size);
+    x509_certificate load_x509_certificate_by_raw(
+        const uint8_t *data, 
+        int32_t size);
 
     /*********************************************************************************
      * Free X509 certificate.
@@ -102,7 +106,9 @@ namespace ssl {
     /*********************************************************************************
      * Get X509 certificate scts.
      ********************************************************************************/
-    bool get_x509_scts(x509_certificate cert, std::vector<std::string> &scts);
+    bool get_x509_scts(
+        x509_certificate cert, 
+        std::vector<std::string> &scts);
 
     /*********************************************************************************
      * Get X509 certificate signature scheme.

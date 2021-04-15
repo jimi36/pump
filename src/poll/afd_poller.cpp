@@ -89,17 +89,18 @@ namespace poll {
          */
         IO_STATUS_BLOCK iosb;
         HANDLE afd_device_handle;
-        NTSTATUS status = NtCreateFile(&afd_device_handle,
-                                       SYNCHRONIZE,
-                                       &afd__device_attributes,
-                                       &iosb,
-                                       NULL,
-                                       0,
-                                       FILE_SHARE_READ | FILE_SHARE_WRITE,
-                                       FILE_OPEN,
-                                       0,
-                                       NULL,
-                                       0);
+        NTSTATUS status = NtCreateFile(
+                            &afd_device_handle,
+                            SYNCHRONIZE,
+                            &afd__device_attributes,
+                            &iosb,
+                            NULL,
+                            0,
+                            FILE_SHARE_READ | FILE_SHARE_WRITE,
+                            FILE_OPEN,
+                            0,
+                            NULL,
+                            0);
         if (status != STATUS_SUCCESS) {
             return NULL;
         }
@@ -169,9 +170,10 @@ namespace poll {
         }
 
         IO_STATUS_BLOCK cancel_iosb;
-        NTSTATUS cancel_status = NtCancelIoFileEx(afd_device_handler_, 
-                                                  &(event->iosb), 
-                                                  &cancel_iosb);
+        NTSTATUS cancel_status = NtCancelIoFileEx(
+                                    afd_device_handler_, 
+                                    &(event->iosb), 
+                                    &cancel_iosb);
         if (cancel_status == STATUS_SUCCESS || cancel_status == STATUS_NOT_FOUND) {
             cur_event_count_.fetch_sub(1, std::memory_order_relaxed);
             return true;
@@ -196,16 +198,17 @@ namespace poll {
         }
         event->iosb.Status = STATUS_PENDING;
 
-        NTSTATUS status = NtDeviceIoControlFile(afd_device_handler_,
-                                                NULL,
-                                                NULL,
-                                                tracker,
-                                                &(event->iosb),
-                                                IOCTL_AFD_POLL,
-                                                &(event->info),
-                                                sizeof(event->info),
-                                                event,
-                                                sizeof(event->info));
+        NTSTATUS status = NtDeviceIoControlFile(
+                            afd_device_handler_,
+                            NULL,
+                            NULL,
+                            tracker,
+                            &(event->iosb),
+                            IOCTL_AFD_POLL,
+                            &(event->info),
+                            sizeof(event->info),
+                            event,
+                            sizeof(event->info));
         if (status == STATUS_SUCCESS || status == STATUS_PENDING) {
             return true;
         }
@@ -228,12 +231,13 @@ namespace poll {
 
         DWORD completion_count = 0;
         LPOVERLAPPED_ENTRY iocp_events = (LPOVERLAPPED_ENTRY)events_;
-        BOOL ret = GetQueuedCompletionStatusEx(iocp_handler_,
-                                               iocp_events,
-                                               max_event_count_,
-                                               &completion_count,
-                                               timeout,
-                                               FALSE);
+        BOOL ret = GetQueuedCompletionStatusEx(
+                    iocp_handler_,
+                    iocp_events,
+                    max_event_count_,
+                    &completion_count,
+                    timeout,
+                    FALSE);
         if (!ret) {
             return;
         }

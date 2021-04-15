@@ -81,7 +81,9 @@ namespace http {
          * This parse http pocket, and return parsed size. If this return -1, it means
          * parsed error.
          ********************************************************************************/
-        virtual int32_t parse(const block_t *b, int32_t size) = 0;
+        virtual int32_t parse(
+            const block_t *b,
+            int32_t size) = 0;
 
         /*********************************************************************************
          * Serialize

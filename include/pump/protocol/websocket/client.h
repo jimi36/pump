@@ -58,7 +58,9 @@ namespace websocket {
         /*********************************************************************************
          * Start
          ********************************************************************************/
-        bool start(service_ptr sv, const client_callbacks &cbs);
+        bool start(
+            service_ptr sv,
+            const client_callbacks &cbs);
 
         /*********************************************************************************
          * Stop
@@ -68,15 +70,18 @@ namespace websocket {
         /*********************************************************************************
          * Send
          ********************************************************************************/
-        bool send(const block_t *b, int32_t size);
+        bool send(
+            const block_t *b, 
+            int32_t size);
 
       protected:
         /*********************************************************************************
          * Dialed callback
          ********************************************************************************/
-        static void on_dialed(client_wptr wptr,
-                              transport::base_transport_sptr &transp,
-                              bool succ);
+        static void on_dialed(
+            client_wptr wptr,
+            transport::base_transport_sptr &transp,
+            bool succ);
 
         /*********************************************************************************
          * Dialed timeout callback
@@ -92,24 +97,33 @@ namespace websocket {
         /*********************************************************************************
          * Upgrade response callback
          ********************************************************************************/
-        static void on_upgrade_response(client_wptr wptr, http::pocket_sptr pk);
+        static void on_upgrade_response(
+            client_wptr wptr, 
+            http::pocket_sptr pk);
 
         /*********************************************************************************
          * Frame callback
          ********************************************************************************/
-        static void on_frame(client_wptr wptr, const block_t *b, int32_t size, bool end);
+        static void on_frame(
+            client_wptr wptr, 
+            const block_t *b, 
+            int32_t size,
+            bool end);
 
         /*********************************************************************************
          * Connection error closed
          ********************************************************************************/
-        static void on_error(client_wptr wptr, const std::string &msg);
+        static void on_error(
+            client_wptr wptr, 
+            const std::string &msg);
 
       private:
         /*********************************************************************************
          * Constructor
          ********************************************************************************/
-        client(const std::string &url, 
-               const std::map<std::string, std::string> &headers) noexcept;
+        client(
+            const std::string &url, 
+            const std::map<std::string, std::string> &headers) noexcept;
 
         /*********************************************************************************
          * Start dial and upgrade

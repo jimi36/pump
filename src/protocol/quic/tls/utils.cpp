@@ -314,20 +314,27 @@ namespace tls {
         }
     }
 
-    std::string signature_message(
+    std::string generate_signed_message(
         ssl::hash_algorithm algo,
         const std::string &context,
         const std::string &msg) {
-        ssl::hash_context_ptr hash_ctx = ssl::create_hash_context(algo);
-        PUMP_DEBUG_CHECK(ssl::update_hash(hash_ctx, signature_padding, (int32_t)sizeof(signature_padding)));
-        PUMP_DEBUG_CHECK(ssl::update_hash(hash_ctx, context));
-        PUMP_DEBUG_CHECK(ssl::update_hash(hash_ctx, msg));
-        std::string sign = ssl::sum_hash(hash_ctx);
-        ssl::free_hash_context(hash_ctx);
-        return std::forward<std::string>(sign);
+        std::string signed_msg;
+        if (algo == ssl::HASH_UNKNOWN) {
+            signed_msg.append((const char*)signature_padding, (size_t)sizeof(signature_padding));
+            signed_msg.append(context.data(), context.size());
+            signed_msg.append(msg.data(), msg.size());
+        } else {
+            ssl::hash_context_ptr hash_ctx = ssl::create_hash_context(algo);
+            PUMP_DEBUG_CHECK(ssl::update_hash(hash_ctx, signature_padding, (int32_t)sizeof(signature_padding)));
+            PUMP_DEBUG_CHECK(ssl::update_hash(hash_ctx, context));
+            PUMP_DEBUG_CHECK(ssl::update_hash(hash_ctx, msg));
+            signed_msg = ssl::sum_hash(hash_ctx);
+            ssl::free_hash_context(hash_ctx);
+        }
+        return std::forward<std::string>(signed_msg);
     }
 
-}
-}
-}
-}
+} // namespace tls
+} // namespace quic
+} // namespace protocol
+} // namespace pump

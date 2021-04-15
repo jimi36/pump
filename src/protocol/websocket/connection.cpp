@@ -28,9 +28,10 @@ namespace websocket {
     const static int32_t DECODE_FRAME_HEADER = 0;
     const static int32_t DECODE_FRAME_PAYLOAD = 1;
 
-    connection::connection(service_ptr sv,
-                           transport::base_transport_sptr &transp,
-                           bool has_mask) noexcept
+    connection::connection(
+        service_ptr sv,
+        transport::base_transport_sptr &transp,
+        bool has_mask) noexcept
       : sv_(sv),
         transp_(transp),
         rt_(READ_NONE),
@@ -45,7 +46,9 @@ namespace websocket {
         closed_.clear();
     }
 
-    bool connection::start_upgrade(bool client, const upgrade_callbacks &ucbs) {
+    bool connection::start_upgrade(
+        bool client, 
+        const upgrade_callbacks &ucbs) {
         PUMP_LOCK_SPOINTER(transp, transp_);
         if (!transp || transp->is_started()) {
             return false;
@@ -140,7 +143,9 @@ namespace websocket {
         return true;
     }
 
-    bool connection::send_buffer(const block_t *b, int32_t size) {
+    bool connection::send_raw(
+        const block_t *b, 
+        int32_t size) {
         PUMP_LOCK_SPOINTER(transp, transp_);
         if (!transp || !transp->is_started()) {
             return false;
@@ -153,7 +158,9 @@ namespace websocket {
         return true;
     }
 
-    bool connection::send(const block_t *b, int32_t size) {
+    bool connection::send_frame(
+        const block_t *b, 
+        int32_t size) {
         PUMP_LOCK_SPOINTER(transp, transp_);
         if (!transp || !transp->is_started()) {
             return false;
@@ -185,7 +192,10 @@ namespace websocket {
         return true;
     }
 
-    void connection::on_read(connection_wptr wptr, const block_t *b, int32_t size) {
+    void connection::on_read(
+        connection_wptr wptr, 
+        const block_t *b,
+        int32_t size) {
         PUMP_LOCK_WPOINTER(conn, wptr);
         if (conn) {
             if (!conn->read_cache_.empty()) {
@@ -234,7 +244,9 @@ namespace websocket {
         }
     }
 
-    int32_t connection::__handle_pocket(const block_t *b, int32_t size) {
+    int32_t connection::__handle_pocket(
+        const block_t *b, 
+        int32_t size) {
         auto pk = pocket_.get();
         PUMP_ASSERT(pk);
 

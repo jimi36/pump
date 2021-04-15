@@ -74,7 +74,9 @@ namespace websocket {
         /*********************************************************************************
          * Start
          ********************************************************************************/
-        bool start(service_ptr sv, const server_callbacks &cbs);
+        bool start(
+            service_ptr sv, 
+            const server_callbacks &cbs);
 
         /*********************************************************************************
          * Stop
@@ -92,7 +94,9 @@ namespace websocket {
         /*********************************************************************************
          * Acceptor accepted callback
          ********************************************************************************/
-        static void on_accepted(server_wptr wptr, transport::base_transport_sptr &transp);
+        static void on_accepted(
+            server_wptr wptr, 
+            transport::base_transport_sptr &transp);
 
         /*********************************************************************************
          * Acceptor stopped callback
@@ -102,30 +106,35 @@ namespace websocket {
         /*********************************************************************************
          * Upgrade request callback
          ********************************************************************************/
-        static void on_upgrade_request(server_wptr wptr,
-                                       connection_ptr conn,
-                                       http::pocket_sptr pk);
+        static void on_upgrade_request(
+            server_wptr wptr,
+            connection_ptr conn,
+            http::pocket_sptr pk);
 
         /*********************************************************************************
          * Connection error callback
          ********************************************************************************/
-        static void on_error(server_wptr wptr,
-                             connection_ptr conn,
-                             const std::string &msg);
+        static void on_error(
+            server_wptr wptr,
+            connection_ptr conn,
+            const std::string &msg);
 
       private:
         /*********************************************************************************
          * Constructor
          ********************************************************************************/
         server(const transport::address &listen_address) noexcept;
-        server(const transport::address &listen_address, 
-               const std::string &certfile,
-               const std::string &keyfile) noexcept;
+        server(
+            const transport::address &listen_address, 
+            const std::string &certfile,
+            const std::string &keyfile) noexcept;
 
         /*********************************************************************************
          * Handle http upgrade request
          ********************************************************************************/
-        bool __handle_upgrade_request(connection_ptr conn, http::request_ptr req);
+        bool __handle_upgrade_request(
+            connection_ptr conn, 
+            http::request_ptr req);
 
         /*********************************************************************************
          * Stop all upgrading connections

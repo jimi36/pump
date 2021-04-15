@@ -3,7 +3,9 @@
 namespace pump {
 namespace toolkit {
 
-    bits_reader::bits_reader(const uint8_t *b, uint32_t size) noexcept
+    bits_reader::bits_reader(
+        const uint8_t *b, 
+        uint32_t size) noexcept
       : left_bc_(8), 
         used_bc_(0), 
         all_bc_(size * 8), 
@@ -12,7 +14,9 @@ namespace toolkit {
         PUMP_ASSERT(size > 0);
     }
 
-    bool bits_reader::read(uint32_t bc, uint8_t *val) {
+    bool bits_reader::read(
+        uint32_t bc,
+        uint8_t *val) {
         if (bc > 8 || bc > all_bc_) {
             return false;
         }
@@ -22,7 +26,9 @@ namespace toolkit {
         return true;
     }
 
-    bool bits_reader::read(uint32_t bc, uint16_t *val) {
+    bool bits_reader::read(
+        uint32_t bc, 
+        uint16_t *val) {
         if (bc > 16 || bc > all_bc_) {
             return false;
         }
@@ -54,7 +60,9 @@ namespace toolkit {
         return true;
     }
 
-    bool bits_reader::read(uint32_t bc, uint32_t *val) {
+    bool bits_reader::read(
+        uint32_t bc, 
+        uint32_t *val) {
         if (bc > 32 || bc > all_bc_) {
             return false;
         }
@@ -86,7 +94,9 @@ namespace toolkit {
         return true;
     }
 
-    bool bits_reader::read(uint32_t bc, uint64_t *val) {
+    bool bits_reader::read(
+        uint32_t bc, 
+        uint64_t *val) {
         if (bc > 64 || bc > all_bc_) {
             return false;
         }
@@ -137,7 +147,9 @@ namespace toolkit {
         return val;
     }
 
-    bits_writer::bits_writer(uint8_t *b, uint32_t size) noexcept
+    bits_writer::bits_writer(
+        uint8_t *b, 
+        uint32_t size) noexcept
       : left_bc_(8), 
         used_bc_(0), 
         all_bc_(size * 8), 
@@ -146,7 +158,9 @@ namespace toolkit {
         PUMP_ASSERT(size > 0);
     }
 
-    bool bits_writer::write(uint32_t bc, uint8_t val) {
+    bool bits_writer::write(
+        uint32_t bc, 
+        uint8_t val) {
         if (bc > 8 || bc > all_bc_) {
             return false;
         }
@@ -156,7 +170,9 @@ namespace toolkit {
         return true;
     }
 
-    bool bits_writer::write(uint32_t bc, uint16_t val) {
+    bool bits_writer::write(
+        uint32_t bc, 
+        uint16_t val) {
         if (bc > 16 || bc > all_bc_) {
             return false;
         }
@@ -186,7 +202,9 @@ namespace toolkit {
         return true;
     }
 
-    bool bits_writer::write(uint32_t bc, uint32_t val) {
+    bool bits_writer::write(
+        uint32_t bc, 
+        uint32_t val) {
         if (bc > 32 || bc > all_bc_) {
             return false;
         }
@@ -216,7 +234,9 @@ namespace toolkit {
         return true;
     }
 
-    bool bits_writer::write(uint32_t bc, uint64_t val) {
+    bool bits_writer::write(
+        uint32_t bc, 
+        uint64_t val) {
         if (bc > 64 || bc > all_bc_) {
             return false;
         }
@@ -246,7 +266,9 @@ namespace toolkit {
         return true;
     }
 
-    void bits_writer::__write_to_byte(uint32_t bc, uint8_t val) {
+    void bits_writer::__write_to_byte(
+        uint32_t bc, 
+        uint8_t val) {
         if (left_bc_ < bc) {
             *byte_pos_ |= ((val & (0xff >> (8 - left_bc_))) >> (bc - left_bc_));
             bc -= left_bc_;

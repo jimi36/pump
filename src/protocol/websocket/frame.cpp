@@ -24,12 +24,13 @@ namespace pump {
 namespace protocol {
 namespace websocket {
 
-    void init_frame_header(frame_header_ptr hdr,
-                           uint32_t fin,
-                           uint32_t optcode,
-                           uint32_t mask,
-                           uint8_t mask_key[4],
-                           uint64_t payload_len) {
+    void init_frame_header(
+        frame_header_ptr hdr,
+        uint32_t fin,
+        uint32_t optcode,
+        uint32_t mask,
+        uint8_t mask_key[4],
+        uint64_t payload_len) {
         memset(hdr, 0, sizeof(frame_header));
 
         hdr->fin = fin;
@@ -68,7 +69,10 @@ namespace websocket {
         return size;
     }
 
-    int32_t decode_frame_header(const block_t *b, int32_t size, frame_header_ptr hdr) {
+    int32_t decode_frame_header(
+        const block_t *b, 
+        int32_t size, 
+        frame_header_ptr hdr) {
         // Init frame header
         memset(hdr, 0, sizeof(frame_header));
 
@@ -110,7 +114,10 @@ namespace websocket {
         return int32_t(r.used_bc() / 8);
     }
 
-    int32_t encode_frame_header(c_frame_header_ptr hdr, block_t *b, int32_t size) {
+    int32_t encode_frame_header(
+        c_frame_header_ptr hdr, 
+        block_t *b, 
+        int32_t size) {
         // Init bits writer
         toolkit::bits_writer w((uint8_t*)b, size);
 
@@ -146,7 +153,10 @@ namespace websocket {
         return w.used_bc() / 8;
     }
 
-    void mask_transform(uint8_t *b, int32_t size, uint8_t mask_key[4]) {
+    void mask_transform(
+        uint8_t *b, 
+        int32_t size, 
+        uint8_t mask_key[4]) {
         for (int32_t i = 0; i < size; i++) {
             b[i] = b[i] ^ mask_key[i % 4];
         }

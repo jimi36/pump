@@ -27,13 +27,17 @@ namespace http {
       : header_parsed_(false) {
     }
 
-    void header::set_head(const std::string &name, int32_t value) {
+    void header::set_head(
+        const std::string &name,
+        int32_t value) {
         block_t tmp[HTTP_HEAD_VALUE_MAX_LEN + 1] = {0};
         pump_snprintf(tmp, sizeof(tmp) - 1, "%d", value);
         headers_[name].push_back(tmp);
     }
 
-    void header::set_head(const std::string &name, const std::string &value) {
+    void header::set_head(
+        const std::string &name, 
+        const std::string &value) {
         auto vals = split_string(value, "[,;] *");
         auto it = headers_.find(name);
         if (it == headers_.end()) {
@@ -43,17 +47,23 @@ namespace http {
         }
     }
 
-    void header::set_unique_head(const std::string &name, int32_t value) {
+    void header::set_unique_head(
+        const std::string &name, 
+        int32_t value) {
         block_t tmp[HTTP_HEAD_VALUE_MAX_LEN + 1] = {0};
         pump_snprintf(tmp, sizeof(tmp) - 1, "%d", value);
         headers_[name] = std::vector<std::string>(1, tmp);
     }
 
-    void header::set_unique_head(const std::string &name, const std::string &value) {
+    void header::set_unique_head(
+        const std::string &name,
+        const std::string &value) {
         headers_[name] = split_string(value, "[,;] *");
     }
 
-    bool header::get_head(const std::string &name, int32_t &value) const {
+    bool header::get_head(
+        const std::string &name,
+        int32_t &value) const {
         auto it = headers_.find(name);
         if (it == headers_.end() || it->second.empty()) {
             return false;
@@ -64,7 +74,9 @@ namespace http {
         return true;
     }
 
-    bool header::get_head(const std::string &name, std::string &value) const {
+    bool header::get_head(
+        const std::string &name, 
+        std::string &value) const {
         auto it = headers_.find(name);
         if (it == headers_.end() || it->second.empty()) {
             return false;
@@ -75,7 +87,9 @@ namespace http {
         return true;
     }
 
-    bool header::get_head(const std::string &name, std::vector<std::string> &values) const {
+    bool header::get_head(
+        const std::string &name,
+        std::vector<std::string> &values) const {
         auto it = headers_.find(name);
         if (it == headers_.end() || it->second.empty()) {
             return false;
@@ -93,7 +107,9 @@ namespace http {
         return true;
     }
 
-    int32_t header::__parse_header(const block_t* b, int32_t size) {
+    int32_t header::__parse_header(
+        const block_t* b, 
+        int32_t size) {
         if (header_parsed_) {
             return 0;
         }

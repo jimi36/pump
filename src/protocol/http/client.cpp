@@ -69,16 +69,19 @@ namespace http {
         return resp;
     }
 
-    bool client::__create_connection(bool https, const transport::address &peer_address) {
+    bool client::__create_connection(
+        bool https, 
+        const transport::address &peer_address) {
         transport::base_transport_sptr transp;
         transport::address bind_address("0.0.0.0", 0);
         if (https) {
             auto dialer = transport::tls_sync_dialer::create();
-            transp = dialer->dial(sv_,
-                                    bind_address,
-                                    peer_address,
-                                    dial_timeout_,
-                                    tls_handshake_timeout_);
+            transp = dialer->dial(
+                        sv_,
+                        bind_address,
+                        peer_address,
+                        dial_timeout_,
+                        tls_handshake_timeout_);
         } else {
             auto dialer = transport::tcp_sync_dialer::create();
             transp = dialer->dial(sv_, bind_address, peer_address, dial_timeout_);
@@ -105,7 +108,9 @@ namespace http {
         }
     }
 
-    void client::__notify_response(connection_ptr conn, response_sptr &&resp) {
+    void client::__notify_response(
+        connection_ptr conn, 
+        response_sptr &&resp) {
         std::unique_lock<std::mutex> lock(resp_mx_);
         if (wait_for_response_ && conn == conn_.get()) {
             resp_ = resp;
@@ -113,14 +118,20 @@ namespace http {
         }
     }
 
-    void client::on_response(client_wptr wptr, connection_ptr conn, pocket_sptr &&pk) {
+    void client::on_response(
+        client_wptr wptr, 
+        connection_ptr conn, 
+        pocket_sptr &&pk) {
         client_sptr cli =  wptr.lock();
         if (cli) {
             cli->__notify_response(conn, std::static_pointer_cast<response>(pk));
         }
     }
 
-    void client::on_error(client_wptr wptr, connection_ptr conn, const std::string &msg) {
+    void client::on_error(
+        client_wptr wptr, 
+        connection_ptr conn, 
+        const std::string &msg) {
         client_sptr cli = wptr.lock();
         if (cli) {
             cli->__notify_response(conn, response_sptr());

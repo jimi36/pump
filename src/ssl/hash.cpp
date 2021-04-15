@@ -134,11 +134,16 @@ namespace ssl {
 #endif
     }
 
-    bool update_hash(hash_context_ptr ctx, const std::string &data) {
+    bool update_hash(
+        hash_context_ptr ctx, 
+        const std::string &data) {
         return update_hash(ctx, (const uint8_t*)data.data(), (int32_t)data.size());
     }
 
-    bool update_hash(hash_context_ptr ctx, const uint8_t *data, int32_t data_len) {
+    bool update_hash(
+        hash_context_ptr ctx, 
+        const uint8_t *data, 
+        int32_t data_len) {
 #if defined(PUMP_HAVE_OPENSSL)
         PUMP_ASSERT(ctx && ctx->ctx);
         PUMP_ASSERT(data && data_len > 0);
@@ -159,7 +164,10 @@ namespace ssl {
         return false;
     }
 
-    bool sum_hash(hash_context_ptr ctx, uint8_t *out, int32_t out_len) {
+    bool sum_hash(
+        hash_context_ptr ctx, 
+        uint8_t *out, 
+        int32_t out_len) {
 #if defined(PUMP_HAVE_OPENSSL)
         PUMP_ASSERT(ctx && ctx->ctx);
         PUMP_ASSERT(out && out_len >= hash_digest_length(ctx->algo));

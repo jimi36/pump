@@ -26,8 +26,9 @@ namespace pump {
 namespace protocol {
 namespace websocket {
 
-    client::client(const std::string &url,
-                   const std::map<std::string, std::string> &headers) noexcept
+    client::client(
+        const std::string &url,
+        const std::map<std::string, std::string> &headers) noexcept
       : started_(false), 
         sv_(nullptr), 
         is_upgraded_(false),
@@ -35,7 +36,9 @@ namespace websocket {
         upgrade_req_headers_(headers) {
     }
 
-    bool client::start(service_ptr sv,const client_callbacks &cbs) {
+    bool client::start(
+        service_ptr sv, 
+        const client_callbacks &cbs) {
         // Check service.
         if (!sv) {
             return false;
@@ -77,7 +80,9 @@ namespace websocket {
         }
     }
 
-    bool client::send(const block_t *b, int32_t size) {
+    bool client::send(
+        const block_t *b,
+        int32_t size) {
         // Check started state.
         if (!started_.load()) {
             return false;
@@ -87,12 +92,13 @@ namespace websocket {
             return false;
         }
 
-        return conn_->send(b, size);
+        return conn_->send_frame(b, size);
     }
 
-    void client::on_dialed(client_wptr wptr,
-                           transport::base_transport_sptr &transp,
-                           bool succ) {
+    void client::on_dialed(
+        client_wptr wptr,
+        transport::base_transport_sptr &transp,
+        bool succ) {
         PUMP_LOCK_WPOINTER(cli, wptr);
         if (cli) {
             if (!succ) {
@@ -112,7 +118,7 @@ namespace websocket {
             std::string data;
             PUMP_ASSERT(cli->upgrade_req_);
             cli->upgrade_req_->serialize(data);
-            if (!cli->conn_->send_buffer(data.c_str(), (int32_t)data.size())) {
+            if (!cli->conn_->send_raw(data.c_str(), (int32_t)data.size())) {
                 cli->cbs_.error_cb("client connection send upgrade request error");
             }
 
@@ -137,7 +143,9 @@ namespace websocket {
         }
     }
 
-    void client::on_upgrade_response(client_wptr wptr, http::pocket_sptr pk) {
+    void client::on_upgrade_response(
+        client_wptr wptr, 
+        http::pocket_sptr pk) {
         PUMP_LOCK_WPOINTER(cli, wptr);
         if (cli) {
             auto resp = std::static_pointer_cast<http::response>(pk);
@@ -157,14 +165,20 @@ namespace websocket {
         }
     }
 
-    void client::on_frame(client_wptr wptr, const block_t *b, int32_t size, bool end) {
+    void client::on_frame(
+        client_wptr wptr, 
+        const block_t *b, 
+        int32_t size, 
+        bool end) {
         PUMP_LOCK_WPOINTER(cli, wptr);
         if (cli) {
             cli->cbs_.data_cb(b, size, end);
         }
     }
 
-    void client::on_error(client_wptr wptr, const std::string &msg) {
+    void client::on_error(
+        client_wptr wptr, 
+        const std::string &msg) {
         PUMP_LOCK_WPOINTER(cli, wptr);
         if (cli) {
             cli->conn_.reset();

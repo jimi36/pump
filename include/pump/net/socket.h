@@ -54,42 +54,60 @@ namespace net {
     /*********************************************************************************
      * Create socket file descriptor
      ********************************************************************************/
-    pump_socket create_socket(int32_t domain, int32_t type);
+    pump_socket create_socket(
+        int32_t domain, 
+        int32_t type);
 
     /*********************************************************************************
      * Set nonblock flag
      ********************************************************************************/
-    bool set_noblock(pump_socket fd, int32_t noblock);
+    bool set_noblock(
+        pump_socket fd, 
+        int32_t noblock);
 
     /*********************************************************************************
      * Set linger flag
      ********************************************************************************/
-    bool set_linger(pump_socket fd, uint16_t on, uint16_t linger);
+    bool set_linger(
+        pump_socket fd, 
+        uint16_t on, 
+        uint16_t linger);
 
     /*********************************************************************************
      * Set read buffer size
      ********************************************************************************/
-    bool set_read_bs(pump_socket fd, int32_t size);
+    bool set_read_bs(
+        pump_socket fd, 
+        int32_t size);
 
     /*********************************************************************************
      * Set send buffer size
      ********************************************************************************/
-    bool set_send_bs(pump_socket fd, int32_t size);
+    bool set_send_bs(
+        pump_socket fd, 
+        int32_t size);
 
     /*********************************************************************************
      * Set tcp keeplive
      ********************************************************************************/
-    bool set_keeplive(pump_socket fd, int32_t keeplive, int32_t keepinterval);
+    bool set_keeplive(
+        pump_socket fd, 
+        int32_t keeplive, 
+        int32_t keepinterval);
 
     /*********************************************************************************
      * Set reuse address
      ********************************************************************************/
-    bool set_reuse(pump_socket fd, int32_t reuse);
+    bool set_reuse(
+        pump_socket fd, 
+        int32_t reuse);
 
     /*********************************************************************************
      * Set tcp no delay
      ********************************************************************************/
-    bool set_nodelay(pump_socket fd, int32_t nodelay);
+    bool set_nodelay(
+        pump_socket fd, 
+        int32_t nodelay);
 
     /*********************************************************************************
      * Update connect context
@@ -100,55 +118,76 @@ namespace net {
      * Set udp connection reset
      * This is for windows system, other system will return true
      ********************************************************************************/
-    bool set_udp_conn_reset(pump_socket fd, bool enable);
+    bool set_udp_conn_reset(
+        pump_socket fd, 
+        bool enable);
 
     /*********************************************************************************
      * Bind address
      ********************************************************************************/
-    bool bind(pump_socket fd, struct sockaddr *addr, int32_t addrlen);
+    bool bind(
+        pump_socket fd, 
+        struct sockaddr *addr, 
+        int32_t addrlen);
 
     /*********************************************************************************
      * Listen socket
      ********************************************************************************/
-    bool listen(pump_socket fd, int32_t backlog = 65535);
+    bool listen(
+        pump_socket fd, 
+        int32_t backlog = 65535);
 
     /*********************************************************************************
      * Accept socket
      ********************************************************************************/
-    pump_socket accept(pump_socket fd, struct sockaddr *addr, int32_t *addrlen);
+    pump_socket accept(
+        pump_socket fd, 
+        struct sockaddr *addr, 
+        int32_t *addrlen);
 
     /*********************************************************************************
      * Connect
      ********************************************************************************/
-    bool connect(pump_socket fd, struct sockaddr *addr, int32_t addrlen);
+    bool connect(
+        pump_socket fd, 
+        struct sockaddr *addr, 
+        int32_t addrlen);
 
     /*********************************************************************************
      * Read
      ********************************************************************************/
-    int32_t read(pump_socket fd, block_t *b, int32_t size);
+    int32_t read(
+        pump_socket fd, 
+        block_t *b, 
+        int32_t size);
 
     /*********************************************************************************
      * Readfrom
      ********************************************************************************/
-    int32_t read_from(pump_socket fd,
-                      block_t *b, 
-                      int32_t size, 
-                      struct sockaddr *addr, 
-                      int32_t *addrlen);
+    int32_t read_from(
+        pump_socket fd,
+        block_t *b, 
+        int32_t size, 
+        struct sockaddr *addr, 
+        int32_t *addrlen);
 
     /*********************************************************************************
      * Send
      ********************************************************************************/
-    int32_t send(pump_socket fd, const block_t *b, int32_t size);
+    int32_t send(
+        pump_socket fd, 
+        const block_t *b, 
+        int32_t size);
 
     /*********************************************************************************
      * Sendto
      ********************************************************************************/
-    int32_t send_to(pump_socket fd,
-                    const block_t *b,
-                    int32_t size, 
-                    struct sockaddr *addr, 
-                    int32_t addrlen);
+    int32_t send_to(
+        pump_socket fd,
+        const block_t *b,
+        int32_t size, 
+        struct sockaddr *addr, 
+        int32_t addrlen);
 
     /*********************************************************************************
      * Close the ability of writing
@@ -173,27 +212,36 @@ namespace net {
     /*********************************************************************************
      * Get local address of the socket
      ********************************************************************************/
-    bool local_address(pump_socket fd, struct sockaddr *addr, int32_t *addrlen);
+    bool local_address(
+        pump_socket fd, 
+        struct sockaddr *addr, 
+        int32_t *addrlen);
 
     /*********************************************************************************
      * Get remote address of the socket
      ********************************************************************************/
-    bool remote_address(pump_socket fd, struct sockaddr *addr, int32_t *addrlen);
+    bool remote_address(
+        pump_socket fd,
+        struct sockaddr *addr, 
+        int32_t *addrlen);
 
     /*********************************************************************************
      * Transfrom address to string
      * On success return string address like 127.0.0.1:80, else return empty
      *string
      ********************************************************************************/
-    std::string address_to_string(struct sockaddr *addr, int32_t addrlen);
+    std::string address_to_string(
+        struct sockaddr *addr, 
+        int32_t addrlen);
 
     /*********************************************************************************
      * Transfrom string to address
      ********************************************************************************/
-    bool string_to_address(const std::string &ip,
-                           uint16_t port,
-                           struct sockaddr *addr,
-                           int32_t *addrlen);
+    bool string_to_address(
+        const std::string &ip,
+        uint16_t port,
+        struct sockaddr *addr,
+        int32_t *addrlen);
 
 }  // namespace net
 }  // namespace pump

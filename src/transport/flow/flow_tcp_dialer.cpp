@@ -27,7 +27,9 @@ namespace flow {
     flow_tcp_dialer::~flow_tcp_dialer() {
     }
 
-    int32_t flow_tcp_dialer::init(poll::channel_sptr &&ch, const address &bind_address) {
+    int32_t flow_tcp_dialer::init(
+        poll::channel_sptr &&ch, 
+        const address &bind_address) {
         PUMP_DEBUG_ASSIGN(ch, ch_, ch);
 
         is_ipv6_ = bind_address.is_ipv6();
@@ -66,7 +68,9 @@ namespace flow {
         return FLOW_ERR_NO;
     }
 
-    int32_t flow_tcp_dialer::connect(address_ptr local_address, address_ptr remote_address) {
+    int32_t flow_tcp_dialer::connect(
+        address_ptr local_address, 
+        address_ptr remote_address) {
         int32_t ec = net::get_socket_error(fd_);
         if (ec != 0) {
             return ec;

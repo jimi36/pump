@@ -109,7 +109,9 @@ namespace tls {
      * Check element array contains the element or not.
      ********************************************************************************/
     template <typename T>
-    bool is_contains(const std::vector<T> &elems, T &elem) {
+    bool is_contains(
+        const std::vector<T> &elems,
+        T &elem) {
         for (auto &the_elem : elems) {
             if (elem == the_elem) {
                 return true;
@@ -184,16 +186,16 @@ namespace tls {
     ssl::signature_algorithm transform_to_sign_algo(ssl::signature_scheme scheme);
 
     /*********************************************************************************
-     * Signature message.
+     * Generate signed message.
      ********************************************************************************/
-    std::string signature_message(
+    std::string generate_signed_message(
         ssl::hash_algorithm algo, 
         const std::string &context, 
         const std::string &msg);
 
-}
-}
-}
-}
+} // namespace tls
+} // namespace quic
+} // namespace protocol
+} // namespace pump
 
 #endif

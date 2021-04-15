@@ -172,10 +172,11 @@ namespace toolkit {
         bool try_wait() {
             int64_t old_count = count_.load(std::memory_order_relaxed);
             while (old_count > 0) {
-                if (count_.compare_exchange_weak(old_count,
-                                                 old_count - 1,
-                                                 std::memory_order_acquire,
-                                                 std::memory_order_relaxed)) {
+                if (count_.compare_exchange_weak(
+                        old_count,
+                        old_count - 1,
+                        std::memory_order_acquire,
+                        std::memory_order_relaxed)) {
                     return true;
                 }
             }
@@ -229,10 +230,11 @@ namespace toolkit {
             while (--spin >= 0) {
                 old_count = count_.load(std::memory_order_relaxed);
                 if ((old_count > 0) &&
-                    count_.compare_exchange_strong(old_count,
-                                                   old_count - 1,
-                                                   std::memory_order_acquire,
-                                                   std::memory_order_relaxed)) {
+                    count_.compare_exchange_strong(
+                        old_count,
+                        old_count - 1,
+                        std::memory_order_acquire,
+                        std::memory_order_relaxed)) {
                     return true;
                 }
                 // Prevent the compiler from collapsing the loop.
@@ -259,10 +261,11 @@ namespace toolkit {
                     return true;
                 }
                 if (old_count < 0 &&
-                    count_.compare_exchange_strong(old_count,
-                                                   old_count + 1,
-                                                   std::memory_order_relaxed,
-                                                   std::memory_order_relaxed)) {
+                    count_.compare_exchange_strong(
+                        old_count,
+                        old_count + 1,
+                        std::memory_order_relaxed,
+                        std::memory_order_relaxed)) {
                     return false;
                 }
             }

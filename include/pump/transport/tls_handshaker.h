@@ -53,16 +53,20 @@ namespace transport {
         /*********************************************************************************
          * Init
          ********************************************************************************/
-        void init(pump_socket fd,
-                  bool client,
-                  void_ptr xcred,
-                  const address &local_address,
-                  const address &remote_address);
+        void init(
+            pump_socket fd,
+            bool client,
+            void_ptr xcred,
+            const address &local_address,
+            const address &remote_address);
 
         /*********************************************************************************
          * Start tls handshaker
          ********************************************************************************/
-        bool start(service_ptr sv, int64_t timeout, const tls_handshaker_callbacks &cbs);
+        bool start(
+            service_ptr sv, 
+            int64_t timeout, 
+            const tls_handshaker_callbacks &cbs);
 
         /*********************************************************************************
          * Stop transport

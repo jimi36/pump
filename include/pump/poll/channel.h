@@ -151,7 +151,9 @@ namespace poll {
         /*********************************************************************************
          * Constructor
          ********************************************************************************/
-        channel_tracker(channel_sptr &ch, int32_t ev) noexcept
+        channel_tracker(
+            channel_sptr &ch, 
+            int32_t ev) noexcept
           : state_(TRACKER_STATE_STOP),
               installed_(false),
               expected_event_(ev),
@@ -162,13 +164,15 @@ namespace poll {
                 memset(&ev_, 0, sizeof(ev_));
 #endif
         }
-        channel_tracker(channel_sptr &&ch, int32_t ev) noexcept
+        channel_tracker(
+            channel_sptr &&ch, 
+            int32_t ev) noexcept
           : state_(TRACKER_STATE_STOP),
-              installed_(false),
-              expected_event_(ev),
-              fd_(ch->get_fd()), 
-              ch_(ch), 
-              pr_(nullptr) {
+            installed_(false),
+            expected_event_(ev),
+            fd_(ch->get_fd()), 
+            ch_(ch), 
+            pr_(nullptr) {
 #if defined(PUMP_HAVE_EPOLL) || defined(PUMP_HAVE_IOCP)
             memset(&ev_, 0, sizeof(ev_));
 #endif
@@ -190,8 +194,9 @@ namespace poll {
          * Stop
          ********************************************************************************/
         PUMP_INLINE bool stop() {
-            return state_.exchange(TRACKER_STATE_STOP, std::memory_order_acquire) != 
-                TRACKER_STATE_STOP;
+            return state_.exchange(
+                TRACKER_STATE_STOP, 
+                std::memory_order_acquire) != TRACKER_STATE_STOP;
         }
 
         /*********************************************************************************

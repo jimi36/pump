@@ -33,11 +33,12 @@ namespace http {
         return ut_strings[ut];
     }
 
-    bool parse_url(const std::string &url,
-                   int32_t &ut,
-                   std::string &host,
-                   std::string &path,
-                   std::map<std::string, std::string> &params) {
+    bool parse_url(
+        const std::string &url,
+        int32_t &ut,
+        std::string &host,
+        std::string &path,
+        std::map<std::string, std::string> &params) {
         std::string sut;
         {
             auto result = split_string(url, "[:]");
@@ -120,7 +121,9 @@ namespace http {
         return parse_url(url, ut_, host_, path_, params_);
     }
 
-    bool uri::get_param(const std::string &key, std::string &value) const {
+    bool uri::get_param(
+        const std::string &key, 
+        std::string &value) const {
         auto it = params_.find(key);
         if (it == params_.end()) {
             return false;

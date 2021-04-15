@@ -62,7 +62,9 @@ namespace codec {
 
     /* Hash a single 512-bit block. This is the core of the algorithm. */
 
-    void sha1_transform(uint32_t state[5], const uint8_t buffer[64]) {
+    void sha1_transform(
+        uint32_t state[5], 
+        const uint8_t buffer[64]) {
         uint32_t a, b, c, d, e;
 
         typedef union {
@@ -196,7 +198,10 @@ namespace codec {
 
     /* Run your data through this. */
 
-    void sha1_update(SHA1_CTX *ctx, const block_t *data, int32_t size) {
+    void sha1_update(
+        SHA1_CTX *ctx,
+        const block_t *data, 
+        int32_t size) {
         uint32_t i, j;
         uint32_t len = uint32_t(size);
 
@@ -221,7 +226,9 @@ namespace codec {
 
     /* Add padding and return the message digest. */
 
-    void sha1_final(SHA1_CTX *ctx, uint8_t digest[20]) {
+    void sha1_final(
+        SHA1_CTX *ctx, 
+        uint8_t digest[20]) {
         uint32_t i;
 
         uint8_t finalcount[8];
@@ -267,7 +274,10 @@ namespace codec {
         memset(&finalcount, '\0', sizeof(finalcount));
     }
 
-    void sha1(const block_t *data, int32_t size, uint8_t digest[20]) {
+    void sha1(
+        const block_t *data, 
+        int32_t size, 
+        uint8_t digest[20]) {
         SHA1_CTX ctx;
         sha1_init(&ctx);
         for (uint32_t i = 0; i < uint32_t(size); i += 1) {

@@ -101,14 +101,18 @@ namespace http {
         /*********************************************************************************
          * Set param
          ********************************************************************************/
-        PUMP_INLINE void set_param(const std::string &key, const std::string &value) {
+        PUMP_INLINE void set_param(
+            const std::string &key, 
+            const std::string &value) {
             params_[key] = value;
         }
 
         /*********************************************************************************
          * Get param
          ********************************************************************************/
-        bool get_param(const std::string &key, std::string &value) const;
+        bool get_param(
+            const std::string &key, 
+            std::string &value) const;
 
         /*********************************************************************************
          * To url string
@@ -135,11 +139,12 @@ namespace http {
     /*********************************************************************************
      * Parse url
      ********************************************************************************/
-    LIB_PUMP bool parse_url(const std::string &url,
-                            int32_t &ut,
-                            std::string &host,
-                            std::string &path,
-                            std::map<std::string, std::string> &params);
+    LIB_PUMP bool parse_url(
+        const std::string &url,
+        int32_t &ut,
+        std::string &host,
+        std::string &path,
+        std::map<std::string, std::string> &params);
 
 }  // namespace http
 }  // namespace protocol

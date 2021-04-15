@@ -22,7 +22,9 @@ namespace pump {
 namespace protocol {
 namespace http {
 
-    connection::connection(bool server, transport::base_transport_sptr &transp) noexcept
+    connection::connection(
+        bool server, 
+        transport::base_transport_sptr &transp) noexcept
       : incoming_pocket_(nullptr),
         transp_(transp) {
         if (server) {
@@ -42,7 +44,9 @@ namespace http {
         }
     }
 
-    bool connection::start(service_ptr sv, const http_callbacks &cbs) {
+    bool connection::start(
+        service_ptr sv, 
+        const http_callbacks &cbs) {
         if (!transp_) {
             return false;
         }
@@ -93,7 +97,10 @@ namespace http {
         return transp_->send(data.c_str(), (int32_t)data.size()) == transport::ERROR_OK;
     }
 
-    void connection::on_read(connection_wptr wptr, const block_t *b, int32_t size) {
+    void connection::on_read(
+        connection_wptr wptr, 
+        const block_t *b, 
+        int32_t size) {
         PUMP_LOCK_WPOINTER(conn, wptr);
         if (conn) {
             conn->__handle_http_data(b, size);
@@ -114,7 +121,9 @@ namespace http {
         }
     }
 
-    void connection::__handle_http_data(const block_t *b, int32_t size) {
+    void connection::__handle_http_data(
+        const block_t *b, 
+        int32_t size) {
         auto pk = incoming_pocket_.get();
         if (!pk) {
             pk = create_incoming_pocket_();

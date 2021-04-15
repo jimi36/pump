@@ -34,8 +34,14 @@ namespace transport {
          * Constructor
          ********************************************************************************/
         address() noexcept;
-        address(const std::string &ip, uint16_t port);
-        address(const struct sockaddr *addr, int32_t addrlen);
+
+        address(
+            const std::string &ip, 
+            uint16_t port);
+
+        address(
+            const struct sockaddr *addr, 
+            int32_t addrlen);
 
         /*********************************************************************************
          * Deconstructor
@@ -45,8 +51,13 @@ namespace transport {
         /*********************************************************************************
          * Set and Get address
          ********************************************************************************/
-        bool set(const std::string &ip, uint16_t port);
-        bool set(const struct sockaddr *addr, int32_t addrlen);
+        bool set(
+            const std::string &ip, 
+            uint16_t port);
+
+        bool set(
+            const struct sockaddr *addr, 
+            int32_t addrlen);
 
         /*********************************************************************************
          * Get address struct

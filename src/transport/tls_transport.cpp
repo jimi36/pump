@@ -33,9 +33,10 @@ namespace transport {
         __clear_send_pockets();
     }
 
-    void tls_transport::init(flow::flow_tls_sptr &flow,
-                             const address &local_address,
-                             const address &remote_address) {
+    void tls_transport::init(
+        flow::flow_tls_sptr &flow,
+        const address &local_address,
+        const address &remote_address) {
         local_address_ = local_address;
         remote_address_ = remote_address;
 
@@ -45,7 +46,9 @@ namespace transport {
         poll::channel::__set_fd(flow->get_fd());
     }
 
-    int32_t tls_transport::start(service_ptr sv, const transport_callbacks &cbs) {
+    int32_t tls_transport::start(
+        service_ptr sv, 
+        const transport_callbacks &cbs) {
         if (!flow_) {
             PUMP_ERR_LOG("tls_transport: start failed with invalid flow");
             return ERROR_INVALID;
@@ -145,7 +148,9 @@ namespace transport {
         return ERROR_UNSTART;
     }
 
-    int32_t tls_transport::send(const block_t *b, int32_t size) {
+    int32_t tls_transport::send(
+        const block_t *b, 
+        int32_t size) {
         if (!b || size == 0) {
             PUMP_ERR_LOG("tls_transport: send failed with invalid buffer");
             return ERROR_INVALID;

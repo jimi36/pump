@@ -29,16 +29,20 @@ namespace websocket {
         acceptor_ = transport::tcp_acceptor::create(listen_address);
     }
 
-    server::server(const transport::address &listen_address,
-                   const std::string &certfile,
-                   const std::string &keyfile) noexcept 
+    server::server(
+        const transport::address &listen_address,
+        const std::string &certfile,
+        const std::string &keyfile) noexcept 
       : sv_(nullptr) {
-        acceptor_ = transport::tls_acceptor::create_with_file(certfile, 
-                                                              keyfile, 
-                                                              listen_address);
+        acceptor_ = transport::tls_acceptor::create_with_file(
+                        certfile, 
+                        keyfile, 
+                        listen_address);
     }
 
-    bool server::start(service_ptr sv, const server_callbacks &scbs) {
+    bool server::start(
+        service_ptr sv, 
+        const server_callbacks &scbs) {
         if (!sv) {
             return false;
         }
@@ -66,7 +70,9 @@ namespace websocket {
         }
     }
 
-    void server::on_accepted(server_wptr wptr, transport::base_transport_sptr &transp) {
+    void server::on_accepted(
+        server_wptr wptr, 
+        transport::base_transport_sptr &transp) {
         PUMP_LOCK_WPOINTER(svr, wptr);
         if (svr) {
             service_ptr sv = svr->sv_;
@@ -102,9 +108,10 @@ namespace websocket {
         }
     }
 
-    void server::on_upgrade_request(server_wptr wptr,
-                                    connection_ptr conn,
-                                    http::pocket_sptr pk) {
+    void server::on_upgrade_request(
+        server_wptr wptr,
+        connection_ptr conn,
+        http::pocket_sptr pk) {
         PUMP_LOCK_WPOINTER(svr, wptr);
         if (svr) {
             connection_sptr conn_locker;
@@ -132,9 +139,10 @@ namespace websocket {
         }
     }
 
-    void server::on_error(server_wptr wptr,
-                          connection_ptr conn,
-                          const std::string &msg) {
+    void server::on_error(
+        server_wptr wptr,
+        connection_ptr conn,
+        const std::string &msg) {
         PUMP_LOCK_WPOINTER(svr, wptr);
         if (svr) {
             std::unique_lock<std::mutex> w_lock(svr->conn_mx_);
@@ -146,8 +154,9 @@ namespace websocket {
         }
     }
 
-    bool server::__handle_upgrade_request(connection_ptr conn,
-                                          http::request_ptr req) {
+    bool server::__handle_upgrade_request(
+        connection_ptr conn,
+        http::request_ptr req) {
         if (req->get_method() != http::METHOD_GET) {
             send_http_error_response(conn, 404, "");
             return false;
@@ -210,7 +219,7 @@ namespace websocket {
 
         std::string data;
         resp.serialize(data);
-        return conn->send_buffer(data.c_str(), (int32_t)data.size());
+        return conn->send_raw(data.c_str(), (int32_t)data.size());
     }
 
     void server::__stop_all_upgrading_conns() {

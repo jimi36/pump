@@ -42,7 +42,9 @@ namespace http {
         /*********************************************************************************
          * Constructor
          ********************************************************************************/
-        connection(bool server, transport::base_transport_sptr &transp) noexcept;
+        connection(
+            bool server, 
+            transport::base_transport_sptr &transp) noexcept;
 
         /*********************************************************************************
          * Deconstructor
@@ -52,7 +54,9 @@ namespace http {
         /*********************************************************************************
          * Start http connection
          ********************************************************************************/
-        bool start(service_ptr sv, const http_callbacks &cbs);
+        bool start(
+            service_ptr sv, 
+            const http_callbacks &cbs);
 
         /*********************************************************************************
          * Stop http connection
@@ -99,7 +103,10 @@ namespace http {
         /*********************************************************************************
          * Read event callback
          ********************************************************************************/
-        static void on_read(connection_wptr wptr, const block_t *b, int32_t size);
+        static void on_read(
+            connection_wptr wptr, 
+            const block_t *b, 
+            int32_t size);
 
         /*********************************************************************************
          * Disconnected event callback
@@ -115,7 +122,9 @@ namespace http {
         /*********************************************************************************
          * Handle http data
          ********************************************************************************/
-        void __handle_http_data(const block_t *b, int32_t size);
+        void __handle_http_data(
+            const block_t *b, 
+            int32_t size);
 
         /*********************************************************************************
          * Stop transport

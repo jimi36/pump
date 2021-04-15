@@ -20,13 +20,16 @@
 namespace pump {
 namespace transport {
 
-    tcp_dialer::tcp_dialer(const address &local_address,
-                           const address &remote_address,
-                           int64_t timeout) noexcept
+    tcp_dialer::tcp_dialer(
+        const address &local_address,
+        const address &remote_address,
+        int64_t timeout) noexcept
       : base_dialer(TCP_DIALER, local_address, remote_address, timeout) {
     }
 
-    int32_t tcp_dialer::start(service_ptr sv, const dialer_callbacks &cbs) {
+    int32_t tcp_dialer::start(
+        service_ptr sv, 
+        const dialer_callbacks &cbs) {
         if (!sv) {
             PUMP_ERR_LOG("tcp_dialer: start failed with invalid service");
             return ERROR_INVALID;
@@ -148,8 +151,9 @@ namespace transport {
     bool tcp_dialer::__open_dial_flow() {
         // Init tcp dialer flow.
         PUMP_ASSERT(!flow_);
-        flow_.reset(object_create<flow::flow_tcp_dialer>(),
-                    object_delete<flow::flow_tcp_dialer>);
+        flow_.reset(
+            object_create<flow::flow_tcp_dialer>(),
+            object_delete<flow::flow_tcp_dialer>);
         if (flow_->init(shared_from_this(), local_address_) != flow::FLOW_ERR_NO) {
             PUMP_ERR_LOG("tcp_dialer: opend dal flow failed for flow init failed");
             return false;
@@ -161,10 +165,11 @@ namespace transport {
         return true;
     }
 
-    base_transport_sptr tcp_sync_dialer::dial(service_ptr sv,
-                                              const address &local_address,
-                                              const address &remote_address,
-                                              int64_t timeout) {
+    base_transport_sptr tcp_sync_dialer::dial(
+        service_ptr sv,
+        const address &local_address,
+        const address &remote_address,
+        int64_t timeout) {
         if (dialer_) {
             return base_transport_sptr();
         }
@@ -182,17 +187,18 @@ namespace transport {
         return dial_promise_.get_future().get();
     }
 
-    void tcp_sync_dialer::on_dialed(tcp_sync_dialer_wptr wptr,
-                                    base_transport_sptr &transp,
-                                    bool succ) {
-        tcp_sync_dialer_sptr dialer = wptr.lock();
+    void tcp_sync_dialer::on_dialed(
+        tcp_sync_dialer_wptr wptr,
+        base_transport_sptr &transp,
+        bool succ) {
+        auto dialer = wptr.lock();
         if (dialer) {
             dialer->dial_promise_.set_value(transp);
         }
     }
 
     void tcp_sync_dialer::on_timeouted(tcp_sync_dialer_wptr wptr) {
-        tcp_sync_dialer_sptr dialer = wptr.lock();
+        auto dialer = wptr.lock();
         if (dialer) {
             dialer->dial_promise_.set_value(base_transport_sptr());
         }

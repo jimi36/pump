@@ -85,11 +85,14 @@ namespace transport {
         /*********************************************************************************
          * Constructor
          ********************************************************************************/
-        base_channel(int32_t type, service_ptr sv, int32_t fd) noexcept
-            : service_getter(sv),
-              poll::channel(fd),
-              type_(type),
-              transport_state_(TRANSPORT_INITED) {
+        base_channel(
+            int32_t type, 
+            service_ptr sv, 
+            int32_t fd) noexcept
+          : service_getter(sv),
+            poll::channel(fd),
+            type_(type),
+            transport_state_(TRANSPORT_INITED) {
         }
 
         /*********************************************************************************
@@ -115,7 +118,9 @@ namespace transport {
         /*********************************************************************************
          * Set channel state
          ********************************************************************************/
-        PUMP_INLINE bool __set_state(int32_t expected, int32_t desired) {
+        PUMP_INLINE bool __set_state(
+            int32_t expected, 
+            int32_t desired) {
             return transport_state_.compare_exchange_strong(expected, desired);
         }
 
@@ -129,10 +134,14 @@ namespace transport {
         /*********************************************************************************
          * Post channel event
          ********************************************************************************/
-        PUMP_INLINE void __post_channel_event(poll::channel_sptr &&ch, int32_t event) {
+        PUMP_INLINE void __post_channel_event(
+            poll::channel_sptr &&ch, 
+            int32_t event) {
             get_service()->post_channel_event(ch, event);
         }
-        PUMP_INLINE void __post_channel_event(poll::channel_sptr &ch, int32_t event) {
+        PUMP_INLINE void __post_channel_event(
+            poll::channel_sptr &ch, 
+            int32_t event) {
             get_service()->post_channel_event(ch, event);
         }
 
@@ -151,10 +160,13 @@ namespace transport {
         /*********************************************************************************
          * Constructor
          ********************************************************************************/
-        base_transport(int32_t type, service_ptr sv, int32_t fd)
-            : base_channel(type, sv, fd),
-              read_state_(READ_NONE),
-              pending_send_size_(0) {
+        base_transport(
+            int32_t type, 
+            service_ptr sv, 
+            int32_t fd)
+          : base_channel(type, sv, fd),
+            read_state_(READ_NONE),
+            pending_send_size_(0) {
         }
 
         /*********************************************************************************
@@ -166,7 +178,9 @@ namespace transport {
         /*********************************************************************************
          * Start
          ********************************************************************************/
-        virtual int32_t start(service_ptr sv, const transport_callbacks &cbs) = 0;
+        virtual int32_t start(
+            service_ptr sv, 
+            const transport_callbacks &cbs) = 0;
 
         /*********************************************************************************
          * Stop
@@ -195,7 +209,9 @@ namespace transport {
         /*********************************************************************************
          * Send
          ********************************************************************************/
-        virtual int32_t send(const block_t *b, int32_t size) {
+        virtual int32_t send(
+            const block_t *b, 
+            int32_t size) {
             return ERROR_DISABLE;
         }
 
@@ -210,9 +226,10 @@ namespace transport {
         /*********************************************************************************
          * Send
          ********************************************************************************/
-        virtual int32_t send(const block_t *b,
-                             int32_t size,
-                             const address &address) {
+        virtual int32_t send(
+            const block_t *b,
+            int32_t size,
+            const address &address) {
             return ERROR_DISABLE;
         }
 
@@ -266,7 +283,8 @@ namespace transport {
             auto tracker = r_tracker_.get();
             if (PUMP_UNLIKELY(!tracker)) {
                 tracker = object_create<poll::channel_tracker>(
-                    shared_from_this(), poll::TRACK_READ);
+                            shared_from_this(), 
+                            poll::TRACK_READ);
                 r_tracker_.reset(tracker, object_delete<poll::channel_tracker>);
                 if (!get_service()->add_channel_tracker(r_tracker_, READ_POLLER)) {
                     PUMP_WARN_LOG("base_transport: start read tracker failed");
@@ -284,7 +302,8 @@ namespace transport {
             auto tracker = s_tracker_.get();
             if (PUMP_UNLIKELY(!tracker)) {
                 tracker = object_create<poll::channel_tracker>(
-                    shared_from_this(), poll::TRACK_SEND);
+                            shared_from_this(), 
+                            poll::TRACK_SEND);
                 s_tracker_.reset(tracker, object_delete<poll::channel_tracker>);
                 if (!get_service()->add_channel_tracker(s_tracker_, SEND_POLLER)) {
                     PUMP_WARN_LOG("base_transport: start send tracker failed");

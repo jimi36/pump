@@ -20,11 +20,12 @@
 namespace pump {
 namespace transport {
 
-    tls_dialer::tls_dialer(void_ptr xcred,
-                           const address &local_address,
-                           const address &remote_address,
-                           int64_t dial_timeout,
-                           int64_t handshake_timeout) noexcept
+    tls_dialer::tls_dialer(
+        void_ptr xcred,
+        const address &local_address,
+        const address &remote_address,
+        int64_t dial_timeout,
+        int64_t handshake_timeout) noexcept
       : base_dialer(TLS_DIALER, local_address, remote_address, dial_timeout),
         xcred_(xcred),
         xcred_owner_(false),
@@ -41,7 +42,9 @@ namespace transport {
         }
     }
 
-    int32_t tls_dialer::start(service_ptr sv, const dialer_callbacks &cbs) {
+    int32_t tls_dialer::start(
+        service_ptr sv, 
+        const dialer_callbacks &cbs) {
         if (!xcred_) {
             PUMP_ERR_LOG("tls_dialer: start failed with invalid certificate");
             return ERROR_INVALID;
@@ -146,9 +149,15 @@ namespace transport {
             // If handshaker is started error, handshaked callback will be triggered. So
             // we do nothing at here when started error. But if dialer stopped befere
             // here, we shuold stop handshaking.
-            handshaker_.reset(object_create<tls_handshaker>(),
-                              object_delete<tls_handshaker>);
-            handshaker_->init(flow->unbind(), true, xcred_, local_address, remote_address);
+            handshaker_.reset(
+                object_create<tls_handshaker>(),
+                object_delete<tls_handshaker>);
+            handshaker_->init(
+                flow->unbind(), 
+                true, 
+                xcred_, 
+                local_address, 
+                remote_address);
 
             tls_handshaker::tls_handshaker_callbacks tls_cbs;
             tls_cbs.handshaked_cb =
@@ -188,9 +197,10 @@ namespace transport {
         }
     }
 
-    void tls_dialer::on_handshaked(tls_dialer_wptr wptr,
-                                   tls_handshaker_ptr handshaker,
-                                   bool succ) {
+    void tls_dialer::on_handshaked(
+        tls_dialer_wptr wptr,
+        tls_handshaker_ptr handshaker,
+        bool succ) {
         PUMP_LOCK_WPOINTER(dialer, wptr);
         if (!dialer) {
             PUMP_WARN_LOG("tls_dialer: handle handshaked event failed for dialer invalid");
@@ -218,8 +228,9 @@ namespace transport {
         dialer->handshaker_.reset();
     }
 
-    void tls_dialer::on_handshake_stopped(tls_dialer_wptr wptr,
-                                          tls_handshaker_ptr handshaker) {
+    void tls_dialer::on_handshake_stopped(
+        tls_dialer_wptr wptr,
+        tls_handshaker_ptr handshaker) {
         PUMP_LOCK_WPOINTER(dialer, wptr);
         if (!dialer) {
             PUMP_WARN_LOG("tls_dialer: handle handshake stopped event failed for dialer invalid");
@@ -234,8 +245,9 @@ namespace transport {
     bool tls_dialer::__open_dial_flow() {
         // Setup flow
         PUMP_ASSERT(!flow_);
-        flow_.reset(object_create<flow::flow_tcp_dialer>(),
-                    object_delete<flow::flow_tcp_dialer>);
+        flow_.reset(
+            object_create<flow::flow_tcp_dialer>(),
+            object_delete<flow::flow_tcp_dialer>);
 
         if (flow_->init(shared_from_this(), local_address_) != flow::FLOW_ERR_NO) {
             PUMP_ERR_LOG("tls_dialer: open dial flow failed for flow init failed");
@@ -248,11 +260,12 @@ namespace transport {
         return true;
     }
 
-    base_transport_sptr tls_sync_dialer::dial(service_ptr sv,
-                                              const address &local_address,
-                                              const address &remote_address,
-                                              int64_t connect_timeout,
-                                              int64_t handshake_timeout) {
+    base_transport_sptr tls_sync_dialer::dial(
+        service_ptr sv,
+        const address &local_address,
+        const address &remote_address,
+        int64_t connect_timeout,
+        int64_t handshake_timeout) {
         if (dialer_) {
             return base_transport_sptr();
         }
@@ -270,17 +283,18 @@ namespace transport {
         return dial_promise_.get_future().get();
     }
 
-    void tls_sync_dialer::on_dialed(tls_sync_dialer_wptr wptr,
-                                    base_transport_sptr &transp,
-                                    bool succ) {
-        tls_sync_dialer_sptr dialer = wptr.lock();
+    void tls_sync_dialer::on_dialed(
+        tls_sync_dialer_wptr wptr,
+        base_transport_sptr &transp,
+        bool succ) {
+        auto dialer = wptr.lock();
         if (dialer) {
             dialer->dial_promise_.set_value(transp);
         }
     }
 
     void tls_sync_dialer::on_timeouted(tls_sync_dialer_wptr wptr) {
-        tls_sync_dialer_sptr dialer = wptr.lock();
+        auto dialer = wptr.lock();
         if (dialer) {
             dialer->dial_promise_.set_value(base_transport_sptr());
         }

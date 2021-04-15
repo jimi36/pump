@@ -56,9 +56,10 @@ namespace websocket {
         /*********************************************************************************
          * Constructor
          ********************************************************************************/
-        connection(service_ptr sv,
-                   transport::base_transport_sptr &transp,
-                   bool has_mask) noexcept;
+        connection(
+            service_ptr sv,
+            transport::base_transport_sptr &transp,
+            bool has_mask) noexcept;
 
         /*********************************************************************************
          * Deconstructor
@@ -69,7 +70,9 @@ namespace websocket {
          * Start upgrade
          * User must not call this function!!!
          ********************************************************************************/
-        bool start_upgrade(bool client, const upgrade_callbacks &ucbs);
+        bool start_upgrade(
+            bool client,
+            const upgrade_callbacks &ucbs);
 
         /*********************************************************************************
          * Start
@@ -87,16 +90,20 @@ namespace websocket {
         bool async_read_next_frame();
 
         /*********************************************************************************
-         * Send buffer
-         * Send raw buffer without packing as frame.
+         * Send raw data
+         * Send raw data without packing as frame.
          ********************************************************************************/
-        bool send_buffer(const block_t *b, int32_t size);
+        bool send_raw(
+            const block_t *b,
+            int32_t size);
 
         /*********************************************************************************
-         * Send
-         * Send buffer with packing as frame.
+         * Send frame
+         * Send data with packing as frame.
          ********************************************************************************/
-        bool send(const block_t *b, int32_t size);
+        bool send_frame(
+            const block_t *b,
+            int32_t size);
 
         /*********************************************************************************
          * Check connection is valid or not
@@ -112,7 +119,10 @@ namespace websocket {
         /*********************************************************************************
          * Read event callback
          ********************************************************************************/
-        static void on_read(connection_wptr wptr, const block_t *b, int32_t size);
+        static void on_read(
+            connection_wptr wptr,
+            const block_t *b, 
+            int32_t size);
 
         /*********************************************************************************
          * Disconnected event callback
@@ -128,12 +138,16 @@ namespace websocket {
         /*********************************************************************************
          * Handle frame
          ********************************************************************************/
-        int32_t __handle_pocket(const block_t *b, int32_t size);
+        int32_t __handle_pocket(
+            const block_t *b, 
+            int32_t size);
 
         /*********************************************************************************
          * Handle frame
          ********************************************************************************/
-        int32_t __handle_frame(const block_t *b, int32_t size);
+        int32_t __handle_frame(
+            const block_t *b, 
+            int32_t size);
 
         /*********************************************************************************
          * Send ping frame

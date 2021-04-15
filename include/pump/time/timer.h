@@ -49,9 +49,10 @@ namespace time {
         /*********************************************************************************
          * Create instance
          ********************************************************************************/
-        PUMP_INLINE static timer_sptr create(uint64_t timeout,
-                                             const timer_callback &cb,
-                                             bool repeated = false) {
+        PUMP_INLINE static timer_sptr create(
+            uint64_t timeout,
+            const timer_callback &cb,
+            bool repeated = false) {
             INLINE_OBJECT_CREATE(obj, timer, (timeout, cb, repeated));
             return timer_sptr(obj, object_delete<timer>);
         }
@@ -98,7 +99,10 @@ namespace time {
         /*********************************************************************************
          * Constructor
          ********************************************************************************/
-        timer(uint64_t timeout, const timer_callback &cb, bool repeated) noexcept;
+        timer(
+            uint64_t timeout, 
+            const timer_callback &cb, 
+            bool repeated) noexcept;
 
         /*********************************************************************************
          * Start
@@ -108,7 +112,9 @@ namespace time {
         /*********************************************************************************
          * Set state
          ********************************************************************************/
-        PUMP_INLINE bool __set_state(int32_t expected, int32_t desired) {
+        PUMP_INLINE bool __set_state(
+            int32_t expected, 
+            int32_t desired) {
             return status_.compare_exchange_strong(expected, desired);
         }
 

@@ -100,7 +100,9 @@ namespace poll {
 #endif
     }
 
-    void select_poller::__dispatch_pending_event(const fd_set *rfds, const fd_set *wfds) {
+    void select_poller::__dispatch_pending_event(
+        const fd_set *rfds, 
+        const fd_set *wfds) {
 #if defined(PUMP_HAVE_SELECT)
         auto beg = trackers_.begin();
         while (beg != trackers_.end()) {

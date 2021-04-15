@@ -38,15 +38,17 @@ namespace websocket {
     /*********************************************************************************
      * Match websocket protocol
      ********************************************************************************/
-    std::string match_protocol(const std::vector<std::string> &srcs,
-                               const std::string &des);
+    std::string match_protocol(
+        const std::vector<std::string> &srcs,
+        const std::string &des);
 
     /*********************************************************************************
      * Send http error response
      ********************************************************************************/
-    void send_http_error_response(connection_ptr conn,
-                                  int32_t status_code,
-                                  const std::string &reason);
+    void send_http_error_response(
+        connection_ptr conn,
+        int32_t status_code,
+        const std::string &reason);
 
 }  // namespace websocket
 }  // namespace protocol

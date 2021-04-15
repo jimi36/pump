@@ -27,9 +27,10 @@ namespace http {
     server::~server() {
     }
 
-    bool server::start(service_ptr sv,
-                       const transport::address &listen_address,
-                       const server_callbacks &cbs) {
+    bool server::start(
+        service_ptr sv,
+        const transport::address &listen_address,
+        const server_callbacks &cbs) {
         // Check acceptor
         if (acceptor_) {
             return false;
@@ -61,11 +62,12 @@ namespace http {
         return true;
     }
 
-    bool server::start(service_ptr sv,
-                       const std::string &crtfile,
-                       const std::string &keyfile,
-                       const transport::address &listen_address,
-                       const server_callbacks &cbs) {
+    bool server::start(
+        service_ptr sv,
+        const std::string &crtfile,
+        const std::string &keyfile,
+        const transport::address &listen_address,
+        const server_callbacks &cbs) {
         // Check acceptor
         if (acceptor_) {
             return false;
@@ -105,8 +107,9 @@ namespace http {
         }
     }
 
-    void server::on_accepted(server_wptr wptr,
-                             transport::base_transport_sptr &transp) {
+    void server::on_accepted(
+        server_wptr wptr,
+        transport::base_transport_sptr &transp) {
         PUMP_LOCK_WPOINTER(svr, wptr);
         if (!svr) {
             return;
@@ -149,9 +152,10 @@ namespace http {
         svr->cbs_.stopped_cb();
     }
 
-    void server::on_http_request(server_wptr wptr,
-                                 connection_wptr wconn,
-                                 pocket_sptr &&pk) {
+    void server::on_http_request(
+        server_wptr wptr,
+        connection_wptr wconn,
+        pocket_sptr &&pk) {
         PUMP_LOCK_WPOINTER(svr, wptr);
         if (!svr) {
             return;
@@ -167,9 +171,10 @@ namespace http {
         conn->read_next_pocket();
     }
 
-    void server::on_http_error(server_wptr wptr,
-                               connection_wptr wconn,
-                               const std::string &msg) {
+    void server::on_http_error(
+        server_wptr wptr,
+        connection_wptr wconn,
+        const std::string &msg) {
         PUMP_LOCK_WPOINTER(conn, wconn);
         PUMP_ASSERT(conn);
 

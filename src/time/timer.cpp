@@ -20,7 +20,10 @@
 namespace pump {
 namespace time {
 
-    timer::timer(uint64_t timeout, const timer_callback &cb, bool repeated) noexcept
+    timer::timer(
+        uint64_t timeout, 
+        const timer_callback &cb, 
+        bool repeated) noexcept
       : queue_(nullptr),
         status_(TIMER_INIT),
         cb_(cb),

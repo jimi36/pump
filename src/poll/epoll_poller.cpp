@@ -129,10 +129,11 @@ namespace poll {
             PUMP_ASSERT(events_);
         }
 
-        auto count = ::epoll_wait(fd_, 
-                                  (struct epoll_event*)events_, 
-                                  max_event_count_, 
-                                  timeout);
+        auto count = ::epoll_wait(
+                        fd_, 
+                        (struct epoll_event*)events_, 
+                        max_event_count_, 
+                        timeout);
         if (count > 0) {
             __dispatch_pending_event(count);
         }

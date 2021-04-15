@@ -107,7 +107,9 @@ namespace pump {
         }
     }
 
-    bool service::add_channel_tracker(poll::channel_tracker_sptr &tracker, int32_t pi) {
+    bool service::add_channel_tracker(
+        poll::channel_tracker_sptr &tracker, 
+        int32_t pi) {
         PUMP_ASSERT(pi <= SEND_POLLER);
         if (pollers_[pi]) {
             return pollers_[pi]->add_channel_tracker(tracker);
@@ -115,14 +117,18 @@ namespace pump {
         return false;
     }
 
-    void service::remove_channel_tracker(poll::channel_tracker_sptr &tracker, int32_t pi) {
+    void service::remove_channel_tracker(
+        poll::channel_tracker_sptr &tracker, 
+        int32_t pi) {
         PUMP_ASSERT(pi <= SEND_POLLER);
         if (pollers_[pi]) {
             return pollers_[pi]->remove_channel_tracker(tracker);
         }
     }
 
-    bool service::resume_channel_tracker(poll::channel_tracker_ptr tracker, int32_t pi) {
+    bool service::resume_channel_tracker(
+        poll::channel_tracker_ptr tracker, 
+        int32_t pi) {
         PUMP_ASSERT(pi <= SEND_POLLER);
         if (pollers_[pi]) {
             return pollers_[pi]->resume_channel_tracker(tracker);
@@ -130,7 +136,9 @@ namespace pump {
         return false;
     }
 
-    bool service::post_channel_event(poll::channel_sptr &ch, int32_t event) {
+    bool service::post_channel_event(
+        poll::channel_sptr &ch, 
+        int32_t event) {
         if (PUMP_LIKELY(!!pollers_[SEND_POLLER])) {
             return pollers_[SEND_POLLER]->push_channel_event(ch, event);
         }
@@ -157,8 +165,9 @@ namespace pump {
                 }
             }
         };
-        posted_task_worker_.reset(object_create<std::thread>(func),
-                                  object_delete<std::thread>);
+        posted_task_worker_.reset(
+            object_create<std::thread>(func),
+            object_delete<std::thread>);
     }
 
     void service::__start_timeout_timer_worker() {
@@ -173,8 +182,9 @@ namespace pump {
                 }
             }
         };
-        pending_timer_worker_.reset(object_create<std::thread>(func),
-                                    object_delete<std::thread>);
+        pending_timer_worker_.reset(
+            object_create<std::thread>(func),
+            object_delete<std::thread>);
     }
 
 }  // namespace pump

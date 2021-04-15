@@ -47,10 +47,11 @@ namespace flow {
          *     FLOW_ERR_NO    => success
          *     FLOW_ERR_ABORT => error
          ********************************************************************************/
-        int32_t init(poll::channel_sptr &ch,
-                     pump_socket fd,
-                     void_ptr xcred,
-                     bool client);
+        int32_t init(
+            poll::channel_sptr &ch,
+            pump_socket fd,
+            void_ptr xcred,
+            bool client);
 
         /*********************************************************************************
          * Handshake
@@ -67,7 +68,9 @@ namespace flow {
         /*********************************************************************************
          * Read
          ********************************************************************************/
-        PUMP_INLINE int32_t read(block_t* b, int32_t size) {
+        PUMP_INLINE int32_t read(
+            block_t* b, 
+            int32_t size) {
             return ssl::tls_read(session_, b, size);
         }
 

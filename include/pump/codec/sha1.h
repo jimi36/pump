@@ -37,17 +37,25 @@ namespace codec {
     /*********************************************************************************
      * Update sha1 context
      ********************************************************************************/
-    LIB_PUMP void sha1_update(SHA1_CTX *ctx, const block_t *data, int32_t size);
+    LIB_PUMP void sha1_update(
+        SHA1_CTX *ctx, 
+        const block_t *data, 
+        int32_t size);
 
     /*********************************************************************************
      * Final sha1 context
      ********************************************************************************/
-    LIB_PUMP void sha1_final(SHA1_CTX *ctx, uint8_t digest[20]);
+    LIB_PUMP void sha1_final(
+        SHA1_CTX *ctx, 
+        uint8_t digest[20]);
 
     /*********************************************************************************
      * Sha1
      ********************************************************************************/
-    LIB_PUMP void sha1(const block_t *data, int32_t size, uint8_t digest[20]);
+    LIB_PUMP void sha1(
+        const block_t *data, 
+        int32_t size, 
+        uint8_t digest[20]);
 
 }  // namespace codec
 }  // namespace pump

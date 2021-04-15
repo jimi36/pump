@@ -85,9 +85,10 @@ struct pump_c_timer_impl {
     time::timer_sptr t;
 };
 
-pump_c_timer pump_c_timer_create(int timeout_ms, 
-                                 int repeated, 
-                                 pump_c_timeout_callback cb_func) {
+pump_c_timer pump_c_timer_create(
+    int timeout_ms, 
+    int repeated, 
+    pump_c_timeout_callback cb_func) {
     pump_c_timer_impl *impl = object_create<pump_c_timer_impl>();
 
     time::timer_callback cb = pump_bind(cb_func);
@@ -101,7 +102,9 @@ void pump_c_timer_destory(pump_c_timer timer) {
     object_delete((pump_c_timer_impl*)timer);
 }
 
-int pump_c_timer_start(pump_c_service sv, pump_c_timer timer) {
+int pump_c_timer_start(
+    pump_c_service sv, 
+    pump_c_timer timer) {
     pump_c_service_impl *impl_sv = (pump_c_service_impl*)sv;
     PUMP_ASSERT(impl_sv && impl_sv->sv);
 
@@ -138,7 +141,9 @@ struct pump_c_transport_impl {
     transport::base_transport_sptr transp;
 };
 
-pump_c_acceptor pump_c_tcp_acceptor_create(const char *ip, int port) {
+pump_c_acceptor pump_c_tcp_acceptor_create(
+    const char *ip, 
+    int port) {
     pump_c_acceptor_impl *impl = object_create<pump_c_acceptor_impl>();
 
     transport::address addr(ip, port);
@@ -150,10 +155,11 @@ pump_c_acceptor pump_c_tcp_acceptor_create(const char *ip, int port) {
     return impl;
 }
 
-pump_c_acceptor pump_c_tls_acceptor_create(const char *ip, 
-                                           int port,
-                                           const char *cert,
-                                           const char *key) {
+pump_c_acceptor pump_c_tls_acceptor_create(
+    const char *ip, 
+    int port,
+    const char *cert,
+    const char *key) {
     pump_c_acceptor_impl *impl = object_create<pump_c_acceptor_impl>();
 
     transport::address addr(ip, port);
@@ -171,8 +177,9 @@ void pump_c_acceptor_destory(pump_c_acceptor acceptor) {
     object_delete((pump_c_acceptor_impl*)acceptor);
 }
 
-static void on_acceptor_accepted_cb(pump_c_acceptor_impl *impl,
-                                    transport::base_transport_sptr &transp) {
+static void on_acceptor_accepted_cb(
+    pump_c_acceptor_impl *impl,
+    transport::base_transport_sptr &transp) {
     if (impl->cbs.accepted_cb) {
         pump_c_transport_impl *impl_transp = object_create<pump_c_transport_impl>();
         impl_transp->transp = transp;
@@ -191,9 +198,10 @@ static void on_acceptor_stopped_cb(pump_c_acceptor_impl *impl) {
     }
 }
 
-int pump_c_acceptor_start(pump_c_service sv,
-                          pump_c_acceptor acceptor, 
-                          struct pump_c_acceptor_callbacks cbs) {
+int pump_c_acceptor_start(
+    pump_c_service sv,
+    pump_c_acceptor acceptor, 
+    struct pump_c_acceptor_callbacks cbs) {
     pump_c_service_impl *impl_sv = (pump_c_service_impl*)sv;
     PUMP_ASSERT(impl_sv && impl_sv->sv);
 
@@ -221,10 +229,11 @@ int pump_c_acceptor_stop(pump_c_acceptor acceptor) {
     return 0;
 }
 
-pump_c_acceptor pump_c_tcp_dialer_create(const char *local_ip, 
-                                         int local_port,
-                                         const char *remote_ip, 
-                                         int remote_port) {
+pump_c_acceptor pump_c_tcp_dialer_create(
+    const char *local_ip, 
+    int local_port,
+    const char *remote_ip, 
+    int remote_port) {
     pump_c_dialer_impl *impl = object_create<pump_c_dialer_impl>();
 
     transport::address local_addr(local_ip, local_port);
@@ -238,10 +247,11 @@ pump_c_acceptor pump_c_tcp_dialer_create(const char *local_ip,
     return impl;
 }
 
-pump_c_acceptor pump_c_tls_dialer_create(const char *local_ip, 
-                                         int local_port,
-                                         const char *remote_ip, 
-                                         int remote_port) {
+pump_c_acceptor pump_c_tls_dialer_create(
+    const char *local_ip, 
+    int local_port,
+    const char *remote_ip, 
+    int remote_port) {
     pump_c_dialer_impl *impl = object_create<pump_c_dialer_impl>();
 
     transport::address local_addr(local_ip, local_port);
@@ -260,9 +270,10 @@ void pump_c_dialer_destory(pump_c_dialer dialer) {
     object_delete((pump_c_dialer_impl*)dialer);
 }
 
-static void on_dialer_dialed(pump_c_dialer_impl *impl, 
-                             transport::base_transport_sptr &transp, 
-                             bool succ) {
+static void on_dialer_dialed(
+    pump_c_dialer_impl *impl, 
+    transport::base_transport_sptr &transp, 
+    bool succ) {
     if (impl->cbs.dialed_cb) {
         pump_c_transport_impl *impl_transp = nullptr;
         if (succ) {
@@ -289,9 +300,10 @@ static void on_dialer_stopped(pump_c_dialer_impl *impl) {
     }
 }
 
-int pump_c_dialer_start(pump_c_service sv,
-                        pump_c_dialer dialer,
-                        struct pump_c_dialer_callbacks cbs) {
+int pump_c_dialer_start(
+    pump_c_service sv,
+    pump_c_dialer dialer,
+    struct pump_c_dialer_callbacks cbs) {
     pump_c_service_impl *impl_sv = (pump_c_service_impl*)sv;
     PUMP_ASSERT(impl_sv && impl_sv->sv);
 
@@ -325,18 +337,20 @@ void pump_c_transport_destory(pump_c_transport transp) {
     object_delete((pump_c_transport_impl*)transp);
 }
 
-static void on_transport_read(pump_c_transport_impl *impl, 
-                              const char *b, 
-                              int size) {
+static void on_transport_read(
+    pump_c_transport_impl *impl, 
+    const char *b, 
+    int size) {
     if (impl->cbs.read_cb) {
         impl->cbs.read_cb(impl, b, size);
     }
 }
 
-static void on_transport_read_from(pump_c_transport_impl *impl,
-                                   const char *b, 
-                                   int size, 
-                                   const transport::address &addr) {
+static void on_transport_read_from(
+    pump_c_transport_impl *impl,
+    const char *b, 
+    int size, 
+    const transport::address &addr) {
     if (impl->cbs.read_from_cb) {
         impl->cbs.read_from_cb(impl, b, size, addr.ip().c_str(), (int)addr.port());
     }
@@ -354,9 +368,10 @@ static void on_transport_disconnected(pump_c_transport_impl *impl) {
     }
 }
 
-int pump_c_transport_start(pump_c_service sv,
-                           pump_c_transport transp, 
-                           struct pump_c_transport_callbacks cbs) {
+int pump_c_transport_start(
+    pump_c_service sv,
+    pump_c_transport transp, 
+    struct pump_c_transport_callbacks cbs) {
     pump_c_service_impl *impl_sv = (pump_c_service_impl*)sv;
     PUMP_ASSERT(impl_sv && impl_sv->sv);
 
@@ -386,7 +401,10 @@ int pump_c_transport_stop(pump_c_transport transp) {
     return 0;
 }
 
-int pump_c_transport_send(pump_c_transport transp, const char *b, int size) {
+int pump_c_transport_send(
+    pump_c_transport transp, 
+    const char *b, 
+    int size) {
     pump_c_transport_impl *impl_transp = (pump_c_transport_impl*)transp;
     PUMP_ASSERT(impl_transp && impl_transp->transp);
 

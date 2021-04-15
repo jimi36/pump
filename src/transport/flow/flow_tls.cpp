@@ -30,10 +30,11 @@ namespace flow {
         ssl::destory_tls_session(session_);
     }
 
-    int32_t flow_tls::init(poll::channel_sptr &ch,
-                           pump_socket fd,
-                           void_ptr xcred,
-                           bool client) {
+    int32_t flow_tls::init(
+        poll::channel_sptr &ch,
+        pump_socket fd,
+        void_ptr xcred,
+        bool client) {
         PUMP_DEBUG_ASSIGN(ch, ch_, ch);
         PUMP_DEBUG_ASSIGN(fd > 0, fd_, fd);
 

@@ -84,7 +84,9 @@ namespace http {
         /*********************************************************************************
          * Create http connection
          ********************************************************************************/
-        bool __create_connection(bool https, const transport::address &address);
+        bool __create_connection(
+            bool https, 
+            const transport::address &address);
 
         /*********************************************************************************
          * Destroy http connection
@@ -94,18 +96,26 @@ namespace http {
         /*********************************************************************************
          * Destroy http connection
          ********************************************************************************/
-        void __notify_response(connection_ptr conn, response_sptr &&resp);
+        void __notify_response(
+            connection_ptr conn, 
+            response_sptr &&resp);
 
       private:
         /*********************************************************************************
          * Handel connection response
          ********************************************************************************/
-        static void on_response(client_wptr wptr, connection_ptr conn, pocket_sptr &&pk);
+        static void on_response(
+            client_wptr wptr, 
+            connection_ptr conn, 
+            pocket_sptr &&pk);
 
         /*********************************************************************************
          * Handel connection disconnected
          ********************************************************************************/
-        static void on_error(client_wptr wptr, connection_ptr conn, const std::string &msg);
+        static void on_error(
+            client_wptr wptr, 
+            connection_ptr conn, 
+            const std::string &msg);
 
       private:
         // Service

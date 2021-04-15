@@ -10,7 +10,7 @@ void on_receive(websocket::connection_ptr conn,
     std::string gbk = pump::utf8_to_gbk(data);
     printf("received: %s\n", gbk.c_str());
 
-    conn->send(b, size);
+    conn->send_frame(b, size);
 }
 
 void on_error(websocket::connection_ptr conn, const std::string &msg) {
@@ -28,7 +28,7 @@ void on_new_connection(const std::string &path, websocket::connection_sptr conn)
 
     std::string msg = "hello world";
     std::string data = pump::gbk_to_utf8(msg);
-    conn->send(data.c_str(), (int32_t)data.size());
+    conn->send_frame(data.c_str(), (int32_t)data.size());
 
     ws_conn = conn;
 }

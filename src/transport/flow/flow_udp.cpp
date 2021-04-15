@@ -26,7 +26,9 @@ namespace flow {
     flow_udp::~flow_udp() {
     }
 
-    int32_t flow_udp::init(poll::channel_sptr &&ch, const address &bind_address) {
+    int32_t flow_udp::init(
+        poll::channel_sptr &&ch, 
+        const address &bind_address) {
         PUMP_DEBUG_ASSIGN(ch, ch_, ch);
 
         int32_t domain = AF_INET;
@@ -61,12 +63,16 @@ namespace flow {
         return FLOW_ERR_NO;
     }
 
-    int32_t flow_udp::send(const block_t *b, int32_t size, const address &to_address) {
-        return net::send_to(fd_, 
-                            b, 
-                            size, 
-                            (struct sockaddr*)to_address.get(), 
-                            to_address.len());
+    int32_t flow_udp::send(
+        const block_t *b, 
+        int32_t size, 
+        const address &to_address) {
+        return net::send_to(
+                fd_, 
+                b, 
+                size, 
+                (struct sockaddr*)to_address.get(), 
+                to_address.len());
     }
 
 }  // namespace flow

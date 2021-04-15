@@ -51,12 +51,13 @@ namespace websocket {
     /*********************************************************************************
      * Init frame header
      ********************************************************************************/
-    void init_frame_header(frame_header_ptr hdr,
-                           uint32_t fin,
-                           uint32_t optcode,
-                           uint32_t mask,
-                           uint8_t mask_key[4],
-                           uint64_t payload_len);
+    void init_frame_header(
+        frame_header_ptr hdr,
+        uint32_t fin,
+        uint32_t optcode,
+        uint32_t mask,
+        uint8_t mask_key[4],
+        uint64_t payload_len);
 
     /*********************************************************************************
      * Get ws frame header size
@@ -66,17 +67,26 @@ namespace websocket {
     /*********************************************************************************
      * Decode ws frame header
      ********************************************************************************/
-    int32_t decode_frame_header(const block_t *b, int32_t size, frame_header_ptr hdr);
+    int32_t decode_frame_header(
+        const block_t *b,
+        int32_t size,
+        frame_header_ptr hdr);
 
     /*********************************************************************************
      * Encode ws frame header
      ********************************************************************************/
-    int32_t encode_frame_header(c_frame_header_ptr hdr, block_t *b, int32_t size);
+    int32_t encode_frame_header(
+        c_frame_header_ptr hdr,
+        block_t *b, 
+        int32_t size);
 
     /*********************************************************************************
      * Mask transform
      ********************************************************************************/
-    void mask_transform(uint8_t *b, int32_t size, uint8_t mask_key[4]);
+    void mask_transform(
+        uint8_t *b, 
+        int32_t size, 
+        uint8_t mask_key[4]);
 
 }  // namespace websocket
 }  // namespace protocol

@@ -33,9 +33,10 @@ namespace transport {
         __clear_sendlist();
     }
 
-    void tcp_transport::init(pump_socket fd,
-                             const address &local_address,
-                             const address &remote_address) {
+    void tcp_transport::init(
+        pump_socket fd,
+        const address &local_address,
+        const address &remote_address) {
         local_address_ = local_address;
         remote_address_ = remote_address;
 
@@ -43,7 +44,9 @@ namespace transport {
         poll::channel::__set_fd(fd);
     }
 
-    int32_t tcp_transport::start(service_ptr sv, const transport_callbacks &cbs) {
+    int32_t tcp_transport::start(
+        service_ptr sv, 
+        const transport_callbacks &cbs) {
         if (flow_) {
             PUMP_ERR_LOG("tcp_transport: start failed for started");
             return ERROR_INVALID;
@@ -148,7 +151,9 @@ namespace transport {
         return ERROR_UNSTART;
     }
 
-    int32_t tcp_transport::send(const block_t *b, int32_t size) {
+    int32_t tcp_transport::send(
+        const block_t *b, 
+        int32_t size) {
         if (!b || size == 0) {
             PUMP_WARN_LOG("tcp_transport: send failed with invalid buffer");
             return ERROR_INVALID;

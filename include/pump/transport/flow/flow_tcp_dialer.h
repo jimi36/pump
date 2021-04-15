@@ -43,7 +43,9 @@ namespace flow {
          *     FLOW_ERR_NO    => success
          *     FLOW_ERR_ABORT => error
          ********************************************************************************/
-        int32_t init(poll::channel_sptr &&ch, const address &bind_address);
+        int32_t init(
+            poll::channel_sptr &&ch, 
+            const address &bind_address);
 
         /*********************************************************************************
          * Post connect
@@ -57,7 +59,9 @@ namespace flow {
          * Connect
          * Return socket error code.
          ********************************************************************************/
-        int32_t connect(address_ptr local_address, address_ptr remote_address);
+        int32_t connect(
+            address_ptr local_address, 
+            address_ptr remote_address);
 
       private:
         // IPV6

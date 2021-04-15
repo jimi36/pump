@@ -46,14 +46,18 @@ namespace http {
         /*********************************************************************************
          * Append data
          ********************************************************************************/
-        void append(const block_t *b, int32_t size);
+        void append(
+            const block_t *b, 
+            int32_t size);
         void append(const std::string &data);
 
         /*********************************************************************************
          * Parse
          * This return parsed size. If return -1, it means parse error.
          ********************************************************************************/
-        int32_t parse(const block_t *b, int32_t size);
+        int32_t parse(
+            const block_t *b, 
+            int32_t size);
 
         /*********************************************************************************
          * Serialize
@@ -86,12 +90,16 @@ namespace http {
         /*********************************************************************************
          * Parse body by content length mode
          ********************************************************************************/
-        int32_t __parse_by_length(const block_t *b, int32_t size);
+        int32_t __parse_by_length(
+            const block_t *b, 
+            int32_t size);
 
         /*********************************************************************************
          * Parse body by chunk mode
          ********************************************************************************/
-        int32_t __parse_by_chunk(const block_t *b, int32_t size);
+        int32_t __parse_by_chunk(
+            const block_t *b, 
+            int32_t size);
 
       private:
         // Parse finished mark

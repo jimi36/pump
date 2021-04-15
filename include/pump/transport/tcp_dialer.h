@@ -37,11 +37,14 @@ namespace transport {
         /*********************************************************************************
          * Create instance
          ********************************************************************************/
-        PUMP_INLINE static tcp_dialer_sptr create(const address &local_address,
-                                                  const address &remote_address,
-                                                  int64_t connect_timeout = 0) {
+        PUMP_INLINE static tcp_dialer_sptr create(
+            const address &local_address,
+            const address &remote_address,
+            int64_t connect_timeout = 0) {
             INLINE_OBJECT_CREATE(
-                obj, tcp_dialer, (local_address, remote_address, connect_timeout));
+                obj, 
+                tcp_dialer, 
+                (local_address, remote_address, connect_timeout));
             return tcp_dialer_sptr(obj, object_delete<tcp_dialer>);
         }
 
@@ -53,7 +56,9 @@ namespace transport {
         /*********************************************************************************
          * Start
          ********************************************************************************/
-        virtual int32_t start(service_ptr sv, const dialer_callbacks &cbs) override;
+        virtual int32_t start(
+            service_ptr sv, 
+            const dialer_callbacks &cbs) override;
 
         /*********************************************************************************
          * Stop
@@ -89,9 +94,10 @@ namespace transport {
         /*********************************************************************************
          * Constructor
          ********************************************************************************/
-        tcp_dialer(const address &local_address,
-                   const address &remote_address,
-                   int64_t timeout) noexcept;
+        tcp_dialer(
+            const address &local_address,
+            const address &remote_address,
+            int64_t timeout) noexcept;
 
       private:
         // Dialer flow
@@ -120,18 +126,20 @@ namespace transport {
         /*********************************************************************************
          * Dial by sync
          ********************************************************************************/
-        base_transport_sptr dial(service_ptr sv,
-                                 const address &local_address,
-                                 const address &remote_address,
-                                 int64_t timeout = 0);
+        base_transport_sptr dial(
+            service_ptr sv,
+            const address &local_address,
+            const address &remote_address,
+            int64_t timeout = 0);
 
       protected:
         /*********************************************************************************
          * Dialed callback
          ********************************************************************************/
-        static void on_dialed(tcp_sync_dialer_wptr wptr,
-                              base_transport_sptr &transp,
-                              bool succ);
+        static void on_dialed(
+            tcp_sync_dialer_wptr wptr,
+            base_transport_sptr &transp,
+            bool succ);
 
         /*********************************************************************************
          * Dialed timeout callback

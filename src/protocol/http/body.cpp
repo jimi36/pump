@@ -27,7 +27,9 @@ namespace http {
         content_length_(0) {
     }
 
-    void body::append(const block_t *b, int32_t size) {
+    void body::append(
+        const block_t *b, 
+        int32_t size) {
         data_.append(b, size);
     }
 
@@ -56,7 +58,9 @@ namespace http {
         }
     }
 
-    int32_t body::parse(const block_t *b, int32_t size) {
+    int32_t body::parse(
+        const block_t *b, 
+        int32_t size) {
         if (is_chunked_) {
             return __parse_by_chunk(b, size);
         } else {
@@ -64,7 +68,9 @@ namespace http {
         }
     }
 
-    int32_t body::__parse_by_length(const block_t *b, int32_t size) {
+    int32_t body::__parse_by_length(
+        const block_t *b, 
+        int32_t size) {
         int32_t want_parse_size = content_length_ - (int32_t)data_.size();
         if (want_parse_size > size) {
             want_parse_size = size;
@@ -78,7 +84,9 @@ namespace http {
         return want_parse_size;
     }
 
-    int32_t body::__parse_by_chunk(const block_t *b, int32_t size) {
+    int32_t body::__parse_by_chunk(
+        const block_t *b, 
+        int32_t size) {
         const block_t *pos = b;
 
         while (1) {

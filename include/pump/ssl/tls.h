@@ -34,12 +34,12 @@ namespace ssl {
     /*********************************************************************************
      * Create tls client certificate.
      ********************************************************************************/
-    void_ptr create_tls_client_certificate();
+    LIB_PUMP void_ptr create_tls_client_certificate();
 
     /*********************************************************************************
      * Create tls certificate by file.
      ********************************************************************************/
-    void_ptr create_tls_certificate_by_file(
+    LIB_PUMP void_ptr create_tls_certificate_by_file(
         bool client,
         const std::string &cert,
         const std::string &key);
@@ -47,7 +47,7 @@ namespace ssl {
     /*********************************************************************************
      * Create tls certificate by buffer.
      ********************************************************************************/
-    void_ptr create_tls_certificate_by_buffer(
+    LIB_PUMP void_ptr create_tls_certificate_by_buffer(
         bool client,
         const std::string &cert,
         const std::string &key);
@@ -58,7 +58,6 @@ namespace ssl {
     void destory_tls_certificate(void_ptr xcred);
 
     struct tls_session {
-        // SSL Context
         void_ptr ssl_ctx;
     };
     DEFINE_RAW_POINTER_TYPE(tls_session);
@@ -67,7 +66,10 @@ namespace ssl {
      * Create tls session
      * This will create ssl context, net read buffer and net send buffer.
      ********************************************************************************/
-    tls_session_ptr create_tls_session(void_ptr xcred, int32_t fd, bool client);
+    tls_session_ptr create_tls_session(
+        void_ptr xcred, 
+        int32_t fd, 
+        bool client);
 
     /*********************************************************************************
      * Destory tls session
@@ -94,13 +96,19 @@ namespace ssl {
      * Read
      * If success return read size, else return 0.
      ********************************************************************************/
-    int32_t tls_read(tls_session_ptr session, block_t *b, int32_t size);
+    int32_t tls_read(
+        tls_session_ptr session, 
+        block_t *b, 
+        int32_t size);
 
     /*********************************************************************************
      * Send
      * If success return send size, else return 0.
      ********************************************************************************/
-    int32_t tls_send(tls_session_ptr session, const block_t *b, int32_t size);
+    int32_t tls_send(
+        tls_session_ptr session, 
+        const block_t *b, 
+        int32_t size);
 
 }  // namespace ssl
 }  // namespace pump

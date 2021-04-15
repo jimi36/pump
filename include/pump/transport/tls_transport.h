@@ -47,14 +47,17 @@ namespace transport {
         /*********************************************************************************
          * Init
          ********************************************************************************/
-        void init(flow::flow_tls_sptr &flow,
-                  const address &local_address,
-                  const address &remote_address);
+        void init(
+            flow::flow_tls_sptr &flow,
+            const address &local_address,
+            const address &remote_address);
 
         /*********************************************************************************
          * Start tls transport
          ********************************************************************************/
-        virtual int32_t start(service_ptr sv, const transport_callbacks &cbs) override;
+        virtual int32_t start(
+            service_ptr sv, 
+            const transport_callbacks &cbs) override;
 
         /*********************************************************************************
          * Stop
@@ -80,7 +83,9 @@ namespace transport {
         /*********************************************************************************
          * Send
          ********************************************************************************/
-        virtual int32_t send(const block_t *b, int32_t size) override;
+        virtual int32_t send(
+            const block_t *b, 
+            int32_t size) override;
 
         /*********************************************************************************
          * Send io buffer

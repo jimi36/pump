@@ -70,9 +70,9 @@ namespace tls {
 
     #undef DEFINE_TLS_ALERT
 
-}
-}
-}
-}
+} // namespace tls
+} // namespace quic
+} // namespace protocol
+} // namespace pump
 
 #endif

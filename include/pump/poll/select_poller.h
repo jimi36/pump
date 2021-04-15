@@ -66,7 +66,9 @@ namespace poll {
         /*********************************************************************************
          * Dispatch pending event
          ********************************************************************************/
-        void __dispatch_pending_event(const fd_set *rfds, const fd_set *wfds);
+        void __dispatch_pending_event(
+            const fd_set *rfds, 
+            const fd_set *wfds);
 
       private:
         fd_set read_fds_;

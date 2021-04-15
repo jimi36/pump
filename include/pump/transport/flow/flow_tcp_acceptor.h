@@ -43,12 +43,16 @@ namespace flow {
          *     FLOW_ERR_NO    => success
          *     FLOW_ERR_ABORT => error
          ********************************************************************************/
-        int32_t init(poll::channel_sptr &&ch, const address &listen_address);
+        int32_t init(
+            poll::channel_sptr &&ch, 
+            const address &listen_address);
 
         /*********************************************************************************
          * Accept
          ********************************************************************************/
-        pump_socket accept(address_ptr local_address, address_ptr remote_address);
+        pump_socket accept(
+            address_ptr local_address, 
+            address_ptr remote_address);
 
       private:
         // IPV6

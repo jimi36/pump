@@ -230,7 +230,7 @@ namespace tls {
     struct config {
         std::string cert_pem;
         std::string server_name;
-        std::string alpn;
+        std::string application_protocol;
     };
     DEFINE_RAW_POINTER_TYPE(config)
 
@@ -297,9 +297,9 @@ namespace tls {
      ********************************************************************************/
     void reset_connection_session(connection_session_ptr session);
 
-}
-}
-}
-}
+} // namespace tls
+} // namespace quic
+} // namespace protocol
+} // namespace pump
 
 #endif

@@ -56,7 +56,9 @@ namespace http {
          * This parse http pocket, and return parsed size. 
          * If parsed error, return -1.
          ********************************************************************************/
-        virtual int32_t parse(const block_t *b, int32_t size) override;
+        virtual int32_t parse(
+            const block_t *b, 
+            int32_t size) override;
 
         /*********************************************************************************
          * Serialize
@@ -68,7 +70,9 @@ namespace http {
         /*********************************************************************************
          * Parse http start line
          ********************************************************************************/
-        int32_t __parse_start_line(const block_t *b, int32_t size);
+        int32_t __parse_start_line(
+            const block_t *b, 
+            int32_t size);
 
         /*********************************************************************************
          * Serialize http response line

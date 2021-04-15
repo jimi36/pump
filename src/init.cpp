@@ -41,76 +41,76 @@ extern "C" {
 namespace pump {
 
 #if defined(OS_LINUX)
-typedef void (*sighandler_t)(int32_t);
-static bool setup_signal(int32_t sig, sighandler_t hdl) {
-    if (signal(sig, NULL) != 0) {
-        PUMP_WARN_LOG("setup_signal: signal failed sig=%d", sig);
-        return false;
-    }
+    typedef void (*sighandler_t)(int32_t);
+    static bool setup_signal(int32_t sig, sighandler_t hdl) {
+        if (signal(sig, NULL) != 0) {
+            PUMP_WARN_LOG("setup_signal: signal failed sig=%d", sig);
+            return false;
+        }
 
-    return true;
-}
+        return true;
+    }
 #endif
 
-bool init() {
+    bool init() {
 #if defined(PUMP_HAVE_WINSOCK)
-    WSADATA wsaData;
-    WORD wVersionRequested;
-    wVersionRequested = MAKEWORD(2, 2);
-    if (::WSAStartup(wVersionRequested, &wsaData) == SOCKET_ERROR) {
-        PUMP_WARN_LOG("init: WSAStartup failed");
-        return false;
-    }
+        WSADATA wsaData;
+        WORD wVersionRequested;
+        wVersionRequested = MAKEWORD(2, 2);
+        if (::WSAStartup(wVersionRequested, &wsaData) == SOCKET_ERROR) {
+            PUMP_WARN_LOG("init: WSAStartup failed");
+            return false;
+        }
 #if defined(PUMP_HAVE_IOCP)
-    HMODULE ntdll = LoadLibraryA("ntdll.dll");
-    if (!ntdll) {
-        return false;
-    }
-    NtCreateFile = (FnNtCreateFile)GetProcAddress(ntdll, "NtCreateFile");
-    if (!NtCreateFile) {
-        return false;
-    }
-    NtDeviceIoControlFile = (FnNtDeviceIoControlFile)GetProcAddress(ntdll, "NtDeviceIoControlFile");
-    if (!NtDeviceIoControlFile) {
-        return false;
-    }
-    NtCancelIoFileEx = (FnNtCancelIoFileEx)GetProcAddress(ntdll, "NtCancelIoFileEx");
-    if (!NtCancelIoFileEx) {
-        return false;
-    }
+        HMODULE ntdll = LoadLibraryA("ntdll.dll");
+        if (!ntdll) {
+            return false;
+        }
+        NtCreateFile = (FnNtCreateFile)GetProcAddress(ntdll, "NtCreateFile");
+        if (!NtCreateFile) {
+            return false;
+        }
+        NtDeviceIoControlFile = (FnNtDeviceIoControlFile)GetProcAddress(ntdll, "NtDeviceIoControlFile");
+        if (!NtDeviceIoControlFile) {
+            return false;
+        }
+        NtCancelIoFileEx = (FnNtCancelIoFileEx)GetProcAddress(ntdll, "NtCancelIoFileEx");
+        if (!NtCancelIoFileEx) {
+            return false;
+        }
 #endif
 #endif
 
 #if defined(OS_LINUX)
-    setup_signal(SIGPIPE, SIG_IGN);
+        setup_signal(SIGPIPE, SIG_IGN);
 #endif
 
 #if defined(PUMP_HAVE_GNUTLS)
-    if (gnutls_global_init() != 0) {
-        PUMP_WARN_LOG("init: gnutls_global_init failed");
-        return false;
-    }
-    gnutls_global_set_log_level(0);
+        if (gnutls_global_init() != 0) {
+            PUMP_WARN_LOG("init: gnutls_global_init failed");
+            return false;
+        }
+        gnutls_global_set_log_level(0);
 #elif defined(PUMP_HAVE_OPENSSL)
-    SSL_library_init();
-    OpenSSL_add_all_algorithms();
-    //SSL_load_error_strings();
+        SSL_library_init();
+        OpenSSL_add_all_algorithms();
+        //SSL_load_error_strings();
 #endif
 
-    return true;
-}
+        return true;
+    }
 
-void uninit() {
+    void uninit() {
 #if defined(PUMP_HAVE_WINSOCK)
-    ::WSACleanup();
+        ::WSACleanup();
 #endif
 
 #if defined(OS_LINUX)
-    setup_signal(SIGPIPE, SIG_DFL);
+        setup_signal(SIGPIPE, SIG_DFL);
 #endif
 
 #if defined(PUMP_HAVE_GNUTLS)
-    gnutls_global_deinit();
+        gnutls_global_deinit();
 #elif defined(PUMP_HAVE_OPENSSL)
 #endif
 }

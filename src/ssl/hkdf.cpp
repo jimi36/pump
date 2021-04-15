@@ -60,8 +60,8 @@ namespace ssl {
         if (EVP_PKEY_derive_init(pctx) != 1 ||
             EVP_PKEY_CTX_hkdf_mode(pctx, EVP_PKEY_HKDEF_MODE_EXTRACT_ONLY) != 1 ||
             EVP_PKEY_CTX_set_hkdf_md(pctx, new_md_func()) != 1 ||
-            EVP_PKEY_CTX_set1_hkdf_salt(pctx, salt.data(), salt.size()) != 1 ||
-            EVP_PKEY_CTX_set1_hkdf_key(pctx, key.data(), key.size()) != 1) {
+            EVP_PKEY_CTX_set1_hkdf_salt(pctx, salt.data(), (int32_t)salt.size()) != 1 ||
+            EVP_PKEY_CTX_set1_hkdf_key(pctx, key.data(), (int32_t)key.size()) != 1) {
             goto end;
         }
 
@@ -109,8 +109,8 @@ namespace ssl {
         if (EVP_PKEY_derive_init(pctx) != 1 ||
             EVP_PKEY_CTX_hkdf_mode(pctx, EVP_PKEY_HKDEF_MODE_EXPAND_ONLY) != 1 ||
             EVP_PKEY_CTX_set_hkdf_md(pctx, new_md_func()) != 1 ||
-            EVP_PKEY_CTX_set1_hkdf_key(pctx, key.data(), key.size()) != 1 ||
-            EVP_PKEY_CTX_add1_hkdf_info(pctx, info.data(), info.size()) != 1) {
+            EVP_PKEY_CTX_set1_hkdf_key(pctx, key.data(), (int32_t)key.size()) != 1 ||
+            EVP_PKEY_CTX_add1_hkdf_info(pctx, info.data(), (int32_t)info.size()) != 1) {
             goto end;
         }
 

@@ -45,7 +45,9 @@ namespace transport {
             int64_t handshake_timeout = 0) {
             void_ptr xcred = ssl::create_tls_certificate_by_file(false, cert, key);
             INLINE_OBJECT_CREATE(
-                obj, tls_acceptor, (xcred, true, listen_address, handshake_timeout));
+                obj, 
+                tls_acceptor, 
+                (xcred, true, listen_address, handshake_timeout));
             return tls_acceptor_sptr(obj, object_delete<tls_acceptor>);
         }
 
@@ -56,7 +58,9 @@ namespace transport {
             int64_t handshake_timeout = 0) {
             void_ptr xcred = ssl::create_tls_certificate_by_buffer(false, cert, key);
             INLINE_OBJECT_CREATE(
-                obj, tls_acceptor, (xcred, true, listen_address, handshake_timeout));
+                obj, 
+                tls_acceptor, 
+                (xcred, true, listen_address, handshake_timeout));
             return tls_acceptor_sptr(obj, object_delete<tls_acceptor>);
         }
 
@@ -65,7 +69,9 @@ namespace transport {
             const address& listen_address,
             int64_t handshake_timeout = 0) {
             INLINE_OBJECT_CREATE(
-                obj, tls_acceptor, (xcerd, false, listen_address, handshake_timeout));
+                obj, 
+                tls_acceptor, 
+                (xcerd, false, listen_address, handshake_timeout));
             return tls_acceptor_sptr(obj, object_delete<tls_acceptor>);
         }
 
@@ -77,7 +83,9 @@ namespace transport {
         /*********************************************************************************
          * Start
          ********************************************************************************/
-        virtual int32_t start(service_ptr sv, const acceptor_callbacks &cbs) override;
+        virtual int32_t start(
+            service_ptr sv, 
+            const acceptor_callbacks &cbs) override;
 
         /*********************************************************************************
          * Stop
@@ -93,24 +101,27 @@ namespace transport {
         /*********************************************************************************
          * TLS handshaked callback
          ********************************************************************************/
-        static void on_handshaked(tls_acceptor_wptr wptr,
-                                  tls_handshaker_ptr handshaker,
-                                  bool succ);
+        static void on_handshaked(
+            tls_acceptor_wptr wptr,
+            tls_handshaker_ptr handshaker,
+            bool succ);
 
         /*********************************************************************************
          * Tls handskake stopped callback
          ********************************************************************************/
-        static void on_handshake_stopped(tls_acceptor_wptr wptr,
-                                         tls_handshaker_ptr handshaker);
+        static void on_handshake_stopped(
+            tls_acceptor_wptr wptr,
+            tls_handshaker_ptr handshaker);
 
       private:
         /*********************************************************************************
          * Constructor
          ********************************************************************************/
-        tls_acceptor(void_ptr xcred,
-                     bool xcred_owner,
-                     const address& listen_address,
-                     int64_t handshake_timeout);
+        tls_acceptor(
+            void_ptr xcred,
+            bool xcred_owner,
+            const address& listen_address,
+            int64_t handshake_timeout);
 
         /*********************************************************************************
          * Open accept flow

@@ -85,7 +85,9 @@ namespace http {
         init_http_code_desc_map();
     }
 
-    int32_t response::parse(const block_t *b, int32_t size) {
+    int32_t response::parse(
+        const block_t *b,
+        int32_t size) {
         if (parse_status_ == PARSE_FINISHED) {
             return 0;
         }
@@ -195,7 +197,9 @@ namespace http {
         return serialize_size;
     }
 
-    int32_t response::__parse_start_line(const block_t *b, int32_t size) {
+    int32_t response::__parse_start_line(
+        const block_t *b, 
+        int32_t size) {
         const block_t *pos = b;
 
         const block_t *line_end = find_http_line_end(pos, size);
@@ -231,11 +235,12 @@ namespace http {
 
     int32_t response::__serialize_response_line(std::string &buffer) const {
         block_t tmp[128] = {0};
-        int32_t size = pump_snprintf(tmp, sizeof(tmp) - 1,
-                                     "%s %d %s\r\n",
-                                     get_http_version_string().c_str(),
-                                     status_code_,
-                                     get_http_code_desc(status_code_).c_str());
+        int32_t size = pump_snprintf(
+                        tmp, sizeof(tmp) - 1,
+                        "%s %d %s\r\n",
+                        get_http_version_string().c_str(),
+                        status_code_,
+                        get_http_code_desc(status_code_).c_str());
         buffer.append(tmp);
         return size;
     }

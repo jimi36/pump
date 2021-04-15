@@ -51,8 +51,9 @@ namespace websocket {
         return codec::base64_encode(hash);
     }
 
-    std::string match_protocol(const std::vector<std::string> &srcs,
-                               const std::string &des) {
+    std::string match_protocol(
+        const std::vector<std::string> &srcs,
+        const std::string &des) {
         std::string protocol;
         if (std::find(srcs.begin(), srcs.end(), des) != srcs.end()) {
             protocol = des;
@@ -60,9 +61,10 @@ namespace websocket {
         return protocol;
     }
 
-    void send_http_error_response(connection_ptr conn,
-                                  int32_t status_code,
-                                  const std::string &reason) {
+    void send_http_error_response(
+        connection_ptr conn,
+        int32_t status_code,
+        const std::string &reason) {
         http::response resp;
         resp.set_http_version(http::VERSION_11);
         resp.set_status_code(status_code);
@@ -78,7 +80,7 @@ namespace websocket {
 
         std::string data;
         resp.serialize(data);
-        conn->send_buffer(data.c_str(), (uint32_t)data.size());
+        conn->send_raw(data.c_str(), (uint32_t)data.size());
     }
 
 }  // namespace websocket

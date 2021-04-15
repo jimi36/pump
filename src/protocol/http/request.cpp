@@ -37,14 +37,18 @@ namespace http {
         method_(METHOD_UNKNOWN) {
     }
 
-    request::request(const std::string &url, void_ptr ctx) noexcept
+    request::request(
+        const std::string &url,
+        void_ptr ctx) noexcept
       : pocket(PK_REQUEST), 
         ctx_(ctx), 
         method_(METHOD_UNKNOWN) {
         uri_.parse(url);
     }
 
-    int32_t request::parse(const block_t *b, int32_t size) {
+    int32_t request::parse(
+        const block_t *b, 
+        int32_t size) {
         if (parse_status_ == PARSE_FINISHED) {
             return 0;
         }
@@ -159,7 +163,9 @@ namespace http {
         return serialize_size;
     }
 
-    int32_t request::__parse_start_line(const block_t *b, int32_t size) {
+    int32_t request::__parse_start_line(
+        const block_t *b, 
+        int32_t size) {
         const block_t *pos = b;
 
         // Find request line end
@@ -236,11 +242,13 @@ namespace http {
 
     int32_t request::__serialize_request_line(std::string &buf) const {
         block_t tmp[256] = {0};
-        int32_t size = snprintf(tmp, sizeof(tmp) - 1,
-                                "%s %s %s\r\n",
-                                request_method_strings[method_],
-                                uri_.get_path().c_str(),
-                                get_http_version_string().c_str());
+        int32_t size = pump_snprintf(
+                        tmp, 
+                        sizeof(tmp) - 1,
+                        "%s %s %s\r\n",
+                        request_method_strings[method_],
+                        uri_.get_path().c_str(),
+                        get_http_version_string().c_str());
         buf.append(tmp);
         return size;
     }

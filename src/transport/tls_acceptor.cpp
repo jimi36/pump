@@ -20,10 +20,11 @@
 namespace pump {
 namespace transport {
 
-    tls_acceptor::tls_acceptor(void_ptr xcred,
-                               bool xcred_owner,
-                               const address& listen_address,
-                               int64_t handshake_timeout) 
+    tls_acceptor::tls_acceptor(
+        void_ptr xcred,
+        bool xcred_owner,
+        const address& listen_address,
+        int64_t handshake_timeout) 
       : base_acceptor(TLS_ACCEPTOR, listen_address), 
         xcred_(xcred), 
         xcred_owner_(xcred_owner) ,
@@ -36,7 +37,9 @@ namespace transport {
         }
     }
 
-    int32_t tls_acceptor::start(service_ptr sv, const acceptor_callbacks &cbs) {
+    int32_t tls_acceptor::start(
+        service_ptr sv, 
+        const acceptor_callbacks &cbs) {
         if (!xcred_) {
             PUMP_ERR_LOG("tls_acceptor: start failed with invalid certificate");
             return ERROR_INVALID;
@@ -138,9 +141,10 @@ namespace transport {
         __trigger_interrupt_callbacks();
     }
 
-    void tls_acceptor::on_handshaked(tls_acceptor_wptr wptr,
-                                     tls_handshaker_ptr handshaker,
-                                     bool succ) {
+    void tls_acceptor::on_handshaked(
+        tls_acceptor_wptr wptr,
+        tls_handshaker_ptr handshaker,
+        bool succ) {
         PUMP_LOCK_WPOINTER(acceptor, wptr);
         if (!acceptor) {
             PUMP_DEBUG_LOG("tls_acceptor: handle handshaked event failed for invalid acceptor");
@@ -163,8 +167,9 @@ namespace transport {
         }
     }
 
-    void tls_acceptor::on_handshake_stopped(tls_acceptor_wptr wptr,
-                                            tls_handshaker_ptr handshaker) {
+    void tls_acceptor::on_handshake_stopped(
+        tls_acceptor_wptr wptr,
+        tls_handshaker_ptr handshaker) {
         PUMP_LOCK_WPOINTER(acceptor, wptr);
         if (!acceptor) {
             PUMP_DEBUG_LOG("tls_acceptor: handle handshaked stopped event failed for invalid acceptor");
@@ -177,8 +182,9 @@ namespace transport {
     bool tls_acceptor::__open_accept_flow() {
         // Init tls acceptor flow.
         PUMP_ASSERT(!flow_);
-        flow_.reset(object_create<flow::flow_tls_acceptor>(),
-                    object_delete<flow::flow_tls_acceptor>);
+        flow_.reset(
+            object_create<flow::flow_tls_acceptor>(),
+            object_delete<flow::flow_tls_acceptor>);
 
         if (flow_->init(shared_from_this(), listen_address_) != flow::FLOW_ERR_NO) {
             PUMP_WARN_LOG("tls_acceptor: open flow failed for flow init failed");
@@ -197,8 +203,9 @@ namespace transport {
     }
 
     tls_handshaker_ptr tls_acceptor::__create_handshaker() {
-        tls_handshaker_sptr handshaker(object_create<tls_handshaker>(),
-                                       object_delete<tls_handshaker>);
+        tls_handshaker_sptr handshaker(
+            object_create<tls_handshaker>(),
+            object_delete<tls_handshaker>);
         std::lock_guard<std::mutex> lock(handshaker_mx_);
         handshakers_[handshaker.get()] = handshaker;
         return handshaker.get();

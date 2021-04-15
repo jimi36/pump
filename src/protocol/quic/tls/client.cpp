@@ -58,10 +58,10 @@ namespace tls {
         }
         session_.server_name = cfg.server_name;
 
-        if (cfg.alpn.empty() || cfg.alpn.size() > 255) {
+        if (cfg.application_protocol.empty() || cfg.application_protocol.size() > 255) {
             return false;
         }
-        session_.alpn = cfg.alpn;
+        session_.alpn = cfg.application_protocol;
 
         if (!cfg.cert_pem.empty()) {
             auto cert = ssl::load_x509_certificate_by_pem(cfg.cert_pem);
@@ -78,39 +78,25 @@ namespace tls {
         return true;
     }
 
-    bool client_handshaker::handshake(handshake_message *msg) {
-        alert_code code = ALERT_NONE;
+    alert_code client_handshaker::handshake(handshake_message *msg) {
         switch (msg->type)
         {
         case TLS_MSG_SERVER_HELLO:
-            code = __handle_server_hello(msg);
-            break;
+            return __handle_server_hello(msg);
         case TLS_MSG_ENCRYPTED_EXTENSIONS:
-            code = __handle_encrypted_extensions(msg);
-            break;
+            return __handle_encrypted_extensions(msg);
         case TLS_MSG_CERTIFICATE_REQUEST:
-            code = __handle_certificate_request_tls13(msg);
-            break;
+            return __handle_certificate_request_tls13(msg);
         case TLS_MSG_CERTIFICATE:
-            code = __handle_certificate_tls13(msg);
-            break;
+            return __handle_certificate_tls13(msg);
         case TLS_MSG_CERTIFICATE_VERIFY:
-            code = __handle_certificate_verify(msg);
-            break;
+            return __handle_certificate_verify(msg);
         case TLS_MSG_FINISHED:
-            code = __handle_finished(msg);
-            break;
+            return __handle_finished(msg);
         default:
-            code = ALERT_UNEXPECTED_MESSGAE;
             break;
         }
-
-        if (code != ALERT_NONE) {
-            // TODO: send alert message.
-            return false;
-        }
-
-        return true;
+        return ALERT_UNEXPECTED_MESSGAE;
     }
 
     bool client_handshaker::__send_client_hello() {
@@ -150,13 +136,13 @@ namespace tls {
         hello->supported_groups = supported_curve_groups;
 
         // Set supported point formats.
-        hello->supported_points.push_back(TLS_POINT_FORMAT_UNCOMPRESSED);
+        hello->supported_point_formats.push_back(TLS_POINT_FORMAT_UNCOMPRESSED);
 
         // TODO: Support session ticket? Default not.
         //hello->is_support_session_ticket = true;
 
         // Set supported signature algorithms.
-        hello->supported_signature_schemes = supported_signature_schemes;
+        hello->signature_schemes = supported_signature_schemes;
 
         // TODO: Support renegotiation_info? Default not.
         //hello->is_support_renegotiation_info = true;
@@ -356,7 +342,7 @@ namespace tls {
         // TODO: Support early data? Default not.
         //client_hello->is_support_early_data = true;
 
-        __write_transcript(pack_message_hash(__reset_transcript()));
+        __write_transcript(pack_msg_hash_message(__reset_transcript()));
         __write_transcript(pack_handshake_message(msg));
 
         __send_handshake_message(hello_, false);
@@ -399,7 +385,7 @@ namespace tls {
         }
         status_ = HANDSHAKE_CARTIFICATE_REQUEST_RECV;
 
-        auto cert_request = (certificate_request_tls13_message*)msg->raw_msg;
+        auto cert_request = (certificate_req_tls13_message*)msg->raw_msg;
         PUMP_ASSERT(cert_request);
 
         cert_request_ = cert_request;
@@ -460,7 +446,7 @@ namespace tls {
         auto client_hello = (client_hello_message*)hello_->raw_msg;
         PUMP_ASSERT(client_hello);
 
-        if (!is_contains(client_hello->supported_signature_schemes, cert_verify->signature_scheme)) {
+        if (!is_contains(client_hello->signature_schemes, cert_verify->signature_scheme)) {
             return ALERT_ILLEGAL_PARAMETER;
         }
 
@@ -477,8 +463,16 @@ namespace tls {
         if (session_.peer_certs.empty()) {
             return ALERT_ILLEGAL_PARAMETER;
         }
-        auto sign = signature_message(hash_algo, SERVER_SIGNATURE_CONTEXT, ssl::sum_hash(transcript_));
-        if (!ssl::verify_x509_signature(session_.peer_certs[0], sign_algo, hash_algo, sign, cert_verify->signature)) {
+        auto signed_msg = generate_signed_message(
+                            hash_algo, 
+                            SERVER_SIGNATURE_CONTEXT, 
+                            ssl::sum_hash(transcript_));
+        if (!ssl::verify_x509_signature(
+                session_.peer_certs[0], 
+                sign_algo, 
+                hash_algo, 
+                signed_msg, 
+                cert_verify->signature)) {
             return ALERT_DECRYPT_ERROR;
         }
 
@@ -623,7 +617,7 @@ namespace tls {
                 return ALERT_INTERNAL_ERROR;
             }
 
-            auto sign = signature_message(hash_algo, SERVER_SIGNATURE_CONTEXT, ssl::sum_hash(transcript_));
+            auto sign = generate_signed_message(hash_algo, SERVER_SIGNATURE_CONTEXT, ssl::sum_hash(transcript_));
             if (!ssl::do_x509_signature(session_.certs[0], sign_algo, sign_algo, sign, cert_verify->signature)) {
                 return ALERT_INTERNAL_ERROR;
             }
@@ -693,7 +687,7 @@ namespace tls {
         PUMP_DEBUG_CHECK(ssl::update_hash(transcript_, data));
     }
 
-}
-}
-}
-}
+} // namespace tls
+} // namespace quic
+} // namespace protocol
+} // namespace pump

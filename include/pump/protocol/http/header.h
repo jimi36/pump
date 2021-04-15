@@ -41,21 +41,35 @@ namespace http {
         /*********************************************************************************
          * Set http head by append
          ********************************************************************************/
-        void set_head(const std::string &name, int32_t value);
-        void set_head(const std::string &name, const std::string &value);
+        void set_head(
+            const std::string &name, 
+            int32_t value);
+        void set_head(
+            const std::string &name, 
+            const std::string &value);
 
         /*********************************************************************************
          * Set http header by replace
          ********************************************************************************/
-        void set_unique_head(const std::string &name, int32_t value);
-        void set_unique_head(const std::string &name, const std::string &value);
+        void set_unique_head(
+            const std::string &name,
+            int32_t value);
+        void set_unique_head(
+            const std::string &name, 
+            const std::string &value);
 
         /*********************************************************************************
          * Get http header
          ********************************************************************************/
-        bool get_head(const std::string &name, int32_t &value) const;
-        bool get_head(const std::string &name, std::string &value) const;
-        bool get_head(const std::string &name, std::vector<std::string> &values) const;
+        bool get_head(
+            const std::string &name, 
+            int32_t &value) const;
+        bool get_head(
+            const std::string &name, 
+            std::string &value) const;
+        bool get_head(
+            const std::string &name, 
+            std::vector<std::string> &values) const;
 
         /*********************************************************************************
          * Check header field existed or not
@@ -68,7 +82,9 @@ namespace http {
          * This parse http header and return parsed size. 
          * If parsed error, return -1.
          ********************************************************************************/
-        int32_t __parse_header(const block_t *b, int32_t size);
+        int32_t __parse_header(
+            const block_t *b, 
+            int32_t size);
 
         /*********************************************************************************
          * Check parse is finished or not

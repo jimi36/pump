@@ -30,7 +30,10 @@ namespace toolkit {
      * range is [left, right)
      ********************************************************************************/
     template <typename T>
-    void bubble_sort(const T *a, int32_t left, int32_t right) {
+    void bubble_sort(
+        T *a, 
+        int32_t left, 
+        int32_t right) {
         for (int32_t i = left; i < right; ++i) {
             for (int32 j = i + 1; j < right; ++j) {
                 if (a[i] > a[j]) {
@@ -48,7 +51,10 @@ namespace toolkit {
      * range is [left, right)
      ********************************************************************************/
     template <typename T>
-    void select_sort(const T *a, int32_t left, int32_t right) {
+    void select_sort(
+        T *a, 
+        int32_t left, 
+        int32_t right) {
         int32 min_pos;
         for (int32_t i = left; i < right; ++i) {
             min_pos = i;
@@ -71,7 +77,10 @@ namespace toolkit {
      * range is [left, right)
      ********************************************************************************/
     template <typename T>
-    void insert_sort(T *a, int32_t left, int32_t right) {
+    void insert_sort(
+        T *a, 
+        int32_t left, 
+        int32_t right) {
         for (int32_t i = left + 1; i < right; ++i) {
             T tem = a[i];
             int32 j = i;
@@ -90,7 +99,10 @@ namespace toolkit {
      * range is [left, right)
      ********************************************************************************/
     template <typename T>
-    int32_t __median_pos(T *a, int32_t left, int32_t right) {
+    int32_t __median_pos(
+        T *a, 
+        int32_t left, 
+        int32_t right) {
         int32_t i = left;
         int32_t j = right - 1;
         T pivot = a[left];
@@ -121,7 +133,10 @@ namespace toolkit {
      * range is [left, right)
      ********************************************************************************/
     template <typename T>
-    void quick_sort(T *a, int32_t left, int32_t right) {
+    void quick_sort(
+        T *a, 
+        int32_t left, 
+        int32_t right) {
         static int32 min_size = 10;
 
         if (right - left > min_size) {
@@ -140,7 +155,10 @@ namespace toolkit {
      * i      ---->   rott index of the subtree.
      ********************************************************************************/
     template <typename T>
-    void __max_heapify(T *a, int32_t s, int32_t i) {
+    void __max_heapify(
+        T *a, 
+        int32_t s, 
+        int32_t i) {
         int32 l = i * 2;
         int32 r = i * 2 + 1;
 
@@ -164,7 +182,9 @@ namespace toolkit {
      * s      ---->   size of the array.
      ********************************************************************************/
     template <typename T>
-    void __bulid_max_heap(T *a, int32_t s) {
+    void __bulid_max_heap(
+        T *a, 
+        int32_t s) {
         for (int32_t i = s / 2; i >= 0; --i) {
             __max_heapify(a, s, i);
         }
@@ -176,7 +196,9 @@ namespace toolkit {
      * s      ---->   size of the array.
      ********************************************************************************/
     template <typename T>
-    void heap_sort(T *a, int32_t s) {
+    void heap_sort(
+        T *a, 
+        int32_t s) {
         __bulid_max_heap(a, s);
         for (int32_t i = s - 1; i >= 1; --i) {
             std::swap(a[0], a[i]);

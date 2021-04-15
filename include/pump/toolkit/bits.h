@@ -30,7 +30,9 @@ namespace toolkit {
         /*********************************************************************************
          * Constructor
          ********************************************************************************/
-        bits_reader(const uint8_t *b, uint32_t size) noexcept;
+        bits_reader(
+            const uint8_t *b, 
+            uint32_t size) noexcept;
 
         /*********************************************************************************
          * Deconstructor
@@ -40,10 +42,21 @@ namespace toolkit {
         /*********************************************************************************
          * Read into integer
          ********************************************************************************/
-        bool read(uint32_t bc, uint8_t *val);
-        bool read(uint32_t bc, uint16_t *val);
-        bool read(uint32_t bc, uint32_t *val);
-        bool read(uint32_t bc, uint64_t *val);
+        bool read(
+            uint32_t bc, 
+            uint8_t *val);
+
+        bool read(
+            uint32_t bc, 
+            uint16_t *val);
+
+        bool read(
+            uint32_t bc, 
+            uint32_t *val);
+
+        bool read(
+            uint32_t bc, 
+            uint64_t *val);
 
         /*********************************************************************************
          * Get used bit count
@@ -76,7 +89,9 @@ namespace toolkit {
         /*********************************************************************************
          * Constructor
          ********************************************************************************/
-        bits_writer(uint8_t *b, uint32_t size) noexcept;
+        bits_writer(
+            uint8_t *b, 
+            uint32_t size) noexcept;
 
         /*********************************************************************************
          * Deconstructor
@@ -86,10 +101,21 @@ namespace toolkit {
         /*********************************************************************************
          * Write integer
          ********************************************************************************/
-        bool write(uint32_t bc, uint8_t val);
-        bool write(uint32_t bc, uint16_t val);
-        bool write(uint32_t bc, uint32_t val);
-        bool write(uint32_t bc, uint64_t val);
+        bool write(
+            uint32_t bc, 
+            uint8_t val);
+
+        bool write(
+            uint32_t bc, 
+            uint16_t val);
+
+        bool write(
+            uint32_t bc, 
+            uint32_t val);
+
+        bool write(
+            uint32_t bc, 
+            uint64_t val);
 
         /*********************************************************************************
          * Get used bit count
@@ -103,7 +129,9 @@ namespace toolkit {
          * Read one byte
          * Bit count has to be less than 8
          ********************************************************************************/
-        void __write_to_byte(uint32_t bc, uint8_t val);
+        void __write_to_byte(
+            uint32_t bc, 
+            uint8_t val);
 
       private:
         // Left bit count

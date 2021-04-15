@@ -106,7 +106,9 @@ namespace ssl {
         return ctx;
     }
 
-    static std::string __gen_X25519_shared_key(ecdhe_context_ptr ctx, const std::string &pubkey) {
+    static std::string __gen_X25519_shared_key(
+        ecdhe_context_ptr ctx, 
+        const std::string &pubkey) {
         std::string shared_key;
 #if defined(PUMP_HAVE_OPENSSL)
         BIO *bio = nullptr;
@@ -220,7 +222,9 @@ namespace ssl {
         return ctx;
     }
 
-    static std::string __gen_curve_shared_key(ecdhe_context_ptr ctx, const std::string &pubkey) {
+    static std::string __gen_curve_shared_key(
+        ecdhe_context_ptr ctx, 
+        const std::string &pubkey) {
         std::string shared_key;
 #if defined(PUMP_HAVE_OPENSSL)
         EC_KEY *key = nullptr;
@@ -323,7 +327,9 @@ namespace ssl {
         }
     }
 
-    std::string gen_ecdhe_shared_key(ecdhe_context_ptr ctx, const std::string &pubkey) {
+    std::string gen_ecdhe_shared_key(
+        ecdhe_context_ptr ctx, 
+        const std::string &pubkey) {
         if (ctx->group == TLS_CURVE_X25519) {
             return __gen_X25519_shared_key(ctx, pubkey);
         } else {

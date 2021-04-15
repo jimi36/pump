@@ -25,7 +25,9 @@ namespace transport {
         memset(&addr_, 0, sizeof(addr_));
     }
 
-    address::address(const std::string &ip, uint16_t port) {
+    address::address(
+        const std::string &ip, 
+        uint16_t port) {
         if (net::string_to_address(ip, port, (struct sockaddr*)addr_, &addrlen_)) {
             if (addrlen_ == sizeof(struct sockaddr_in6)) {
                 is_v6_ = true;
@@ -35,7 +37,9 @@ namespace transport {
         }
     }
 
-    address::address(const struct sockaddr *addr, int32_t addr_len) {
+    address::address(
+        const struct sockaddr *addr, 
+        int32_t addr_len) {
         addrlen_ = addr_len;
         memcpy(&addr_, addr, addr_len);
         if (addrlen_ == sizeof(struct sockaddr_in6)) {
@@ -45,7 +49,9 @@ namespace transport {
         }
     }
 
-    bool address::set(const std::string &ip, uint16_t port) {
+    bool address::set(
+        const std::string &ip, 
+        uint16_t port) {
         if (net::string_to_address(ip, port, (struct sockaddr*)addr_, &addrlen_)) {
             if (addrlen_ == sizeof(struct sockaddr_in6)) {
                 is_v6_ = true;
@@ -59,7 +65,9 @@ namespace transport {
         return true;
     }
 
-    bool address::set(const struct sockaddr *addr, int32_t addrlen) {
+    bool address::set(
+        const struct sockaddr *addr, 
+        int32_t addrlen) {
         if (addrlen == sizeof(struct sockaddr_in6)) {
             is_v6_ = true;
         } else if (addrlen == sizeof(struct sockaddr_in)) {

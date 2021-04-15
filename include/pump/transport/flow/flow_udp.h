@@ -43,12 +43,17 @@ namespace flow {
          *     FLOW_ERR_NO    => success
          *     FLOW_ERR_ABORT => error
          ********************************************************************************/
-        int32_t init(poll::channel_sptr &&ch, const address &bind_address);
+        int32_t init(
+            poll::channel_sptr &&ch, 
+            const address &bind_address);
 
         /*********************************************************************************
          * Read from
          ********************************************************************************/
-        PUMP_INLINE int32_t read_from(block_t *b, int32_t size, address_ptr from_address) {
+        PUMP_INLINE int32_t read_from(
+            block_t *b, 
+            int32_t size, 
+            address_ptr from_address) {
             int32_t addrlen = ADDRESS_MAX_LEN;
             struct sockaddr *addr = from_address->get();
             size = net::read_from(fd_, b, size, addr, &addrlen);
@@ -62,7 +67,10 @@ namespace flow {
          * Send to
          * Return sent size.
          ********************************************************************************/
-        int32_t send(const block_t *b, int32_t size, const address &to_address);
+        int32_t send(
+            const block_t *b, 
+            int32_t size, 
+            const address &to_address);
     };
     DEFINE_ALL_POINTER_TYPE(flow_udp);
 

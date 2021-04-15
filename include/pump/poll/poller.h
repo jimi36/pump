@@ -34,8 +34,11 @@ namespace poll {
 
       protected:
         struct channel_event {
-            channel_event(std::shared_ptr<channel> &c, int32_t ev) noexcept
-                : ch(c), event(ev) {
+            channel_event(
+                std::shared_ptr<channel> &c, 
+                int32_t ev) noexcept
+              : ch(c), 
+                event(ev) {
             }
             channel_wptr ch;
             int32_t event;
@@ -43,8 +46,11 @@ namespace poll {
         DEFINE_RAW_POINTER_TYPE(channel_event);
 
         struct tracker_event {
-            tracker_event(channel_tracker_sptr &t, int32_t ev) noexcept
-                : tracker(t), event(ev) {
+            tracker_event(
+                channel_tracker_sptr &t, 
+                int32_t ev) noexcept
+              : tracker(t), 
+                event(ev) {
             }
             channel_tracker_sptr tracker;
             int32_t event;
@@ -104,7 +110,9 @@ namespace poll {
         /*********************************************************************************
          * Push channel event
          ********************************************************************************/
-        virtual bool push_channel_event(channel_sptr &c, int32_t event);
+        virtual bool push_channel_event(
+            channel_sptr &c, 
+            int32_t event);
 
       protected:
         /*********************************************************************************

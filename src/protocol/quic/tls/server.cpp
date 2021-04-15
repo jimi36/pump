@@ -53,7 +53,7 @@ namespace tls {
             return false;
         }
 
-        session_.alpn = cfg.alpn;
+        session_.alpn = cfg.application_protocol;
         session_.server_name = cfg.server_name;
 
         // Load certificate.
@@ -71,33 +71,21 @@ namespace tls {
         return true;
     }
 
-    bool server_handshaker::handshake(handshake_message *msg) {
-        alert_code code = ALERT_NONE;
+    alert_code server_handshaker::handshake(handshake_message *msg) {
         switch (msg->type)
         {
         case TLS_MSG_CLIENT_HELLO:
-            code = __handle_client_hello(msg);
-            break;
+            return __handle_client_hello(msg);
         case TLS_MSG_CERTIFICATE:
-            code = __handle_certificate_tls13(msg);
-            break;
+            return __handle_certificate_tls13(msg);
         case TLS_MSG_CERTIFICATE_VERIFY:
-            code = __handle_certificate_verify(msg);
-            break;
+            return __handle_certificate_verify(msg);
         case TLS_MSG_FINISHED:
-            code = __handle_finished(msg);
-            break;
+            return __handle_finished(msg);
         default:
-            code = ALERT_UNEXPECTED_MESSGAE;
             break;
         }
-
-        if (code != ALERT_NONE) {
-            // TODO: Send alert message.
-            return false;
-        }
-
-        return true;
+        return ALERT_UNEXPECTED_MESSGAE;
     }
 
     alert_code server_handshaker::__handle_client_hello(handshake_message *msg) {
@@ -127,7 +115,7 @@ namespace tls {
             return ALERT_HANDSHAKE_FAILURE;
         }
 
-        if (client_hello->supported_signature_schemes.empty()) {
+        if (client_hello->signature_schemes.empty()) {
             return ALERT_MISSING_EXTENSION;
         }
 
@@ -195,7 +183,7 @@ namespace tls {
         if (sign_scheme == ssl::TLS_SIGN_SCHE_UNKNOWN) {
             return ALERT_INTERNAL_ERROR;
         }
-        if (!is_contains(client_hello->supported_signature_schemes, sign_scheme)) {
+        if (!is_contains(client_hello->signature_schemes, sign_scheme)) {
             return ALERT_HANDSHAKE_FAILURE;
         }
 
@@ -263,7 +251,7 @@ namespace tls {
 
         memcpy(server_hello->random, hello_retry_request_random, 32);
   
-        __write_transcript(pack_message_hash(__reset_transcript()));
+        __write_transcript(pack_msg_hash_message(__reset_transcript()));
 
         __send_handshake_message(msg);
 
@@ -386,7 +374,7 @@ namespace tls {
         toolkit::defer cleanup([&](){
             delete_handshake_message(msg);
         });
-        auto cert_request = (certificate_request_tls13_message*)msg->raw_msg;
+        auto cert_request = (certificate_req_tls13_message*)msg->raw_msg;
 
         cert_request->is_support_scts = true;
 
@@ -476,7 +464,7 @@ namespace tls {
             return ALERT_INTERNAL_ERROR;
         }
 
-        auto sign = signature_message(hash_algo, SERVER_SIGNATURE_CONTEXT, ssl::sum_hash(transcript_));
+        auto sign = generate_signed_message(hash_algo, SERVER_SIGNATURE_CONTEXT, ssl::sum_hash(transcript_));
         if (!ssl::do_x509_signature(session_.certs[0], sign_algo, sign_algo, sign, cert_verify->signature)) {
             return ALERT_INTERNAL_ERROR;
         }
@@ -609,8 +597,16 @@ namespace tls {
             return ALERT_ILLEGAL_PARAMETER; 
         }
 
-        auto sign = signature_message(hash_algo, SERVER_SIGNATURE_CONTEXT, ssl::sum_hash(transcript_));
-        if (!ssl::verify_x509_signature(session_.certs[0], sign_algo, hash_algo, sign, cert_verify->signature)) {
+        auto signed_msg = generate_signed_message(
+                            hash_algo, 
+                            SERVER_SIGNATURE_CONTEXT, 
+                            ssl::sum_hash(transcript_));
+        if (!ssl::verify_x509_signature(
+                session_.certs[0], 
+                sign_algo, 
+                hash_algo, 
+                signed_msg, 
+                cert_verify->signature)) {
             return ALERT_DECRYPT_ERROR;
         }
 
@@ -675,7 +671,7 @@ namespace tls {
         PUMP_DEBUG_CHECK(ssl::update_hash(transcript_, data));
     }
 
-}
-}
-}
-}
+} // namespace tls
+} // namespace quic
+} // namespace protocol
+} // namespace pump

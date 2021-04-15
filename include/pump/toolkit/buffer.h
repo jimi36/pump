@@ -68,13 +68,17 @@ namespace toolkit {
          * Init with copy
          * Allocate a memory block and copy input buffer to the buffer memory block.
          ********************************************************************************/
-        bool __init_with_copy(const block_t *b, uint32_t size);
+        bool __init_with_copy(
+            const block_t *b, 
+            uint32_t size);
 
         /*********************************************************************************
          * Init with ownership
          * The input buffer ownership transfer to the buffer.
          ********************************************************************************/
-        bool __init_with_ownership(const block_t *b, uint32_t size);
+        bool __init_with_ownership(
+            const block_t *b, 
+            uint32_t size);
 
         /*********************************************************************************
          * Append
@@ -117,7 +121,9 @@ namespace toolkit {
          * Init with copy
          * Allocate a memory block and copy input buffer to the buffer memory block.
          ********************************************************************************/
-        PUMP_INLINE bool init_with_copy(const block_t *b, uint32_t size) {
+        PUMP_INLINE bool init_with_copy(
+            const block_t *b, 
+            uint32_t size) {
             if (__init_with_copy(b, size)) {
                 data_size_ = size;
                 return true;
@@ -130,7 +136,9 @@ namespace toolkit {
          * The input buffer ownership transfer to the buffer.
          * The input buffer must be created by pump_malloc or pump_realloc.
          ********************************************************************************/
-        PUMP_INLINE bool init_with_ownership(const block_t *b, uint32_t size) {
+        PUMP_INLINE bool init_with_ownership(
+            const block_t *b, 
+            uint32_t size) {
             if (__init_with_ownership(b, size)) {
                 data_size_ = size;
                 return true;
@@ -143,7 +151,9 @@ namespace toolkit {
          * Append input buffer by copying. If there is no enough memory block to use, the
          * buffer will allocate a new memory block.
          ********************************************************************************/
-        bool append(const block_t *b, uint32_t size);
+        bool append(
+            const block_t *b, 
+            uint32_t size);
 
         /*********************************************************************************
          * Shift

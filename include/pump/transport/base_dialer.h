@@ -29,10 +29,11 @@ namespace transport {
         /*********************************************************************************
          * Constructor
          ********************************************************************************/
-        base_dialer(int32_t type,
-                    const address &local_address,
-                    const address &remote_address,
-                    int64_t connect_timeout) noexcept
+        base_dialer(
+            int32_t type,
+            const address &local_address,
+            const address &remote_address,
+            int64_t connect_timeout) noexcept
           : base_channel(type, nullptr, -1),
             local_address_(local_address),
             remote_address_(remote_address),
@@ -49,7 +50,9 @@ namespace transport {
         /*********************************************************************************
          * Start
          ********************************************************************************/
-        virtual int32_t start(service_ptr sv, const dialer_callbacks &cbs) = 0;
+        virtual int32_t start(
+            service_ptr sv, 
+            const dialer_callbacks &cbs) = 0;
 
         /*********************************************************************************
          * Stop

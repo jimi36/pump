@@ -36,22 +36,30 @@ namespace http {
     /*********************************************************************************
      * Find http line end position
      ********************************************************************************/
-    LIB_PUMP const block_t* find_http_line_end(const block_t *src, int32_t len);
+    LIB_PUMP const block_t* find_http_line_end(
+        const block_t *src, 
+        int32_t len);
 
     /*********************************************************************************
      * Decode url string
      ********************************************************************************/
-    LIB_PUMP bool url_decode(const std::string &src, std::string &des);
+    LIB_PUMP bool url_decode(
+        const std::string &src, 
+        std::string &des);
 
     /*********************************************************************************
      * Encode to url string
      ********************************************************************************/
-    LIB_PUMP bool url_encode(const std::string &src, std::string &des);
+    LIB_PUMP bool url_encode(
+        const std::string &src, 
+        std::string &des);
 
     /*********************************************************************************
      * Host to address
      ********************************************************************************/
-    LIB_PUMP transport::address host_to_address(bool https, const std::string &host);
+    LIB_PUMP transport::address host_to_address(
+        bool https, 
+        const std::string &host);
 
 }  // namespace http
 }  // namespace protocol

@@ -27,7 +27,7 @@ namespace protocol {
 namespace quic {
 namespace tls {
 
-    class server_handshaker {
+    class LIB_PUMP server_handshaker {
 
       public:
         /*********************************************************************************
@@ -49,7 +49,7 @@ namespace tls {
         /*********************************************************************************
          * Handshake
          ********************************************************************************/
-        bool handshake(handshake_message *msg);
+        alert_code handshake(handshake_message *msg);
 
         /*********************************************************************************
          * Check handshake finished status
@@ -139,7 +139,9 @@ namespace tls {
         /*********************************************************************************
          * Send handshake message
          ********************************************************************************/
-        void __send_handshake_message(handshake_message *msg, bool transcript = true) {
+        void __send_handshake_message(
+            handshake_message *msg, 
+            bool transcript = true) {
             if (transcript) {
                 __write_transcript(pack_handshake_message(msg));
             }
@@ -171,9 +173,9 @@ namespace tls {
         pump_function<void (const connection_session&)> finished_callback_;
     };
 
-}
-}
-}
-}
+} // namespace tls
+} // namespace quic
+} // namespace protocol
+} // namespace pump
 
 #endif

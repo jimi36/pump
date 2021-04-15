@@ -24,7 +24,9 @@ namespace transport {
       : base_acceptor(TCP_ACCEPTOR, listen_address) {
     }
 
-    int32_t tcp_acceptor::start(service_ptr sv, const acceptor_callbacks &cbs) {
+    int32_t tcp_acceptor::start(
+        service_ptr sv, 
+        const acceptor_callbacks &cbs) {
         if (!sv) {
             PUMP_ERR_LOG("tcp_acceptor: start failed with invalid service");
             return ERROR_INVALID;
@@ -100,8 +102,9 @@ namespace transport {
     bool tcp_acceptor::__open_accept_flow() {
         // Init tcp acceptor flow.
         PUMP_ASSERT(!flow_);
-        flow_.reset(object_create<flow::flow_tcp_acceptor>(),
-                    object_delete<flow::flow_tcp_acceptor>);
+        flow_.reset(
+            object_create<flow::flow_tcp_acceptor>(),
+            object_delete<flow::flow_tcp_acceptor>);
         if (flow_->init(shared_from_this(), listen_address_) != flow::FLOW_ERR_NO) {
             PUMP_WARN_LOG("tcp_acceptor: open flow failed for flow init failed");
             return false;

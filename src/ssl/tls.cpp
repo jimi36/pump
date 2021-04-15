@@ -207,7 +207,10 @@ namespace ssl {
 #endif
     }
 
-    tls_session_ptr create_tls_session(void_ptr xcred, int32_t fd, bool client) {
+    tls_session_ptr create_tls_session(
+        void_ptr xcred, 
+        int32_t fd, 
+        bool client) {
 #if defined(PUMP_HAVE_GNUTLS)
         tls_session_ptr session = object_create<tls_session>();
         gnutls_session_t ssl_ctx = nullptr;
@@ -305,7 +308,10 @@ namespace ssl {
         return false;
     }
 
-    int32_t tls_read(tls_session_ptr session, block_t *b, int32_t size) {
+    int32_t tls_read(
+        tls_session_ptr session, 
+        block_t *b, 
+        int32_t size) {
 #if defined(PUMP_HAVE_GNUTLS)
         int32_t ret = (int32_t)gnutls_read((gnutls_session_t)session->ssl_ctx, b, size);
         if (PUMP_LIKELY(ret > 0)) {
@@ -324,7 +330,10 @@ namespace ssl {
         return 0;
     }
 
-    int32_t tls_send(tls_session_ptr session, const block_t *b, int32_t size) {
+    int32_t tls_send(
+        tls_session_ptr session, 
+        const block_t *b, 
+        int32_t size) {
 #if defined(PUMP_HAVE_GNUTLS)
         return (int32_t)gnutls_write((gnutls_session_t)session->ssl_ctx, b, size);
 #elif defined(PUMP_HAVE_OPENSSL)

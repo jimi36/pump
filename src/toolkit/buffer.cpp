@@ -33,7 +33,9 @@ namespace toolkit {
         return false;
     }
 
-    bool base_buffer::__init_with_copy(const block_t *b, uint32_t size) {
+    bool base_buffer::__init_with_copy(
+        const block_t *b, 
+        uint32_t size) {
         try {
             if (!raw_ && b && size > 0) {
                 raw_ = (block_t*)pump_malloc(size);
@@ -49,7 +51,9 @@ namespace toolkit {
         return false;
     }
 
-    bool base_buffer::__init_with_ownership(const block_t *b, uint32_t size) {
+    bool base_buffer::__init_with_ownership(
+        const block_t *b, 
+        uint32_t size) {
         if (!raw_ && b && size > 0) {
             raw_ = (block_t*)b;
             raw_size_ = size;
@@ -58,7 +62,9 @@ namespace toolkit {
         return false;
     }
 
-    bool io_buffer::append(const block_t *b, uint32_t size) {
+    bool io_buffer::append(
+        const block_t *b, 
+        uint32_t size) {
         if (!b || size == 0) {
             return false;
         }

@@ -47,7 +47,9 @@ namespace transport {
          * Start
          * max_pending_send_size is ignore on udp transport.
          ********************************************************************************/
-        virtual int32_t start(service_ptr sv, const transport_callbacks &cbs) override;
+        virtual int32_t start(
+            service_ptr sv, 
+            const transport_callbacks &cbs) override;
 
         /*********************************************************************************
          * Stop
@@ -74,9 +76,10 @@ namespace transport {
         /*********************************************************************************
          * Send
          ********************************************************************************/
-        virtual int32_t send(const block_t *b,
-                             int32_t size,
-                             const address &address) override;
+        virtual int32_t send(
+            const block_t *b,
+            int32_t size,
+            const address &address) override;
 
       protected:
         /*********************************************************************************

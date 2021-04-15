@@ -110,7 +110,9 @@ namespace poll {
         tev_cnt_.fetch_add(1, std::memory_order_relaxed);
     }
 
-    bool poller::push_channel_event(channel_sptr &c, int32_t event) {
+    bool poller::push_channel_event(
+        channel_sptr &c, 
+        int32_t event) {
         if (PUMP_UNLIKELY(!started_.load())) {
             PUMP_DEBUG_LOG("poller: push channel event failed for poller not started");
             return false;

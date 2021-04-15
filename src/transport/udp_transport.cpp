@@ -29,7 +29,9 @@ namespace transport {
         __stop_send_tracker();
     }
 
-    int32_t udp_transport::start(service_ptr sv, const transport_callbacks &cbs) {
+    int32_t udp_transport::start(
+        service_ptr sv, 
+        const transport_callbacks &cbs) {
         if (!sv) {
             PUMP_ERR_LOG("udp_transport: start failed with invalid service");
             return ERROR_INVALID;
@@ -98,9 +100,10 @@ namespace transport {
         return ERROR_UNSTART;
     }
 
-    int32_t udp_transport::send(const block_t *b,
-                                int32_t size,
-                                const address &address) {
+    int32_t udp_transport::send(
+        const block_t *b,
+        int32_t size,
+        const address &address) {
         if (!b || size == 0) {
             PUMP_ERR_LOG("udp_transport: send failed with invalid buffer");
             return ERROR_INVALID;
@@ -154,7 +157,10 @@ namespace transport {
     bool udp_transport::__open_transport_flow() {
         // Init udp transport flow.
         PUMP_ASSERT(!flow_);
-        flow_.reset(object_create<flow::flow_udp>(), object_delete<flow::flow_udp>);
+        flow_.reset(
+            object_create<flow::flow_udp>(), 
+            object_delete<flow::flow_udp>);
+
         if (flow_->init(shared_from_this(), local_address_) != flow::FLOW_ERR_NO) {
             PUMP_ERR_LOG("udp_transport: open transport flow failed for flow init failed");
             return false;

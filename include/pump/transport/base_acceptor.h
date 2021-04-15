@@ -29,7 +29,9 @@ namespace transport {
         /*********************************************************************************
          * Constructor
          ********************************************************************************/
-        base_acceptor(int32_t type, const address &listen_address) noexcept
+        base_acceptor(
+            int32_t type, 
+            const address &listen_address) noexcept
           : base_channel(type, nullptr, -1), 
             listen_address_(listen_address) {
         }
@@ -42,7 +44,9 @@ namespace transport {
         /*********************************************************************************
          * Start
          ********************************************************************************/
-        virtual int32_t start(service_ptr sv, const acceptor_callbacks &cbs) = 0;
+        virtual int32_t start(
+            service_ptr sv, 
+            const acceptor_callbacks &cbs) = 0;
 
         /*********************************************************************************
          * Stop
