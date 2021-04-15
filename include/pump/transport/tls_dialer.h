@@ -51,7 +51,7 @@ namespace transport {
         }
 
         PUMP_INLINE static tls_dialer_sptr create_with_cred(
-            void_ptr xcred,
+            void *xcred,
             const address &local_address,
             const address &remote_address,
             int64_t dial_timeout = 0,
@@ -125,7 +125,7 @@ namespace transport {
          * Constructor
          ********************************************************************************/
         tls_dialer(
-            void_ptr xcred,
+            void *xcred,
             const address &local_address,
             const address &remote_address,
             int64_t dial_timeout,
@@ -134,7 +134,7 @@ namespace transport {
 
       private:
         // Credentials
-        void_ptr xcred_;
+        void *xcred_;
         // Credentials owner
         bool xcred_owner_;
 

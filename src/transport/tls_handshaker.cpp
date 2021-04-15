@@ -30,7 +30,7 @@ namespace transport {
     void tls_handshaker::init(
         pump_socket fd,
         bool client,
-        void_ptr xcred,
+        void *xcred,
         const address &local_address,
         const address &remote_address) {
         local_address_ = local_address;
@@ -141,7 +141,7 @@ namespace transport {
         }
     }
 
-    bool tls_handshaker::__open_flow(pump_socket fd, void_ptr xcred, bool is_client) {
+    bool tls_handshaker::__open_flow(pump_socket fd, void *xcred, bool is_client) {
         // Setup flow
         PUMP_ASSERT(!flow_);
         flow_.reset(

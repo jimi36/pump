@@ -55,7 +55,7 @@ namespace ssl {
     const signature_scheme TLS_SIGN_SCHE_ECDSAWITHSHA1          = 0x0203;
 
     // X509 certificate
-    typedef void_ptr x509_certificate;
+    typedef void* x509_certificate;
 
     /*********************************************************************************
      * Generate X509 certificate.

@@ -65,14 +65,14 @@ namespace poll {
         /*********************************************************************************
          * Get channel context
          ********************************************************************************/
-        PUMP_INLINE void_ptr get_context() const {
+        PUMP_INLINE void* get_context() const {
             return ctx_;
         }
 
         /*********************************************************************************
          * Set context
          ********************************************************************************/
-        PUMP_INLINE void set_context(void_ptr ctx) {
+        PUMP_INLINE void set_context(void *ctx) {
             ctx_ = ctx;
         }
 
@@ -123,7 +123,7 @@ namespace poll {
 
       protected:
         // Channel context
-        void_ptr ctx_;
+        void *ctx_;
         // Channel fd
         pump_socket fd_;
     };

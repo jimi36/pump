@@ -21,7 +21,7 @@ namespace pump {
 namespace transport {
 
     tls_acceptor::tls_acceptor(
-        void_ptr xcred,
+        void *xcred,
         bool xcred_owner,
         const address& listen_address,
         int64_t handshake_timeout) 

@@ -41,10 +41,10 @@ namespace http {
          * Constructor
          * This construct a http request to serialize.
          ********************************************************************************/
-        request(void_ptr ctx = nullptr) noexcept;
+        request(void *ctx = nullptr) noexcept;
         request(
             const std::string &url,
-            void_ptr ctx = nullptr) noexcept;
+            void *ctx = nullptr) noexcept;
 
         /*********************************************************************************
          * Deconstructor
@@ -85,7 +85,7 @@ namespace http {
         /*********************************************************************************
          * Get context
          ********************************************************************************/
-        PUMP_INLINE void_ptr get_context() const {
+        PUMP_INLINE void *get_context() const {
             return ctx_;
         }
 
@@ -119,7 +119,7 @@ namespace http {
 
       private:
         // Request context
-        void_ptr ctx_;
+        void *ctx_;
 
         // Request uri
         uri uri_;

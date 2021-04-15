@@ -101,7 +101,7 @@ namespace tls {
 #define CASE_PACK_MESSAGE(msg_type, pack) \
     case msg_type: \
     { \
-        packed_data_size = pack((c_void_ptr)msg->raw_msg, buffer, sizeof(buffer)); \
+        packed_data_size = pack((const void*)msg->raw_msg, buffer, sizeof(buffer)); \
         break; \
     }
 
@@ -190,7 +190,7 @@ namespace tls {
     }
 
     int32_t pack_hello_req_message(
-        c_void_ptr msg, 
+        const void *msg, 
         uint8_t *buf, 
         int32_t max_size) {
         uint8_t *p = buf;
@@ -208,7 +208,7 @@ namespace tls {
     int32_t unpack_hello_req_message(
         const uint8_t *buf, 
         int32_t size, 
-        void_ptr msg) {
+        void *msg) {
         const uint8_t *p = buf;
         const uint8_t *end = buf + size;
         if (p[0] != TLS_MSG_HELLO_REQUEST) {
@@ -237,7 +237,7 @@ namespace tls {
     }
 
     int32_t pack_client_hello_message(
-        c_void_ptr msg, 
+        const void *msg, 
         uint8_t *buf, 
         int32_t max_size) {
         auto raw = (const client_hello_message*)msg;
@@ -460,7 +460,7 @@ namespace tls {
     int32_t unpack_client_hello_message(
         const uint8_t *buf, 
         int32_t size, 
-        void_ptr msg) {
+        void *msg) {
         auto raw = (client_hello_message*)msg;
 
         const uint8_t *p = buf;
@@ -777,7 +777,7 @@ namespace tls {
     }
 
     int32_t pack_server_hello_message(
-        c_void_ptr msg, 
+        const void *msg, 
         uint8_t *buf, 
         int32_t max_size) {
         auto raw = (const server_hello_message*)msg;
@@ -903,7 +903,7 @@ namespace tls {
     int32_t unpack_server_hello_message(
         const uint8_t *buf, 
         int32_t size, 
-        void_ptr msg) {
+        void *msg) {
         auto raw = (server_hello_message*)msg;
 
         const uint8_t *p = buf;
@@ -1042,7 +1042,7 @@ namespace tls {
     }
 
     int32_t pack_new_session_ticket_message(
-        c_void_ptr msg, 
+        const void *msg, 
         uint8_t *buf, 
         int32_t max_size) {
         auto raw = (const new_session_ticket_message*)msg;
@@ -1069,7 +1069,7 @@ namespace tls {
     int32_t unpack_new_session_ticket_message(
         const uint8_t *buf, 
         int32_t size, 
-        void_ptr msg) {
+        void *msg) {
         auto raw = (new_session_ticket_message*)msg;
 
         const uint8_t *p = buf;
@@ -1105,7 +1105,7 @@ namespace tls {
     }
 
     int32_t pack_new_session_ticket_tls13_message(
-        c_void_ptr msg, 
+        const void *msg, 
         uint8_t *buf, 
         int32_t max_size) {
         auto raw = (const new_session_ticket_tls13_message*)msg;
@@ -1156,7 +1156,7 @@ namespace tls {
     int32_t unpack_new_session_ticket_tls13_message(
         const uint8_t *buf, 
         int32_t size, 
-        void_ptr msg) {
+        void *msg) {
         auto raw = (new_session_ticket_tls13_message*)msg;
 
         const uint8_t *p = buf;
@@ -1209,7 +1209,7 @@ namespace tls {
     }
 
     int32_t pack_end_early_data_message(
-        c_void_ptr msg, 
+        const void *msg, 
         uint8_t *buf, 
         int32_t max_size) {
         uint8_t *p = buf;
@@ -1227,7 +1227,7 @@ namespace tls {
     int32_t unpack_end_early_data_message(
         const uint8_t *buf, 
         int32_t size, 
-        void_ptr msg) {
+        void *msg) {
         const uint8_t *p = buf;
         const uint8_t *end = buf + size;
         if (p[0] != TLS_MSG_END_OF_EARLY_DATA) {
@@ -1254,7 +1254,7 @@ namespace tls {
     }
 
     int32_t pack_encrypted_extensions_message(
-        c_void_ptr msg, 
+        const void *msg, 
         uint8_t *buf, 
         int32_t max_size) {
         auto raw = (const encrypted_extensions_message*)msg;
@@ -1302,7 +1302,7 @@ namespace tls {
     int32_t unpack_encrypted_extensions_message(
         const uint8_t *buf, 
         int32_t size, 
-        void_ptr msg) {
+        void *msg) {
         auto raw = (encrypted_extensions_message*)msg;
 
         const uint8_t *p = buf;
@@ -1361,7 +1361,7 @@ namespace tls {
     }
 
     int32_t pack_certificate_message(
-        c_void_ptr msg, 
+        const void *msg, 
         uint8_t *buf, 
         int32_t max_size) {
         auto raw = (const certificate_message*)msg;
@@ -1397,7 +1397,7 @@ namespace tls {
     int32_t unpack_certificate_message(
         const uint8_t *buf, 
         int32_t size, 
-        void_ptr msg) {
+        void *msg) {
         auto raw = (certificate_message*)msg;
 
         const uint8_t *p = buf;
@@ -1441,7 +1441,7 @@ namespace tls {
     }
 
     int32_t pack_certificate_tls13_message(
-        c_void_ptr msg, 
+        const void *msg, 
         uint8_t *buf, 
         int32_t max_size) {
         auto raw = (const certificate_tls13_message*)msg;
@@ -1511,7 +1511,7 @@ namespace tls {
     int32_t unpack_certificate_tls13_message(
         const uint8_t *buf, 
         int32_t size, 
-        void_ptr msg) {
+        void *msg) {
         auto raw = (certificate_tls13_message*)msg;
 
         const uint8_t *p = buf;
@@ -1609,7 +1609,7 @@ namespace tls {
     }
 
     int32_t pack_server_key_exchange_message(
-        c_void_ptr msg, 
+        const void *msg, 
         uint8_t *buf, 
         int32_t max_size) {
         auto raw = (const server_key_exchange_message*)msg;
@@ -1632,7 +1632,7 @@ namespace tls {
     int32_t unpack_server_key_exchange_message(
         const uint8_t *buf, 
         int32_t size, 
-        void_ptr msg) {
+        void *msg) {
         auto raw = (server_key_exchange_message*)msg;
 
         const uint8_t *p = buf;
@@ -1661,7 +1661,7 @@ namespace tls {
     }
 
     int32_t pack_certificate_req_message(
-        c_void_ptr msg, 
+        const void *msg, 
         uint8_t *buf, 
         int32_t max_size) {
         auto raw = (const certificate_req_message*)msg;
@@ -1706,7 +1706,7 @@ namespace tls {
     int32_t unpack_certificate_req_message(
         const uint8_t *buf, 
         int32_t size, 
-        void_ptr msg) {
+        void *msg) {
         auto raw = (certificate_req_message*)msg;
 
         const uint8_t *p = buf;
@@ -1764,7 +1764,7 @@ namespace tls {
     }
 
     int32_t pack_certificate_req_tls13_message(
-        c_void_ptr msg, 
+        const void *msg, 
         uint8_t *buf, 
         int32_t max_size) {
         auto raw = (const certificate_req_tls13_message*)msg;
@@ -1841,7 +1841,7 @@ namespace tls {
     int32_t unpack_certificate_req_tls13_message(
         const uint8_t *buf, 
         int32_t size, 
-        void_ptr msg) {
+        void *msg) {
         auto raw = (certificate_req_tls13_message*)msg;
 
         const uint8_t *p = buf;
@@ -1930,7 +1930,7 @@ namespace tls {
     }
 
     int32_t pack_server_hello_done_message(
-        c_void_ptr msg, 
+        const void *msg, 
         uint8_t *buf, 
         int32_t max_size) {
         uint8_t *p = buf;
@@ -1948,7 +1948,7 @@ namespace tls {
     int32_t unpack_server_hello_done_message(
         const uint8_t *buf, 
         int32_t size, 
-        void_ptr msg) {
+        void *msg) {
         const uint8_t *p = buf;
         const uint8_t *end = buf + size;
         if (p[0] != TLS_MSG_SERVER_HELLO_DONE) {
@@ -1972,7 +1972,7 @@ namespace tls {
     }
 
     int32_t pack_certificate_verify_message(
-        c_void_ptr msg, 
+        const void *msg, 
         uint8_t *buf, 
         int32_t max_size) {
         auto raw = (const certificate_verify_message*)msg;
@@ -2004,7 +2004,7 @@ namespace tls {
     int32_t unpack_certificate_verify_message(
         const uint8_t *buf, 
         int32_t size, 
-        void_ptr msg) {
+        void *msg) {
         auto raw = (certificate_verify_message*)msg;
 
         const uint8_t *p = buf;
@@ -2034,7 +2034,7 @@ namespace tls {
     }
 
     int32_t pack_client_key_exchange_message(
-        c_void_ptr msg, 
+        const void *msg, 
         uint8_t *buf, 
         int32_t max_size) {
         auto raw = (const client_key_exchange_message*)msg;
@@ -2057,7 +2057,7 @@ namespace tls {
     int32_t unpack_client_key_exchange_message(
         const uint8_t *buf, 
         int32_t size, 
-        void_ptr msg) {
+        void *msg) {
         auto raw = (client_key_exchange_message*)msg;
 
         const uint8_t *p = buf;
@@ -2082,7 +2082,7 @@ namespace tls {
     }
 
     int32_t pack_finished_message(
-        c_void_ptr msg, 
+        const void *msg, 
         uint8_t *buf, 
         int32_t max_size) {
         auto raw = (const finished_message*)msg;
@@ -2105,7 +2105,7 @@ namespace tls {
     int32_t unpack_finished_message(
         const uint8_t *buf, 
         int32_t size, 
-        void_ptr msg) {
+        void *msg) {
         auto raw = (finished_message*)msg;
 
         const uint8_t *p = buf;
@@ -2130,7 +2130,7 @@ namespace tls {
     }
 
     int32_t pack_certificate_status_message(
-        c_void_ptr msg, 
+        const void *msg, 
         uint8_t *buf, 
         int32_t max_size) {
         auto raw = (const certificate_status_message*)msg;
@@ -2155,7 +2155,7 @@ namespace tls {
     int32_t unpack_certificate_status_message(
         const uint8_t *buf, 
         int32_t size, 
-        void_ptr msg) {
+        void *msg) {
         auto raw = (certificate_status_message*)msg;
 
         const uint8_t *p = buf;
@@ -2188,7 +2188,7 @@ namespace tls {
     }
 
     int32_t pack_key_update_message(
-        c_void_ptr msg, 
+        const void *msg, 
         uint8_t *buf, 
         int32_t max_size) {
         auto raw = (const key_update_message*)msg;
@@ -2217,7 +2217,7 @@ namespace tls {
     int32_t unpack_key_update_message(
         const uint8_t *buf, 
         int32_t size, 
-        void_ptr msg) {
+        void *msg) {
         auto raw = (key_update_message*)msg;
 
         const uint8_t *p = buf;

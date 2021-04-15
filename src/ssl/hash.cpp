@@ -36,7 +36,7 @@ namespace ssl {
 
     struct hash_context {
         hash_algorithm algo;
-        void_ptr ctx;
+        void *ctx;
         int8_t _pctx[0];
     };
 
@@ -225,7 +225,7 @@ namespace ssl {
 
         uint8_t *ret = HMAC(
                         md, 
-                        (c_void_ptr)key.data(), 
+                        (const void*)key.data(), 
                         (int32_t)key.size(),
                         (const uint8_t*)input.data(), 
                         input.size(),

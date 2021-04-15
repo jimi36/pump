@@ -43,7 +43,7 @@ namespace transport {
             const std::string &key,
             const address &listen_address,
             int64_t handshake_timeout = 0) {
-            void_ptr xcred = ssl::create_tls_certificate_by_file(false, cert, key);
+            void *xcred = ssl::create_tls_certificate_by_file(false, cert, key);
             INLINE_OBJECT_CREATE(
                 obj, 
                 tls_acceptor, 
@@ -56,7 +56,7 @@ namespace transport {
             const std::string &key,
             const address &listen_address,
             int64_t handshake_timeout = 0) {
-            void_ptr xcred = ssl::create_tls_certificate_by_buffer(false, cert, key);
+            void *xcred = ssl::create_tls_certificate_by_buffer(false, cert, key);
             INLINE_OBJECT_CREATE(
                 obj, 
                 tls_acceptor, 
@@ -65,7 +65,7 @@ namespace transport {
         }
 
         PUMP_INLINE static tls_acceptor_sptr create_with_cred(
-            void_ptr xcerd,
+            void *xcerd,
             const address& listen_address,
             int64_t handshake_timeout = 0) {
             INLINE_OBJECT_CREATE(
@@ -118,7 +118,7 @@ namespace transport {
          * Constructor
          ********************************************************************************/
         tls_acceptor(
-            void_ptr xcred,
+            void *xcred,
             bool xcred_owner,
             const address& listen_address,
             int64_t handshake_timeout);
@@ -150,7 +150,7 @@ namespace transport {
 
       private:
         // Credentials
-        void_ptr xcred_;
+        void *xcred_;
         // Credentials owner
         bool xcred_owner_;
 

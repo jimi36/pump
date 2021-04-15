@@ -34,12 +34,12 @@ namespace ssl {
     /*********************************************************************************
      * Create tls client certificate.
      ********************************************************************************/
-    LIB_PUMP void_ptr create_tls_client_certificate();
+    LIB_PUMP void* create_tls_client_certificate();
 
     /*********************************************************************************
      * Create tls certificate by file.
      ********************************************************************************/
-    LIB_PUMP void_ptr create_tls_certificate_by_file(
+    LIB_PUMP void* create_tls_certificate_by_file(
         bool client,
         const std::string &cert,
         const std::string &key);
@@ -47,7 +47,7 @@ namespace ssl {
     /*********************************************************************************
      * Create tls certificate by buffer.
      ********************************************************************************/
-    LIB_PUMP void_ptr create_tls_certificate_by_buffer(
+    LIB_PUMP void* create_tls_certificate_by_buffer(
         bool client,
         const std::string &cert,
         const std::string &key);
@@ -55,10 +55,10 @@ namespace ssl {
     /*********************************************************************************
      * Destory tls certificate.
      ********************************************************************************/
-    void destory_tls_certificate(void_ptr xcred);
+    void destory_tls_certificate(void *xcred);
 
     struct tls_session {
-        void_ptr ssl_ctx;
+        void *ssl_ctx;
     };
     DEFINE_RAW_POINTER_TYPE(tls_session);
 
@@ -67,7 +67,7 @@ namespace ssl {
      * This will create ssl context, net read buffer and net send buffer.
      ********************************************************************************/
     tls_session_ptr create_tls_session(
-        void_ptr xcred, 
+        void *xcred, 
         int32_t fd, 
         bool client);
 

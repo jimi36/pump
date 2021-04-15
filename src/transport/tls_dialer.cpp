@@ -21,7 +21,7 @@ namespace pump {
 namespace transport {
 
     tls_dialer::tls_dialer(
-        void_ptr xcred,
+        void *xcred,
         const address &local_address,
         const address &remote_address,
         int64_t dial_timeout,

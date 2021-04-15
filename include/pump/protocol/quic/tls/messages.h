@@ -33,7 +33,7 @@ namespace tls {
     struct handshake_message {
         std::string packed_data;
         message_type type;
-        void_ptr raw_msg;
+        void *raw_msg;
     };
 
     /*********************************************************************************
@@ -109,7 +109,7 @@ namespace tls {
      * Pack hello request message.
      ********************************************************************************/
     LIB_PUMP int32_t pack_hello_req_message(
-        c_void_ptr msg, 
+        const void *msg, 
         uint8_t *buf, 
         int32_t max_size);
 
@@ -119,7 +119,7 @@ namespace tls {
     LIB_PUMP int32_t unpack_hello_req_message(
         const uint8_t *buf, 
         int32_t size, 
-        void_ptr msg);
+        void *msg);
 
     /*********************************************************************************
      * When client first connects to a server, it is REQUIRED to send the ClientHello
@@ -324,7 +324,7 @@ namespace tls {
      * Pack client hello message.
      ********************************************************************************/
     LIB_PUMP int32_t pack_client_hello_message(
-        c_void_ptr msg, 
+        const void *msg, 
         uint8_t *buf, 
         int32_t max_size);
 
@@ -334,7 +334,7 @@ namespace tls {
     LIB_PUMP int32_t unpack_client_hello_message(
         const uint8_t *buf, 
         int32_t max_size, 
-        void_ptr msg);
+        void *msg);
 
     /*********************************************************************************
      * The server will send this message in response to a ClientHello message to
@@ -511,7 +511,7 @@ namespace tls {
      * Pack server hello message.
      ********************************************************************************/
     LIB_PUMP int32_t pack_server_hello_message(
-        c_void_ptr msg, 
+        const void *msg, 
         uint8_t *buf, 
         int32_t max_size);
 
@@ -521,7 +521,7 @@ namespace tls {
     LIB_PUMP int32_t unpack_server_hello_message(
         const uint8_t *buf, 
         int32_t size, 
-        void_ptr msg);
+        void *msg);
 
     /*********************************************************************************
      * This message is sent by the server during the TLS handshake before the
@@ -551,7 +551,7 @@ namespace tls {
      * Pack new session message.
      ********************************************************************************/
     LIB_PUMP int32_t pack_new_session_ticket_message(
-        c_void_ptr msg, 
+        const void *msg, 
         uint8_t *buf, 
         int32_t max_size);
 
@@ -561,7 +561,7 @@ namespace tls {
     LIB_PUMP int32_t unpack_new_session_ticket_message(
         const uint8_t *buf, 
         int32_t size, 
-        void_ptr msg);
+        void *msg);
 
     /*********************************************************************************
      * At any time after the server has received the client Finished message, it MAY 
@@ -618,7 +618,7 @@ namespace tls {
      * Pack new session ticket message.
      ********************************************************************************/
     LIB_PUMP int32_t pack_new_session_ticket_tls13_message(
-        c_void_ptr msg, 
+        const void *msg, 
         uint8_t *buf, 
         int32_t max_size);
 
@@ -628,7 +628,7 @@ namespace tls {
     LIB_PUMP int32_t unpack_new_session_ticket_tls13_message(
         const uint8_t *buf, 
         int32_t size, 
-        void_ptr msg);
+        void *msg);
 
     /*********************************************************************************
      * If the server sent an "early_data" extension in EncryptedExtensions, the client 
@@ -654,7 +654,7 @@ namespace tls {
      * Pack end early data message.
      ********************************************************************************/
     LIB_PUMP int32_t pack_end_early_data_message(
-        c_void_ptr msg, 
+        const void *msg, 
         uint8_t *buf, 
         int32_t max_size);
 
@@ -664,7 +664,7 @@ namespace tls {
     LIB_PUMP int32_t unpack_end_early_data_message(
         const uint8_t *buf, 
         int32_t size, 
-        void_ptr msg);
+        void *msg);
 
     /*********************************************************************************
      * In all handshakes, the server MUST send the EncryptedExtensions message  
@@ -700,7 +700,7 @@ namespace tls {
      * Pack encrypted extensions message.
      ********************************************************************************/
     LIB_PUMP int32_t pack_encrypted_extensions_message(
-        c_void_ptr msg, 
+        const void *msg, 
         uint8_t *buf, 
         int32_t max_size);
 
@@ -710,7 +710,7 @@ namespace tls {
     LIB_PUMP int32_t unpack_encrypted_extensions_message(
         const uint8_t *buf, 
         int32_t size, 
-        void_ptr msg);
+        void *msg);
 
     /*********************************************************************************
      * This message conveys the endpoint's certificate chain to the peer. The server 
@@ -760,7 +760,7 @@ namespace tls {
      * Pack certificate message.
      ********************************************************************************/
     LIB_PUMP int32_t pack_certificate_message(
-        c_void_ptr msg, 
+        const void *msg, 
         uint8_t *buf, 
         int32_t max_size);
 
@@ -770,7 +770,7 @@ namespace tls {
     LIB_PUMP int32_t unpack_certificate_message(
         const uint8_t *buf, 
         int32_t size, 
-        void_ptr msg);
+        void *msg);
 
     /*********************************************************************************
      * New certificate tls13 message.
@@ -781,7 +781,7 @@ namespace tls {
      * Pack certificate tls13 message.
      ********************************************************************************/
     LIB_PUMP int32_t pack_certificate_tls13_message(
-        c_void_ptr msg, 
+        const void *msg, 
         uint8_t *buf, 
         int32_t max_size);
 
@@ -791,7 +791,7 @@ namespace tls {
     LIB_PUMP int32_t unpack_certificate_tls13_message(
         const uint8_t *buf, 
         int32_t size, 
-        void_ptr msg);
+        void *msg);
 
     /*********************************************************************************
      * This message will be sent immediately after the server certificate
@@ -815,7 +815,7 @@ namespace tls {
      * Pack server key exchange message.
      ********************************************************************************/
     LIB_PUMP int32_t pack_server_key_exchange_message(
-        c_void_ptr msg, 
+        const void *msg, 
         uint8_t *buf, 
         int32_t max_size);
 
@@ -825,7 +825,7 @@ namespace tls {
     LIB_PUMP int32_t unpack_server_key_exchange_message(
         const uint8_t *buf, 
         int32_t size, 
-        void_ptr msg);
+        void *msg);
 
     /*********************************************************************************
      * When this message will be sent:
@@ -865,7 +865,7 @@ namespace tls {
      * Pack certificate request message.
      ********************************************************************************/
     LIB_PUMP int32_t pack_certificate_req_message(
-        c_void_ptr msg, 
+        const void *msg, 
         uint8_t *buf, 
         int32_t max_size);
 
@@ -875,7 +875,7 @@ namespace tls {
     LIB_PUMP int32_t unpack_certificate_req_message(
         const uint8_t *buf, 
         int32_t size, 
-        void_ptr msg);
+        void *msg);
 
     /*********************************************************************************
      * A server which is authenticating with a certificate MAY optionally request a 
@@ -921,7 +921,7 @@ namespace tls {
      * Pack certificate request tls13 message.
      ********************************************************************************/
     LIB_PUMP int32_t pack_certificate_req_tls13_message(
-        c_void_ptr msg, 
+        const void *msg, 
         uint8_t *buf, 
         int32_t max_size);
 
@@ -931,7 +931,7 @@ namespace tls {
     LIB_PUMP int32_t unpack_certificate_req_tls13_message(
         const uint8_t *buf, 
         int32_t size, 
-        void_ptr msg);
+        void *msg);
 
     /*********************************************************************************
      * The server hello done message is sent by the server to indicate the end of the
@@ -955,7 +955,7 @@ namespace tls {
      * Pack server hello done message.
      ********************************************************************************/
     LIB_PUMP int32_t pack_server_hello_done_message(
-        c_void_ptr msg, 
+        const void *msg, 
         uint8_t *buf, 
         int32_t max_size);
 
@@ -965,7 +965,7 @@ namespace tls {
     LIB_PUMP int32_t unpack_server_hello_done_message(
         const uint8_t *buf, 
         int32_t size, 
-        void_ptr msg);
+        void *msg);
 
     /*********************************************************************************
      * This message is used to provide explicit verification of a client certificate. 
@@ -990,7 +990,7 @@ namespace tls {
      * Pack certificate verify message.
      ********************************************************************************/
     LIB_PUMP int32_t pack_certificate_verify_message(
-        c_void_ptr msg, 
+        const void *msg, 
         uint8_t *buf, 
         int32_t max_size);
 
@@ -1000,7 +1000,7 @@ namespace tls {
     LIB_PUMP int32_t unpack_certificate_verify_message(
         const uint8_t *buf, 
         int32_t size, 
-        void_ptr msg);
+        void *msg);
 
     /*********************************************************************************
      * This message is always sent by the client. It MUST immediately follow the 
@@ -1029,7 +1029,7 @@ namespace tls {
      * Pack client key exchange message.
      ********************************************************************************/
     LIB_PUMP int32_t pack_client_key_exchange_message(
-        c_void_ptr msg, 
+        const void *msg, 
         uint8_t *buf, 
         int32_t max_size);
 
@@ -1039,7 +1039,7 @@ namespace tls {
     LIB_PUMP int32_t unpack_client_key_exchange_message(
         const uint8_t *buf, 
         int32_t size, 
-        void_ptr msg);
+        void *msg);
 
     /*********************************************************************************
      * A finished message is always sent immediately after a change cipher spec 
@@ -1066,7 +1066,7 @@ namespace tls {
      * Pack finished message.
      ********************************************************************************/
     LIB_PUMP int32_t pack_finished_message(
-        c_void_ptr msg, 
+        const void *msg, 
         uint8_t *buf, 
         int32_t max_size);
 
@@ -1076,7 +1076,7 @@ namespace tls {
     LIB_PUMP int32_t unpack_finished_message(
         const uint8_t *buf, 
         int32_t size, 
-        void_ptr msg);
+        void *msg);
 
     /*********************************************************************************
      * Servers that receive a client hello containing the "status_request" extension
@@ -1105,7 +1105,7 @@ namespace tls {
      * Pack certificate status message.
      ********************************************************************************/
     LIB_PUMP int32_t pack_certificate_status_message(
-        c_void_ptr msg, 
+        const void *msg, 
         uint8_t *buf, 
         int32_t max_size);
 
@@ -1115,7 +1115,7 @@ namespace tls {
     LIB_PUMP int32_t unpack_certificate_status_message(
         const uint8_t *buf, 
         int32_t size, 
-        void_ptr msg);
+        void *msg);
 
     /*********************************************************************************
      * The KeyUpdate handshake message is used to indicate that the sender is updating 
@@ -1144,7 +1144,7 @@ namespace tls {
      * Pack key update message.
      ********************************************************************************/
     LIB_PUMP int32_t pack_key_update_message(
-        c_void_ptr msg, 
+        const void *msg, 
         uint8_t *buf, 
         int32_t max_size);
 
@@ -1154,7 +1154,7 @@ namespace tls {
     LIB_PUMP int32_t unpack_key_update_message(
         const uint8_t *buf, 
         int32_t size, 
-        void_ptr msg);
+        void *msg);
 
     /*********************************************************************************
      * Pack message hash message.

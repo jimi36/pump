@@ -33,7 +33,7 @@ namespace flow {
     int32_t flow_tls::init(
         poll::channel_sptr &ch,
         pump_socket fd,
-        void_ptr xcred,
+        void *xcred,
         bool client) {
         PUMP_DEBUG_ASSIGN(ch, ch_, ch);
         PUMP_DEBUG_ASSIGN(fd > 0, fd_, fd);

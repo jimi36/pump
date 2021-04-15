@@ -33,7 +33,7 @@ extern "C" {
 namespace pump {
 namespace ssl {
 
-        void_ptr create_tls_client_certificate() {
+        void* create_tls_client_certificate() {
 #if defined(PUMP_HAVE_GNUTLS)
         gnutls_certificate_credentials_t xcred;
         if (gnutls_certificate_allocate_credentials(&xcred) != 0) {
@@ -56,7 +56,7 @@ namespace ssl {
 #endif
     }
 
-    void_ptr create_tls_certificate_by_file(
+    void* create_tls_certificate_by_file(
         bool client,
         const std::string &cert,
         const std::string &key) {
@@ -111,7 +111,7 @@ namespace ssl {
 #endif
     }
 
-    void_ptr create_tls_certificate_by_buffer(
+    void* create_tls_certificate_by_buffer(
         bool client,
         const std::string &cert,
         const std::string &key) {
@@ -154,7 +154,7 @@ namespace ssl {
             return nullptr;
         }
 
-        BIO *cert_bio = BIO_new_mem_buf((void_ptr)cert.c_str(), -1);
+        BIO *cert_bio = BIO_new_mem_buf((void*)cert.c_str(), -1);
         X509 *x509_cert = PEM_read_bio_X509(cert_bio, NULL, NULL, NULL);
         BIO_free(cert_bio);
         if (!x509_cert) {
@@ -164,7 +164,7 @@ namespace ssl {
             return nullptr;
         }
 
-        BIO *key_bio = BIO_new_mem_buf((void_ptr)key.c_str(), -1);
+        BIO *key_bio = BIO_new_mem_buf((void*)key.c_str(), -1);
         EVP_PKEY *evp_key = PEM_read_bio_PrivateKey(key_bio, NULL, 0, NULL);
         BIO_free(key_bio);
         if (!evp_key) {
@@ -195,7 +195,7 @@ namespace ssl {
 #endif
     }
 
-    void destory_tls_certificate(void_ptr xcred) {
+    void destory_tls_certificate(void *xcred) {
 #if defined(PUMP_HAVE_GNUTLS)
         if (xcred) {
             gnutls_certificate_free_credentials((gnutls_certificate_credentials_t)xcred);
@@ -208,7 +208,7 @@ namespace ssl {
     }
 
     tls_session_ptr create_tls_session(
-        void_ptr xcred, 
+        void *xcred, 
         int32_t fd, 
         bool client) {
 #if defined(PUMP_HAVE_GNUTLS)

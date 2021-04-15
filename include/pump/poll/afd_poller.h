@@ -65,11 +65,11 @@ namespace poll {
 
       private:
         // IOCP handler
-        void_ptr iocp_handler_;
+        void *iocp_handler_;
         // AFD device handler
-        void_ptr afd_device_handler_;
+        void *afd_device_handler_;
 
-        void_ptr events_;
+        void *events_;
         int32_t max_event_count_;
         std::atomic_int32_t cur_event_count_;
     };

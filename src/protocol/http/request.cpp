@@ -31,7 +31,7 @@ namespace http {
         "DELETE"
     };
 
-    request::request(void_ptr ctx) noexcept
+    request::request(void *ctx) noexcept
       : pocket(PK_REQUEST), 
         ctx_(ctx), 
         method_(METHOD_UNKNOWN) {
@@ -39,7 +39,7 @@ namespace http {
 
     request::request(
         const std::string &url,
-        void_ptr ctx) noexcept
+        void *ctx) noexcept
       : pocket(PK_REQUEST), 
         ctx_(ctx), 
         method_(METHOD_UNKNOWN) {

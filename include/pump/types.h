@@ -36,7 +36,7 @@ typedef SSIZE_T ssize_t;
     DEFINE_RAW_POINTER_TYPE(class_name)     \
     DEFINE_SMART_POINTER_TYPE(class_name)
 
-DEFINE_ALL_POINTER_TYPE(void);
+//DEFINE_ALL_POINTER_TYPE(void);
 
 typedef char block_t;
 typedef float float32_t;

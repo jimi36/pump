@@ -66,7 +66,7 @@ namespace poll {
       private:
         int32_t fd_;
 
-        void_ptr events_;
+        void *events_;
         int32_t max_event_count_;
         std::atomic_int32_t cur_event_count_;
     };
