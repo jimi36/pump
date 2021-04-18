@@ -72,7 +72,7 @@ namespace transport {
          * Start
          ********************************************************************************/
         virtual int32_t start(
-            service_ptr sv, 
+            service *sv, 
             const dialer_callbacks &cbs) override;
 
         /*********************************************************************************
@@ -96,7 +96,7 @@ namespace transport {
          ********************************************************************************/
         static void on_handshaked(
             tls_dialer_wptr wptr,
-            tls_handshaker_ptr handshaker,
+            tls_handshaker *handshaker,
             bool succ);
 
         /*********************************************************************************
@@ -104,7 +104,7 @@ namespace transport {
          ********************************************************************************/
         static void on_handshake_stopped(
             tls_dialer_wptr wptr,
-            tls_handshaker_ptr handshaker);
+            tls_handshaker *handshaker);
 
       protected:
         /*********************************************************************************
@@ -171,7 +171,7 @@ namespace transport {
          * Dial by synchronization
          ********************************************************************************/
         base_transport_sptr dial(
-            service_ptr sv,
+            service *sv,
             const address &local_address,
             const address &remote_address,
             int64_t connect_timeout,

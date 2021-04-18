@@ -53,11 +53,10 @@ namespace time {
         if (!started_.load()) {
             return false;
         }
-
         if (!ptr->__start(this)) {
             return false;
         }
-
+        
         PUMP_DEBUG_CHECK(new_timers_.enqueue(ptr));
 
         return true;

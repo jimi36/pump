@@ -46,10 +46,14 @@ namespace http {
         /*********************************************************************************
          * Append data
          ********************************************************************************/
+        void append(const std::string &data) {
+            data_.append(data);
+        }
         void append(
             const block_t *b, 
-            int32_t size);
-        void append(const std::string &data);
+            int32_t size) {
+            data_.append(b, size);
+        }
 
         /*********************************************************************************
          * Parse

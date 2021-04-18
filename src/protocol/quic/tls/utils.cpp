@@ -163,8 +163,8 @@ namespace tls {
         return p + 4;
     }
 
-    cipher_suite_context_ptr new_cipher_suite_context(cipher_suite_type suite_type) {
-        cipher_suite_context_ptr ctx = nullptr;
+    cipher_suite_context* new_cipher_suite_context(cipher_suite_type suite_type) {
+        cipher_suite_context *ctx = nullptr;
         switch (suite_type)
         {
         case TLS_AES_128_GCM_SHA256:
@@ -189,21 +189,21 @@ namespace tls {
         return ctx;
     }
 
-    void delete_cipher_suite_context(cipher_suite_context_ptr ctx) {
+    void delete_cipher_suite_context(cipher_suite_context *ctx) {
         if (ctx) {
             object_delete(ctx);
         }
     }
 
     std::string cipher_suite_extract(
-        cipher_suite_context_ptr ctx, 
+        cipher_suite_context *ctx, 
         const std::string &salt, 
         const std::string &key) {
         return hkdf_extract(ctx->algo, salt, key);
     }
 
     std::string cipher_suite_expand_label(
-        cipher_suite_context_ptr ctx,
+        cipher_suite_context *ctx,
         const std::string &key, 
         const std::string &context,
         const std::string &label,
@@ -212,10 +212,10 @@ namespace tls {
     }
 
     std::string cipher_suite_device_secret(
-        cipher_suite_context_ptr ctx,
+        cipher_suite_context *ctx,
         const std::string &key,
         const std::string &label,
-        ssl::hash_context_ptr transcript) {                    
+        ssl::hash_context *transcript) {                    
         std::string context;
         if (transcript == nullptr) {
             transcript = ssl::create_hash_context(ctx->algo);
@@ -324,7 +324,7 @@ namespace tls {
             signed_msg.append(context.data(), context.size());
             signed_msg.append(msg.data(), msg.size());
         } else {
-            ssl::hash_context_ptr hash_ctx = ssl::create_hash_context(algo);
+            ssl::hash_context *hash_ctx = ssl::create_hash_context(algo);
             PUMP_DEBUG_CHECK(ssl::update_hash(hash_ctx, signature_padding, (int32_t)sizeof(signature_padding)));
             PUMP_DEBUG_CHECK(ssl::update_hash(hash_ctx, context));
             PUMP_DEBUG_CHECK(ssl::update_hash(hash_ctx, msg));

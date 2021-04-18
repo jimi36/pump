@@ -59,7 +59,7 @@ namespace websocket {
          * Start
          ********************************************************************************/
         bool start(
-            service_ptr sv,
+            service *sv,
             const client_callbacks &cbs);
 
         /*********************************************************************************
@@ -140,7 +140,7 @@ namespace websocket {
         std::atomic_bool started_;
 
         // Service
-        service_ptr sv_;
+        service *sv_;
 
         // Transport Dialer
         transport::base_dialer_sptr dialer_;

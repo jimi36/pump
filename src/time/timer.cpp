@@ -50,16 +50,15 @@ namespace time {
         }
     }
 
-    bool timer::__start(timer_queue_ptr queue) {
+    bool timer::__start(timer_queue *queue) {
         if (!__set_state(TIMER_INIT, TIMER_STARTED)) {
             return false;
         }
 
-        // Update overtime.
-        overtime_ = get_clock_milliseconds() + timeout_;
-
         // Save timer queue.
         queue_ = queue;
+        // Update overtime.
+        overtime_ = get_clock_milliseconds() + timeout_;
 
         return true;
     }

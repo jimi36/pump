@@ -37,10 +37,10 @@ namespace websocket {
     }
 
     bool client::start(
-        service_ptr sv, 
+        service *sv, 
         const client_callbacks &cbs) {
         // Check service.
-        if (!sv) {
+        if (sv == nullptr) {
             return false;
         }
 
@@ -55,7 +55,6 @@ namespace websocket {
         }
 
         sv_ = sv;
-
         cbs_ = cbs;
 
         if (!__start()) {
@@ -87,6 +86,7 @@ namespace websocket {
         if (!started_.load()) {
             return false;
         }
+
         // Check connection.
         if (!conn_ || !conn_->is_valid()) {
             return false;
@@ -99,7 +99,7 @@ namespace websocket {
         client_wptr wptr,
         transport::base_transport_sptr &transp,
         bool succ) {
-        PUMP_LOCK_WPOINTER(cli, wptr);
+        auto cli = wptr.lock();
         if (cli) {
             if (!succ) {
                 cli->cbs_.error_cb("client dial error");
@@ -130,14 +130,14 @@ namespace websocket {
     }
 
     void client::on_dial_timeouted(client_wptr wptr) {
-        PUMP_LOCK_WPOINTER(cli, wptr);
+        auto cli = wptr.lock();
         if (cli) {
             cli->cbs_.error_cb("client dial timeouted");
         }
     }
 
     void client::on_dial_stopped(client_wptr wptr) {
-        PUMP_LOCK_WPOINTER(cli, wptr);
+        auto cli = wptr.lock();
         if (cli) {
             cli->cbs_.error_cb("client dial stopped");
         }
@@ -146,7 +146,7 @@ namespace websocket {
     void client::on_upgrade_response(
         client_wptr wptr, 
         http::pocket_sptr pk) {
-        PUMP_LOCK_WPOINTER(cli, wptr);
+        auto cli = wptr.lock();
         if (cli) {
             auto resp = std::static_pointer_cast<http::response>(pk);
             if (!cli->__check_upgrade_response(resp)) {
@@ -170,7 +170,7 @@ namespace websocket {
         const block_t *b, 
         int32_t size, 
         bool end) {
-        PUMP_LOCK_WPOINTER(cli, wptr);
+        auto cli = wptr.lock();
         if (cli) {
             cli->cbs_.data_cb(b, size, end);
         }
@@ -179,7 +179,7 @@ namespace websocket {
     void client::on_error(
         client_wptr wptr, 
         const std::string &msg) {
-        PUMP_LOCK_WPOINTER(cli, wptr);
+        auto cli = wptr.lock();
         if (cli) {
             cli->conn_.reset();
             cli->cbs_.error_cb(msg);
@@ -240,8 +240,7 @@ namespace websocket {
 
         std::vector<std::string> connection;
         if (!resp->get_head("Connection", connection) ||
-            std::find(connection.begin(), connection.end(), "Upgrade") ==
-                connection.end()) {
+            std::find(connection.begin(), connection.end(), "Upgrade") == connection.end()) {
             return false;
         }
 

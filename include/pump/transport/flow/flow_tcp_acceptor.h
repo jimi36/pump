@@ -51,15 +51,15 @@ namespace flow {
          * Accept
          ********************************************************************************/
         pump_socket accept(
-            address_ptr local_address, 
-            address_ptr remote_address);
+            address *local_address, 
+            address *remote_address);
 
       private:
         // IPV6
         bool is_ipv6_;
 
         // Accept buffer
-        toolkit::io_buffer_ptr iob_;
+        toolkit::io_buffer *iob_;
     };
     DEFINE_ALL_POINTER_TYPE(flow_tcp_acceptor);
 

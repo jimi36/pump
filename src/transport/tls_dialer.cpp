@@ -43,7 +43,7 @@ namespace transport {
     }
 
     int32_t tls_dialer::start(
-        service_ptr sv, 
+        service *sv, 
         const dialer_callbacks &cbs) {
         if (!xcred_) {
             PUMP_ERR_LOG("tls_dialer: start failed with invalid certificate");
@@ -199,7 +199,7 @@ namespace transport {
 
     void tls_dialer::on_handshaked(
         tls_dialer_wptr wptr,
-        tls_handshaker_ptr handshaker,
+        tls_handshaker *handshaker,
         bool succ) {
         PUMP_LOCK_WPOINTER(dialer, wptr);
         if (!dialer) {
@@ -230,7 +230,7 @@ namespace transport {
 
     void tls_dialer::on_handshake_stopped(
         tls_dialer_wptr wptr,
-        tls_handshaker_ptr handshaker) {
+        tls_handshaker *handshaker) {
         PUMP_LOCK_WPOINTER(dialer, wptr);
         if (!dialer) {
             PUMP_WARN_LOG("tls_dialer: handle handshake stopped event failed for dialer invalid");
@@ -261,7 +261,7 @@ namespace transport {
     }
 
     base_transport_sptr tls_sync_dialer::dial(
-        service_ptr sv,
+        service *sv,
         const address &local_address,
         const address &remote_address,
         int64_t connect_timeout,

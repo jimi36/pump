@@ -57,7 +57,7 @@ namespace websocket {
          * Constructor
          ********************************************************************************/
         connection(
-            service_ptr sv,
+            service *sv,
             transport::base_transport_sptr &transp,
             bool has_mask) noexcept;
 
@@ -166,7 +166,7 @@ namespace websocket {
 
       private:
         // Service
-        service_ptr sv_;
+        service *sv_;
 
         // Transport
         transport::base_transport_sptr transp_;

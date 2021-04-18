@@ -84,7 +84,7 @@ namespace transport {
          * Start
          ********************************************************************************/
         virtual int32_t start(
-            service_ptr sv, 
+            service *sv, 
             const acceptor_callbacks &cbs) override;
 
         /*********************************************************************************
@@ -103,7 +103,7 @@ namespace transport {
          ********************************************************************************/
         static void on_handshaked(
             tls_acceptor_wptr wptr,
-            tls_handshaker_ptr handshaker,
+            tls_handshaker *handshaker,
             bool succ);
 
         /*********************************************************************************
@@ -111,7 +111,7 @@ namespace transport {
          ********************************************************************************/
         static void on_handshake_stopped(
             tls_acceptor_wptr wptr,
-            tls_handshaker_ptr handshaker);
+            tls_handshaker *handshaker);
 
       private:
         /*********************************************************************************
@@ -136,12 +136,12 @@ namespace transport {
         /*********************************************************************************
          * Create handshaker
          ********************************************************************************/
-        tls_handshaker_ptr __create_handshaker();
+        tls_handshaker* __create_handshaker();
 
         /*********************************************************************************
          * Remove handshaker
          ********************************************************************************/
-        void __remove_handshaker(tls_handshaker_ptr handshaker);
+        void __remove_handshaker(tls_handshaker *handshaker);
 
         /*********************************************************************************
          * Stop all handshakers
@@ -159,7 +159,7 @@ namespace transport {
 
         // Handshakers
         std::mutex handshaker_mx_;
-        std::unordered_map<tls_handshaker_ptr, tls_handshaker_sptr> handshakers_;
+        std::unordered_map<tls_handshaker*, tls_handshaker_sptr> handshakers_;
 
         // Acceptor flow
         flow::flow_tls_acceptor_sptr flow_;

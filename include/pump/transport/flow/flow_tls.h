@@ -90,7 +90,7 @@ namespace flow {
          *     FLOW_ERR_AGAIN   => try again
          *     FLOW_ERR_ABORT   => error
          ********************************************************************************/
-        int32_t want_to_send(toolkit::io_buffer_ptr iob);
+        int32_t want_to_send(toolkit::io_buffer *iob);
 
         /*********************************************************************************
          * Send to net
@@ -121,9 +121,9 @@ namespace flow {
         // Handshaked status
         bool is_handshaked_;
         // TLS session
-        ssl::tls_session_ptr session_;
+        ssl::tls_session *session_;
         // Current sending io buffer
-        toolkit::io_buffer_ptr send_iob_;
+        toolkit::io_buffer *send_iob_;
     };
     DEFINE_ALL_POINTER_TYPE(flow_tls);
 

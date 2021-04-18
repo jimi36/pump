@@ -123,18 +123,18 @@ namespace tls {
     /*********************************************************************************
      * New cipher suite context.
      ********************************************************************************/
-    cipher_suite_context_ptr new_cipher_suite_context(cipher_suite_type suite_type);
+    cipher_suite_context* new_cipher_suite_context(cipher_suite_type suite_type);
 
     /*********************************************************************************
      * Delete cipher suite context.
      ********************************************************************************/
-    void delete_cipher_suite_context(cipher_suite_context_ptr ctx);
+    void delete_cipher_suite_context(cipher_suite_context *ctx);
 
     /*********************************************************************************
      * Cipher suite extract.
      ********************************************************************************/
     std::string cipher_suite_extract(
-        cipher_suite_context_ptr ctx, 
+        cipher_suite_context *ctx, 
         const std::string &salt, 
         const std::string &key);
 
@@ -142,7 +142,7 @@ namespace tls {
      * Cipher suite expand label.
      ********************************************************************************/
     std::string cipher_suite_expand_label(
-        cipher_suite_context_ptr ctx,
+        cipher_suite_context *ctx,
         const std::string &key, 
         const std::string &context,
         const std::string &label,
@@ -152,10 +152,10 @@ namespace tls {
      * Cipher suite device secret.
      ********************************************************************************/
     std::string cipher_suite_device_secret(
-        cipher_suite_context_ptr suite_param,
+        cipher_suite_context *suite_param,
         const std::string &key,
         const std::string &label,
-        ssl::hash_context_ptr transcript);
+        ssl::hash_context *transcript);
 
     /*********************************************************************************
      * HKDF extract with hash algorithm.

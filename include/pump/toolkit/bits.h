@@ -45,15 +45,12 @@ namespace toolkit {
         bool read(
             uint32_t bc, 
             uint8_t *val);
-
         bool read(
             uint32_t bc, 
             uint16_t *val);
-
         bool read(
             uint32_t bc, 
             uint32_t *val);
-
         bool read(
             uint32_t bc, 
             uint64_t *val);
@@ -104,15 +101,12 @@ namespace toolkit {
         bool write(
             uint32_t bc, 
             uint8_t val);
-
         bool write(
             uint32_t bc, 
             uint16_t val);
-
         bool write(
             uint32_t bc, 
             uint32_t val);
-
         bool write(
             uint32_t bc, 
             uint64_t val);

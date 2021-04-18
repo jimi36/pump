@@ -47,7 +47,7 @@ namespace transport {
     }
 
     int32_t tls_transport::start(
-        service_ptr sv, 
+        service *sv, 
         const transport_callbacks &cbs) {
         if (!flow_) {
             PUMP_ERR_LOG("tls_transport: start failed with invalid flow");
@@ -191,7 +191,7 @@ namespace transport {
         return ec;
     }
 
-    int32_t tls_transport::send(toolkit::io_buffer_ptr iob) {
+    int32_t tls_transport::send(toolkit::io_buffer *iob) {
         if (!iob || iob->data_size() == 0) {
             PUMP_ERR_LOG("tls_transport: send failed with invalid io buffer");
             return ERROR_INVALID;
@@ -356,7 +356,7 @@ namespace transport {
         return ERROR_OK;
     }
 
-    bool tls_transport::__async_send(toolkit::io_buffer_ptr iob) {
+    bool tls_transport::__async_send(toolkit::io_buffer *iob) {
         // Insert buffer to sendlist.
         PUMP_DEBUG_CHECK(sendlist_.push(iob));
 
@@ -385,7 +385,7 @@ namespace transport {
         return false;
     }
 
-    int32_t tls_transport::__send_once(flow::flow_tls_ptr flow) {
+    int32_t tls_transport::__send_once(flow::flow_tls *flow) {
         PUMP_ASSERT(!last_send_iob_);
         // Pop next buffer from sendlist.
         PUMP_DEBUG_CHECK(sendlist_.pop(last_send_iob_));
@@ -422,7 +422,7 @@ namespace transport {
             last_send_iob_->sub_ref();
         }
 
-        toolkit::io_buffer_ptr iob;
+        toolkit::io_buffer *iob;
         while (sendlist_.pop(iob)) {
             iob->sub_ref();
         }

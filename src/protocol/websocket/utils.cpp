@@ -62,7 +62,7 @@ namespace websocket {
     }
 
     void send_http_error_response(
-        connection_ptr conn,
+        connection *conn,
         int32_t status_code,
         const std::string &reason) {
         http::response resp;

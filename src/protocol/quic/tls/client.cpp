@@ -63,8 +63,8 @@ namespace tls {
         }
         session_.alpn = cfg.application_protocol;
 
-        if (!cfg.cert_pem.empty()) {
-            auto cert = ssl::load_x509_certificate_by_pem(cfg.cert_pem);
+        if (!cfg.cert_pem.empty() && !cfg.key_pem.empty()) {
+            auto cert = ssl::load_x509_certificate_by_pem(cfg.cert_pem, cfg.key_pem);
             if (cert == nullptr) {
                 return false;
             }
@@ -79,24 +79,39 @@ namespace tls {
     }
 
     alert_code client_handshaker::handshake(handshake_message *msg) {
+        alert_code code = ALERT_OK;
         switch (msg->type)
         {
         case TLS_MSG_SERVER_HELLO:
-            return __handle_server_hello(msg);
+            PUMP_DEBUG_LOG("client_handshaker handle server hello message");
+            code = __handle_server_hello(msg);
+            break;
         case TLS_MSG_ENCRYPTED_EXTENSIONS:
-            return __handle_encrypted_extensions(msg);
+            PUMP_DEBUG_LOG("client_handshaker handle encrypted extensions message");
+            code = __handle_encrypted_extensions(msg);
+            break;
         case TLS_MSG_CERTIFICATE_REQUEST:
-            return __handle_certificate_request_tls13(msg);
+            PUMP_DEBUG_LOG("client_handshaker handle certificate request tls13 message");
+            code = __handle_certificate_request_tls13(msg);
+            break;
         case TLS_MSG_CERTIFICATE:
-            return __handle_certificate_tls13(msg);
+            PUMP_DEBUG_LOG("client_handshaker handle certificate tls13 message");
+            code = __handle_certificate_tls13(msg);
+            break;
         case TLS_MSG_CERTIFICATE_VERIFY:
-            return __handle_certificate_verify(msg);
+            PUMP_DEBUG_LOG("client_handshaker handle certificate verify message");
+            code = __handle_certificate_verify(msg);
+            break;
         case TLS_MSG_FINISHED:
-            return __handle_finished(msg);
+            PUMP_DEBUG_LOG("client_handshaker handle finished message");
+            code = __handle_finished(msg);
+            break;
         default:
+            PUMP_DEBUG_LOG("client_handshaker handle unknown message");
+            code = ALERT_UNEXPECTED_MESSGAE;
             break;
         }
-        return ALERT_UNEXPECTED_MESSGAE;
+        return code;
     }
 
     bool client_handshaker::__send_client_hello() {
@@ -166,6 +181,7 @@ namespace tls {
         // TODO: support eraly data? Default not.
         //hello->is_support_early_data = true;
 
+        PUMP_DEBUG_LOG("client_handshaker send client hello message");
         __send_handshake_message(hello_, false);
 
         return true;
@@ -290,7 +306,7 @@ namespace tls {
             //PUMP_DEBUG_LOG("client handshaker master_secret_base64: %s", master_secret_base64.c_str());
         }
 
-        return ALERT_NONE;
+        return ALERT_OK;
     }
 
     alert_code client_handshaker::__send_hello_retry(handshake_message *msg) {
@@ -345,9 +361,10 @@ namespace tls {
         __write_transcript(pack_msg_hash_message(__reset_transcript()));
         __write_transcript(pack_handshake_message(msg));
 
+        PUMP_DEBUG_LOG("client_handshaker send hello retry message");
         __send_handshake_message(hello_, false);
 
-        return ALERT_NONE;
+        return ALERT_OK;
     }
 
     alert_code client_handshaker::__handle_encrypted_extensions(handshake_message *msg) {
@@ -376,7 +393,7 @@ namespace tls {
 
         __write_transcript(pack_handshake_message(msg));
 
-        return ALERT_NONE;
+        return ALERT_OK;
     }
 
     alert_code client_handshaker::__handle_certificate_request_tls13(handshake_message *msg) {
@@ -393,7 +410,7 @@ namespace tls {
 
         __write_transcript(pack_handshake_message(msg));
 
-        return ALERT_NONE;
+        return ALERT_OK;
     }
 
     alert_code client_handshaker::__handle_certificate_tls13(handshake_message *msg) {
@@ -410,7 +427,7 @@ namespace tls {
             return ALERT_ILLEGAL_PARAMETER;
         }
         for (auto &certificate : cert_tls13->certificates) {
-            auto cert = ssl::load_x509_certificate_by_raw(certificate);
+            auto cert = ssl::load_x509_certificate_by_raw(certificate, "");
             if (cert == nullptr) {
                 return ALERT_ILLEGAL_PARAMETER;
             }
@@ -431,7 +448,7 @@ namespace tls {
 
         __write_transcript(pack_handshake_message(msg));
 
-        return ALERT_NONE;
+        return ALERT_OK;
     }
 
     alert_code client_handshaker::__handle_certificate_verify(handshake_message *msg) {
@@ -467,6 +484,13 @@ namespace tls {
                             hash_algo, 
                             SERVER_SIGNATURE_CONTEXT, 
                             ssl::sum_hash(transcript_));
+        auto signed_msg_base64 = codec::base64_encode(signed_msg);
+        auto signature_base64 = codec::base64_encode(cert_verify->signature);
+        PUMP_DEBUG_LOG("client handshaker verify signature sign: %d hash: %ld msg: %s signature: %s", 
+            sign_algo,
+            hash_algo,
+            signed_msg_base64.c_str(),
+            signature_base64.c_str());
         if (!ssl::verify_x509_signature(
                 session_.peer_certs[0], 
                 sign_algo, 
@@ -478,7 +502,7 @@ namespace tls {
 
         __write_transcript(pack_handshake_message(msg));
 
-        return ALERT_NONE;
+        return ALERT_OK;
     }
 
     alert_code client_handshaker::__handle_finished(handshake_message *msg) {
@@ -536,20 +560,20 @@ namespace tls {
         //auto export_master_secret_base64 = codec::base64_encode(session_.export_master_secret);
         //PUMP_DEBUG_LOG("client handshaker export_master_secret_base64: %s", export_master_secret_base64.c_str());
 
-        alert_code code = ALERT_NONE;
+        alert_code code = ALERT_OK;
         if (cert_request_) {
-            if ((code = __send_certificate_tls13()) != ALERT_NONE) {
+            if ((code = __send_certificate_tls13()) != ALERT_OK) {
                 return code;
             }
-            if ((code = __send_certificate_verify()) != ALERT_NONE) {
+            if ((code = __send_certificate_verify()) != ALERT_OK) {
                 return code;
             }
         }
-        if ((code = __send_finished()) != ALERT_NONE) {
+        if ((code = __send_finished()) != ALERT_OK) {
             return code;
         }
 
-        return ALERT_NONE;
+        return ALERT_OK;
     }
 
     alert_code client_handshaker::__send_certificate_tls13() {
@@ -582,9 +606,10 @@ namespace tls {
             }
         }
 
+        PUMP_DEBUG_LOG("client_handshaker send certificate tls13 message");
         __send_handshake_message(msg);
 
-        return ALERT_NONE;
+        return ALERT_OK;
     }
 
     alert_code client_handshaker::__send_certificate_verify() {
@@ -622,10 +647,11 @@ namespace tls {
                 return ALERT_INTERNAL_ERROR;
             }
 
+            PUMP_DEBUG_LOG("client_handshaker send certificate verify message");
             __send_handshake_message(msg);
         }
 
-        return ALERT_NONE;
+        return ALERT_OK;
     }
 
     alert_code client_handshaker::__send_finished() {
@@ -659,6 +685,7 @@ namespace tls {
         //auto verify_data_base64 = codec::base64_encode(finished->verify_data);
         //PUMP_DEBUG_LOG("client handshaker client verify_data_base64: %s", verify_data_base64.c_str());
 
+        PUMP_DEBUG_LOG("client_handshaker send finished message");
         __send_handshake_message(msg);
 
         status_ = HANDSHAKE_SUCCESS;
@@ -667,7 +694,7 @@ namespace tls {
             finished_callback_(session_);
         }
 
-        return ALERT_NONE;
+        return ALERT_OK;
     }
 
     std::string client_handshaker::__reset_transcript() {

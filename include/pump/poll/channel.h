@@ -137,12 +137,11 @@ namespace poll {
     const int32_t TRACKER_EVENT_DEL = 0;
     const int32_t TRACKER_EVENT_ADD = 1;
 
-    const int32_t TRACKER_STATE_STOP = 0x00;
-    const int32_t TRACKER_STATE_TRACK = 0x01;
+    const int32_t TRACKER_STATE_STOP    = 0x00;
+    const int32_t TRACKER_STATE_TRACK   = 0x01;
     const int32_t TRACKER_STATE_UNTRACK = 0x02;
 
     class poller;
-    DEFINE_RAW_POINTER_TYPE(poller);
 
     class channel_tracker
       : public toolkit::noncopyable {
@@ -184,10 +183,10 @@ namespace poll {
         PUMP_INLINE bool start() {
             int32_t expected = TRACKER_STATE_STOP;
             return state_.compare_exchange_strong(
-                expected, 
-                TRACKER_STATE_TRACK,
-                std::memory_order_acquire,
-                std::memory_order_relaxed);
+                    expected, 
+                    TRACKER_STATE_TRACK,
+                    std::memory_order_acquire,
+                    std::memory_order_relaxed);
         }
 
         /*********************************************************************************
@@ -195,8 +194,8 @@ namespace poll {
          ********************************************************************************/
         PUMP_INLINE bool stop() {
             return state_.exchange(
-                TRACKER_STATE_STOP, 
-                std::memory_order_acquire) != TRACKER_STATE_STOP;
+                    TRACKER_STATE_STOP, 
+                    std::memory_order_acquire) != TRACKER_STATE_STOP;
         }
 
         /*********************************************************************************
@@ -212,10 +211,10 @@ namespace poll {
         PUMP_INLINE bool track() {
             int32_t expected = TRACKER_STATE_UNTRACK;
             return state_.compare_exchange_strong(
-                expected, 
-                TRACKER_STATE_TRACK,
-                std::memory_order_acquire,
-                std::memory_order_relaxed);
+                    expected, 
+                    TRACKER_STATE_TRACK,
+                    std::memory_order_acquire,
+                    std::memory_order_relaxed);
         }
 
         /*********************************************************************************
@@ -224,10 +223,10 @@ namespace poll {
         PUMP_INLINE bool untrack() {
             int32_t expected = TRACKER_STATE_TRACK;
             return state_.compare_exchange_strong(
-                expected, 
-                TRACKER_STATE_UNTRACK,
-                std::memory_order_acquire,
-                std::memory_order_relaxed);
+                    expected, 
+                    TRACKER_STATE_UNTRACK,
+                    std::memory_order_acquire,
+                    std::memory_order_relaxed);
         }
 
         /*********************************************************************************
@@ -296,20 +295,20 @@ namespace poll {
          * Get channel
          ********************************************************************************/
         PUMP_INLINE channel_sptr get_channel() {
-            return std::move(ch_.lock());
+            return ch_.lock();
         }
 
         /*********************************************************************************
          * Set poller
          ********************************************************************************/
-        PUMP_INLINE void set_poller(poller_ptr pr) {
+        PUMP_INLINE void set_poller(poller *pr) {
             pr_ = pr;
         }
 
         /*********************************************************************************
          * Get poller
          ********************************************************************************/
-        PUMP_INLINE poller_ptr get_poller() {
+        PUMP_INLINE poller* get_poller() {
             return pr_;
         }
 
@@ -325,7 +324,7 @@ namespace poll {
         // Channel
         channel_wptr ch_;
         // Poller
-        poller_ptr pr_;
+        poller *pr_;
 #if defined(PUMP_HAVE_EPOLL)
         struct epoll_event ev_;
 #elif defined(PUMP_HAVE_IOCP)

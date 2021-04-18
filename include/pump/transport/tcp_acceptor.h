@@ -48,7 +48,7 @@ namespace transport {
          * Start
          ********************************************************************************/
         virtual int32_t start(
-            service_ptr sv, 
+            service *sv, 
             const acceptor_callbacks &cbs) override;
 
         /*********************************************************************************

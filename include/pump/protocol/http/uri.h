@@ -25,12 +25,13 @@ namespace pump {
 namespace protocol {
 namespace http {
 
-    const static int32_t UIR_NONE = 0;
-    const static int32_t URI_HTTP = 1;
-    const static int32_t URI_HTTPS = 2;
-    const static int32_t URI_WS = 3;
-    const static int32_t URI_WSS = 4;
-    const static int32_t URI_END = 5;
+    typedef int32_t uri_class;
+    const static uri_class UIR_UNKNOWN  = 0;
+    const static uri_class URI_HTTP     = 1;
+    const static uri_class URI_HTTPS    = 2;
+    const static uri_class URI_WS       = 3;
+    const static uri_class URI_WSS      = 4;
+    const static uri_class URI_END      = 5;
 
     class LIB_PUMP uri {
 
@@ -59,15 +60,15 @@ namespace http {
         /*********************************************************************************
          * Set uri type
          ********************************************************************************/
-        PUMP_INLINE void set_type(int32_t ut) {
-            ut_ = ut;
+        PUMP_INLINE void set_type(uri_class uc) {
+            uc_ = uc;
         }
 
         /*********************************************************************************
          * Get uri type
          ********************************************************************************/
-        PUMP_INLINE int32_t get_type() const {
-            return ut_;
+        PUMP_INLINE uri_class get_type() const {
+            return uc_;
         }
 
         /*********************************************************************************
@@ -120,8 +121,8 @@ namespace http {
         std::string to_url() const;
 
       private:
-        // Uri type
-        int32_t ut_;
+        // Uri class
+        uri_class uc_;
         // Uri host
         std::string host_;
         // Uri path
@@ -141,7 +142,7 @@ namespace http {
      ********************************************************************************/
     LIB_PUMP bool parse_url(
         const std::string &url,
-        int32_t &ut,
+        uri_class &uc,
         std::string &host,
         std::string &path,
         std::map<std::string, std::string> &params);

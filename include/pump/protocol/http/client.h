@@ -37,7 +37,7 @@ namespace http {
         /*********************************************************************************
          * Create instance
          ********************************************************************************/
-        PUMP_INLINE static client_sptr create(service_ptr sv) {
+        PUMP_INLINE static client_sptr create(service *sv) {
             INLINE_OBJECT_CREATE(obj, client, (sv));
             return client_sptr(obj, object_delete<client>);
         }
@@ -79,7 +79,7 @@ namespace http {
         /*********************************************************************************
          * Constructor
          ********************************************************************************/
-        client(service_ptr sv);
+        client(service *sv);
 
         /*********************************************************************************
          * Create http connection
@@ -97,7 +97,7 @@ namespace http {
          * Destroy http connection
          ********************************************************************************/
         void __notify_response(
-            connection_ptr conn, 
+            connection *conn, 
             response_sptr &&resp);
 
       private:
@@ -106,7 +106,7 @@ namespace http {
          ********************************************************************************/
         static void on_response(
             client_wptr wptr, 
-            connection_ptr conn, 
+            connection *conn, 
             pocket_sptr &&pk);
 
         /*********************************************************************************
@@ -114,12 +114,12 @@ namespace http {
          ********************************************************************************/
         static void on_error(
             client_wptr wptr, 
-            connection_ptr conn, 
+            connection *conn, 
             const std::string &msg);
 
       private:
         // Service
-        service_ptr sv_;
+        service *sv_;
 
         // Dial timeout ms tims
         int64_t dial_timeout_;

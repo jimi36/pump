@@ -57,7 +57,7 @@ namespace http {
          * Start server
          ********************************************************************************/
         bool start(
-            service_ptr sv,
+            service *sv,
             const transport::address &listen_address,
             const server_callbacks &cbs);
 
@@ -65,7 +65,7 @@ namespace http {
          * Start server with tls
          ********************************************************************************/
         bool start(
-            service_ptr sv,
+            service *sv,
             const std::string &crtfile,
             const std::string &keyfile,
             const transport::address &listen_address,
@@ -114,15 +114,15 @@ namespace http {
 
       private:
         // Service
-        service_ptr sv_;
+        service *sv_;
 
         // Acceptor
         transport::base_acceptor_sptr acceptor_;
 
         // Connections
         std::mutex conn_mx_;
-        std::condition_variable conn_cond_;
-        std::map<connection_ptr, connection_sptr> conns_;
+        //std::condition_variable conn_cond_;
+        std::map<connection*, connection_sptr> conns_;
 
         // Server callbacks
         server_callbacks cbs_;

@@ -75,10 +75,10 @@ namespace http {
         /*********************************************************************************
          * Get http uri
          ********************************************************************************/
-        PUMP_INLINE c_uri_ptr get_uri() const {
-            return (c_uri_ptr)&uri_;
+        PUMP_INLINE const uri* get_uri() const {
+            return (const uri*)&uri_;
         }
-        PUMP_INLINE uri_ptr get_uri() {
+        PUMP_INLINE uri* get_uri() {
             return &uri_;
         }
 
@@ -120,10 +120,8 @@ namespace http {
       private:
         // Request context
         void *ctx_;
-
         // Request uri
         uri uri_;
-
         // Request method
         int32_t method_;
     };

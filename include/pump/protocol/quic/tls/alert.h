@@ -31,7 +31,7 @@ namespace tls {
 
     // https://tools.ietf.org/html/rfc8446#section-6
     typedef uint64_t alert_code;
-    DEFINE_TLS_ALERT(ALERT_NONE,                            -1, "")
+    DEFINE_TLS_ALERT(ALERT_OK,                            -1, "")
     DEFINE_TLS_ALERT(ALERT_CLOSE_NOTIFY,                    0,  "close notify")
     DEFINE_TLS_ALERT(ALERT_UNEXPECTED_MESSGAE,              10, "unexpected message")
     DEFINE_TLS_ALERT(ALERT_BAD_RECORD_MAC,                  20, "bad record MAC")

@@ -30,7 +30,7 @@ namespace websocket {
 
     struct server_callbacks {
         // Check upgrade request callback
-        pump_function<bool(http::c_request_ptr)> check_request_cb;
+        pump_function<bool(const http::request*)> check_request_cb;
         // Upgraded callback
         pump_function<void(const std::string&, connection_sptr&)> upgraded_cb;
         // Error callback
@@ -41,7 +41,7 @@ namespace websocket {
       : public std::enable_shared_from_this<server> {
 
       public:
-        typedef pump_function<service_ptr()> select_service_callback;
+        typedef pump_function<service*()> get_service_callback;
 
         struct ws_upgarde_config {
             std::string host;
@@ -75,7 +75,7 @@ namespace websocket {
          * Start
          ********************************************************************************/
         bool start(
-            service_ptr sv, 
+            service *sv, 
             const server_callbacks &cbs);
 
         /*********************************************************************************
@@ -86,7 +86,7 @@ namespace websocket {
         /*********************************************************************************
          * Set select service callabck
          ********************************************************************************/
-        PUMP_INLINE void set_select_service_callabck(const select_service_callback &cb) {
+        PUMP_INLINE void set_select_service_callabck(const get_service_callback &cb) {
             select_service_cb_ = cb;
         }
 
@@ -108,7 +108,7 @@ namespace websocket {
          ********************************************************************************/
         static void on_upgrade_request(
             server_wptr wptr,
-            connection_ptr conn,
+            connection *conn,
             http::pocket_sptr pk);
 
         /*********************************************************************************
@@ -116,7 +116,7 @@ namespace websocket {
          ********************************************************************************/
         static void on_error(
             server_wptr wptr,
-            connection_ptr conn,
+            connection *conn,
             const std::string &msg);
 
       private:
@@ -133,8 +133,8 @@ namespace websocket {
          * Handle http upgrade request
          ********************************************************************************/
         bool __handle_upgrade_request(
-            connection_ptr conn, 
-            http::request_ptr req);
+            connection *conn, 
+            http::request *req);
 
         /*********************************************************************************
          * Stop all upgrading connections
@@ -143,16 +143,17 @@ namespace websocket {
 
       private:
         // Service
-        service_ptr sv_;
+        service *sv_;
+        
         // Acceptor
         transport::base_acceptor_sptr acceptor_;
 
         // Select service callback
-        select_service_callback select_service_cb_;
+        get_service_callback select_service_cb_;
 
         // Connections
         std::mutex conn_mx_;
-        std::map<void_ptr, connection_sptr> conns_;
+        std::map<void*, connection_sptr> conns_;
 
         // Callbacks
         server_callbacks cbs_;

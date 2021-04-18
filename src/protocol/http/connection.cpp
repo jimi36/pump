@@ -45,9 +45,9 @@ namespace http {
     }
 
     bool connection::start(
-        service_ptr sv, 
+        service *sv, 
         const http_callbacks &cbs) {
-        if (!transp_) {
+        if (sv == nullptr || !transp_) {
             return false;
         }
 
@@ -73,49 +73,61 @@ namespace http {
     }
 
     bool connection::read_next_pocket() {
-        PUMP_LOCK_SPOINTER(transp, transp_);
-        if (!transp) {
+        auto transp = transp_;
+        PUMP_ASSERT(transp);
+        if (!transp || transp->read_for_once() != transport::ERROR_OK) {
             return false;
         }
-
-        if (transp->read_for_once() != transport::ERROR_OK) {
-            return false;
-        }
-
         return true;
     }
 
-    bool connection::send(c_pocket_ptr pk) {
-        std::string data;
-        pk->serialize(data);
-        return transp_->send(data.c_str(), (int32_t)data.size()) == transport::ERROR_OK;
+    bool connection::send(const pocket *pk) {
+        auto transp = transp_;
+        PUMP_ASSERT(transp);
+        if (!transp) {
+            std::string data;
+            int32_t size = pk->serialize(data);
+            PUMP_ASSERT(size > 0);
+            if (transp_->send(data.c_str(), size) == transport::ERROR_OK) {
+                return true;
+            }
+        }
+        return false;
     }
 
-    bool connection::send(c_body_ptr b) {
-        std::string data;
-        b->serialize(data);
-        return transp_->send(data.c_str(), (int32_t)data.size()) == transport::ERROR_OK;
+    bool connection::send(const body *b) {
+        auto transp = transp_;
+        PUMP_ASSERT(transp);
+        if (!transp) {
+            std::string data;
+            int32_t size = b->serialize(data);
+            PUMP_ASSERT(size > 0);
+            if (transp_->send(data.c_str(), size) == transport::ERROR_OK) {
+                return true;
+            }
+        }
+        return false;
     }
 
     void connection::on_read(
         connection_wptr wptr, 
         const block_t *b, 
         int32_t size) {
-        PUMP_LOCK_WPOINTER(conn, wptr);
+        auto conn = wptr.lock();
         if (conn) {
             conn->__handle_http_data(b, size);
         }
     }
 
     void connection::on_disconnected(connection_wptr wptr) {
-        PUMP_LOCK_WPOINTER(conn, wptr);
+        auto conn = wptr.lock();
         if (conn) {
             conn->http_cbs_.error_cb("http connection disconnected");
         }
     }
 
     void connection::on_stopped(connection_wptr wptr) {
-        PUMP_LOCK_WPOINTER(conn, wptr);
+        auto conn = wptr.lock();
         if (conn) {
             conn->http_cbs_.error_cb("http connection stopped");
         }
@@ -125,8 +137,8 @@ namespace http {
         const block_t *b, 
         int32_t size) {
         auto pk = incoming_pocket_.get();
-        if (!pk) {
-            pk = create_incoming_pocket_();
+        if (pk == nullptr) {
+            PUMP_DEBUG_COND_CHECK(pk = create_incoming_pocket_(), !=, nullptr);
             incoming_pocket_.reset(pk, object_delete<pocket>);
         }
 
@@ -139,8 +151,9 @@ namespace http {
         } else {
             read_cache_.append(b, size);
             parse_size = pk->parse(read_cache_.data(), (int32_t)read_cache_.size());
-            if (parse_size > 0)
+            if (parse_size > 0) {
                 read_cache_ = read_cache_.substr(parse_size);
+            }
         }
 
         if (parse_size == -1) {

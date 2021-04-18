@@ -97,9 +97,9 @@ namespace tls {
         alert_code __send_certificate_request();
 
         /*********************************************************************************
-         * Send certificate message
+         * Send certificate tls13 message
          ********************************************************************************/
-        alert_code __send_certificate();
+        alert_code __send_certificate_tls13();
 
         /*********************************************************************************
          * Send certificate verify message
@@ -161,7 +161,7 @@ namespace tls {
         client_hello_message *client_hello_;
 
         // Handshake transcript hash context
-        ssl::hash_context_ptr transcript_;
+        ssl::hash_context *transcript_;
 
         // Connection session
         connection_session session_;

@@ -43,7 +43,6 @@ namespace poll {
             channel_wptr ch;
             int32_t event;
         };
-        DEFINE_RAW_POINTER_TYPE(channel_event);
 
         struct tracker_event {
             tracker_event(
@@ -55,7 +54,6 @@ namespace poll {
             channel_tracker_sptr tracker;
             int32_t event;
         };
-        DEFINE_RAW_POINTER_TYPE(tracker_event);
 
       public:
         /*********************************************************************************
@@ -98,7 +96,7 @@ namespace poll {
         /*********************************************************************************
          * Resume channel tracker
          ********************************************************************************/
-        PUMP_INLINE bool resume_channel_tracker(channel_tracker_ptr tracker) {
+        PUMP_INLINE bool resume_channel_tracker(channel_tracker *tracker) {
             if (PUMP_LIKELY(tracker->track())) {
                 return __resume_channel_tracker(tracker);
             }
@@ -118,14 +116,14 @@ namespace poll {
         /*********************************************************************************
          * Install channel tracker for derived class
          ********************************************************************************/
-        virtual bool __install_channel_tracker(channel_tracker_ptr tracker) {
+        virtual bool __install_channel_tracker(channel_tracker *tracker) {
             return false;
         }
 
         /*********************************************************************************
          * Uninstall append channel for derived class
          ********************************************************************************/
-        virtual bool __uninstall_channel_tracker(channel_tracker_ptr tracker) {
+        virtual bool __uninstall_channel_tracker(channel_tracker *tracker) {
             return false;
         }
 
@@ -133,7 +131,7 @@ namespace poll {
         /*********************************************************************************
          * Awake channel tracker for derived class
          ********************************************************************************/
-        virtual bool __resume_channel_tracker(channel_tracker_ptr tracker) {
+        virtual bool __resume_channel_tracker(channel_tracker *tracker) {
             return false;
         }
 
@@ -164,14 +162,14 @@ namespace poll {
 
         // Channel event
         std::atomic_int32_t cev_cnt_;
-        toolkit::freelock_multi_queue<channel_event_ptr> cevents_;
+        toolkit::freelock_multi_queue<channel_event*> cevents_;
 
         // Channel tracker event
         std::atomic_int32_t tev_cnt_;
-        toolkit::freelock_multi_queue<tracker_event_ptr> tevents_;
+        toolkit::freelock_multi_queue<tracker_event*> tevents_;
 
         // Channel trackers
-        std::map<channel_tracker_ptr, channel_tracker_sptr> trackers_;
+        std::map<channel_tracker*, channel_tracker_sptr> trackers_;
     };
     DEFINE_SMART_POINTER_TYPE(poller);
 

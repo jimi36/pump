@@ -27,14 +27,14 @@ namespace pump {
         memset(pollers_, 0, sizeof(pollers_));
         if (enable_poller) {
 #if defined(PUMP_HAVE_IOCP)
-            pollers_[READ_POLLER] = object_create<poll::afd_poller>();
-            pollers_[SEND_POLLER] = object_create<poll::afd_poller>();
+            pollers_[READ_POLLER_ID] = object_create<poll::afd_poller>();
+            pollers_[SEND_POLLER_ID] = object_create<poll::afd_poller>();
 #elif defined(PUMP_HAVE_SELECT)
-            pollers_[READ_POLLER] = object_create<poll::select_poller>();
-            pollers_[SEND_POLLER] = object_create<poll::select_poller>();
+            pollers_[READ_POLLER_ID] = object_create<poll::select_poller>();
+            pollers_[SEND_POLLER_ID] = object_create<poll::select_poller>();
 #elif defined(PUMP_HAVE_EPOLL)
-            pollers_[READ_POLLER] = object_create<poll::epoll_poller>();
-            pollers_[SEND_POLLER] = object_create<poll::epoll_poller>();
+            pollers_[READ_POLLER_ID] = object_create<poll::epoll_poller>();
+            pollers_[SEND_POLLER_ID] = object_create<poll::epoll_poller>();
 #endif
         }
 
@@ -42,11 +42,11 @@ namespace pump {
     }
 
     service::~service() {
-        if (pollers_[READ_POLLER]) {
-            delete pollers_[READ_POLLER];
+        if (pollers_[READ_POLLER_ID]) {
+            delete pollers_[READ_POLLER_ID];
         }
-        if (pollers_[SEND_POLLER]) {
-            delete pollers_[SEND_POLLER];
+        if (pollers_[SEND_POLLER_ID]) {
+            delete pollers_[SEND_POLLER_ID];
         }
     }
 
@@ -61,11 +61,11 @@ namespace pump {
         if (timers_) {
             timers_->start(pump_bind(&service::__post_pending_timer, this, _1));
         }
-        if (pollers_[READ_POLLER]) {
-            pollers_[READ_POLLER]->start();
+        if (pollers_[READ_POLLER_ID]) {
+            pollers_[READ_POLLER_ID]->start();
         }
-        if (pollers_[SEND_POLLER]) {
-            pollers_[SEND_POLLER]->start();
+        if (pollers_[SEND_POLLER_ID]) {
+            pollers_[SEND_POLLER_ID]->start();
         }
 
         __start_posted_task_worker();
@@ -81,79 +81,30 @@ namespace pump {
         if (timers_) {
             timers_->stop();
         }
-        if (pollers_[READ_POLLER]) {
-            pollers_[READ_POLLER]->stop();
+        if (pollers_[READ_POLLER_ID]) {
+            pollers_[READ_POLLER_ID]->stop();
         }
-        if (pollers_[SEND_POLLER]) {
-            pollers_[SEND_POLLER]->stop();
+        if (pollers_[SEND_POLLER_ID]) {
+            pollers_[SEND_POLLER_ID]->stop();
         }
     }
 
     void service::wait_stopped() {
-        if (pollers_[READ_POLLER]) {
-            pollers_[READ_POLLER]->wait_stopped();
+        if (pollers_[READ_POLLER_ID]) {
+            pollers_[READ_POLLER_ID]->wait_stopped();
         }
-        if (pollers_[SEND_POLLER]) {
-            pollers_[SEND_POLLER]->wait_stopped();
+        if (pollers_[SEND_POLLER_ID]) {
+            pollers_[SEND_POLLER_ID]->wait_stopped();
         }
         if (timers_) {
             timers_->wait_stopped();
         }
-        if (posted_task_worker_) {
-            posted_task_worker_->join();
+        if (task_worker_) {
+            task_worker_->join();
         }
-        if (pending_timer_worker_) {
-            pending_timer_worker_->join();
+        if (timer_worker_) {
+            timer_worker_->join();
         }
-    }
-
-    bool service::add_channel_tracker(
-        poll::channel_tracker_sptr &tracker, 
-        int32_t pi) {
-        PUMP_ASSERT(pi <= SEND_POLLER);
-        if (pollers_[pi]) {
-            return pollers_[pi]->add_channel_tracker(tracker);
-        }
-        return false;
-    }
-
-    void service::remove_channel_tracker(
-        poll::channel_tracker_sptr &tracker, 
-        int32_t pi) {
-        PUMP_ASSERT(pi <= SEND_POLLER);
-        if (pollers_[pi]) {
-            return pollers_[pi]->remove_channel_tracker(tracker);
-        }
-    }
-
-    bool service::resume_channel_tracker(
-        poll::channel_tracker_ptr tracker, 
-        int32_t pi) {
-        PUMP_ASSERT(pi <= SEND_POLLER);
-        if (pollers_[pi]) {
-            return pollers_[pi]->resume_channel_tracker(tracker);
-        }
-        return false;
-    }
-
-    bool service::post_channel_event(
-        poll::channel_sptr &ch, 
-        int32_t event) {
-        if (PUMP_LIKELY(!!pollers_[SEND_POLLER])) {
-            return pollers_[SEND_POLLER]->push_channel_event(ch, event);
-        }
-        return false;
-    }
-
-    bool service::start_timer(time::timer_sptr &timer) {
-        auto queue = timers_;
-        if (PUMP_LIKELY(!!queue)) {
-            return queue->start_timer(timer);
-        }
-
-        PUMP_WARN_LOG("service: start timer failed with invalid timer queue");
-
-        return false;
     }
 
     void service::__start_posted_task_worker() {
@@ -165,7 +116,7 @@ namespace pump {
                 }
             }
         };
-        posted_task_worker_.reset(
+        task_worker_.reset(
             object_create<std::thread>(func),
             object_delete<std::thread>);
     }
@@ -182,7 +133,7 @@ namespace pump {
                 }
             }
         };
-        pending_timer_worker_.reset(
+        timer_worker_.reset(
             object_create<std::thread>(func),
             object_delete<std::thread>);
     }

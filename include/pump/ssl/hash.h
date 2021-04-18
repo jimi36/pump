@@ -33,7 +33,6 @@ namespace ssl {
     const hash_algorithm HASH_SHA512  = 5;
 
     struct hash_context;
-    DEFINE_RAW_POINTER_TYPE(hash_context);
 
     /*********************************************************************************
      * Hash digest length.
@@ -43,36 +42,36 @@ namespace ssl {
     /*********************************************************************************
      * Create hash context
      ********************************************************************************/
-    hash_context_ptr create_hash_context(hash_algorithm algo);
+    hash_context* create_hash_context(hash_algorithm algo);
 
     /*********************************************************************************
      * Free hash context
      ********************************************************************************/
-    void free_hash_context(hash_context_ptr ctx);
+    void free_hash_context(hash_context *ctx);
 
     /*********************************************************************************
      * Reset hash context
      ********************************************************************************/
-    void reset_hash_context(hash_context_ptr ctx);
+    void reset_hash_context(hash_context *ctx);
 
     /*********************************************************************************
      * Update ash 
      ********************************************************************************/
     bool update_hash(
-        hash_context_ptr ctx, 
+        hash_context *ctx, 
         const std::string &data);
     bool update_hash(
-        hash_context_ptr ctx, 
+        hash_context *ctx, 
         const uint8_t *data, int32_t data_len);
 
     /*********************************************************************************
      * Sum hash
      ********************************************************************************/
+    std::string sum_hash(hash_context *ctx);
     bool sum_hash(
-        hash_context_ptr ctx, 
+        hash_context *ctx, 
         uint8_t *out, 
         int32_t out_len);
-    std::string sum_hash(hash_context_ptr ctx);
 
     /*********************************************************************************
      * Sum hmac

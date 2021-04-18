@@ -56,7 +56,7 @@ namespace transport {
          * Start tls transport
          ********************************************************************************/
         virtual int32_t start(
-            service_ptr sv, 
+            service *sv, 
             const transport_callbacks &cbs) override;
 
         /*********************************************************************************
@@ -91,7 +91,7 @@ namespace transport {
          * Send io buffer
          * The ownership of io buffer will be transferred.
          ********************************************************************************/
-        virtual int32_t send(toolkit::io_buffer_ptr iob) override;
+        virtual int32_t send(toolkit::io_buffer *iob) override;
 
       protected:
         /*********************************************************************************
@@ -141,12 +141,12 @@ namespace transport {
         /*********************************************************************************
          * Async send
          ********************************************************************************/
-        bool __async_send(toolkit::io_buffer_ptr iob);
+        bool __async_send(toolkit::io_buffer *iob);
 
         /*********************************************************************************
          * Send once
          ********************************************************************************/
-        int32_t __send_once(flow::flow_tls_ptr flow);
+        int32_t __send_once(flow::flow_tls *flow);
 
         /*********************************************************************************
          * Try doing transport dissconnected process
@@ -172,13 +172,14 @@ namespace transport {
 
         // Last send buffer
         volatile int32_t last_send_iob_size_;
-        volatile toolkit::io_buffer_ptr last_send_iob_;
+        toolkit::io_buffer *last_send_iob_;
+        //volatile toolkit::io_buffer *last_send_iob_;
 
         // Pending send count
         std::atomic_int32_t pending_send_cnt_;
 
         // Send buffer list
-        toolkit::freelock_multi_queue<toolkit::io_buffer_ptr, 8> sendlist_;
+        toolkit::freelock_multi_queue<toolkit::io_buffer*, 8> sendlist_;
     };
 
 }  // namespace transport

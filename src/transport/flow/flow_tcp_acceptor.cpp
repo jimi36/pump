@@ -40,7 +40,7 @@ namespace flow {
         int32_t domain = is_ipv6_ ? AF_INET6 : AF_INET;
 
         iob_ = toolkit::io_buffer::create();
-        iob_->init_with_size(ADDRESS_MAX_LEN * 3);
+        iob_->init(ADDRESS_MAX_LEN * 3);
 
         fd_ = net::create_socket(domain, SOCK_STREAM);
         if (fd_ == INVALID_SOCKET) {
@@ -73,8 +73,8 @@ namespace flow {
     }
 
     pump_socket flow_tcp_acceptor::accept(
-        address_ptr local_address, 
-        address_ptr remote_address) {
+        address *local_address, 
+        address *remote_address) {
         int32_t addrlen = ADDRESS_MAX_LEN;
         pump_socket client_fd = net::accept(fd_, (struct sockaddr*)iob_->buffer(), &addrlen);
         if (client_fd == INVALID_SOCKET) {

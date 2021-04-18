@@ -36,7 +36,7 @@ namespace transport {
         tracker_.reset(
             object_create<poll::channel_tracker>(ch, poll::TRACK_READ),
             object_delete<poll::channel_tracker>);
-        if (!get_service()->add_channel_tracker(tracker_, READ_POLLER)) {
+        if (!get_service()->add_channel_tracker(tracker_, READ_POLLER_ID)) {
             PUMP_WARN_LOG("base_acceptor: start tracker failed");
             return false;
         }
@@ -61,7 +61,7 @@ namespace transport {
             return;
         }
 
-        get_service()->remove_channel_tracker(tracker_locker, READ_POLLER);
+        get_service()->remove_channel_tracker(tracker_locker, READ_POLLER_ID);
 
         PUMP_DEBUG_LOG("base_acceptor: stop tracker");
     }

@@ -69,10 +69,10 @@ namespace toolkit {
          * Deconstructor
          ********************************************************************************/
         ~freelock_multi_queue() {
-            // Get element head node.
-            element_node *beg_node = tail_.load(std::memory_order_relaxed)->next;
             // Get next element node of the head element node.
             element_node *end_node = head_.load(std::memory_order_relaxed);
+            // Get element head node.
+            element_node *beg_node = tail_.load(std::memory_order_relaxed)->next;
 
             while (beg_node != end_node) {
                 // Deconstruct element data.
@@ -109,10 +109,11 @@ namespace toolkit {
                 // If next write node is the tail node, list is full and try to extend it.
                 if (next_write_node->next != tail_.load(std::memory_order_acquire)) {
                     // Update list head node to next node.
-                    if (head_.compare_exchange_strong(next_write_node,
-                                                      next_write_node->next,
-                                                      std::memory_order_acquire,
-                                                      std::memory_order_relaxed)) {
+                    if (head_.compare_exchange_strong(
+                            next_write_node,
+                            next_write_node->next,
+                            std::memory_order_acquire,
+                            std::memory_order_relaxed)) {
                         break;
                     }
                 } else {
@@ -155,16 +156,17 @@ namespace toolkit {
                 }
 
                 // Update tail node to next node.
-                if (tail_.compare_exchange_strong(current_tail,
-                                                  next_read_node,
-                                                  std::memory_order_acquire,
-                                                  std::memory_order_relaxed)) {
+                if (tail_.compare_exchange_strong(
+                        current_tail,
+                        next_read_node,
+                        std::memory_order_acquire,
+                        std::memory_order_relaxed)) {
                     break;
                 }
             } while (true);
 
             // Pop element data.
-            element_type *elem = (element_type*)next_read_node->data;
+            auto elem = (element_type*)next_read_node->data;
             data = std::move(*elem);
             elem->~element_type();
 
@@ -235,10 +237,11 @@ namespace toolkit {
          ********************************************************************************/
         bool __extend_list(element_node *head) {
             // Lock the current head element node.
-            if (!head_.compare_exchange_strong(head,
-                                               nullptr,
-                                               std::memory_order_acquire,
-                                               std::memory_order_relaxed)) {
+            if (!head_.compare_exchange_strong(
+                    head,
+                    nullptr,
+                    std::memory_order_acquire,
+                    std::memory_order_relaxed)) {
                 return false;
             }
 

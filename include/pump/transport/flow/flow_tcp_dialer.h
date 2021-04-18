@@ -60,8 +60,8 @@ namespace flow {
          * Return socket error code.
          ********************************************************************************/
         int32_t connect(
-            address_ptr local_address, 
-            address_ptr remote_address);
+            address *local_address, 
+            address *remote_address);
 
       private:
         // IPV6

@@ -29,7 +29,7 @@ namespace websocket {
     const static int32_t DECODE_FRAME_PAYLOAD = 1;
 
     connection::connection(
-        service_ptr sv,
+        service *sv,
         transport::base_transport_sptr &transp,
         bool has_mask) noexcept
       : sv_(sv),

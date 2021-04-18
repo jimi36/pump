@@ -28,7 +28,7 @@ namespace http {
     }
 
     bool server::start(
-        service_ptr sv,
+        service *sv,
         const transport::address &listen_address,
         const server_callbacks &cbs) {
         // Check acceptor
@@ -63,7 +63,7 @@ namespace http {
     }
 
     bool server::start(
-        service_ptr sv,
+        service *sv,
         const std::string &crtfile,
         const std::string &keyfile,
         const transport::address &listen_address,
@@ -90,9 +90,11 @@ namespace http {
         acbs.stopped_cb = pump_bind(&server::on_stopped, wptr);
         acbs.accepted_cb = pump_bind(&server::on_accepted, wptr, _1);
 
-        auto acceptor = 
-            transport::tls_acceptor::create_with_file(
-                            crtfile, keyfile, listen_address, 1000);
+        auto acceptor = transport::tls_acceptor::create_with_file(
+                            crtfile, 
+                            keyfile, 
+                            listen_address, 
+                            1000);
         if (acceptor->start(sv, acbs) != transport::ERROR_OK) {
             return false;
         }
@@ -110,7 +112,7 @@ namespace http {
     void server::on_accepted(
         server_wptr wptr,
         transport::base_transport_sptr &transp) {
-        PUMP_LOCK_WPOINTER(svr, wptr);
+        auto svr = wptr.lock();
         if (!svr) {
             return;
         }
@@ -128,25 +130,24 @@ namespace http {
             std::unique_lock<std::mutex> lock(svr->conn_mx_);
             svr->conns_.erase(conn.get());
         }
-        conn->read_next_pocket();
+        PUMP_DEBUG_CHECK(conn->read_next_pocket());
     }
 
     void server::on_stopped(server_wptr wptr) {
-        PUMP_LOCK_WPOINTER(svr, wptr);
+        auto svr = wptr.lock();
         if (!svr) {
             return;
         }
 
-        std::unique_lock<std::mutex> lock(svr->conn_mx_);
-        while (!svr->conns_.empty()) {
+        {
+            std::unique_lock<std::mutex> lock(svr->conn_mx_);
             auto beg = svr->conns_.begin();
-            while (beg != svr->conns_.end()) {
-                if (beg->second->is_valid()) {
-                    (beg++)->second->stop();
+            auto end = svr->conns_.end();
+            for (auto it = beg; it != end; it++) {
+                if (it->second->is_valid()) {
+                    it->second->stop();
                 }
             }
-
-            svr->conn_cond_.wait_for(lock, std::chrono::seconds(1));
         }
 
         svr->cbs_.stopped_cb();
@@ -156,39 +157,33 @@ namespace http {
         server_wptr wptr,
         connection_wptr wconn,
         pocket_sptr &&pk) {
-        PUMP_LOCK_WPOINTER(svr, wptr);
-        if (!svr) {
-            return;
+        auto svr = wptr.lock();
+        if (svr) {
+            auto conn = wconn.lock();
+            if (conn) {
+                svr->cbs_.request_cb(wconn, std::static_pointer_cast<request>(pk));
+                conn->read_next_pocket();
+            }
         }
-
-        PUMP_LOCK_WPOINTER(conn, wconn);
-        if (!conn) {
-            return;
-        }
-
-        svr->cbs_.request_cb(wconn, std::static_pointer_cast<request>(pk));
-
-        conn->read_next_pocket();
     }
 
     void server::on_http_error(
         server_wptr wptr,
         connection_wptr wconn,
         const std::string &msg) {
-        PUMP_LOCK_WPOINTER(conn, wconn);
-        PUMP_ASSERT(conn);
-
-        PUMP_LOCK_WPOINTER(svr, wptr);
-        if (!svr) {
-            conn->stop();
+        auto conn = wconn.lock();
+        if (!conn) {
             return;
         }
+        conn->stop();
 
-        std::unique_lock<std::mutex> w_lock(svr->conn_mx_);
-        svr->conns_.erase(conn);
-
-        if (!svr->acceptor_->is_started()) {
-            svr->conn_cond_.notify_one();
+        auto svr = wptr.lock();
+        if (svr) {
+            std::unique_lock<std::mutex> w_lock(svr->conn_mx_);
+            svr->conns_.erase(conn.get());
+            //if (!svr->acceptor_->is_started()) {
+            //    svr->conn_cond_.notify_one();
+            //}
         }
     }
 

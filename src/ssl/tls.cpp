@@ -207,12 +207,12 @@ namespace ssl {
 #endif
     }
 
-    tls_session_ptr create_tls_session(
+    tls_session* create_tls_session(
         void *xcred, 
         int32_t fd, 
         bool client) {
 #if defined(PUMP_HAVE_GNUTLS)
-        tls_session_ptr session = object_create<tls_session>();
+        tls_session *session = object_create<tls_session>();
         gnutls_session_t ssl_ctx = nullptr;
         if (client) {
             gnutls_init(&ssl_ctx, GNUTLS_CLIENT | GNUTLS_NONBLOCK);
@@ -231,7 +231,7 @@ namespace ssl {
 
         return session;
 #elif defined(PUMP_HAVE_OPENSSL)
-        tls_session_ptr session = object_create<tls_session>();
+        tls_session *session = object_create<tls_session>();
         SSL *ssl_ctx = SSL_new((SSL_CTX*)xcred);
         SSL_set_fd(ssl_ctx, fd);
         if (client) {
@@ -248,7 +248,7 @@ namespace ssl {
 #endif
     }
 
-    void destory_tls_session(tls_session_ptr session) {
+    void destory_tls_session(tls_session *session) {
         if (!session) {
             return;
         }
@@ -265,7 +265,7 @@ namespace ssl {
         object_delete(session);
     }
 
-    int32_t tls_handshake(tls_session_ptr session) {
+    int32_t tls_handshake(tls_session *session) {
 #if defined(PUMP_HAVE_GNUTLS)
         int32_t ret = gnutls_handshake((gnutls_session_t)session->ssl_ctx);
         if (ret == 0) {
@@ -295,7 +295,7 @@ namespace ssl {
         return TLS_HANDSHAKE_ERROR;
     }
 
-    bool tls_has_unread_data(tls_session_ptr session) {
+    bool tls_has_unread_data(tls_session *session) {
 #if defined(PUMP_HAVE_GNUTLS)
         if (gnutls_record_check_pending((gnutls_session_t)session->ssl_ctx) > 0) {
             return true;
@@ -309,7 +309,7 @@ namespace ssl {
     }
 
     int32_t tls_read(
-        tls_session_ptr session, 
+        tls_session *session, 
         block_t *b, 
         int32_t size) {
 #if defined(PUMP_HAVE_GNUTLS)
@@ -331,7 +331,7 @@ namespace ssl {
     }
 
     int32_t tls_send(
-        tls_session_ptr session, 
+        tls_session *session, 
         const block_t *b, 
         int32_t size) {
 #if defined(PUMP_HAVE_GNUTLS)

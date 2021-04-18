@@ -53,10 +53,11 @@ namespace http {
             if (ch == '+') {
                 ch = ' ';
             } else if (ch == '%') {
-                if (i + 2 >= len)
+                if (i + 2 >= len) {
                     return false;
+                }
                 ch = hexchar_to_decnum(src[i + 1]) << 4 |
-                        hexchar_to_decnum(src[i + 2]);
+                     hexchar_to_decnum(src[i + 2]);
                 i += 2;
             }
             des.append(1, (block_t)ch);

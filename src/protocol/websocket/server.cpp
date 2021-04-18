@@ -41,16 +41,16 @@ namespace websocket {
     }
 
     bool server::start(
-        service_ptr sv, 
+        service *sv, 
         const server_callbacks &scbs) {
-        if (!sv) {
+        if (sv == nullptr) {
             return false;
         }
-        sv_ = sv;
-
         if (!scbs.upgraded_cb) {
             return false;
         }
+
+        sv_ = sv;
         cbs_ = scbs;
 
         transport::acceptor_callbacks cbs;
@@ -73,9 +73,9 @@ namespace websocket {
     void server::on_accepted(
         server_wptr wptr, 
         transport::base_transport_sptr &transp) {
-        PUMP_LOCK_WPOINTER(svr, wptr);
+        auto svr = wptr.lock();
         if (svr) {
-            service_ptr sv = svr->sv_;
+            service *sv = svr->sv_;
             if (svr->select_service_cb_) {
                 sv = svr->select_service_cb_();
             }
@@ -97,7 +97,7 @@ namespace websocket {
     }
 
     void server::on_stopped(server_wptr wptr) {
-        PUMP_LOCK_WPOINTER(svr, wptr);
+        auto svr = wptr.lock();
         if (svr) {
             // Stop all upgrading connections
             svr->__stop_all_upgrading_conns();
@@ -110,9 +110,9 @@ namespace websocket {
 
     void server::on_upgrade_request(
         server_wptr wptr,
-        connection_ptr conn,
+        connection *conn,
         http::pocket_sptr pk) {
-        PUMP_LOCK_WPOINTER(svr, wptr);
+        auto svr = wptr.lock();
         if (svr) {
             connection_sptr conn_locker;
             {
@@ -141,9 +141,9 @@ namespace websocket {
 
     void server::on_error(
         server_wptr wptr,
-        connection_ptr conn,
+        connection *conn,
         const std::string &msg) {
-        PUMP_LOCK_WPOINTER(svr, wptr);
+        auto svr = wptr.lock();
         if (svr) {
             std::unique_lock<std::mutex> w_lock(svr->conn_mx_);
             auto it = svr->conns_.find(conn);
@@ -155,8 +155,8 @@ namespace websocket {
     }
 
     bool server::__handle_upgrade_request(
-        connection_ptr conn,
-        http::request_ptr req) {
+        connection *conn,
+        http::request *req) {
         if (req->get_method() != http::METHOD_GET) {
             send_http_error_response(conn, 404, "");
             return false;

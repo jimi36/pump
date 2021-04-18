@@ -55,7 +55,7 @@ namespace http {
          * Start http connection
          ********************************************************************************/
         bool start(
-            service_ptr sv, 
+            service *sv, 
             const http_callbacks &cbs);
 
         /*********************************************************************************
@@ -71,12 +71,12 @@ namespace http {
         /*********************************************************************************
          * Send http pocket
          ********************************************************************************/
-        bool send(c_pocket_ptr pk);
+        bool send(const pocket *pk);
 
         /*********************************************************************************
          * Send http content
          ********************************************************************************/
-        bool send(c_body_ptr b);
+        bool send(const body *b);
 
         /*********************************************************************************
          * Check connection is valid or not
@@ -141,7 +141,7 @@ namespace http {
 
         // Incoming http pocket
         pocket_sptr incoming_pocket_;
-        pump_function<pocket_ptr()> create_incoming_pocket_;
+        pump_function<pocket*()> create_incoming_pocket_;
 
         // Transport
         transport::base_transport_sptr transp_;

@@ -55,71 +55,79 @@ namespace ssl {
     const signature_scheme TLS_SIGN_SCHE_ECDSAWITHSHA1          = 0x0203;
 
     // X509 certificate
-    typedef void* x509_certificate;
+    struct x509_certificate;
 
     /*********************************************************************************
      * Generate X509 certificate.
      ********************************************************************************/
-    x509_certificate generate_x509_certificate(signature_scheme scheme);
+    x509_certificate* generate_x509_certificate(signature_scheme scheme);
 
     /*********************************************************************************
      * To X509 certificate pem data.
      ********************************************************************************/
-    std::string to_x509_certificate_pem(x509_certificate cert);
+    std::string to_x509_certificate_pem(x509_certificate *xcert);
 
     /*********************************************************************************
      * To X509 certificate raw data.
      ********************************************************************************/
-    std::string to_x509_certificate_raw(x509_certificate cert);
+    std::string to_x509_certificate_raw(x509_certificate *xcert);
 
     /*********************************************************************************
      * Load X509 certificate by pem.
      ********************************************************************************/
-    x509_certificate load_x509_certificate_by_pem(const std::string &data);
-    x509_certificate load_x509_certificate_by_pem(
-        const uint8_t *data, 
-        int32_t size);
+    x509_certificate* load_x509_certificate_by_pem(
+        const std::string &cert, 
+        const std::string &key);
+    x509_certificate* load_x509_certificate_by_pem(
+        const block_t *cert, 
+        int32_t cert_size,
+        const block_t *key, 
+        int32_t key_size);
 
     /*********************************************************************************
      * Load X509 certificate by raw.
      ********************************************************************************/
-    x509_certificate load_x509_certificate_by_raw(const std::string &data);
-    x509_certificate load_x509_certificate_by_raw(
-        const uint8_t *data, 
-        int32_t size);
+    x509_certificate* load_x509_certificate_by_raw(
+        const std::string &data,
+        const std::string &key);
+    x509_certificate* load_x509_certificate_by_raw(
+        const block_t *cert, 
+        int32_t cert_size,
+        const block_t *key, 
+        int32_t key_size);
 
     /*********************************************************************************
      * Free X509 certificate.
      ********************************************************************************/
-    void free_x509_certificate(x509_certificate cert);
+    void free_x509_certificate(x509_certificate *xcert);
 
     /*********************************************************************************
      * X509 certificate verify.
      ********************************************************************************/
-    bool verify_x509_certificates(std::vector<x509_certificate> &certs);
+    bool verify_x509_certificates(std::vector<x509_certificate*> &xcerts);
 
     /*********************************************************************************
      * Check X509 certificate scts exists or not.
      ********************************************************************************/
-    bool has_x509_scts(x509_certificate cert);
+    bool has_x509_scts(x509_certificate *xcert);
 
     /*********************************************************************************
      * Get X509 certificate scts.
      ********************************************************************************/
     bool get_x509_scts(
-        x509_certificate cert, 
+        x509_certificate *xcert, 
         std::vector<std::string> &scts);
 
     /*********************************************************************************
      * Get X509 certificate signature scheme.
      ********************************************************************************/
-    signature_scheme get_x509_signature_scheme(x509_certificate cert);
+    signature_scheme get_x509_signature_scheme(x509_certificate *xcert);
 
     /*********************************************************************************
      * Do X509 signature.
      ********************************************************************************/
     bool do_x509_signature(
-        x509_certificate cert, 
+        x509_certificate *xcert, 
         signature_algorithm sign_algo, 
         hash_algorithm hash_algo,
         const std::string &msg,
@@ -129,7 +137,7 @@ namespace ssl {
      * Verify X509 signature.
      ********************************************************************************/
     bool verify_x509_signature(
-        x509_certificate cert, 
+        x509_certificate *xcert, 
         signature_algorithm sign_algo, 
         hash_algorithm hash_algo,            
         const std::string &msg, 

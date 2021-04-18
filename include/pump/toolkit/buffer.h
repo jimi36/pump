@@ -59,43 +59,33 @@ namespace toolkit {
 
       protected:
         /*********************************************************************************
-         * Init with size
-         * Allocate a memory block with the size.
+         * Init by allocate
+         * Allocate a memory with the size.
          ********************************************************************************/
-        bool __init_with_size(uint32_t size);
+        bool __init_by_allocate(uint32_t size);
 
         /*********************************************************************************
-         * Init with copy
+         * Init by copy
          * Allocate a memory block and copy input buffer to the buffer memory block.
          ********************************************************************************/
-        bool __init_with_copy(
+        bool __init_by_copy(
             const block_t *b, 
             uint32_t size);
 
         /*********************************************************************************
-         * Init with ownership
-         * The input buffer ownership transfer to the buffer.
+         * Init by move
+         * The input buffer will be moved to the buffer.
          ********************************************************************************/
-        bool __init_with_ownership(
+        bool __init_by_move(
             const block_t *b, 
             uint32_t size);
-
-        /*********************************************************************************
-         * Append
-         * Append input buffer by copying. If there is no enough memory block to use, the
-         * buffer will allocate a new memory block.
-         ********************************************************************************/
-        // bool __append(c_block_ptr b, uint32 size);
-
+        
       protected:
         // Raw buffer
         block_t *raw_;
         // Raw buffer size
         uint32_t raw_size_;
     };
-
-    class io_buffer;
-    DEFINE_RAW_POINTER_TYPE(io_buffer);
 
     class io_buffer
       : public base_buffer {
@@ -104,46 +94,17 @@ namespace toolkit {
         /*********************************************************************************
          * Create
          ********************************************************************************/
-        static io_buffer_ptr create() {
+        static io_buffer* create() {
             INLINE_OBJECT_CREATE(obj, io_buffer, ());
             return obj;
         }
 
         /*********************************************************************************
-         * Init with size
-         * Allocate a memory block with the size.
+         * Init
+         * Allocate a memory with the size.
          ********************************************************************************/
-        PUMP_INLINE bool init_with_size(uint32_t size) {
-            return __init_with_size(size);
-        }
-
-        /*********************************************************************************
-         * Init with copy
-         * Allocate a memory block and copy input buffer to the buffer memory block.
-         ********************************************************************************/
-        PUMP_INLINE bool init_with_copy(
-            const block_t *b, 
-            uint32_t size) {
-            if (__init_with_copy(b, size)) {
-                data_size_ = size;
-                return true;
-            }
-            return false;
-        }
-
-        /*********************************************************************************
-         * Init with ownership
-         * The input buffer ownership transfer to the buffer.
-         * The input buffer must be created by pump_malloc or pump_realloc.
-         ********************************************************************************/
-        PUMP_INLINE bool init_with_ownership(
-            const block_t *b, 
-            uint32_t size) {
-            if (__init_with_ownership(b, size)) {
-                data_size_ = size;
-                return true;
-            }
-            return false;
+        PUMP_INLINE bool init(uint32_t size) {
+            return __init_by_allocate(size);
         }
 
         /*********************************************************************************
@@ -253,12 +214,11 @@ namespace toolkit {
         io_buffer& operator=(const io_buffer&) = delete;
 
       private:
-        // data size
+        // Data size
         uint32_t data_size_;
-        // data read pos
+        // Data read pos
         uint32_t read_pos_;
-
-        // Ref count
+        // Refence count
         std::atomic_int ref_cnt_;
     };
 

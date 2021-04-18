@@ -107,7 +107,7 @@ namespace time {
         /*********************************************************************************
          * Start
          ********************************************************************************/
-        bool __start(timer_queue_ptr queue);
+        bool __start(timer_queue *queue);
 
         /*********************************************************************************
          * Set state
@@ -127,7 +127,7 @@ namespace time {
 
       private:
         // Timer queue
-        timer_queue_ptr queue_;
+        timer_queue *queue_;
         // Timer status
         std::atomic_int32_t status_;
         // Timer callback

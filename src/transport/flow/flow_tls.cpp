@@ -46,7 +46,7 @@ namespace flow {
         return FLOW_ERR_NO;
     }
 
-    int32_t flow_tls::want_to_send(toolkit::io_buffer_ptr iob) {
+    int32_t flow_tls::want_to_send(toolkit::io_buffer *iob) {
         PUMP_DEBUG_ASSIGN(iob, send_iob_, iob);
         int32_t size = ssl::tls_send(session_, send_iob_->buffer(), send_iob_->data_size());
         if (PUMP_LIKELY(size > 0)) {

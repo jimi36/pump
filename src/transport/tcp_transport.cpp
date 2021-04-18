@@ -45,7 +45,7 @@ namespace transport {
     }
 
     int32_t tcp_transport::start(
-        service_ptr sv, 
+        service *sv, 
         const transport_callbacks &cbs) {
         if (flow_) {
             PUMP_ERR_LOG("tcp_transport: start failed for started");
@@ -194,7 +194,7 @@ namespace transport {
         return ec;
     }
 
-    int32_t tcp_transport::send(toolkit::io_buffer_ptr iob) {
+    int32_t tcp_transport::send(toolkit::io_buffer *iob) {
         if (!iob || iob->data_size() == 0) {
             PUMP_WARN_LOG("tcp_transport: send failed with invalid io buffer");
             return ERROR_INVALID;
@@ -328,7 +328,7 @@ namespace transport {
         return ERROR_OK;
     }
 
-    bool tcp_transport::__async_send(toolkit::io_buffer_ptr iob) {
+    bool tcp_transport::__async_send(toolkit::io_buffer *iob) {
         // Push buffer to sendlist.
         PUMP_DEBUG_CHECK(sendlist_.push(iob));
 
@@ -394,7 +394,7 @@ namespace transport {
             last_send_iob_->sub_ref();
         }
 
-        toolkit::io_buffer_ptr iob;
+        toolkit::io_buffer *iob;
         while (sendlist_.pop(iob)) {
             iob->sub_ref();
         }

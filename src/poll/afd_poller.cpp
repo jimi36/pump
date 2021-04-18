@@ -94,21 +94,21 @@ namespace poll {
                             SYNCHRONIZE,
                             &afd__device_attributes,
                             &iosb,
-                            NULL,
+                            nullptr,
                             0,
                             FILE_SHARE_READ | FILE_SHARE_WRITE,
                             FILE_OPEN,
                             0,
-                            NULL,
+                            nullptr,
                             0);
         if (status != STATUS_SUCCESS) {
-            return NULL;
+            return nullptr;
         }
 
-        if (CreateIoCompletionPort(afd_device_handle, iocp_handle, 0, 0) == NULL ||
+        if (CreateIoCompletionPort(afd_device_handle, iocp_handle, 0, 0) == nullptr ||
             SetFileCompletionNotificationModes(afd_device_handle, FILE_SKIP_SET_EVENT_ON_HANDLE) == FALSE) {
             CloseHandle(afd_device_handle);
-            return NULL;
+            return nullptr;
         }
 
         return afd_device_handle;
@@ -116,13 +116,13 @@ namespace poll {
 #endif
 
     afd_poller::afd_poller() noexcept
-      : iocp_handler_(NULL),
-        afd_device_handler_(NULL),
+      : iocp_handler_(nullptr),
+        afd_device_handler_(nullptr),
         events_(nullptr),
         max_event_count_(1024),
         cur_event_count_(0) {
 #if defined(PUMP_HAVE_IOCP)
-        iocp_handler_ = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 0);
+        iocp_handler_ = CreateIoCompletionPort(INVALID_HANDLE_VALUE, nullptr, 0, 0);
         if (!iocp_handler_) {
             PUMP_ERR_LOG("afd_poller: create iocp headler fialed");
             return;
@@ -140,27 +140,25 @@ namespace poll {
 
     afd_poller::~afd_poller() {
 #if defined(PUMP_HAVE_IOCP)
-        if (afd_device_handler_) {
+        if (afd_device_handler_ != nullptr) {
             CloseHandle(afd_device_handler_);
         }
-        if (iocp_handler_) {
+        if (iocp_handler_ != nullptr) {
             CloseHandle(iocp_handler_);
         }
 #endif
     }
 
-    bool afd_poller::__install_channel_tracker(channel_tracker_ptr tracker) {
+    bool afd_poller::__install_channel_tracker(channel_tracker *tracker) {
         if (__resume_channel_tracker(tracker)) {
             cur_event_count_.fetch_add(1, std::memory_order_relaxed);
             return true;
         }
-
         PUMP_DEBUG_LOG("afd_poller: install channel tracker failed");
-
         return false;
     }
 
-    bool afd_poller::__uninstall_channel_tracker(channel_tracker_ptr tracker) {
+    bool afd_poller::__uninstall_channel_tracker(channel_tracker *tracker) {
 #if defined(PUMP_HAVE_IOCP)
         auto event = tracker->get_event();
 
@@ -182,7 +180,7 @@ namespace poll {
         return false;
     }
 
-    bool afd_poller::__resume_channel_tracker(channel_tracker_ptr tracker) {
+    bool afd_poller::__resume_channel_tracker(channel_tracker *tracker) {
 #if defined(PUMP_HAVE_IOCP)
         auto expected_event = tracker->get_expected_event();
         auto event = tracker->get_event();
@@ -200,8 +198,8 @@ namespace poll {
 
         NTSTATUS status = NtDeviceIoControlFile(
                             afd_device_handler_,
-                            NULL,
-                            NULL,
+                            nullptr,
+                            nullptr,
                             tracker,
                             &(event->iosb),
                             IOCTL_AFD_POLL,
@@ -213,7 +211,9 @@ namespace poll {
             return true;
         }
 
-        PUMP_DEBUG_LOG("afd_poller: resume channel tracker fialed %d", net::last_errno());
+        PUMP_DEBUG_LOG(
+            "afd_poller: resume channel tracker fialed %d", 
+            net::last_errno());
 #else
         PUMP_ERR_LOG("afd_poller: resume channel tracker failed for not support");
 #endif
@@ -231,14 +231,13 @@ namespace poll {
 
         DWORD completion_count = 0;
         LPOVERLAPPED_ENTRY iocp_events = (LPOVERLAPPED_ENTRY)events_;
-        BOOL ret = GetQueuedCompletionStatusEx(
-                    iocp_handler_,
-                    iocp_events,
-                    max_event_count_,
-                    &completion_count,
-                    timeout,
-                    FALSE);
-        if (!ret) {
+        if (GetQueuedCompletionStatusEx(
+                iocp_handler_,
+                iocp_events,
+                max_event_count_,
+                &completion_count,
+                timeout,
+                FALSE) == FALSE) {
             return;
         }
 
@@ -254,7 +253,7 @@ namespace poll {
         auto ev_end = (LPOVERLAPPED_ENTRY)events_ + count;
         for (auto ev = ev_beg; ev != ev_end; ++ev) {
             // If channel is invalid, tracker should be removed.
-            auto tracker = (channel_tracker_ptr)ev->lpOverlapped;
+            auto tracker = (channel_tracker*)ev->lpOverlapped;
             if (tracker->untrack()) {
                 auto ch = tracker->get_channel();
                 if (ch) {

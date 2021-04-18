@@ -93,7 +93,7 @@ namespace http {
         }
 
         if (parse_status_ == PARSE_CONTENT) {
-            body_ptr body_ptr = body_.get();
+            body *body_ptr = body_.get();
             if (!body_ptr) {
                 int32_t content_length = 0;
                 if (get_head("Content-Length", content_length)) {

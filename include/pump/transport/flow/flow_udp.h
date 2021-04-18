@@ -53,7 +53,7 @@ namespace flow {
         PUMP_INLINE int32_t read_from(
             block_t *b, 
             int32_t size, 
-            address_ptr from_address) {
+            address *from_address) {
             int32_t addrlen = ADDRESS_MAX_LEN;
             struct sockaddr *addr = from_address->get();
             size = net::read_from(fd_, b, size, addr, &addrlen);

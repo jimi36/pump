@@ -33,8 +33,8 @@ namespace transport {
 
       public:
         struct tls_handshaker_callbacks {
-            pump_function<void(tls_handshaker_ptr, bool)> handshaked_cb;
-            pump_function<void(tls_handshaker_ptr)> stopped_cb;
+            pump_function<void(tls_handshaker*, bool)> handshaked_cb;
+            pump_function<void(tls_handshaker*)> stopped_cb;
         };
 
       public:
@@ -64,7 +64,7 @@ namespace transport {
          * Start tls handshaker
          ********************************************************************************/
         bool start(
-            service_ptr sv, 
+            service *sv, 
             int64_t timeout, 
             const tls_handshaker_callbacks &cbs);
 

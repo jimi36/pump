@@ -57,7 +57,7 @@ namespace transport {
          * Start
          ********************************************************************************/
         virtual int32_t start(
-            service_ptr sv, 
+            service *sv, 
             const dialer_callbacks &cbs) override;
 
         /*********************************************************************************
@@ -127,7 +127,7 @@ namespace transport {
          * Dial by sync
          ********************************************************************************/
         base_transport_sptr dial(
-            service_ptr sv,
+            service *sv,
             const address &local_address,
             const address &remote_address,
             int64_t timeout = 0);

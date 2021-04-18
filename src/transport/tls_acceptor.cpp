@@ -38,7 +38,7 @@ namespace transport {
     }
 
     int32_t tls_acceptor::start(
-        service_ptr sv, 
+        service *sv, 
         const acceptor_callbacks &cbs) {
         if (!xcred_) {
             PUMP_ERR_LOG("tls_acceptor: start failed with invalid certificate");
@@ -101,7 +101,7 @@ namespace transport {
         address local_address, remote_address;
         pump_socket fd = flow_->accept(&local_address, &remote_address);
         if (PUMP_LIKELY(fd > 0)) {
-            tls_handshaker_ptr handshaker = __create_handshaker();
+            tls_handshaker *handshaker = __create_handshaker();
             if (PUMP_LIKELY(!!handshaker)) {
                 tls_handshaker::tls_handshaker_callbacks handshaker_cbs;
                 handshaker_cbs.handshaked_cb =
@@ -143,7 +143,7 @@ namespace transport {
 
     void tls_acceptor::on_handshaked(
         tls_acceptor_wptr wptr,
-        tls_handshaker_ptr handshaker,
+        tls_handshaker *handshaker,
         bool succ) {
         PUMP_LOCK_WPOINTER(acceptor, wptr);
         if (!acceptor) {
@@ -169,7 +169,7 @@ namespace transport {
 
     void tls_acceptor::on_handshake_stopped(
         tls_acceptor_wptr wptr,
-        tls_handshaker_ptr handshaker) {
+        tls_handshaker *handshaker) {
         PUMP_LOCK_WPOINTER(acceptor, wptr);
         if (!acceptor) {
             PUMP_DEBUG_LOG("tls_acceptor: handle handshaked stopped event failed for invalid acceptor");
@@ -202,7 +202,7 @@ namespace transport {
         }
     }
 
-    tls_handshaker_ptr tls_acceptor::__create_handshaker() {
+    tls_handshaker* tls_acceptor::__create_handshaker() {
         tls_handshaker_sptr handshaker(
             object_create<tls_handshaker>(),
             object_delete<tls_handshaker>);
@@ -211,7 +211,7 @@ namespace transport {
         return handshaker.get();
     }
 
-    void tls_acceptor::__remove_handshaker(tls_handshaker_ptr handshaker) {
+    void tls_acceptor::__remove_handshaker(tls_handshaker *handshaker) {
         std::lock_guard<std::mutex> lock(handshaker_mx_);
         handshakers_.erase(handshaker);
     }

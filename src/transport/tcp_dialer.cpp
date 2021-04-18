@@ -28,7 +28,7 @@ namespace transport {
     }
 
     int32_t tcp_dialer::start(
-        service_ptr sv, 
+        service *sv, 
         const dialer_callbacks &cbs) {
         if (!sv) {
             PUMP_ERR_LOG("tcp_dialer: start failed with invalid service");
@@ -166,7 +166,7 @@ namespace transport {
     }
 
     base_transport_sptr tcp_sync_dialer::dial(
-        service_ptr sv,
+        service *sv,
         const address &local_address,
         const address &remote_address,
         int64_t timeout) {

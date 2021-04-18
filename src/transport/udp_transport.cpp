@@ -30,7 +30,7 @@ namespace transport {
     }
 
     int32_t udp_transport::start(
-        service_ptr sv, 
+        service *sv, 
         const transport_callbacks &cbs) {
         if (!sv) {
             PUMP_ERR_LOG("udp_transport: start failed with invalid service");

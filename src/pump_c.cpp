@@ -35,7 +35,7 @@ void pump_c_uninit() {
 }
 
 struct pump_c_service_impl {
-    service_ptr sv;
+    service *sv;
 };
 
 pump_c_service pump_c_service_create(int with_poller) {

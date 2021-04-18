@@ -31,7 +31,10 @@ namespace http {
         const std::string &name,
         int32_t value) {
         block_t tmp[HTTP_HEAD_VALUE_MAX_LEN + 1] = {0};
-        pump_snprintf(tmp, sizeof(tmp) - 1, "%d", value);
+        PUMP_DEBUG_COND_CHECK(
+            pump_snprintf(tmp, sizeof(tmp) - 1, "%d", value), 
+            <, 
+            sizeof(tmp));
         headers_[name].push_back(tmp);
     }
 
@@ -51,7 +54,10 @@ namespace http {
         const std::string &name, 
         int32_t value) {
         block_t tmp[HTTP_HEAD_VALUE_MAX_LEN + 1] = {0};
-        pump_snprintf(tmp, sizeof(tmp) - 1, "%d", value);
+        PUMP_DEBUG_COND_CHECK(
+            pump_snprintf(tmp, sizeof(tmp) - 1, "%d", value),
+            <,
+            sizeof(tmp));
         headers_[name] = std::vector<std::string>(1, tmp);
     }
 
@@ -68,9 +74,7 @@ namespace http {
         if (it == headers_.end() || it->second.empty()) {
             return false;
         }
-
         value = atol(it->second[0].c_str());
-
         return true;
     }
 
@@ -81,9 +85,7 @@ namespace http {
         if (it == headers_.end() || it->second.empty()) {
             return false;
         }
-
         value = join_strings(it->second, HEAD_VALUE_SEP);
-
         return true;
     }
 
@@ -94,9 +96,7 @@ namespace http {
         if (it == headers_.end() || it->second.empty()) {
             return false;
         }
-
         values = it->second;
-
         return true;
     }
 
@@ -114,8 +114,8 @@ namespace http {
             return 0;
         }
 
-        std::string name, value;
-
+        std::string name;
+        std::string value;
         const block_t* beg = b;
         const block_t* end = b;
         const block_t* line_end = nullptr;

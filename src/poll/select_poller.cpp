@@ -32,7 +32,7 @@ namespace poll {
 #endif
     }
 
-    bool select_poller::__install_channel_tracker(channel_tracker_ptr tracker) {
+    bool select_poller::__install_channel_tracker(channel_tracker *tracker) {
 #if defined(PUMP_HAVE_SELECT)
         return true;
 #else
@@ -40,7 +40,7 @@ namespace poll {
 #endif
     }
 
-    bool select_poller::__uninstall_channel_tracker(channel_tracker_ptr tracker) {
+    bool select_poller::__uninstall_channel_tracker(channel_tracker *tracker) {
 #if defined(PUMP_HAVE_SELECT)
         return true;
 #else
@@ -48,7 +48,7 @@ namespace poll {
 #endif
     }
 
-    bool select_poller::__resume_channel_tracker(channel_tracker_ptr tracker) {
+    bool select_poller::__resume_channel_tracker(channel_tracker *tracker) {
 #if defined(PUMP_HAVE_SELECT)
         return true;
 #else

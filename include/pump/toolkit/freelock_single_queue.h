@@ -30,7 +30,7 @@ namespace toolkit {
     // Single block node
     struct single_block_node {
         single_block_node() 
-         :  next(nullptr), 
+          : next(nullptr), 
             data(nullptr), 
             head(0), 
             cache_tail(0),

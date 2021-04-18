@@ -45,8 +45,8 @@ namespace ssl {
         return -1;
     }
 
-    static ecdhe_context_ptr __new_X25519_context() {
-        ecdhe_context_ptr ctx = nullptr;
+    static ecdhe_context* __new_X25519_context() {
+        ecdhe_context *ctx = nullptr;
 #if defined(PUMP_HAVE_OPENSSL)
         int32_t len = 0;
         bool ret = false;
@@ -107,7 +107,7 @@ namespace ssl {
     }
 
     static std::string __gen_X25519_shared_key(
-        ecdhe_context_ptr ctx, 
+        ecdhe_context *ctx, 
         const std::string &pubkey) {
         std::string shared_key;
 #if defined(PUMP_HAVE_OPENSSL)
@@ -163,8 +163,8 @@ namespace ssl {
         return shared_key;
     }
 
-    static ecdhe_context_ptr __new_curve_context(curve_group_type curve) {
-        ecdhe_context_ptr ctx = nullptr;
+    static ecdhe_context* __new_curve_context(curve_group_type curve) {
+        ecdhe_context *ctx = nullptr;
 #if defined(PUMP_HAVE_OPENSSL)
         bool ret = false;
         EC_KEY *key = nullptr;
@@ -223,7 +223,7 @@ namespace ssl {
     }
 
     static std::string __gen_curve_shared_key(
-        ecdhe_context_ptr ctx, 
+        ecdhe_context *ctx, 
         const std::string &pubkey) {
         std::string shared_key;
 #if defined(PUMP_HAVE_OPENSSL)
@@ -288,7 +288,7 @@ namespace ssl {
         /* 3==> Calculate the shared key of ecdh1 and ecdh2 */
         shared_key.resize(32);
         if (ECDH_compute_key(
-                (void_ptr)shared_key.data(),
+                (void*)shared_key.data(),
                 shared_key.size(),
                 p_ecdh2_public,
                 key,
@@ -313,7 +313,7 @@ namespace ssl {
         return std::forward<std::string>(shared_key);
     }
 
-    ecdhe_context_ptr new_ecdhe_context(curve_group_type curve) {
+    ecdhe_context* new_ecdhe_context(curve_group_type curve) {
         if (curve == TLS_CURVE_X25519) {
             return __new_X25519_context();
         } else {
@@ -321,14 +321,14 @@ namespace ssl {
         }
     }
 
-    void delete_ecdhe_context(ecdhe_context_ptr ctx) {
+    void delete_ecdhe_context(ecdhe_context *ctx) {
         if (ctx) {
             object_delete(ctx);
         }
     }
 
     std::string gen_ecdhe_shared_key(
-        ecdhe_context_ptr ctx, 
+        ecdhe_context *ctx, 
         const std::string &pubkey) {
         if (ctx->group == TLS_CURVE_X25519) {
             return __gen_X25519_shared_key(ctx, pubkey);

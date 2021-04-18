@@ -46,13 +46,12 @@ namespace websocket {
 
         uint8_t mask_key[4];
     };
-    DEFINE_RAW_POINTER_TYPE(frame_header);
 
     /*********************************************************************************
      * Init frame header
      ********************************************************************************/
     void init_frame_header(
-        frame_header_ptr hdr,
+        frame_header *hdr,
         uint32_t fin,
         uint32_t optcode,
         uint32_t mask,
@@ -62,7 +61,7 @@ namespace websocket {
     /*********************************************************************************
      * Get ws frame header size
      ********************************************************************************/
-    int32_t get_frame_header_size(c_frame_header_ptr hdr);
+    int32_t get_frame_header_size(const frame_header *hdr);
 
     /*********************************************************************************
      * Decode ws frame header
@@ -70,13 +69,13 @@ namespace websocket {
     int32_t decode_frame_header(
         const block_t *b,
         int32_t size,
-        frame_header_ptr hdr);
+        frame_header *hdr);
 
     /*********************************************************************************
      * Encode ws frame header
      ********************************************************************************/
     int32_t encode_frame_header(
-        c_frame_header_ptr hdr,
+        const frame_header *hdr,
         block_t *b, 
         int32_t size);
 

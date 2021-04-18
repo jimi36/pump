@@ -22,14 +22,14 @@ namespace protocol {
 namespace quic {
 namespace tls {
 
-    void init_connection_session(connection_session_ptr session) {
+    void init_connection_session(connection_session *session) {
         session->version = TLS_VERSION_UNKNOWN;
         session->cipher_suite_ctx = nullptr;
         session->ecdhe_ctx = nullptr;
         session->enable_zero_rtt = false;
     }
 
-    void reset_connection_session(connection_session_ptr session) {
+    void reset_connection_session(connection_session *session) {
         session->version = TLS_VERSION_UNKNOWN;
 
         if (session->cipher_suite_ctx) {

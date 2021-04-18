@@ -228,11 +228,11 @@ namespace tls {
      * TLS config.
      ********************************************************************************/
     struct config {
+        std::string key_pem;
         std::string cert_pem;
         std::string server_name;
         std::string application_protocol;
     };
-    DEFINE_RAW_POINTER_TYPE(config)
 
     /*********************************************************************************
      * TLS cipher suite context.
@@ -242,7 +242,6 @@ namespace tls {
         cipher_suite_type type;
         int32_t key_len;
     };
-    DEFINE_RAW_POINTER_TYPE(cipher_suite_context)
 
     /*********************************************************************************
      * TLS connection session.
@@ -252,10 +251,10 @@ namespace tls {
         version_type version;
 
         // TLS ecdhe context
-        ssl::ecdhe_context_ptr ecdhe_ctx;
+        ssl::ecdhe_context *ecdhe_ctx;
 
         // TLS cipher suite context
-        cipher_suite_context_ptr cipher_suite_ctx;
+        cipher_suite_context *cipher_suite_ctx;
 
         // 0-RTT enable status
         bool enable_zero_rtt;
@@ -280,22 +279,21 @@ namespace tls {
         std::string export_master_secret;
 
         // Certificates
-        std::vector<ssl::x509_certificate> certs;
+        std::vector<ssl::x509_certificate*> certs;
 
         // Peer certificates
-        std::vector<ssl::x509_certificate> peer_certs;
+        std::vector<ssl::x509_certificate*> peer_certs;
     };
-    DEFINE_RAW_POINTER_TYPE(connection_session)
 
     /*********************************************************************************
      * Init connection session
      ********************************************************************************/
-    void init_connection_session(connection_session_ptr session);
+    void init_connection_session(connection_session *session);
 
     /*********************************************************************************
      * Rest connection session
      ********************************************************************************/
-    void reset_connection_session(connection_session_ptr session);
+    void reset_connection_session(connection_session *session);
 
 } // namespace tls
 } // namespace quic

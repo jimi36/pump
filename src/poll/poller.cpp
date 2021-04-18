@@ -36,9 +36,7 @@ namespace poll {
         worker_.reset(object_create<std::thread>([&]() {
                           while (started_.load()) {
                               __handle_channel_events();
-
                               __handle_channel_tracker_events();
-
                               if (cev_cnt_.load(std::memory_order_acquire) > 0 ||
                                   tev_cnt_.load(std::memory_order_acquire) > 0) {
                                   __poll(0);
@@ -129,25 +127,22 @@ namespace poll {
     }
 
     void poller::__handle_channel_events() {
-        channel_event_ptr ev = nullptr;
+        channel_event *ev = nullptr;
         int32_t cnt = cev_cnt_.exchange(0, std::memory_order_relaxed);
-        while (cnt > 0) {
+        for (; cnt > 0; cnt--) {
             PUMP_DEBUG_CHECK(cevents_.pop(ev));
-            PUMP_LOCK_WPOINTER(ch, ev->ch);
+            auto ch = ev->ch.lock();
             if (ch) {
                 ch->handle_channel_event(ev->event);
             }
-
             object_delete(ev);
-
-            cnt--;
         }
     }
 
     void poller::__handle_channel_tracker_events() {
-        tracker_event_ptr ev = nullptr;
+        tracker_event *ev = nullptr;
         int32_t cnt = tev_cnt_.exchange(0, std::memory_order_relaxed);
-        while (cnt > 0) {
+        for (; cnt > 0; cnt--) {
             PUMP_DEBUG_CHECK(tevents_.pop(ev));
             if (ev->event == TRACKER_EVENT_ADD) {
                 // Apeend to tracker list
@@ -156,10 +151,7 @@ namespace poll {
                 // Delete from tracker list
                 trackers_.erase(ev->tracker.get());
             }
-
             object_delete(ev);
-
-            cnt--;
         }
     }
 

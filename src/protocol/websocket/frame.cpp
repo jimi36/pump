@@ -25,7 +25,7 @@ namespace protocol {
 namespace websocket {
 
     void init_frame_header(
-        frame_header_ptr hdr,
+        frame_header *hdr,
         uint32_t fin,
         uint32_t optcode,
         uint32_t mask,
@@ -53,7 +53,7 @@ namespace websocket {
         }
     }
 
-    int32_t get_frame_header_size(c_frame_header_ptr hdr) {
+    int32_t get_frame_header_size(const frame_header *hdr) {
         int32_t size = 2;
 
         if (hdr->mask == 1) {
@@ -72,7 +72,7 @@ namespace websocket {
     int32_t decode_frame_header(
         const block_t *b, 
         int32_t size, 
-        frame_header_ptr hdr) {
+        frame_header *hdr) {
         // Init frame header
         memset(hdr, 0, sizeof(frame_header));
 
@@ -115,7 +115,7 @@ namespace websocket {
     }
 
     int32_t encode_frame_header(
-        c_frame_header_ptr hdr, 
+        const frame_header *hdr, 
         block_t *b, 
         int32_t size) {
         // Init bits writer

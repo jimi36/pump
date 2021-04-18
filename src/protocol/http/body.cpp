@@ -27,33 +27,17 @@ namespace http {
         content_length_(0) {
     }
 
-    void body::append(
-        const block_t *b, 
-        int32_t size) {
-        data_.append(b, size);
-    }
-
-    void body::append(const std::string &data) {
-        data_.append(data);
-    }
-
     int32_t body::serialize(std::string &buf) const {
         if (is_chunked_) {
-            int32_t size = 0;
             block_t tmp[32] = {0};
-            size = snprintf(tmp, sizeof(tmp), "%zx%s", data_.size(), HTTP_CR);
-
+            int32_t size = snprintf(tmp, sizeof(tmp) - 1, "%zx%s", data_.size(), HTTP_CR);
             buf.append(tmp).append(data_).append(HTTP_CR);
-            size += (int32_t)data_.size() + HTTP_CR_LEN;
-
-            return size;
+            return size + (int32_t)data_.size() + HTTP_CR_LEN;
         } else {
             if (data_.empty()) {
                 return 0;
             }
-
             buf.append(data_);
-
             return (int32_t)data_.size();
         }
     }

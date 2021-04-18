@@ -42,6 +42,20 @@
 #define pump_realloc realloc
 #endif
 
+// Inline object create
+#define INLINE_OBJECT_CREATE(obj, TYPE, args)      \
+    TYPE *obj = (TYPE*)pump_malloc(sizeof(TYPE));  \
+    if (PUMP_UNLIKELY(obj != nullptr)) {           \
+        new (obj) TYPE args;                       \
+    }
+
+// Inline object create
+#define INLINE_OBJECT_DELETE(obj, TYPE) \
+    if (PUMP_LIKELY(obj != nullptr)) {  \
+        obj->~TYPE();                   \
+        pump_free(obj);                 \
+    }
+
 template <typename T, typename... ArgTypes>
 PUMP_INLINE T *object_create(ArgTypes... args) {
     T *p = (T*)pump_malloc(sizeof(T));
@@ -51,30 +65,13 @@ PUMP_INLINE T *object_create(ArgTypes... args) {
     return new (p) T(args...);
 }
 
-// Inline object create
-#define INLINE_OBJECT_CREATE(obj, TYPE, args)      \
-    TYPE *obj = (TYPE*)pump_malloc(sizeof(TYPE)); \
-    if (PUMP_UNLIKELY(obj != nullptr)) {           \
-        new (obj) TYPE args;                       \
-    }
-
 template <typename T>
 PUMP_INLINE void object_delete(T *obj) {
-    if (PUMP_UNLIKELY(obj == nullptr)) {
-        return;
+    if (PUMP_LIKELY(obj != nullptr)) {
+        obj->~T();
+        pump_free(obj);
     }
-    // Deconstruct object
-    obj->~T();
-    // Free memory
-    pump_free(obj);
 }
-
-// Inline object create
-#define INLINE_OBJECT_DELETE(obj, TYPE) \
-    if (PUMP_LIKELY(obj != nullptr)) {  \
-        obj->~TYPE();                   \
-        pump_free(obj);                 \
-    }
 
 // Try to lock shared pointer and store to raw pointor
 #define PUMP_LOCK_SPOINTER(p, sp) \

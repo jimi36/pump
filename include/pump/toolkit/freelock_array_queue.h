@@ -50,18 +50,20 @@ namespace toolkit {
          * Constructor
          ********************************************************************************/
         freelock_array_queue(uint32_t size)
-            : size_(0),
-              size_mask_(0),
-              nodes_(nullptr),
-              write_index_(1),
-              read_index_(0) {
+          : size_(0),
+            size_mask_(0),
+            nodes_(nullptr),
+            read_index_(0),
+            write_index_(1) {
             // Init array size.
             size_ = ceil_to_pow2(size);
             // Init array size mask.
             size_mask_ = size_ - 1;
             // Create element nodes.
             nodes_ = (element_node*)pump_malloc(size * sizeof(element_node));
-            memset(nodes_, 0, size * sizeof(element_node));
+            if (nodes_ != nullptr) {
+                memset(nodes_, 0, size * sizeof(element_node));
+            }
         }
 
         /*********************************************************************************
@@ -83,6 +85,11 @@ namespace toolkit {
          ********************************************************************************/
         template <typename U>
         bool push(U &&data) {
+            PUMP_ASSERT(nodes_ != nullptr);
+            if (nodes_ == nullptr) {
+                return false;
+            }
+
             // Current write index.
             int32_t cur_write_index = write_index_.load(std::memory_order_relaxed);
             // Max write index.
@@ -97,10 +104,11 @@ namespace toolkit {
                     }
                 }
 
-                if (write_index_.compare_exchange_strong(cur_write_index,
-                                                         cur_write_index + 1,
-                                                         std::memory_order_acquire,
-                                                         std::memory_order_relaxed)) {
+                if (write_index_.compare_exchange_strong(
+                        cur_write_index,
+                        cur_write_index + 1,
+                        std::memory_order_acquire,
+                        std::memory_order_relaxed)) {
                     break;
                 }
             } while(true);
@@ -123,6 +131,11 @@ namespace toolkit {
          ********************************************************************************/
         template <typename U>
         bool pop(U &data) {
+            PUMP_ASSERT(nodes_ != nullptr);
+            if (nodes_ == nullptr) {
+                return false;
+            }
+
             // Current read index.
             int32_t cur_read_index = read_index_.load(std::memory_order_relaxed);
             // Current read index.
@@ -136,10 +149,11 @@ namespace toolkit {
                     }
                 }
 
-                if (read_index_.compare_exchange_strong(cur_read_index,
-                                                        cur_read_index + 1,
-                                                        std::memory_order_acquire,
-                                                        std::memory_order_relaxed)) {
+                if (read_index_.compare_exchange_strong(
+                        cur_read_index,
+                        cur_read_index + 1,
+                        std::memory_order_acquire,
+                        std::memory_order_relaxed)) {
                     break;
                 }
             } while(true);
@@ -204,10 +218,10 @@ namespace toolkit {
         // Element nodes
         element_node *nodes_;
 
-        // Next write index
-        std::atomic_int32_t write_index_;
         // Next read index
         std::atomic_int32_t read_index_;
+        // Next write index
+        std::atomic_int32_t write_index_;
     };
 
 }  // namespace toolkit

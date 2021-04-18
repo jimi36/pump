@@ -53,40 +53,40 @@ namespace ssl {
         return digest_lengths[algo];
     }
 
-    hash_context_ptr create_hash_context(hash_algorithm algo) {
-        hash_context_ptr ctx = nullptr;
+    hash_context* create_hash_context(hash_algorithm algo) {
+        hash_context *ctx = nullptr;
 #if defined(PUMP_HAVE_OPENSSL)
         switch (algo) {
         case HASH_SHA1:
-            ctx = (hash_context_ptr)pump_malloc(sizeof(hash_context) + sizeof(SHA_CTX));
+            ctx = (hash_context*)pump_malloc(sizeof(hash_context) + sizeof(SHA_CTX));
             if (SHA1_Init((SHA_CTX*)ctx->_pctx) == 0) {
                 pump_free(ctx);
                 return nullptr;
             }
             break;
         case HASH_SHA224:
-            ctx = (hash_context_ptr)pump_malloc(sizeof(hash_context) + sizeof(SHA256_CTX));
+            ctx = (hash_context*)pump_malloc(sizeof(hash_context) + sizeof(SHA256_CTX));
             if (SHA224_Init((SHA256_CTX*)ctx->_pctx) == 0) {
                 pump_free(ctx);
                 return nullptr;
             }
             break;
         case HASH_SHA256:
-            ctx = (hash_context_ptr)pump_malloc(sizeof(hash_context) + sizeof(SHA256_CTX));
+            ctx = (hash_context*)pump_malloc(sizeof(hash_context) + sizeof(SHA256_CTX));
             if (SHA256_Init((SHA256_CTX*)ctx->_pctx) == 0) {
                 pump_free(ctx);
                 return nullptr;
             }
             break;
         case HASH_SHA384:
-            ctx = (hash_context_ptr)pump_malloc(sizeof(hash_context) + sizeof(SHA512_CTX));
+            ctx = (hash_context*)pump_malloc(sizeof(hash_context) + sizeof(SHA512_CTX));
             if (SHA384_Init((SHA512_CTX*)ctx->_pctx) == 0) {
                 pump_free(ctx);
                 return nullptr;
             }
             break;
         case HASH_SHA512:
-            ctx = (hash_context_ptr)pump_malloc(sizeof(hash_context) + sizeof(SHA512_CTX));
+            ctx = (hash_context*)pump_malloc(sizeof(hash_context) + sizeof(SHA512_CTX));
             if (SHA512_Init((SHA512_CTX*)ctx->_pctx) == 0) {
                 pump_free(ctx);
                 return nullptr;
@@ -102,7 +102,7 @@ namespace ssl {
         return ctx;
     }
 
-    void free_hash_context(hash_context_ptr ctx) {
+    void free_hash_context(hash_context *ctx) {
         if (ctx) {
 #if defined(PUMP_HAVE_OPENSSL)
             pump_free(ctx);
@@ -110,7 +110,7 @@ namespace ssl {
         }
     }
 
-    void reset_hash_context(hash_context_ptr ctx) {
+    void reset_hash_context(hash_context *ctx) {
         PUMP_ASSERT(ctx);
 #if defined(PUMP_HAVE_OPENSSL)
         switch (ctx->algo)
@@ -135,13 +135,13 @@ namespace ssl {
     }
 
     bool update_hash(
-        hash_context_ptr ctx, 
+        hash_context *ctx, 
         const std::string &data) {
         return update_hash(ctx, (const uint8_t*)data.data(), (int32_t)data.size());
     }
 
     bool update_hash(
-        hash_context_ptr ctx, 
+        hash_context *ctx, 
         const uint8_t *data, 
         int32_t data_len) {
 #if defined(PUMP_HAVE_OPENSSL)
@@ -165,7 +165,7 @@ namespace ssl {
     }
 
     bool sum_hash(
-        hash_context_ptr ctx, 
+        hash_context *ctx, 
         uint8_t *out, 
         int32_t out_len) {
 #if defined(PUMP_HAVE_OPENSSL)
@@ -188,7 +188,7 @@ namespace ssl {
         return false;
     }
 
-    std::string sum_hash(hash_context_ptr ctx) {
+    std::string sum_hash(hash_context *ctx) {
         std::string output(hash_digest_length(ctx->algo), 0);
         PUMP_DEBUG_CHECK(sum_hash(ctx, (uint8_t*)output.data(), (int32_t)output.size()));
         return std::forward<std::string>(output);

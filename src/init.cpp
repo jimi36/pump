@@ -42,12 +42,11 @@ namespace pump {
 
 #if defined(OS_LINUX)
     typedef void (*sighandler_t)(int32_t);
-    static bool setup_signal(int32_t sig, sighandler_t hdl) {
+    static bool setup_signal(int32_t sig, sighandler_t handler) {
         if (signal(sig, NULL) != 0) {
             PUMP_WARN_LOG("setup_signal: signal failed sig=%d", sig);
             return false;
         }
-
         return true;
     }
 #endif
@@ -66,16 +65,13 @@ namespace pump {
         if (!ntdll) {
             return false;
         }
-        NtCreateFile = (FnNtCreateFile)GetProcAddress(ntdll, "NtCreateFile");
-        if (!NtCreateFile) {
+        if ((NtCreateFile = (FnNtCreateFile)GetProcAddress(ntdll, "NtCreateFile")) == nullptr) {
             return false;
         }
-        NtDeviceIoControlFile = (FnNtDeviceIoControlFile)GetProcAddress(ntdll, "NtDeviceIoControlFile");
-        if (!NtDeviceIoControlFile) {
+        if ((NtDeviceIoControlFile = (FnNtDeviceIoControlFile)GetProcAddress(ntdll, "NtDeviceIoControlFile")) == nullptr) {
             return false;
         }
-        NtCancelIoFileEx = (FnNtCancelIoFileEx)GetProcAddress(ntdll, "NtCancelIoFileEx");
-        if (!NtCancelIoFileEx) {
+        if ((NtCancelIoFileEx = (FnNtCancelIoFileEx)GetProcAddress(ntdll, "NtCancelIoFileEx")) == nullptr) {
             return false;
         }
 #endif
@@ -93,10 +89,9 @@ namespace pump {
         gnutls_global_set_log_level(0);
 #elif defined(PUMP_HAVE_OPENSSL)
         SSL_library_init();
+        SSL_load_error_strings();
         OpenSSL_add_all_algorithms();
-        //SSL_load_error_strings();
 #endif
-
         return true;
     }
 
@@ -111,7 +106,6 @@ namespace pump {
 
 #if defined(PUMP_HAVE_GNUTLS)
         gnutls_global_deinit();
-#elif defined(PUMP_HAVE_OPENSSL)
 #endif
 }
 

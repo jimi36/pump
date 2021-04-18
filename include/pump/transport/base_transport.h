@@ -87,7 +87,7 @@ namespace transport {
          ********************************************************************************/
         base_channel(
             int32_t type, 
-            service_ptr sv, 
+            service *sv, 
             int32_t fd) noexcept
           : service_getter(sv),
             poll::channel(fd),
@@ -162,7 +162,7 @@ namespace transport {
          ********************************************************************************/
         base_transport(
             int32_t type, 
-            service_ptr sv, 
+            service *sv, 
             int32_t fd)
           : base_channel(type, sv, fd),
             read_state_(READ_NONE),
@@ -179,7 +179,7 @@ namespace transport {
          * Start
          ********************************************************************************/
         virtual int32_t start(
-            service_ptr sv, 
+            service *sv, 
             const transport_callbacks &cbs) = 0;
 
         /*********************************************************************************
@@ -219,7 +219,7 @@ namespace transport {
          * Send io buffer
          * The ownership of io buffer will be transferred.
          ********************************************************************************/
-        virtual int32_t send(toolkit::io_buffer_ptr iob) {
+        virtual int32_t send(toolkit::io_buffer *iob) {
             return ERROR_DISABLE;
         }
 
@@ -286,7 +286,7 @@ namespace transport {
                             shared_from_this(), 
                             poll::TRACK_READ);
                 r_tracker_.reset(tracker, object_delete<poll::channel_tracker>);
-                if (!get_service()->add_channel_tracker(r_tracker_, READ_POLLER)) {
+                if (!get_service()->add_channel_tracker(r_tracker_, READ_POLLER_ID)) {
                     PUMP_WARN_LOG("base_transport: start read tracker failed");
                     return false;
                 }
@@ -305,7 +305,7 @@ namespace transport {
                             shared_from_this(), 
                             poll::TRACK_SEND);
                 s_tracker_.reset(tracker, object_delete<poll::channel_tracker>);
-                if (!get_service()->add_channel_tracker(s_tracker_, SEND_POLLER)) {
+                if (!get_service()->add_channel_tracker(s_tracker_, SEND_POLLER_ID)) {
                     PUMP_WARN_LOG("base_transport: start send tracker failed");
                     return false;
                 }
@@ -324,13 +324,13 @@ namespace transport {
         PUMP_INLINE void __stop_read_tracker() {
             if (r_tracker_) {
                 PUMP_DEBUG_LOG("base_transport: stop read tracker");
-                get_service()->remove_channel_tracker(r_tracker_, READ_POLLER);
+                get_service()->remove_channel_tracker(r_tracker_, READ_POLLER_ID);
             }
         }
         PUMP_INLINE void __stop_send_tracker() {
             if (s_tracker_) {
                 PUMP_DEBUG_LOG("base_transport: stop send tracker");
-                get_service()->remove_channel_tracker(s_tracker_, SEND_POLLER);
+                get_service()->remove_channel_tracker(s_tracker_, SEND_POLLER_ID);
             }
         }
 

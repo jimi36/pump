@@ -40,23 +40,22 @@ namespace ssl {
         std::string prikey;
         std::string pubkey;
     };
-    DEFINE_RAW_POINTER_TYPE(ecdhe_context);
 
     /*********************************************************************************
      * New ecdhe context.
      ********************************************************************************/
-    ecdhe_context_ptr new_ecdhe_context(curve_group_type curve);
+    ecdhe_context* new_ecdhe_context(curve_group_type curve);
 
     /*********************************************************************************
      * Delete ecdhe context.
      ********************************************************************************/
-    void delete_ecdhe_context(ecdhe_context_ptr ctx);
+    void delete_ecdhe_context(ecdhe_context *ctx);
 
     /*********************************************************************************
      * Generate ecdhe shared key.
      ********************************************************************************/
     std::string gen_ecdhe_shared_key(
-        ecdhe_context_ptr ctx, 
+        ecdhe_context *ctx, 
         const std::string &pubkey);
 
 }

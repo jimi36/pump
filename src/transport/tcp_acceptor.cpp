@@ -25,7 +25,7 @@ namespace transport {
     }
 
     int32_t tcp_acceptor::start(
-        service_ptr sv, 
+        service *sv, 
         const acceptor_callbacks &cbs) {
         if (!sv) {
             PUMP_ERR_LOG("tcp_acceptor: start failed with invalid service");

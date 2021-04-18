@@ -25,8 +25,9 @@
 
 namespace pump {
 
-    const int32_t READ_POLLER = 0;
-    const int32_t SEND_POLLER = 1;
+    typedef int32_t poller_id;
+    const poller_id READ_POLLER_ID = 0;
+    const poller_id SEND_POLLER_ID = 1;
 
     class LIB_PUMP service 
       : public toolkit::noncopyable {
@@ -60,30 +61,52 @@ namespace pump {
         /*********************************************************************************
          * Add channel checker
          ********************************************************************************/
-        bool add_channel_tracker(
+        PUMP_INLINE bool add_channel_tracker(
             poll::channel_tracker_sptr &tracker, 
-            int32_t pi);
+            poller_id pid) {
+            PUMP_ASSERT(pid <= SEND_POLLER_ID);
+            if (pollers_[pid]) {
+                return pollers_[pid]->add_channel_tracker(tracker);
+            }
+            return false;
+        }
 
         /*********************************************************************************
          * Delete channel
          ********************************************************************************/
-        void remove_channel_tracker(
+        PUMP_INLINE void remove_channel_tracker(
             poll::channel_tracker_sptr &tracker, 
-            int32_t pi);
+            poller_id pid) {
+            PUMP_ASSERT(pid <= SEND_POLLER_ID);
+            if (pollers_[pid]) {
+                return pollers_[pid]->remove_channel_tracker(tracker);
+            }
+        }
 
         /*********************************************************************************
          * Resume channel
          ********************************************************************************/
-        bool resume_channel_tracker(
-            poll::channel_tracker_ptr tracker, 
-            int32_t pi);
+        PUMP_INLINE bool resume_channel_tracker(
+            poll::channel_tracker *tracker, 
+            poller_id pid) {
+            PUMP_ASSERT(pid <= SEND_POLLER_ID);
+            if (pollers_[pid]) {
+                return pollers_[pid]->resume_channel_tracker(tracker);
+            }
+            return false;
+        }
 
         /*********************************************************************************
          * Post channel event
          ********************************************************************************/
-        bool post_channel_event(
+        PUMP_INLINE bool post_channel_event(
             poll::channel_sptr &ch, 
-            int32_t event);
+            int32_t event) {
+            if (PUMP_LIKELY(!!pollers_[SEND_POLLER_ID])) {
+                return pollers_[SEND_POLLER_ID]->push_channel_event(ch, event);
+            }
+            return false;
+        }
 
         /*********************************************************************************
          * Post callback task
@@ -96,7 +119,13 @@ namespace pump {
         /*********************************************************************************
          * Start timer
          ********************************************************************************/
-        bool start_timer(time::timer_sptr &timer);
+        PUMP_INLINE bool start_timer(time::timer_sptr &timer) {
+            auto queue = timers_;
+            if (PUMP_LIKELY(!!queue)) {
+                return queue->start_timer(timer);
+            }
+            return false;
+        }
 
       private:
         /*********************************************************************************
@@ -121,19 +150,19 @@ namespace pump {
         bool running_;
 
         // Pollers
-        poll::poller_ptr pollers_[2];
+        poll::poller *pollers_[2];
 
-        // Posted task worker
-        std::shared_ptr<std::thread> posted_task_worker_;
+        // Task worker
+        std::shared_ptr<std::thread> task_worker_;
         typedef pump_function<void()> posted_task_type;
         typedef toolkit::freelock_multi_queue<posted_task_type> task_impl_queue;
         toolkit::freelock_block_queue<task_impl_queue> posted_tasks_;
 
-        // Timer queue
+        // Timers
         time::timer_queue_sptr timers_;
 
-        // Timeout timer worker
-        std::shared_ptr<std::thread> pending_timer_worker_;
+        // Timer worker
+        std::shared_ptr<std::thread> timer_worker_;
         typedef toolkit::freelock_single_queue<time::timer_wptr> timer_impl_queue;
         toolkit::freelock_block_queue<timer_impl_queue> pending_timers_;
     };
@@ -144,7 +173,7 @@ namespace pump {
         /*********************************************************************************
          * Constructor
          ********************************************************************************/
-        service_getter(service_ptr sv) noexcept
+        service_getter(service *sv) noexcept
           : service_(sv) {
         }
 
@@ -156,7 +185,7 @@ namespace pump {
         /*********************************************************************************
          * Get service
          ********************************************************************************/
-        PUMP_INLINE service_ptr get_service() {
+        PUMP_INLINE service* get_service() {
             return service_;
         }
 
@@ -164,12 +193,12 @@ namespace pump {
         /*********************************************************************************
          * Set service
          ********************************************************************************/
-        PUMP_INLINE void __set_service(service_ptr sv) {
+        PUMP_INLINE void __set_service(service *sv) {
             service_ = sv;
         }
 
       private:
-        service_ptr service_;
+        service *service_;
     };
 
 }  // namespace pump

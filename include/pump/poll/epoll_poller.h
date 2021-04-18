@@ -40,17 +40,17 @@ namespace poll {
         /*********************************************************************************
          * Install channel tracker for derived class
          ********************************************************************************/
-        virtual bool __install_channel_tracker(channel_tracker_ptr tracker) override;
+        virtual bool __install_channel_tracker(channel_tracker *tracker) override;
 
         /*********************************************************************************
          * Uninstall append channel for derived class
          ********************************************************************************/
-        virtual bool __uninstall_channel_tracker(channel_tracker_ptr tracker) override;
+        virtual bool __uninstall_channel_tracker(channel_tracker *tracker) override;
 
         /*********************************************************************************
          * Awake channel tracker for derived class
          ********************************************************************************/
-        virtual bool __resume_channel_tracker(channel_tracker_ptr tracker) override;
+        virtual bool __resume_channel_tracker(channel_tracker *tracker) override;
 
         /*********************************************************************************
          * Poll

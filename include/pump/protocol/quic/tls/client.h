@@ -159,7 +159,7 @@ namespace tls {
         certificate_req_tls13_message *cert_request_;
 
         // Handshake transcript hash context
-        ssl::hash_context_ptr transcript_;
+        ssl::hash_context *transcript_;
 
         // Connection session
         connection_session session_;

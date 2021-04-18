@@ -40,7 +40,7 @@ namespace transport {
     }
 
     bool tls_handshaker::start(
-        service_ptr sv,
+        service *sv,
         int64_t timeout,
         const tls_handshaker_callbacks &cbs) {
         if (!flow_) {
@@ -100,7 +100,7 @@ namespace transport {
         } else {
             tracker_->set_expected_event(poll::TRACK_READ);
         }
-        if (!get_service()->add_channel_tracker(tracker_, SEND_POLLER)) {
+        if (!get_service()->add_channel_tracker(tracker_, SEND_POLLER_ID)) {
             PUMP_WARN_LOG("tls_handshaker: start failed for adding tracker failed");
             return false;
         }

@@ -69,8 +69,8 @@ namespace flow {
     }
 
     int32_t flow_tcp_dialer::connect(
-        address_ptr local_address, 
-        address_ptr remote_address) {
+        address *local_address, 
+        address *remote_address) {
         int32_t ec = net::get_socket_error(fd_);
         if (ec != 0) {
             return ec;
