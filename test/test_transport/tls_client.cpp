@@ -69,7 +69,7 @@ class my_tls_dialer : public std::enable_shared_from_this<my_tls_dialer> {
     /*********************************************************************************
      * Tls read event callback
      ********************************************************************************/
-    void on_read_callback(base_transport_ptr transp, const block_t *b, int32_t size) {
+    void on_read_callback(base_transport *transp, const block_t *b, int32_t size) {
         read_size_ += size;
         read_pocket_size_ += size;
 
@@ -82,7 +82,7 @@ class my_tls_dialer : public std::enable_shared_from_this<my_tls_dialer> {
     /*********************************************************************************
      * Tls disconnected event callback
      ********************************************************************************/
-    void on_disconnected_callback(base_transport_ptr transp) {
+    void on_disconnected_callback(base_transport *transp) {
         printf("client tls transport disconnected\n");
         transport_.reset();
     }
@@ -90,7 +90,7 @@ class my_tls_dialer : public std::enable_shared_from_this<my_tls_dialer> {
     /*********************************************************************************
      * Tls stopped event callback
      ********************************************************************************/
-    void on_stopped_callback(base_transport_ptr transp) {
+    void on_stopped_callback(base_transport *transp) {
         printf("client tls transport stopped\n");
     }
 

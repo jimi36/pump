@@ -32,26 +32,19 @@ namespace transport {
     int32_t udp_transport::start(
         service *sv, 
         const transport_callbacks &cbs) {
-        if (!sv) {
-            PUMP_ERR_LOG("udp_transport: start failed with invalid service");
-            return ERROR_INVALID;
-        }
+        PUMP_DEBUG_COND_FAIL(
+            !__set_state(TRANSPORT_INITED, TRANSPORT_STARTING), 
+            return ERROR_INVALID);
 
-        if (!cbs.read_from_cb || !cbs.stopped_cb) {
-            PUMP_ERR_LOG("udp_transport: start failed with invalid callbacks");
-            return ERROR_INVALID;
-        }
-
-        if (!__set_state(TRANSPORT_INITED, TRANSPORT_STARTING)) {
-            PUMP_ERR_LOG("udp_transport: start failed with wrong status");
-            return ERROR_INVALID;
-        }
-
-        // Set callbacks
-        cbs_ = cbs;
-
-        // Set service
+        PUMP_DEBUG_COND_FAIL(
+            sv == nullptr,  
+            return ERROR_INVALID);
         __set_service(sv);
+
+        PUMP_DEBUG_COND_FAIL(
+            !cbs.read_from_cb || !cbs.stopped_cb, 
+            return ERROR_INVALID);
+        cbs_ = cbs;
 
         toolkit::defer cleanup([&]() {
             __close_transport_flow();
@@ -60,6 +53,7 @@ namespace transport {
 
         if (!__open_transport_flow()) {
             PUMP_ERR_LOG("udp_transport: start failed for opening flow failed");
+            PUMP_ASSERT(false);
             return ERROR_FAULT;
         }
 
@@ -104,10 +98,9 @@ namespace transport {
         const block_t *b,
         int32_t size,
         const address &address) {
-        if (!b || size == 0) {
-            PUMP_ERR_LOG("udp_transport: send failed with invalid buffer");
-            return ERROR_INVALID;
-        }
+        PUMP_DEBUG_COND_FAIL(
+            b == nullptr || size <= 0,  
+            return ERROR_INVALID);
 
         if (PUMP_UNLIKELY(!__is_state(TRANSPORT_STARTED))) {
             PUMP_ERR_LOG("udp_transport: send failed for transport no statred");

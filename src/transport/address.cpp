@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#include "pump/debug.h"
 #include "pump/transport/address.h"
 
 namespace pump {
@@ -21,32 +22,28 @@ namespace transport {
 
     address::address() noexcept 
       : is_v6_(false), 
-        addrlen_(0) {
+        addrlen_(sizeof(struct sockaddr_in)) {
         memset(&addr_, 0, sizeof(addr_));
     }
 
     address::address(
         const std::string &ip, 
-        uint16_t port) {
+        uint16_t port)
+      : is_v6_(false), 
+        addrlen_(sizeof(struct sockaddr_in)) {
         if (net::string_to_address(ip, port, (struct sockaddr*)addr_, &addrlen_)) {
             if (addrlen_ == sizeof(struct sockaddr_in6)) {
                 is_v6_ = true;
-            } else {
-                is_v6_ = false;
             }
         }
     }
 
     address::address(
         const struct sockaddr *addr, 
-        int32_t addr_len) {
-        addrlen_ = addr_len;
+        int32_t addr_len)
+      : is_v6_(addr_len == sizeof(struct sockaddr_in6)), 
+        addrlen_(addr_len)  {
         memcpy(&addr_, addr, addr_len);
-        if (addrlen_ == sizeof(struct sockaddr_in6)) {
-            is_v6_ = true;
-        } else {
-            is_v6_ = false;
-        }
     }
 
     bool address::set(

@@ -47,34 +47,28 @@ namespace transport {
     int32_t tcp_transport::start(
         service *sv, 
         const transport_callbacks &cbs) {
-        if (flow_) {
-            PUMP_ERR_LOG("tcp_transport: start failed for started");
-            return ERROR_INVALID;
-        }
+        PUMP_DEBUG_COND_FAIL(
+            flow_, 
+            return ERROR_INVALID);
 
-        if (!sv) {
-            PUMP_ERR_LOG("tcp_transport: start failed invalid service");
-            return ERROR_INVALID;
-        }
+        PUMP_DEBUG_COND_FAIL(
+            !__set_state(TRANSPORT_INITED, TRANSPORT_STARTING), 
+            return ERROR_INVALID);
 
-        if (!cbs.read_cb || !cbs.disconnected_cb || !cbs.stopped_cb) {
-            PUMP_ERR_LOG("tcp_transport: start failed with invalid callbacks");
-            return ERROR_INVALID;
-        }
-
-        if (!__set_state(TRANSPORT_INITED, TRANSPORT_STARTING)) {
-            PUMP_ERR_LOG("tcp_transport: start failed with wrong status");
-            return ERROR_INVALID;
-        }
-
-        // Set callbacks
+        PUMP_DEBUG_COND_FAIL(
+            sv == nullptr,  
+            return ERROR_INVALID);
+        __set_service(sv);
+        
+        PUMP_DEBUG_COND_FAIL(
+            !cbs.read_cb || !cbs.disconnected_cb || !cbs.stopped_cb,  
+            return ERROR_INVALID);
         cbs_ = cbs;
 
-        // Set service
-        __set_service(sv);
-
         if (!__open_transport_flow()) {
+            __set_state(TRANSPORT_STARTING, TRANSPORT_ERROR);
             PUMP_ERR_LOG("tcp_transport: start failed for opening flow failed");
+            PUMP_ASSERT(false);
             return ERROR_FAULT;
         }
 
@@ -154,40 +148,38 @@ namespace transport {
     int32_t tcp_transport::send(
         const block_t *b, 
         int32_t size) {
-        if (!b || size == 0) {
+        if (b == nullptr || size == 0) {
             PUMP_WARN_LOG("tcp_transport: send failed with invalid buffer");
             return ERROR_INVALID;
         }
 
         int32_t ec = ERROR_OK;
-        toolkit::io_buffer *iob = nullptr;
 
         // Add pending send count.
         pending_send_cnt_.fetch_add(1);
-
-        if (PUMP_UNLIKELY(!__is_state(TRANSPORT_STARTED))) {
-            PUMP_WARN_LOG("tcp_transport: send failed for transport not started");
-            ec = ERROR_UNSTART;
-            goto end;
-        }
-
-        iob = toolkit::io_buffer::create();
-        if (PUMP_UNLIKELY(!iob || !iob->append(b, size))) {
-            PUMP_WARN_LOG("tcp_transport: send failed for creatng io buffer failed");
-            if (iob) {
-                iob->sub_ref();
+        do {
+            if (PUMP_UNLIKELY(!__is_state(TRANSPORT_STARTED))) {
+                PUMP_WARN_LOG("tcp_transport: send failed for transport not started");
+                ec = ERROR_UNSTART;
+                break;
             }
-            ec = ERROR_FAULT;
-            goto end;
-        }
 
-        if (!__async_send(iob)) {
-            PUMP_WARN_LOG("tcp_transport: send failed for async sending failed");
-            ec = ERROR_FAULT;
-            goto end;
-        }
+            auto iob = toolkit::io_buffer::create();
+            if (PUMP_UNLIKELY(iob == nullptr || !iob->append(b, size))) {
+                PUMP_WARN_LOG("tcp_transport: send failed for creatng io buffer failed");
+                if (iob) {
+                    iob->sub_ref();
+                }
+                ec = ERROR_FAULT;
+                break;
+            }
 
-    end:
+            if (!__async_send(iob)) {
+                PUMP_WARN_LOG("tcp_transport: send failed for async sending failed");
+                ec = ERROR_FAULT;
+                break;
+            }
+        } while(false);
         // Resuce pending send count.
         pending_send_cnt_.fetch_sub(1);
 
@@ -195,7 +187,7 @@ namespace transport {
     }
 
     int32_t tcp_transport::send(toolkit::io_buffer *iob) {
-        if (!iob || iob->data_size() == 0) {
+        if (iob == nullptr || iob->data_size() == 0) {
             PUMP_WARN_LOG("tcp_transport: send failed with invalid io buffer");
             return ERROR_INVALID;
         }
@@ -260,7 +252,7 @@ namespace transport {
         int32_t ret;
 
         // Continue to send last buffer.
-        if (PUMP_LIKELY(last_send_iob_ != nullptr)) {
+        if (last_send_iob_ != nullptr) {
             ret = flow_->send();
             if (ret == flow::FLOW_ERR_NO) {
                 // Reset last sent buffer.
@@ -302,8 +294,12 @@ namespace transport {
 
     bool tcp_transport::__open_transport_flow() {
         // Init tcp transport flow.
-        PUMP_ASSERT(!flow_);
-        flow_.reset(object_create<flow::flow_tcp>(), object_delete<flow::flow_tcp>);
+        flow_.reset(
+            object_create<flow::flow_tcp>(), 
+            object_delete<flow::flow_tcp>);
+        PUMP_DEBUG_COND_FAIL(
+            !flow_, 
+            return false);
         if (flow_->init(shared_from_this(), get_fd()) != flow::FLOW_ERR_NO) {
             PUMP_ERR_LOG("tcp_transport: open transport flow failed for flow init failed");
             return false;

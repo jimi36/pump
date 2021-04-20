@@ -39,22 +39,18 @@ namespace websocket {
     bool client::start(
         service *sv, 
         const client_callbacks &cbs) {
-        // Check service.
-        if (sv == nullptr) {
-            return false;
-        }
+        PUMP_DEBUG_COND_FAIL(
+            started_.exchange(true),
+            return false)
 
-        // Check callbacks.
-        if (!cbs.started_cb ||!cbs.data_cb || !cbs.error_cb) {
-            return false;
-        }
-
-        // Set and check started state.
-        if (started_.exchange(true)) {
-            return false;
-        }
-
+        PUMP_DEBUG_COND_FAIL(
+            sv == nullptr, 
+            return false);
         sv_ = sv;
+
+        PUMP_DEBUG_COND_FAIL(
+            !cbs.started_cb ||!cbs.data_cb || !cbs.error_cb,
+            return false);
         cbs_ = cbs;
 
         if (!__start()) {

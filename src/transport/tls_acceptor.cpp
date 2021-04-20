@@ -40,31 +40,23 @@ namespace transport {
     int32_t tls_acceptor::start(
         service *sv, 
         const acceptor_callbacks &cbs) {
-        if (!xcred_) {
-            PUMP_ERR_LOG("tls_acceptor: start failed with invalid certificate");
-            return ERROR_INVALID;
-        }
+        PUMP_DEBUG_COND_FAIL(
+            xcred_ == nullptr, 
+            return ERROR_INVALID);
 
-        if (!sv) {
-            PUMP_ERR_LOG("tls_acceptor: start failed with invalid service");
-            return ERROR_INVALID;
-        }
+        PUMP_DEBUG_COND_FAIL(
+            !__set_state(TRANSPORT_INITED, TRANSPORT_STARTING), 
+            return ERROR_INVALID);
 
-        if (!cbs.accepted_cb || !cbs.stopped_cb) {
-            PUMP_ERR_LOG("tls_acceptor: start failed with invalid callbacks");
-            return ERROR_INVALID;
-        }
-
-        if (!__set_state(TRANSPORT_INITED, TRANSPORT_STARTING)) {
-            PUMP_ERR_LOG("tls_acceptor: start failed with wrong status");
-            return ERROR_INVALID;
-        }
-
-        // Callbacks
-        cbs_ = cbs;
-
-        // Service
+        PUMP_DEBUG_COND_FAIL(
+            sv == nullptr, 
+            return ERROR_INVALID);
         __set_service(sv);
+
+        PUMP_DEBUG_COND_FAIL(
+            !cbs.accepted_cb || !cbs.stopped_cb, 
+            return ERROR_INVALID);
+        cbs_ = cbs;
 
         toolkit::defer cleanup([&]() {
             __stop_accept_tracker();
@@ -74,11 +66,13 @@ namespace transport {
 
         if (!__open_accept_flow()) {
             PUMP_ERR_LOG("tls_acceptor: start failed for opening flow failed");
+            PUMP_ASSERT(false);
             return ERROR_FAULT;
         }
 
         if (!__start_accept_tracker(shared_from_this())) {
             PUMP_ERR_LOG("tls_acceptor: start failed for starting tracker failed");
+            PUMP_ASSERT(false);
             return ERROR_FAULT;
         }
 
@@ -102,7 +96,7 @@ namespace transport {
         pump_socket fd = flow_->accept(&local_address, &remote_address);
         if (PUMP_LIKELY(fd > 0)) {
             tls_handshaker *handshaker = __create_handshaker();
-            if (PUMP_LIKELY(!!handshaker)) {
+            if (PUMP_LIKELY(handshaker != nullptr)) {
                 tls_handshaker::tls_handshaker_callbacks handshaker_cbs;
                 handshaker_cbs.handshaked_cb =
                     pump_bind(&tls_acceptor::on_handshaked, shared_from_this(), _1, _2);
@@ -145,7 +139,7 @@ namespace transport {
         tls_acceptor_wptr wptr,
         tls_handshaker *handshaker,
         bool succ) {
-        PUMP_LOCK_WPOINTER(acceptor, wptr);
+        auto acceptor = wptr.lock();
         if (!acceptor) {
             PUMP_DEBUG_LOG("tls_acceptor: handle handshaked event failed for invalid acceptor");
             handshaker->stop();
@@ -170,22 +164,22 @@ namespace transport {
     void tls_acceptor::on_handshake_stopped(
         tls_acceptor_wptr wptr,
         tls_handshaker *handshaker) {
-        PUMP_LOCK_WPOINTER(acceptor, wptr);
+        auto acceptor = wptr.lock();
         if (!acceptor) {
             PUMP_DEBUG_LOG("tls_acceptor: handle handshaked stopped event failed for invalid acceptor");
             return;
         }
-
         acceptor->__remove_handshaker(handshaker);
     }
 
     bool tls_acceptor::__open_accept_flow() {
         // Init tls acceptor flow.
-        PUMP_ASSERT(!flow_);
         flow_.reset(
             object_create<flow::flow_tls_acceptor>(),
             object_delete<flow::flow_tls_acceptor>);
-
+        PUMP_DEBUG_COND_FAIL(
+            !flow_, 
+            return false);
         if (flow_->init(shared_from_this(), listen_address_) != flow::FLOW_ERR_NO) {
             PUMP_WARN_LOG("tls_acceptor: open flow failed for flow init failed");
             return false;
@@ -206,6 +200,9 @@ namespace transport {
         tls_handshaker_sptr handshaker(
             object_create<tls_handshaker>(),
             object_delete<tls_handshaker>);
+        PUMP_DEBUG_COND_FAIL(
+            !handshaker, 
+            return nullptr);
         std::lock_guard<std::mutex> lock(handshaker_mx_);
         handshakers_[handshaker.get()] = handshaker;
         return handshaker.get();

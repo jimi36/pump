@@ -65,7 +65,7 @@ namespace http {
                 return parse_size;
             }
 
-            pos += parse_size;
+            pos  += parse_size;
             size -= parse_size;
 
             parse_status_ = PARSE_HEADER;
@@ -79,7 +79,7 @@ namespace http {
                 return int32_t(pos - b);
             }
 
-            pos += parse_size;
+            pos  += parse_size;
             size -= parse_size;
 
             if (__is_header_parsed()) {
@@ -94,7 +94,7 @@ namespace http {
 
         if (parse_status_ == PARSE_CONTENT) {
             body *body_ptr = body_.get();
-            if (!body_ptr) {
+            if (body_ptr == nullptr) {
                 int32_t content_length = 0;
                 if (get_head("Content-Length", content_length)) {
                     if (content_length > 0) {
@@ -117,7 +117,7 @@ namespace http {
                 }
             }
 
-            if (body_ptr) {
+            if (body_ptr != nullptr) {
                 parse_size = body_ptr->parse(pos, size);
                 if (parse_size < 0) {
                     return parse_size;
@@ -125,7 +125,7 @@ namespace http {
                     return int32_t(pos - b);
                 }
 
-                pos += parse_size;
+                pos  += parse_size;
                 size -= parse_size;
 
                 if (body_ptr->is_parse_finished()) {
@@ -170,7 +170,7 @@ namespace http {
 
         // Find request line end
         const block_t *line_end = find_http_line_end(pos, size);
-        if (!line_end) {
+        if (line_end == nullptr) {
             return 0;
         }
 

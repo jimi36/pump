@@ -74,13 +74,13 @@ PUMP_INLINE void object_delete(T *obj) {
 }
 
 // Try to lock shared pointer and store to raw pointor
-#define PUMP_LOCK_SPOINTER(p, sp) \
-    auto p##_locker = sp;         \
-    auto p = p##_locker.get()
+//#define PUMP_LOCK_SPOINTER(p, sp) 
+//    auto p##_locker = sp;         
+//    auto p = p##_locker.get()
 
 // Try to lock weak pointer and store to raw pointor
-#define PUMP_LOCK_WPOINTER(p, wp) \
-    auto p##_locker = wp.lock();  \
-    auto p = p##_locker.get()
+//#define PUMP_LOCK_WPOINTER(p, wp) 
+//    auto p##_locker = wp.lock();  
+//    auto p = p##_locker.get()
 
 #endif

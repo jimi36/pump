@@ -128,7 +128,7 @@ namespace http {
 
         if (parse_status_ == PARSE_CONTENT) {
             body *body_ptr = body_.get();
-            if (!body_ptr) {
+            if (body_ptr == nullptr) {
                 int32_t content_length = 0;
                 if (get_head("Content-Length", content_length)) {
                     if (content_length > 0) {
@@ -151,7 +151,7 @@ namespace http {
                 }
             }
 
-            if (body_ptr) {
+            if (body_ptr != nullptr) {
                 parse_size = body_ptr->parse(pos, size);
                 if (parse_size < 0) {
                     return parse_size;
@@ -203,7 +203,7 @@ namespace http {
         const block_t *pos = b;
 
         const block_t *line_end = find_http_line_end(pos, size);
-        if (!line_end) {
+        if (line_end == nullptr) {
             return 0;
         }
 

@@ -33,7 +33,10 @@ namespace time {
         if (!started_.load()) {
             started_.store(true);
 
-            PUMP_DEBUG_ASSIGN(cb, pending_cb_, cb);
+            PUMP_DEBUG_COND_FAIL(
+                !cb,
+                return false);
+            pending_cb_ = cb;
 
             observer_.reset(
                 object_create<std::thread>(pump_bind(&timer_queue::__observe_thread, this)),

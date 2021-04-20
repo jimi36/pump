@@ -61,7 +61,7 @@ class my_tls_acceptor : public std::enable_shared_from_this<my_tls_acceptor> {
     /*********************************************************************************
      * Tcp read event callback
      ********************************************************************************/
-    void on_read_callback(base_transport_ptr transp, const block_t *b, int32_t size) {
+    void on_read_callback(base_transport *transp, const block_t *b, int32_t size) {
         transport_context *ctx = (transport_context *)transp->get_context();
 
         ctx->read_pocket_size += size;
@@ -76,7 +76,7 @@ class my_tls_acceptor : public std::enable_shared_from_this<my_tls_acceptor> {
     /*********************************************************************************
      * Tcp disconnected event callback
      ********************************************************************************/
-    void on_disconnected_callback(base_transport_ptr transp) {
+    void on_disconnected_callback(base_transport *transp) {
         std::lock_guard<std::mutex> lock(mx_);
         auto it = transports_.find(transp);
         if (it != transports_.end()) {
@@ -92,7 +92,7 @@ class my_tls_acceptor : public std::enable_shared_from_this<my_tls_acceptor> {
     /*********************************************************************************
      * Tcp stopped event callback
      ********************************************************************************/
-    void on_stopped_callback(base_transport_ptr transp) {
+    void on_stopped_callback(base_transport *transp) {
         std::lock_guard<std::mutex> lock(mx_);
         auto it = transports_.find(transp);
         if (it != transports_.end()) {
@@ -104,7 +104,7 @@ class my_tls_acceptor : public std::enable_shared_from_this<my_tls_acceptor> {
         }
     }
 
-    void send_data(base_transport_ptr transport) {
+    void send_data(base_transport *transport) {
         if (transport->send(send_data_.data(), (int32_t)send_data_.size()) != 0)
             printf("send data error\n");
     }
@@ -113,7 +113,7 @@ class my_tls_acceptor : public std::enable_shared_from_this<my_tls_acceptor> {
     std::string send_data_;
 
     std::mutex mx_;
-    std::map<void_ptr, transport_context *> transports_;
+    std::map<void*, transport_context *> transports_;
 };
 
 const char *cert =

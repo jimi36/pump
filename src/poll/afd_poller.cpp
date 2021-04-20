@@ -102,12 +102,16 @@ namespace poll {
                             nullptr,
                             0);
         if (status != STATUS_SUCCESS) {
+            PUMP_ERR_LOG("afd_create_device_handle: create nt file fialed");
+            PUMP_ABORT(true);
             return nullptr;
         }
 
         if (CreateIoCompletionPort(afd_device_handle, iocp_handle, 0, 0) == nullptr ||
             SetFileCompletionNotificationModes(afd_device_handle, FILE_SKIP_SET_EVENT_ON_HANDLE) == FALSE) {
             CloseHandle(afd_device_handle);
+            PUMP_ERR_LOG("afd_create_device_handle: nt file bind iocp handle fialed");
+            PUMP_ABORT(true);
             return nullptr;
         }
 
@@ -123,18 +127,24 @@ namespace poll {
         cur_event_count_(0) {
 #if defined(PUMP_HAVE_IOCP)
         iocp_handler_ = CreateIoCompletionPort(INVALID_HANDLE_VALUE, nullptr, 0, 0);
-        if (!iocp_handler_) {
+        if (iocp_handler_ == nullptr) {
             PUMP_ERR_LOG("afd_poller: create iocp headler fialed");
+            PUMP_ABORT(true);
             return;
         }
 
         afd_device_handler_ = afd_create_device_handle(iocp_handler_);
-        if (!afd_device_handler_) {
+        if (afd_device_handler_ == nullptr) {
             PUMP_ERR_LOG("afd_poller: create afd device headler fialed");
+            PUMP_ABORT(true);
             return;
         }
 
         events_ = pump_malloc(sizeof(OVERLAPPED_ENTRY) * max_event_count_);
+        if (events_ == nullptr) {
+            PUMP_ERR_LOG("afd_poller: malloc afd events fialed");
+            PUMP_ABORT(true);
+        }
 #endif
     }
 

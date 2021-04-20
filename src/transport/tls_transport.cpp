@@ -40,7 +40,8 @@ namespace transport {
         local_address_ = local_address;
         remote_address_ = remote_address;
 
-        PUMP_DEBUG_ASSIGN(flow, flow_, flow);
+        PUMP_ABORT(!flow);
+        flow_ = flow;
 
         // Set channel fd
         poll::channel::__set_fd(flow->get_fd());
@@ -49,31 +50,23 @@ namespace transport {
     int32_t tls_transport::start(
         service *sv, 
         const transport_callbacks &cbs) {
-        if (!flow_) {
-            PUMP_ERR_LOG("tls_transport: start failed with invalid flow");
-            return ERROR_INVALID;
-        }
+        PUMP_DEBUG_COND_FAIL(
+            !flow_, 
+            return ERROR_INVALID);
 
-        if (!sv) {
-            PUMP_ERR_LOG("tls_transport: start failed with invalid service");
-            return ERROR_INVALID;
-        }
+        PUMP_DEBUG_COND_FAIL(
+            !__set_state(TRANSPORT_INITED, TRANSPORT_STARTING), 
+            return ERROR_INVALID);
 
-        if (!cbs.read_cb || !cbs.disconnected_cb || !cbs.stopped_cb) {
-            PUMP_ERR_LOG("tls_transport: start failed with invalid callbacks");
-            return ERROR_INVALID;
-        }
-
-        if (!__set_state(TRANSPORT_INITED, TRANSPORT_STARTING)) {
-            PUMP_ERR_LOG("tls_transport: start failed with wrong status");
-            return ERROR_INVALID;
-        }
-
-        // Set callbacks
-        cbs_ = cbs;
-
-        // Set service
+        PUMP_DEBUG_COND_FAIL(
+            sv == nullptr, 
+            return ERROR_INVALID);
         __set_service(sv);
+
+        PUMP_DEBUG_COND_FAIL(
+            !cbs.read_cb || !cbs.disconnected_cb || !cbs.stopped_cb, 
+            return ERROR_INVALID);
+        cbs_ = cbs;
 
         __set_state(TRANSPORT_STARTING, TRANSPORT_STARTED);
 
@@ -151,40 +144,37 @@ namespace transport {
     int32_t tls_transport::send(
         const block_t *b, 
         int32_t size) {
-        if (!b || size == 0) {
-            PUMP_ERR_LOG("tls_transport: send failed with invalid buffer");
-            return ERROR_INVALID;
-        }
+        PUMP_DEBUG_COND_FAIL(
+            b == nullptr || size <= 0, 
+            return ERROR_INVALID);
 
         int32_t ec = ERROR_OK;
-        toolkit::io_buffer *iob = nullptr;
-
         // Add pending send count.
         pending_send_cnt_.fetch_add(1);
-
-        if (PUMP_UNLIKELY(!__is_state(TRANSPORT_STARTED))) {
-            PUMP_ERR_LOG("tls_transport: send failed for transport not started");
-            ec = ERROR_UNSTART;
-            goto end;
-        }
-
-        iob = toolkit::io_buffer::create();
-        if (PUMP_UNLIKELY(!iob || !iob->append(b, size))) {
-            PUMP_WARN_LOG("tls_transport: send failed for creating io buffer failed");
-            if (!iob) {
-                iob->sub_ref();
+        do
+        {
+            if (PUMP_UNLIKELY(!__is_state(TRANSPORT_STARTED))) {
+                PUMP_ERR_LOG("tls_transport: send failed for transport not started");
+                ec = ERROR_UNSTART;
+                break;
             }
-            ec = ERROR_AGAIN;
-            goto end;
-        }
 
-        if (!__async_send(iob)) {
-            PUMP_WARN_LOG("tls_transport: send failed for async sending failed");
-            ec = ERROR_FAULT;
-            goto end;
-        }
+            auto *iob = toolkit::io_buffer::create();
+            if (PUMP_UNLIKELY(!iob || !iob->append(b, size))) {
+                PUMP_WARN_LOG("tls_transport: send failed for creating io buffer failed");
+                if (iob != nullptr) {
+                    iob->sub_ref();
+                }
+                ec = ERROR_AGAIN;
+                break;
+            }
 
-    end:
+            if (!__async_send(iob)) {
+                PUMP_WARN_LOG("tls_transport: send failed for async sending failed");
+                ec = ERROR_FAULT;
+                break;
+            }
+        } while (false);
         // Resuce pending send count.
         pending_send_cnt_.fetch_sub(1);
 
@@ -192,31 +182,28 @@ namespace transport {
     }
 
     int32_t tls_transport::send(toolkit::io_buffer *iob) {
-        if (!iob || iob->data_size() == 0) {
-            PUMP_ERR_LOG("tls_transport: send failed with invalid io buffer");
-            return ERROR_INVALID;
-        }
+        PUMP_DEBUG_COND_FAIL(
+            iob == nullptr && iob->data_size() == 0, 
+            return ERROR_INVALID);
 
         int32_t ec = ERROR_OK;
-
         // Add pending send count.
         pending_send_cnt_.fetch_add(1);
+        do
+        {
+            if (PUMP_UNLIKELY(!__is_state(TRANSPORT_STARTED))) {
+                PUMP_ERR_LOG("tls_transport: send failed for transport no started");
+                ec = ERROR_UNSTART;
+                break;
+            }
 
-        if (PUMP_UNLIKELY(!__is_state(TRANSPORT_STARTED))) {
-            PUMP_ERR_LOG("tls_transport: send failed for transport no started");
-            ec = ERROR_UNSTART;
-            goto end;
-        }
-
-        iob->add_ref();
-
-        if (!__async_send(iob)) {
-            PUMP_WARN_LOG("tcp_transport: send failed for async sending failed");
-            ec = ERROR_FAULT;
-            goto end;
-        }
-
-    end:
+            iob->add_ref();
+            if (!__async_send(iob)) {
+                PUMP_WARN_LOG("tcp_transport: send failed for async sending failed");
+                ec = ERROR_FAULT;
+                break;
+            }
+        } while (false);
         // Resuce pending send count.
         pending_send_cnt_.fetch_sub(1);
 

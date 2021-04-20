@@ -42,6 +42,7 @@ namespace ssl {
         } else if (curve == TLS_CURVE_P521) {
             return NID_secp521r1;
         }
+        PUMP_DEBUG_LOG("curve group to curve id failed %d", curve);
         return -1;
     }
 

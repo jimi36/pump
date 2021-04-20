@@ -27,26 +27,19 @@ namespace transport {
     int32_t tcp_acceptor::start(
         service *sv, 
         const acceptor_callbacks &cbs) {
-        if (!sv) {
-            PUMP_ERR_LOG("tcp_acceptor: start failed with invalid service");
-            return ERROR_INVALID;
-        }
+        PUMP_DEBUG_COND_FAIL(
+            !__set_state(TRANSPORT_INITED, TRANSPORT_STARTING), 
+            return ERROR_INVALID);
 
-        if (!cbs.accepted_cb || !cbs.stopped_cb) {
-            PUMP_ERR_LOG("tcp_acceptor: start failed with invalid callbacks");
-            return ERROR_INVALID;
-        }
-
-        if (!__set_state(TRANSPORT_INITED, TRANSPORT_STARTING)) {
-            PUMP_ERR_LOG("tcp_acceptor: start failed with wrong status");
-            return ERROR_INVALID;
-        }
-
-        // Callbacks
-        cbs_ = cbs;
-
-        // Service
+        PUMP_DEBUG_COND_FAIL(
+            sv == nullptr,  
+            return ERROR_INVALID);
         __set_service(sv);
+
+        PUMP_DEBUG_COND_FAIL(
+            !cbs.accepted_cb || !cbs.stopped_cb, 
+            return ERROR_INVALID);
+        cbs_ = cbs;
 
         toolkit::defer cleanup([&]() {
             __close_accept_flow();
@@ -56,11 +49,13 @@ namespace transport {
 
         if (!__open_accept_flow()) {
             PUMP_ERR_LOG("tcp_acceptor: start failed for opening flow failed");
+            PUMP_ASSERT(false);
             return ERROR_FAULT;
         }
 
         if (!__start_accept_tracker(shared_from_this())) {
             PUMP_ERR_LOG("tcp_acceptor: start failed for starting tracker failed");
+            PUMP_ASSERT(false);
             return ERROR_FAULT;
         }
 
@@ -101,10 +96,12 @@ namespace transport {
 
     bool tcp_acceptor::__open_accept_flow() {
         // Init tcp acceptor flow.
-        PUMP_ASSERT(!flow_);
         flow_.reset(
             object_create<flow::flow_tcp_acceptor>(),
             object_delete<flow::flow_tcp_acceptor>);
+        PUMP_DEBUG_COND_FAIL(
+            !flow_, 
+            return false);
         if (flow_->init(shared_from_this(), listen_address_) != flow::FLOW_ERR_NO) {
             PUMP_WARN_LOG("tcp_acceptor: open flow failed for flow init failed");
             return false;

@@ -54,7 +54,7 @@ void test_handshaker() {
 
     config scfg;
     //scfg.cert = cert;
-    scfg.alpn = "test";
+    scfg.application_protocol = "test";
     scfg.server_name = "local";
     sh->handshake(scfg);
 
@@ -62,7 +62,7 @@ void test_handshaker() {
     ch->set_callbacks(pump_bind(server_read_callback, _1), pump_bind(client_finished_callback, _1));
 
     config ccfg;
-    ccfg.alpn = "test";
+    ccfg.application_protocol = "test";
     ccfg.server_name = "local";
     ch->handshake(ccfg);
 

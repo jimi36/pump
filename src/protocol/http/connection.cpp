@@ -47,13 +47,13 @@ namespace http {
     bool connection::start(
         service *sv, 
         const http_callbacks &cbs) {
-        if (sv == nullptr || !transp_) {
-            return false;
-        }
+        PUMP_DEBUG_COND_FAIL(
+            sv == nullptr || !transp_, 
+            return false);
 
-        if (!cbs.pocket_cb || !cbs.error_cb) {
-            return false;
-        }
+        PUMP_DEBUG_COND_FAIL(
+            !cbs.pocket_cb || !cbs.error_cb, 
+            return false);
         http_cbs_ = cbs;
 
         transport::transport_callbacks tcbs;
@@ -75,10 +75,10 @@ namespace http {
     bool connection::read_next_pocket() {
         auto transp = transp_;
         PUMP_ASSERT(transp);
-        if (!transp || transp->read_for_once() != transport::ERROR_OK) {
-            return false;
+        if (transp && transp->read_for_once() == transport::ERROR_OK) {
+            return true;
         }
-        return true;
+        return false;
     }
 
     bool connection::send(const pocket *pk) {
@@ -138,7 +138,7 @@ namespace http {
         int32_t size) {
         auto pk = incoming_pocket_.get();
         if (pk == nullptr) {
-            PUMP_DEBUG_COND_CHECK(pk = create_incoming_pocket_(), !=, nullptr);
+            PUMP_ABORT((pk = create_incoming_pocket_()) == nullptr);
             incoming_pocket_.reset(pk, object_delete<pocket>);
         }
 

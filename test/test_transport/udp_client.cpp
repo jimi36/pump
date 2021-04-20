@@ -7,18 +7,18 @@ class my_udp_client {
     /*********************************************************************************
      * Read event callback for udp
      ********************************************************************************/
-    virtual void on_read_callback(base_transport_ptr transp, const block_t *b,
+    virtual void on_read_callback(base_transport *transp, const block_t *b,
                                   int32_t size, const address &remote_address) {}
 
     /*********************************************************************************
      * Stopped event callback
      ********************************************************************************/
-    virtual void on_stopped_callback(base_transport_ptr transp) {}
+    virtual void on_stopped_callback(base_transport *transp) {}
 
     /*********************************************************************************
      * Disconnected event callback
      ********************************************************************************/
-    virtual void on_disconnected_callback(base_transport_ptr transp) {}
+    virtual void on_disconnected_callback(base_transport *transp) {}
 };
 
 void send(udp_transport_sptr transport, const std::string &ip, uint16_t port) {

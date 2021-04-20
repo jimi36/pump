@@ -45,12 +45,19 @@ namespace http {
             bool https = uri->get_type() == URI_HTTPS;
             auto peer_address = host_to_address(https, req_host);
             if (!__create_connection(https, peer_address)) {
+                PUMP_DEBUG_LOG("http::client: create connection failed");
                 return response_sptr();
             }
             last_req_host_ = uri->get_host();
         }
 
-        if (!conn_->send(req.get()) || !conn_->read_next_pocket()) {
+        if (!conn_->send(req.get())) {
+            PUMP_DEBUG_LOG("http::client: send request failed");
+            return response_sptr();
+        }
+        
+        if (!conn_->read_next_pocket()) {
+            PUMP_DEBUG_LOG("http::client: read next pocket failed");
             return response_sptr();
         }
 
@@ -85,17 +92,20 @@ namespace http {
                         tls_handshake_timeout_);
         } else {
             auto dialer = transport::tcp_sync_dialer::create();
-            transp = dialer->dial(sv_, bind_address, peer_address, dial_timeout_);
+            transp = dialer->dial(
+                        sv_, 
+                        bind_address, 
+                        peer_address, 
+                        dial_timeout_);
         }
         if (!transp) {
             return false;
         }
 
         conn_.reset(new connection(false, transp));
-        PUMP_ASSERT(conn_);
-        if (!conn_) {
-            return false;
-        }
+        PUMP_DEBUG_COND_FAIL(
+            !conn_, 
+            return false);
 
         http_callbacks cbs;
         client_wptr cli = shared_from_this();
@@ -103,7 +113,7 @@ namespace http {
         cbs.pocket_cb = pump_bind(&client::on_response, cli, conn_.get(), _1);
 
         if (!conn_->start(sv_, cbs)) {
-            PUMP_ASSERT(false);
+            PUMP_DEBUG_LOG("http::client: create connection fialed for starting failed");
             return false;
         }
 
@@ -133,9 +143,8 @@ namespace http {
         pocket_sptr &&pk) {
         client_sptr cli =  wptr.lock();
         if (cli) {
-            cli->__notify_response(
-                conn, 
-                std::static_pointer_cast<response>(pk));
+            auto resp = std::static_pointer_cast<response>(pk);
+            cli->__notify_response(conn, std::move(resp));
         }
     }
 

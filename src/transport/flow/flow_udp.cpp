@@ -29,7 +29,10 @@ namespace flow {
     int32_t flow_udp::init(
         poll::channel_sptr &&ch, 
         const address &bind_address) {
-        PUMP_DEBUG_ASSIGN(ch, ch_, ch);
+        PUMP_DEBUG_COND_FAIL(
+            !ch,  
+            return FLOW_ERR_ABORT);
+        ch_ = ch;
 
         int32_t domain = AF_INET;
         if (bind_address.is_ipv6()) {

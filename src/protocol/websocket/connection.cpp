@@ -49,15 +49,14 @@ namespace websocket {
     bool connection::start_upgrade(
         bool client, 
         const upgrade_callbacks &ucbs) {
-        PUMP_LOCK_SPOINTER(transp, transp_);
-        if (!transp || transp->is_started()) {
-            return false;
-        }
+        auto transp = transp_;
+        PUMP_DEBUG_COND_FAIL(
+            !transp || transp->is_started(),
+            return false);
 
-        if (!ucbs.pocket_cb || !ucbs.error_cb) {
-            return false;
-        }
-
+        PUMP_DEBUG_COND_FAIL (
+            !ucbs.pocket_cb || !ucbs.error_cb,
+            return false);
         ucbs_ = ucbs;
 
         transport::transport_callbacks tcbs;
@@ -70,9 +69,6 @@ namespace websocket {
         }
 
         rt_ = READ_POCKET;
-
-        PUMP_ASSERT(!pocket_);
-        PUMP_ASSERT(decode_phase_ == DECODE_FRAME_HEADER);
 
         if (client) {
             pocket_.reset(new http::response);
@@ -91,7 +87,7 @@ namespace websocket {
         PUMP_ASSERT(!pocket_);
         PUMP_ASSERT(decode_phase_ == DECODE_FRAME_HEADER);
 
-        PUMP_LOCK_SPOINTER(transp, transp_);
+        auto transp = transp_;
         if (!transp || !transp->is_started()) {
             return false;
         }
@@ -112,7 +108,7 @@ namespace websocket {
     }
 
     void connection::stop() {
-        PUMP_LOCK_SPOINTER(transp, transp_);
+        auto transp = transp_;
         if (!transp || !transp->is_started()) {
             return;
         }
@@ -129,7 +125,7 @@ namespace websocket {
         PUMP_ASSERT(!pocket_);
         PUMP_ASSERT(decode_phase_ == DECODE_FRAME_HEADER);
 
-        PUMP_LOCK_SPOINTER(transp, transp_);
+        auto transp = transp_;
         if (!transp || !transp->is_started()) {
             return false;
         }
@@ -146,7 +142,7 @@ namespace websocket {
     bool connection::send_raw(
         const block_t *b, 
         int32_t size) {
-        PUMP_LOCK_SPOINTER(transp, transp_);
+        auto transp = transp_;
         if (!transp || !transp->is_started()) {
             return false;
         }
@@ -161,7 +157,7 @@ namespace websocket {
     bool connection::send_frame(
         const block_t *b, 
         int32_t size) {
-        PUMP_LOCK_SPOINTER(transp, transp_);
+        auto transp = transp_;
         if (!transp || !transp->is_started()) {
             return false;
         }
@@ -196,7 +192,7 @@ namespace websocket {
         connection_wptr wptr, 
         const block_t *b,
         int32_t size) {
-        PUMP_LOCK_WPOINTER(conn, wptr);
+        auto conn = wptr.lock();
         if (conn) {
             if (!conn->read_cache_.empty()) {
                 conn->read_cache_.append(b, size);
@@ -227,7 +223,7 @@ namespace websocket {
     }
 
     void connection::on_disconnected(connection_wptr wptr) {
-        PUMP_LOCK_WPOINTER(conn, wptr);
+        auto conn = wptr.lock();
         if (conn) {
             if (!conn->closed_.test_and_set()) {
                 conn->cbs_.error_cb("websocket connection disconnected");
@@ -236,7 +232,7 @@ namespace websocket {
     }
 
     void connection::on_stopped(connection_wptr wptr) {
-        PUMP_LOCK_WPOINTER(conn, wptr);
+        auto conn = wptr.lock();
         if (conn) {
             if (!conn->closed_.test_and_set()) {
                 conn->cbs_.error_cb("websocket connection stopped");

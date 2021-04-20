@@ -36,14 +36,17 @@ namespace poll {
         max_event_count_(1024),
         cur_event_count_(0) {
 #if defined(PUMP_HAVE_EPOLL)
-        fd_ = ::epoll_create1(0);
-        if (fd_ <= 0) {
+        if ((fd_ = ::epoll_create1(0)) < 0) {
             PUMP_ERR_LOG(
                 "epoll_poller: epoll_create1 failed %d", 
                 net::last_errno());
-            return;
+            PUMP_ABORT(true);
         }
-        events_ = pump_malloc(sizeof(struct epoll_event) * max_event_count_);
+        
+        if ((events_ = pump_malloc(sizeof(struct epoll_event) * max_event_count_)) == nullptr) {
+            PUMP_ERR_LOG("epoll_poller: malloc epoll events fialed");
+            PUMP_ABORT(true);
+        }
 #endif
     }
 

@@ -45,31 +45,23 @@ namespace transport {
     int32_t tls_dialer::start(
         service *sv, 
         const dialer_callbacks &cbs) {
-        if (!xcred_) {
-            PUMP_ERR_LOG("tls_dialer: start failed with invalid certificate");
-            return ERROR_INVALID;
-        }
+        PUMP_DEBUG_COND_FAIL(
+            xcred_ == nullptr, 
+            return ERROR_INVALID);
 
-        if (!sv) {
-            PUMP_ERR_LOG("tls_dialer: start failed with invalid service");
-            return ERROR_INVALID;
-        }
+        PUMP_DEBUG_COND_FAIL(
+            !__set_state(TRANSPORT_INITED, TRANSPORT_STARTING), 
+            return ERROR_INVALID);
 
-        if (!cbs.dialed_cb || !cbs.stopped_cb || !cbs.timeouted_cb) {
-            PUMP_ERR_LOG("tls_dialer: start failed with invalid callbacks");
-            return ERROR_INVALID;
-        }
-
-        if (!__set_state(TRANSPORT_INITED, TRANSPORT_STARTING)) {
-            PUMP_ERR_LOG("tls_dialer: start failed with wrong status");
-            return ERROR_INVALID;
-        }
-
-        // Callbacks
-        cbs_ = cbs;
-
-        // Service
+        PUMP_DEBUG_COND_FAIL(
+            sv == nullptr,  
+            return ERROR_INVALID);
         __set_service(sv);
+
+        PUMP_DEBUG_COND_FAIL(
+            !cbs.dialed_cb || !cbs.stopped_cb || !cbs.timeouted_cb, 
+            return ERROR_INVALID);
+        cbs_ = cbs;
 
         toolkit::defer cleanup([&]() {
             __stop_dial_timer();
@@ -80,21 +72,25 @@ namespace transport {
 
         if (!__open_dial_flow()) {
             PUMP_ERR_LOG("tls_dialer: start failed for opening flow failed");
+            PUMP_ASSERT(false);
             return ERROR_FAULT;
         }
 
         if (!__start_dial_timer(pump_bind(&tls_dialer::on_timeout, shared_from_this()))) {
             PUMP_ERR_LOG("tls_dialer: start failed for starting dial timer failed");
+            PUMP_ASSERT(false);
             return ERROR_FAULT;
         }
 
         if (flow_->post_connect(remote_address_) != flow::FLOW_ERR_NO) {
             PUMP_ERR_LOG("tls_dialer: start failed for flow post connect task failed");
+            PUMP_ASSERT(false);
             return ERROR_FAULT;
         }
 
         if (!__start_dial_tracker(shared_from_this())) {
             PUMP_ERR_LOG("tls_dialer: start failed for starting dial tracker failed");
+            PUMP_ASSERT(false);
             return ERROR_FAULT;
         }
 
@@ -145,13 +141,28 @@ namespace transport {
             return;
         }
 
-        if (PUMP_LIKELY(success)) {
+        if (PUMP_UNLIKELY(!success)) {
+            PUMP_DEBUG_LOG("tls_dialer: handle send event failed for dialing failed");
+            __close_dial_flow();
+
+            base_transport_sptr tls_transport;
+            cbs_.dialed_cb(tls_transport, false);
+        }
+
+        do {
             // If handshaker is started error, handshaked callback will be triggered. So
             // we do nothing at here when started error. But if dialer stopped befere
             // here, we shuold stop handshaking.
             handshaker_.reset(
                 object_create<tls_handshaker>(),
                 object_delete<tls_handshaker>);
+            if(!handshaker) {
+                PUMP_DEBUG_LOG("tls_dialer: handle send event failed for creating handshaker fialed");
+                if (__set_state(TRANSPORT_HANDSHAKING, TRANSPORT_ERROR)) {
+                    break;
+                }
+                return;
+            }
             handshaker_->init(
                 flow->unbind(), 
                 true, 
@@ -168,24 +179,23 @@ namespace transport {
                 if (!__is_state(TRANSPORT_HANDSHAKING)) {
                     PUMP_DEBUG_LOG("tls_dialer: handle send event failed for dialer had stopped");
                     handshaker_->stop();
+                    break;
                 }
-                return;
             } else if (__set_state(TRANSPORT_HANDSHAKING, TRANSPORT_ERROR)) {
                 PUMP_ERR_LOG(
                     "tls_dialer: handle send event failed for handshaker start failed");
                 handshaker_.reset();
+                break;
             }
-        } else {
-            PUMP_DEBUG_LOG("tls_dialer: handle send event failed for dialing failed");
-            __close_dial_flow();
-        }
+            return;
+        } while(false);
 
         base_transport_sptr tls_transport;
         cbs_.dialed_cb(tls_transport, false);
     }
 
     void tls_dialer::on_timeout(tls_dialer_wptr wptr) {
-        PUMP_LOCK_WPOINTER(dialer, wptr);
+        auto dialer = wptr.lock();
         if (!dialer) {
             return;
         }
@@ -193,7 +203,7 @@ namespace transport {
         if (dialer->__set_state(TRANSPORT_STARTED, TRANSPORT_TIMEOUTING)) {
             PUMP_WARN_LOG("tls_dialer: handle dialing timeout");
             dialer->__stop_dial_tracker();
-            dialer->__post_channel_event(dialer_locker, 0);
+            dialer->__post_channel_event(dialer, 0);
         }
     }
 
@@ -201,7 +211,7 @@ namespace transport {
         tls_dialer_wptr wptr,
         tls_handshaker *handshaker,
         bool succ) {
-        PUMP_LOCK_WPOINTER(dialer, wptr);
+        auto dialer = wptr.lock();
         if (!dialer) {
             PUMP_WARN_LOG("tls_dialer: handle handshaked event failed for dialer invalid");
             handshaker->stop();
@@ -231,24 +241,21 @@ namespace transport {
     void tls_dialer::on_handshake_stopped(
         tls_dialer_wptr wptr,
         tls_handshaker *handshaker) {
-        PUMP_LOCK_WPOINTER(dialer, wptr);
-        if (!dialer) {
-            PUMP_WARN_LOG("tls_dialer: handle handshake stopped event failed for dialer invalid");
-            return;
+        auto dialer = wptr.lock();
+        if (dialer) {
+            dialer->handshaker_.reset();
+            dialer->__trigger_interrupt_callbacks();
         }
-
-        dialer->handshaker_.reset();
-
-        dialer->__trigger_interrupt_callbacks();
     }
 
     bool tls_dialer::__open_dial_flow() {
-        // Setup flow
-        PUMP_ASSERT(!flow_);
+        // Init tls dialer flow.
         flow_.reset(
             object_create<flow::flow_tcp_dialer>(),
             object_delete<flow::flow_tcp_dialer>);
-
+        PUMP_DEBUG_COND_FAIL(
+            !flow_, 
+            return false);
         if (flow_->init(shared_from_this(), local_address_) != flow::FLOW_ERR_NO) {
             PUMP_ERR_LOG("tls_dialer: open dial flow failed for flow init failed");
             return false;
@@ -275,10 +282,17 @@ namespace transport {
         cbs.timeouted_cb = pump_bind(&tls_sync_dialer::on_timeouted, shared_from_this());
         cbs.stopped_cb = pump_bind(&tls_sync_dialer::on_stopped);
 
-        dialer_ = tls_dialer::create(local_address, remote_address, connect_timeout, handshake_timeout);
-        if (dialer_->start(sv, cbs) != ERROR_OK) {
-            return base_transport_sptr();
-        }
+        dialer_ = tls_dialer::create(
+            local_address, 
+            remote_address, 
+            connect_timeout, 
+            handshake_timeout);
+        PUMP_DEBUG_COND_FAIL(
+            !dialer_, 
+            return base_transport_sptr());
+        PUMP_DEBUG_COND_FAIL(
+            dialer_->start(sv, cbs) != ERROR_OK,
+            return base_transport_sptr());
 
         return dial_promise_.get_future().get();
     }

@@ -35,8 +35,15 @@ namespace flow {
         pump_socket fd,
         void *xcred,
         bool client) {
-        PUMP_DEBUG_ASSIGN(ch, ch_, ch);
-        PUMP_DEBUG_ASSIGN(fd > 0, fd_, fd);
+        PUMP_DEBUG_COND_FAIL(
+            !ch,  
+            return FLOW_ERR_ABORT);
+        ch_ = ch;
+
+        PUMP_DEBUG_COND_FAIL(
+            fd < 0,  
+            return FLOW_ERR_ABORT);
+        fd_ = fd;
 
         session_ = ssl::create_tls_session(xcred, (int32_t)fd, client);
         if (!session_) {
@@ -47,7 +54,11 @@ namespace flow {
     }
 
     int32_t flow_tls::want_to_send(toolkit::io_buffer *iob) {
-        PUMP_DEBUG_ASSIGN(iob, send_iob_, iob);
+        PUMP_DEBUG_COND_FAIL(
+            iob == nullptr,  
+            return FLOW_ERR_ABORT);
+        send_iob_ = iob;
+        
         int32_t size = ssl::tls_send(session_, send_iob_->buffer(), send_iob_->data_size());
         if (PUMP_LIKELY(size > 0)) {
             // Shift send buffer and check data size.

@@ -49,6 +49,7 @@ namespace net {
         }
 #endif
         PUMP_DEBUG_LOG("net: set_noblock failed %d", last_errno());
+        PUMP_ASSERT(false);
         return false;
     }
 
@@ -62,8 +63,8 @@ namespace net {
         if (setsockopt(fd, SOL_SOCKET, SO_LINGER, (const block_t*)&lgr, sizeof(lgr)) == 0) {
             return true;
         }
-
         PUMP_DEBUG_LOG("net: set_linger failed %d", last_errno());
+        PUMP_ASSERT(false);
         return false;
     }
 
@@ -73,8 +74,8 @@ namespace net {
         if (setsockopt(fd, SOL_SOCKET, SO_RCVBUF, (const block_t*)&size, sizeof(size)) == 0) {
             return true;
         }
-
         PUMP_DEBUG_LOG("net: set_read_bs failed %d", last_errno());
+        PUMP_ASSERT(false);
         return false;
     }
 
@@ -84,8 +85,8 @@ namespace net {
         if (setsockopt(fd, SOL_SOCKET, SO_SNDBUF, (const block_t*)&size, sizeof(size)) == 0) {
             return true;
         }
-
         PUMP_DEBUG_LOG("net: set_send_bs failed %d", last_errno());
+        PUMP_ASSERT(false);
         return false;
     }
 
@@ -96,6 +97,7 @@ namespace net {
         int32_t on = 1;
         if (setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, (const block_t*)&on, sizeof(on)) == -1) {
             PUMP_DEBUG_LOG("net: set_keeplive failed %d", last_errno());
+            PUMP_ASSERT(false);
             return false;
         }
 
@@ -116,6 +118,7 @@ namespace net {
                 nullptr,
                 nullptr) == -1) {
             PUMP_DEBUG_LOG("net: set_keeplive failed %d", last_errno());
+            PUMP_ASSERT(false);
             return false;
         }
 #else
@@ -124,6 +127,7 @@ namespace net {
             setsockopt(fd, SOL_TCP, TCP_KEEPINTVL, &interval, sizeof(interval)) == -1 ||
             setsockopt(fd, SOL_TCP, TCP_KEEPCNT, &count, sizeof(count)) == -1) {
             PUMP_DEBUG_LOG("net: set_keeplive failed %d", last_errno());
+            PUMP_ASSERT(false);
             return false;
         }
 #endif
@@ -136,8 +140,8 @@ namespace net {
         if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (const block_t*)&reuse, sizeof(reuse)) == 0) {
             return true;
         }
-
         PUMP_DEBUG_LOG("net: set_reuse failed %d", last_errno());
+        PUMP_ASSERT(false);
         return false;
     }
 
@@ -147,8 +151,8 @@ namespace net {
         if (setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, (const block_t*)&nodelay, sizeof(nodelay)) == 0) {
             return true;
         }
-
         PUMP_DEBUG_LOG("net: set_nodelay failed %d", last_errno());
+        PUMP_ASSERT(false);
         return false;
     }
 
@@ -157,8 +161,8 @@ namespace net {
         if (setsockopt(fd, SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT, nullptr, 0) == 0) {
             return true;
         }
-
         PUMP_DEBUG_LOG("net: update_connect_context failed %d", last_errno());
+        PUMP_ASSERT(false);
         return false;
 #else
         return true;
@@ -183,6 +187,7 @@ namespace net {
                 nullptr) == SOCKET_ERROR &&
             last_errno() != WSAEWOULDBLOCK) {
             PUMP_DEBUG_LOG("net: set_udp_conn_reset failed %d", last_errno());
+            PUMP_ASSERT(false);
             return false;
         }
 #endif
@@ -196,7 +201,6 @@ namespace net {
         if (::bind(fd, addr, addrlen) == 0) {
             return true;
         }
-
         PUMP_DEBUG_LOG("net: bind failed %d", last_errno());
         return false;
     }
@@ -207,7 +211,6 @@ namespace net {
         if (::listen(fd, backlog) == 0) {
             return true;
         }
-
         PUMP_DEBUG_LOG("net: listen failed %d", last_errno());
         return false;
     }
@@ -248,8 +251,7 @@ namespace net {
             return size;
         } else if (size < 0) {
            int32_t ec = net::last_errno();
-            if (ec == LANE_EINPROGRESS || 
-                ec == LANE_EWOULDBLOCK) {
+            if (ec == LANE_EINPROGRESS || ec == LANE_EWOULDBLOCK) {
                 size = -1;
             } else {
                 size = 0;
@@ -267,8 +269,7 @@ namespace net {
         size = ::recvfrom(fd, b, size, 0, (struct sockaddr*)addr, (socklen_t*)addrlen);
         if (size < 0) {
             int32_t ec = net::last_errno();
-            if (ec == LANE_EINPROGRESS || 
-                ec == LANE_EWOULDBLOCK) {
+            if (ec == LANE_EINPROGRESS || ec == LANE_EWOULDBLOCK) {
                 size = -1;
             } else {
                 size = 0;
@@ -286,8 +287,7 @@ namespace net {
             return size;
         } else if (size < 0) {
             int32_t ec = net::last_errno();
-            if (ec == LANE_EINPROGRESS || 
-                ec == LANE_EWOULDBLOCK) {
+            if (ec == LANE_EINPROGRESS || ec == LANE_EWOULDBLOCK) {
                 size = -1;
             } else {
                 size = 0;
@@ -306,8 +306,7 @@ namespace net {
         size = ::sendto(fd, b, size, 0, addr, len);
         if (size < 0) {
             int32_t ec = net::last_errno();
-            if (ec == LANE_EINPROGRESS || 
-                ec == LANE_EWOULDBLOCK) {
+            if (ec == LANE_EINPROGRESS || ec == LANE_EWOULDBLOCK) {
                 size = -1;
             } else {
                 size = 0;
@@ -355,9 +354,8 @@ namespace net {
         if (getsockname(fd, addr, (socklen_t*)addrlen) == 0) {
             return true;
         }
-
         PUMP_DEBUG_LOG("net: local_address failed %d", last_errno());
-
+        PUMP_ASSERT(false);
         return false;
     }
 
@@ -368,9 +366,8 @@ namespace net {
         if (getpeername(fd, addr, (socklen_t*)addrlen) == 0) {
             return true;
         }
-
         PUMP_DEBUG_LOG("net: remote_address failed %d", last_errno());
-
+        PUMP_ASSERT(false);
         return false;
     }
 
@@ -391,9 +388,8 @@ namespace net {
                 return std::string(host);
             }
         }
-
         PUMP_DEBUG_LOG("net: address_to_string failed");
-
+        PUMP_ASSERT(false);
         return "";
     }
 
@@ -437,7 +433,7 @@ namespace net {
         }
 
         PUMP_DEBUG_LOG("net: string_to_address failed");
-
+        PUMP_ASSERT(false);
         return false;
     }
 

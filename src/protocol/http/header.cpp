@@ -34,7 +34,7 @@ namespace http {
         PUMP_DEBUG_COND_CHECK(
             pump_snprintf(tmp, sizeof(tmp) - 1, "%d", value), 
             <, 
-            sizeof(tmp));
+            (int32_t)sizeof(tmp));
         headers_[name].push_back(tmp);
     }
 
@@ -57,7 +57,7 @@ namespace http {
         PUMP_DEBUG_COND_CHECK(
             pump_snprintf(tmp, sizeof(tmp) - 1, "%d", value),
             <,
-            sizeof(tmp));
+            (int32_t)sizeof(tmp));
         headers_[name] = std::vector<std::string>(1, tmp);
     }
 

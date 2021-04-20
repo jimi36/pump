@@ -31,21 +31,19 @@ namespace http {
         service *sv,
         const transport::address &listen_address,
         const server_callbacks &cbs) {
-        // Check acceptor
-        if (acceptor_) {
-            return false;
-        }
+        PUMP_DEBUG_COND_FAIL(
+            acceptor_,
+            return false);
 
-        // Check service
-        if (!sv) {
-            return false;
-        }
+        PUMP_DEBUG_COND_FAIL(
+            sv == nullptr,
+            return false);
         sv_ = sv;
 
         // Check callbacks
-        if (!cbs.request_cb || !cbs.stopped_cb) {
-            return false;
-        }
+        PUMP_DEBUG_COND_FAIL(
+            !cbs.request_cb || !cbs.stopped_cb,
+            return false);
         cbs_ = cbs;
 
         transport::acceptor_callbacks acbs;
@@ -53,11 +51,12 @@ namespace http {
         acbs.stopped_cb = pump_bind(&server::on_stopped, wptr);
         acbs.accepted_cb = pump_bind(&server::on_accepted, wptr, _1);
 
-        auto accepter = transport::tcp_acceptor::create(listen_address);
-        if (accepter->start(sv, acbs) != transport::ERROR_OK) {
+        auto acceptor = transport::tcp_acceptor::create(listen_address);
+        if (acceptor->start(sv, acbs) != transport::ERROR_OK) {
+            PUMP_DEBUG_LOG("http::server: start failed for starting tcp acceptor failed");
             return false;
         }
-        acceptor_ = accepter;
+        acceptor_ = acceptor;
 
         return true;
     }
@@ -68,21 +67,19 @@ namespace http {
         const std::string &keyfile,
         const transport::address &listen_address,
         const server_callbacks &cbs) {
-        // Check acceptor
-        if (acceptor_) {
-            return false;
-        }
+        PUMP_DEBUG_COND_FAIL(
+            acceptor_,
+            return false);
 
-        // Check service
-        if (!sv) {
-            return false;
-        }
+        PUMP_DEBUG_COND_FAIL(
+            sv == nullptr,
+            return false);
         sv_ = sv;
 
         // Check callbacks
-        if (!cbs.request_cb || !cbs.stopped_cb) {
-            return false;
-        }
+        PUMP_DEBUG_COND_FAIL(
+            !cbs.request_cb || !cbs.stopped_cb,
+            return false);
         cbs_ = cbs;
 
         transport::acceptor_callbacks acbs;
@@ -96,6 +93,7 @@ namespace http {
                             listen_address, 
                             1000);
         if (acceptor->start(sv, acbs) != transport::ERROR_OK) {
+            PUMP_DEBUG_LOG("http::server: start failed for starting tls acceptor failed");
             return false;
         }
         acceptor_ = acceptor;

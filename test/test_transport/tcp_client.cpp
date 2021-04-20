@@ -79,7 +79,7 @@ class my_tcp_dialer : public std::enable_shared_from_this<my_tcp_dialer> {
     /*********************************************************************************
      * Tcp read event callback
      ********************************************************************************/
-    void on_read_callback(base_transport_ptr transp, const block_t *b, int32_t size) {
+    void on_read_callback(base_transport *transp, const block_t *b, int32_t size) {
         read_size_ += size;
         all_read_size_ += size;
         read_pocket_size_ += size;
@@ -93,7 +93,7 @@ class my_tcp_dialer : public std::enable_shared_from_this<my_tcp_dialer> {
     /*********************************************************************************
      * Tcp disconnected event callback
      ********************************************************************************/
-    void on_disconnected_callback(base_transport_ptr transp) {
+    void on_disconnected_callback(base_transport *transp) {
         printf("client tcp transport disconnected read raw_msg %d\n", all_read_size_ / 4096);
         dial_mx.lock();
         my_dialers.erase(this);
@@ -103,7 +103,7 @@ class my_tcp_dialer : public std::enable_shared_from_this<my_tcp_dialer> {
     /*********************************************************************************
      * Tcp stopped event callback
      ********************************************************************************/
-    void on_stopped_callback(base_transport_ptr transp) {
+    void on_stopped_callback(base_transport *transp) {
         printf("client tcp transport stopped read raw_msg %d\n", all_read_size_ / 4096);
         dial_mx.lock();
         if (my_dialers.erase(this) != 1) {

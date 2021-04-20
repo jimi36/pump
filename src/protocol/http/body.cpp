@@ -76,7 +76,7 @@ namespace http {
         while (1) {
             const block_t *chunk_pos = pos;
             const block_t *line_end = find_http_line_end(chunk_pos, size - int32_t(chunk_pos - b));
-            if (!line_end) {
+            if (line_end == nullptr) {
                 break;
             }
 

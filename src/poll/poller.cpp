@@ -33,19 +33,20 @@ namespace poll {
 
         started_.store(true);
 
-        worker_.reset(object_create<std::thread>([&]() {
-                          while (started_.load()) {
-                              __handle_channel_events();
-                              __handle_channel_tracker_events();
-                              if (cev_cnt_.load(std::memory_order_acquire) > 0 ||
-                                  tev_cnt_.load(std::memory_order_acquire) > 0) {
-                                  __poll(0);
-                              } else {
-                                  __poll(3);
-                              }
-                          }
-                      }),
-                      object_delete<std::thread>);
+        worker_.reset(
+            object_create<std::thread>([&]() {
+                while (started_.load()) {
+                    __handle_channel_events();
+                    __handle_channel_tracker_events();
+                    if (cev_cnt_.load(std::memory_order_acquire) > 0 ||
+                        tev_cnt_.load(std::memory_order_acquire) > 0) {
+                        __poll(0);
+                    } else {
+                        __poll(3);
+                    }
+                }
+            }),
+            object_delete<std::thread>);
 
         return true;
     }
@@ -65,17 +66,23 @@ namespace poll {
 
         tracker->set_poller(this);
 
-        PUMP_DEBUG_CHECK(tracker->start());
+        PUMP_DEBUG_COND_FAIL(
+            !tracker->start(), 
+            return false);
 
         // Install channel tracker
-        PUMP_DEBUG_CHECK(__install_channel_tracker(tracker.get()));
+        PUMP_DEBUG_COND_FAIL(
+            !__install_channel_tracker(tracker.get()), 
+            return false);
 
         // Set channel tracker installed.
-        PUMP_DEBUG_CHECK(tracker->set_installed(true));
+        PUMP_DEBUG_COND_FAIL(
+            !tracker->set_installed(true),
+            return false);
 
         // Create tracker event
-        PUMP_DEBUG_CHECK(
-            tevents_.push(object_create<tracker_event>(tracker, TRACKER_EVENT_ADD)));
+        PUMP_ABORT(
+            !tevents_.push(object_create<tracker_event>(tracker, TRACKER_EVENT_ADD)));
 
         // Add pending trakcer event count
         tev_cnt_.fetch_add(1, std::memory_order_release);
@@ -97,12 +104,12 @@ namespace poll {
         // Wait channel tracker installed.
         while(!tracker->installed());
 
-        // Uninstall channel tracker
+        // Uninstall channel tracker.
         __uninstall_channel_tracker(tracker.get());
 
-        // Create tracker event
-        PUMP_DEBUG_CHECK(
-            tevents_.push(object_create<tracker_event>(tracker, TRACKER_EVENT_DEL)));
+        // Push tracker event to queue.
+        PUMP_ABORT(
+            !tevents_.push(object_create<tracker_event>(tracker, TRACKER_EVENT_DEL)));
 
         // Add pending trakcer event count
         tev_cnt_.fetch_add(1, std::memory_order_relaxed);
@@ -116,9 +123,9 @@ namespace poll {
             return false;
         }
 
-        // Create channel event
-        auto cev = object_create<channel_event>(c, event);
-        PUMP_DEBUG_CHECK(cevents_.push(cev));
+        // Push channel event to queue.
+        PUMP_ABORT(
+            !cevents_.push(object_create<channel_event>(c, event)));
 
         // Add pending channel event count
         cev_cnt_.fetch_add(1, std::memory_order_relaxed);

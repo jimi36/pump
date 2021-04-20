@@ -41,7 +41,6 @@ namespace ssl {
       : key(nullptr),
         cert(nullptr) {
         }
-
 #if defined(PUMP_HAVE_OPENSSL)
         EVP_PKEY *key;
         X509 *cert;
@@ -68,21 +67,28 @@ namespace ssl {
                     new_md_fn = EVP_sha512;
                     eckey = EC_KEY_new_by_curve_name(NID_secp521r1);
                 } else {
-                    return nullptr;
+                    PUMP_DEBUG_LOG("generate_x509_certificate: unkonwn signature scheme %d", scheme);
+                    break;
                 }
-                PUMP_ASSERT(eckey != nullptr);
-                PUMP_ASSERT(new_md_fn != nullptr);
-                if (eckey == nullptr || new_md_fn == nullptr) {
-                    return nullptr;
+                if (eckey == nullptr) {
+                    PUMP_WARN_LOG("generate_x509_certificate: new ec key failed");
+                    break;
                 }
                 EC_KEY_set_asn1_flag(eckey, OPENSSL_EC_NAMED_CURVE);
                 PUMP_DEBUG_COND_CHECK(EC_KEY_generate_key(eckey), ==, 1);
 
                 EVP_PKEY *pkey = EVP_PKEY_new();
+                if (pkey == nullptr) {
+                    EC_KEY_free(eckey);
+                    break;
+                }
                 PUMP_DEBUG_COND_CHECK(EVP_PKEY_assign_EC_KEY(pkey, eckey), ==, 1);
                 
                 X509 *cert = X509_new();
-                PUMP_ASSERT(cert != nullptr);
+                if (cert == nullptr) {
+                    EVP_PKEY_free(pkey);
+                    break;
+                }
                 PUMP_DEBUG_COND_CHECK(X509_set_version(cert, 3), ==, 1);
                 PUMP_DEBUG_COND_CHECK(ASN1_INTEGER_set(X509_get_serialNumber(cert), 3), ==, 1);
                 PUMP_DEBUG_COND_CHECK(X509_gmtime_adj(X509_get_notBefore(cert), 0), !=, nullptr);
@@ -90,17 +96,21 @@ namespace ssl {
                 PUMP_DEBUG_COND_CHECK(X509_set_pubkey(cert, pkey), ==, 1);
 
                 X509_NAME *name = X509_get_subject_name(cert);
-                PUMP_ASSERT(name != nullptr);
+                if (name == nullptr) {
+                    EVP_PKEY_free(pkey);
+                    X509_free(cert);
+                    break;
+                }
                 PUMP_DEBUG_COND_CHECK(X509_NAME_add_entry_by_txt(name, "C", MBSTRING_ASC, (uint8_t*)"CA", -1, -1, 0), ==, 1);
                 PUMP_DEBUG_COND_CHECK(X509_NAME_add_entry_by_txt(name, "O", MBSTRING_ASC, (uint8_t*)"MyCompany Inc.", -1, -1, 0), == , 1);
                 PUMP_DEBUG_COND_CHECK(X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC, (uint8_t*)"localhost", -1, -1, 0), ==, 1);
                 PUMP_DEBUG_COND_CHECK(X509_set_issuer_name(cert, name), ==, 1);
                 
-                PUMP_DEBUG_COND_CHECK(X509_sign(cert, pkey, new_md_fn()), ==, 1);
+                PUMP_DEBUG_COND_CHECK(X509_sign(cert, pkey, new_md_fn()), >, 0);
 
                 if ((xcert = object_create<x509_certificate>()) == nullptr) {
-                    X509_free(cert);
                     EVP_PKEY_free(pkey);
+                    X509_free(cert);
                 } else {
                     xcert->key = pkey;
                     xcert->cert = cert;
@@ -117,29 +127,35 @@ namespace ssl {
     std::string to_x509_certificate_pem(x509_certificate *xcert) {
         std::string out;
 #if defined(PUMP_HAVE_OPENSSL)
-        BIO *bio = BIO_new(BIO_s_mem());
-        PUMP_ASSERT(bio != nullptr);
-        PUMP_DEBUG_COND_CHECK(PEM_write_bio_X509(bio, xcert->cert), ==, 1);
+        do {
+            BIO *bio = BIO_new(BIO_s_mem());
+            if (bio == nullptr) {
+                break;
+            }
+            PUMP_DEBUG_COND_CHECK(PEM_write_bio_X509(bio, xcert->cert), ==, 1);
 
-        BUF_MEM *buf = nullptr;
-        BIO_get_mem_ptr(bio, &buf);
-        out.assign(buf->data, buf->length);
+            BUF_MEM *buf = nullptr;
+            BIO_get_mem_ptr(bio, &buf);
+            if (buf == nullptr) {
+                break;
+            }
+            out.assign(buf->data, buf->length);
 
-        BIO_free(bio);
+            BIO_free(bio);
+        } while(false);
 #endif
         return std::forward<std::string>(out);
     }
 
     std::string to_x509_certificate_raw(x509_certificate *xcert) {
-        PUMP_ASSERT(xcert != nullptr && xcert->cert != nullptr);
-
         std::string out;
 #if defined(PUMP_HAVE_OPENSSL)
         int32_t size = i2d_X509(xcert->cert, nullptr);
-        PUMP_ASSERT(size > 0);
-        out.resize(size);
-        uint8_t *buffer = (uint8_t*)out.data();
-        PUMP_DEBUG_COND_CHECK(i2d_X509(xcert->cert, &buffer), ==, size);
+        if (size > 0) {
+            out.resize(size);
+            uint8_t *buffer = (uint8_t*)out.data();
+            PUMP_DEBUG_COND_CHECK(i2d_X509(xcert->cert, &buffer), ==, size);
+        }
 #endif
         return std::forward<std::string>(out);
     }
@@ -162,20 +178,36 @@ namespace ssl {
         x509_certificate *xcert = nullptr;
 #if defined(PUMP_HAVE_OPENSSL)
         xcert = object_create<x509_certificate>();
-        PUMP_ASSERT(xcert != nullptr);
+        if (xcert == nullptr) {
+            return nullptr;
+        }
 
         BIO *bio = BIO_new_mem_buf(cert, cert_size);
-        PUMP_ASSERT(bio != nullptr);
+        if (bio == nullptr) {
+            object_delete(xcert);
+            return nullptr;
+        }
         xcert->cert = PEM_read_bio_X509(bio, nullptr, nullptr, nullptr);
-        PUMP_ASSERT(xcert->cert != nullptr);
         BIO_free(bio);
+        if (xcert->cert == nullptr) {
+            object_delete(xcert);
+            return nullptr;
+        }
 
         if (key != nullptr && key_size > 0) {
             bio = BIO_new_mem_buf(key, key_size);
-            PUMP_ASSERT(bio != nullptr);
+            if (bio == nullptr) {
+                X509_free(xcert->cert);
+                object_delete(xcert);
+                return nullptr;
+            }
             xcert->key = PEM_read_bio_PrivateKey(bio, nullptr, nullptr, nullptr);
-            PUMP_ASSERT(xcert->key != nullptr);
             BIO_free(bio);
+            if (xcert->key == nullptr) {
+                X509_free(xcert->cert);
+                object_delete(xcert);
+                return nullptr;
+            }
         }
 #endif
         return xcert;
@@ -199,16 +231,25 @@ namespace ssl {
         x509_certificate *xcert = nullptr;
 #if defined(PUMP_HAVE_OPENSSL)
         xcert = object_create<x509_certificate>();
-        PUMP_ASSERT(xcert != nullptr);
+        if (xcert == nullptr) {
+            return nullptr;
+        }
 
         const uint8_t *p_cert = (const uint8_t*)cert;
         xcert->cert = d2i_X509(nullptr, &p_cert, cert_size);
-        PUMP_ASSERT(xcert->cert != nullptr);
-
-        if (key != nullptr && key_size > 0) {
-            const uint8_t *p_key = (const uint8_t*)key;
-            xcert->key = d2i_AutoPrivateKey(nullptr, &p_key, key_size);
-            PUMP_ASSERT(xcert->key != nullptr);
+        if (xcert->cert == nullptr) {
+            object_delete(xcert);
+            return nullptr;
+        } else {
+            if (key != nullptr && key_size > 0) {
+                const uint8_t *p_key = (const uint8_t*)key;
+                xcert->key = d2i_AutoPrivateKey(nullptr, &p_key, key_size);
+                if (xcert->key == nullptr) {
+                    X509_free(xcert->cert);
+                    object_delete(xcert);
+                    return nullptr;
+                }
+            }
         }
 #endif
         return xcert;
@@ -261,7 +302,8 @@ namespace ssl {
         if (X509_get_ext_by_NID(
                 xcert->cert, 
                 NID_ct_precert_scts, 
-                -1) >= 0) {
+                -1) 
+            >= 0) {
             return true;
         }
 #endif
@@ -363,7 +405,6 @@ namespace ssl {
         }
 
         EVP_PKEY_CTX *ctx = EVP_PKEY_CTX_new(xcert->key, nullptr);
-        PUMP_ASSERT(ctx != nullptr);
         if (ctx == nullptr) {
             return false;
         }
@@ -434,14 +475,13 @@ namespace ssl {
         bool ret = false;
 #if defined(PUMP_HAVE_OPENSSL)
         EVP_PKEY *pkey = X509_get0_pubkey(xcert->cert);
-        PUMP_ASSERT(pkey != nullptr);
         if (pkey == nullptr) {
             return false;
         }
 
         EVP_PKEY_CTX *ctx = EVP_PKEY_CTX_new(pkey, nullptr);
-        PUMP_ASSERT(ctx != nullptr);
         if (ctx == nullptr) {
+            EVP_PKEY_free(pkey);
             return false;
         }
 

@@ -43,31 +43,23 @@ namespace transport {
         service *sv,
         int64_t timeout,
         const tls_handshaker_callbacks &cbs) {
-        if (!flow_) {
-            PUMP_ERR_LOG("tls_handshaker: start failed with invalid flow");
-            return false;
-        }
+        PUMP_DEBUG_COND_FAIL(
+            !flow_, 
+            return false);
 
-        if (!sv) {
-            PUMP_ERR_LOG("tls_handshaker: start failed with invalid service");
-            return false;
-        }
+        PUMP_DEBUG_COND_FAIL(
+            !__set_state(TRANSPORT_INITED, TRANSPORT_STARTING), 
+            return false);
 
-        if (!cbs.handshaked_cb || !cbs.stopped_cb) {
-            PUMP_ERR_LOG("tls_handshaker: start failed with invalid callbacks");
-            return false;
-        }
-
-        if (!__set_state(TRANSPORT_INITED, TRANSPORT_STARTING)) {
-            PUMP_ERR_LOG("tls_handshaker: start failed with wrong status");
-            return false;
-        }
-
-        // Callbacks
-        cbs_ = cbs;
-
-        // Service
+        PUMP_DEBUG_COND_FAIL(
+            sv == nullptr,  
+            return false);
         __set_service(sv);
+
+        PUMP_DEBUG_COND_FAIL(
+            !cbs.handshaked_cb || !cbs.stopped_cb, 
+            return false);
+        cbs_ = cbs;
 
         toolkit::defer cleanup([&]() {
             __set_state(TRANSPORT_STARTING, TRANSPORT_ERROR);
@@ -79,6 +71,7 @@ namespace transport {
         auto ret = flow_->handshake();
         if (ret == ssl::TLS_HANDSHAKE_ERROR) {
             PUMP_WARN_LOG("tls_handshaker: start failed for flow handshake failed");
+            PUMP_ASSERT(false);
             return false;
         }
 
@@ -90,6 +83,7 @@ namespace transport {
         // Start handshake timeout timer
         if (!__start_handshake_timer(timeout)) {
             PUMP_WARN_LOG("tls_handshaker: start failed for starting handshake timer failed");
+            PUMP_ASSERT(false);
             return false;
         }
 
@@ -133,7 +127,7 @@ namespace transport {
     }
 
     void tls_handshaker::on_timeout(tls_handshaker_wptr wptr) {
-        PUMP_LOCK_WPOINTER(handshaker, wptr);
+        auto handshaker = wptr.lock();
         if (handshaker) {
             if (handshaker->__set_state(TRANSPORT_STARTED, TRANSPORT_TIMEOUTING)) {
                 handshaker->__close_flow();

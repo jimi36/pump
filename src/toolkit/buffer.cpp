@@ -66,31 +66,34 @@ namespace toolkit {
         }
 
         if (raw_ == nullptr) {
-            return __init_by_copy(b, size);
-        }
-
-        if (read_pos_ == raw_size_) {
-            reset();
-        }
-
-        uint32_t left = raw_size_ - read_pos_ - data_size_;
-        if (size < left) {
-            memcpy(raw_ + read_pos_ + data_size_, b, size);
-            data_size_ += size;
-        } else if (size + data_size_ < raw_size_) {
-            memmove(raw_, raw_ + read_pos_, data_size_);
-            memcpy(raw_ + data_size_, b, size);
-            data_size_ += size;
-            read_pos_ = 0;
-        } else {
-            uint32_t new_size_ = raw_size_ + size * 2;
-            block_t *new_raw = (block_t*)pump_realloc(raw_, new_size_);
-            if (new_raw == nullptr) {
+            if (!__init_by_copy(b, size)) {
                 return false;
             }
-            memcpy(raw_ + read_pos_ + data_size_, b, size);
-            raw_size_ = new_size_;
             data_size_ += size;
+        } else {
+            if (read_pos_ == raw_size_) {
+                reset();
+            }
+
+            uint32_t left = raw_size_ - read_pos_ - data_size_;
+            if (size < left) {
+                memcpy(raw_ + read_pos_ + data_size_, b, size);
+                data_size_ += size;
+            } else if (size + data_size_ < raw_size_) {
+                memmove(raw_, raw_ + read_pos_, data_size_);
+                memcpy(raw_ + data_size_, b, size);
+                data_size_ += size;
+                read_pos_ = 0;
+            } else {
+                uint32_t new_size_ = raw_size_ + size * 2;
+                block_t *new_raw = (block_t*)pump_realloc(raw_, new_size_);
+                if (new_raw == nullptr) {
+                    return false;
+                }
+                memcpy(raw_ + read_pos_ + data_size_, b, size);
+                raw_size_ = new_size_;
+                data_size_ += size;
+            }
         }
 
         return true;

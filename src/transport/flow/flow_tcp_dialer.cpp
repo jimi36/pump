@@ -30,7 +30,10 @@ namespace flow {
     int32_t flow_tcp_dialer::init(
         poll::channel_sptr &&ch, 
         const address &bind_address) {
-        PUMP_DEBUG_ASSIGN(ch, ch_, ch);
+        PUMP_DEBUG_COND_FAIL(
+            !ch, 
+            return FLOW_ERR_ABORT);
+        ch_ = ch;
 
         is_ipv6_ = bind_address.is_ipv6();
         int32_t domain = is_ipv6_ ? AF_INET6 : AF_INET;

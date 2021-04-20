@@ -12,7 +12,7 @@ class my_udp_server {
     /*********************************************************************************
      * Udp read event callback
      ********************************************************************************/
-    virtual void on_read_callback(base_transport_ptr transp, const block_t *b,
+    virtual void on_read_callback(base_transport *transp, const block_t *b,
                                   int32_t size, const address &remote_address) {
         if (size > 0) read_size_ += size;
 
@@ -30,17 +30,17 @@ class my_udp_server {
     /*********************************************************************************
      * Sent event callback
      ********************************************************************************/
-    virtual void on_sent_callback(base_transport_ptr transp) {}
+    virtual void on_sent_callback(base_transport *transp) {}
 
     /*********************************************************************************
      * Stopped event callback
      ********************************************************************************/
-    virtual void on_stopped_callback(base_transport_ptr transp) {}
+    virtual void on_stopped_callback(base_transport *transp) {}
 
     /*********************************************************************************
      * Disconnected event callback
      ********************************************************************************/
-    virtual void on_disconnected_callback(base_transport_ptr transp) {}
+    virtual void on_disconnected_callback(base_transport *transp) {}
 
   private:
     int32_t read_size_;

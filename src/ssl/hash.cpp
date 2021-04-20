@@ -93,7 +93,6 @@ namespace ssl {
             }
             break;
         default:
-            PUMP_ASSERT(false);
             return nullptr;
         }
         ctx->ctx = ctx->_pctx;
@@ -145,8 +144,6 @@ namespace ssl {
         const uint8_t *data, 
         int32_t data_len) {
 #if defined(PUMP_HAVE_OPENSSL)
-        PUMP_ASSERT(ctx && ctx->ctx);
-        PUMP_ASSERT(data && data_len > 0);
         switch (ctx->algo)
         {
         case HASH_SHA1:
@@ -169,8 +166,9 @@ namespace ssl {
         uint8_t *out, 
         int32_t out_len) {
 #if defined(PUMP_HAVE_OPENSSL)
-        PUMP_ASSERT(ctx && ctx->ctx);
-        PUMP_ASSERT(out && out_len >= hash_digest_length(ctx->algo));
+        if (out == nullptr || out_len < hash_digest_length(ctx->algo)) {
+            return false;
+        }
         switch (ctx->algo)
         {
         case HASH_SHA1:
@@ -200,38 +198,40 @@ namespace ssl {
         const std::string &input) {
         std::string out;
 #if defined(PUMP_HAVE_OPENSSL)
-        const EVP_MD *md = nullptr;
-        switch (algo)
-        {
-        case HASH_SHA1:
-            md = EVP_sha1();
-            break;
-        case HASH_SHA224:
-            md = EVP_sha224();
-            break;
-        case HASH_SHA256:
-            md = EVP_sha256();
-            break;
-        case HASH_SHA384:
-            md = EVP_sha384();
-            break;
-        case HASH_SHA512:
-            md = EVP_sha512();
-            break;
-        }
+        do {
+            uint32_t out_len = (uint32_t)hash_digest_length(algo);
+            if (out_len == 0) {
+                break;
+            }
 
-        uint32_t out_len = (uint32_t)hash_digest_length(algo);
-        out.resize(out_len);
+            const EVP_MD *(*new_md_func)() = nullptr;
+            if (algo == HASH_SHA1) {
+                new_md_func = EVP_sha1;
+            } else if (algo == HASH_SHA224) {
+                new_md_func = EVP_sha224;
+            } else if (algo == HASH_SHA256) {
+                new_md_func = EVP_sha256;
+            } else if (algo == HASH_SHA384) {
+                new_md_func = EVP_sha384;
+            } else if (algo == HASH_SHA512) {
+                new_md_func = EVP_sha512;
+            }
 
-        uint8_t *ret = HMAC(
-                        md, 
+            if (new_md_func != nullptr) {
+                out.resize(out_len);
+                PUMP_DEBUG_COND_CHECK(
+                    HMAC(
+                        new_md_func(), 
                         (const void*)key.data(), 
                         (int32_t)key.size(),
                         (const uint8_t*)input.data(), 
                         input.size(),
                         (uint8_t*)out.data(), 
-                        &out_len);
-        PUMP_ASSERT(ret != nullptr);
+                        &out_len), 
+                    !=, 
+                    nullptr); 
+            }
+        } while(false);
 #endif
         return std::forward<std::string>(out);
     }

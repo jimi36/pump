@@ -19,19 +19,10 @@
 
 #include <assert.h>
 
-#include "pump/config.h"
+#include "pump/platform.h"
 
 // Pump assert
 #define PUMP_ASSERT(x) assert(x)
-
-// Pump debug assign
-#if defined(NDEBUG)
-#define PUMP_DEBUG_ASSIGN(c, d, s) d = s
-#else
-#define PUMP_DEBUG_ASSIGN(c, d, s) \
-    PUMP_ASSERT(c);                \
-    d = s
-#endif
 
 // Pump debug check
 #if defined(NDEBUG)
@@ -47,8 +38,21 @@
 #define PUMP_DEBUG_COND_CHECK(x, cmp, val) PUMP_ASSERT((x) cmp val)
 #endif
 
+// Pump debug assign
+#define PUMP_DEBUG_COND_FAIL(c, x) \
+    if (c) { \
+        PUMP_ASSERT(false); \
+        x; \
+    }
+
 // Pump static assert
 #define PUMP_STATIC_ASSERT(x, msg) static_assert((x), msg)
+
+// Pump abort
+#define PUMP_ABORT(x) \
+    if (x) { \
+        abort(); \
+    }
 
 #if defined(PUMP_HAVE_DEBUG_LOG)
 #define PUMP_ERR_LOG(fmt, ...) printf("[Error] " fmt "\n", ##__VA_ARGS__)
