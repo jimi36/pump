@@ -30,17 +30,20 @@ namespace transport {
     int32_t tcp_dialer::start(
         service *sv, 
         const dialer_callbacks &cbs) {
-        PUMP_DEBUG_COND_FAIL(
+        PUMP_DEBUG_FAILED_RUN(
             !__set_state(TRANSPORT_INITED, TRANSPORT_STARTING), 
+            "tcp_dialer: start failed for transport state incorrect",
             return ERROR_INVALID);
 
-        PUMP_DEBUG_COND_FAIL(
+        PUMP_DEBUG_FAILED_RUN(
             sv == nullptr, 
+            "tcp_dialer: start failed for service invalid",
             return ERROR_INVALID);
         __set_service(sv);
 
-        PUMP_DEBUG_COND_FAIL(
+        PUMP_DEBUG_FAILED_RUN(
             !cbs.dialed_cb || !cbs.stopped_cb || !cbs.timeouted_cb, 
+            "tcp_dialer: start failed for callbacks invalid",
             return ERROR_INVALID);
         cbs_ = cbs;
 
@@ -52,26 +55,22 @@ namespace transport {
         });
 
         if (!__open_dial_flow()) {
-            PUMP_ERR_LOG("tcp_dialer: start failed for opening dial flow failed");
-            PUMP_ASSERT(false);
+            PUMP_DEBUG_LOG("tcp_dialer: start failed for opening flow failed");
             return ERROR_FAULT;
         }
 
         if (!__start_dial_timer(pump_bind(&tcp_dialer::on_timeout, shared_from_this()))) {
-            PUMP_ERR_LOG("tcp_dialer: start failed for starting dial timer failed");
-            PUMP_ASSERT(false);
+            PUMP_DEBUG_LOG("tcp_dialer: start failed for starting timer failed");
             return ERROR_FAULT;
         }
 
         if (flow_->post_connect(remote_address_) != flow::FLOW_ERR_NO) {
-            PUMP_ERR_LOG("tcp_dialer: start failed for flow post connect task failed");
-            PUMP_ASSERT(false);
+            PUMP_DEBUG_LOG("tcp_dialer: start failed for posting connect failed");
             return ERROR_FAULT;
         }
 
         if (!__start_dial_tracker(shared_from_this())) {
-            PUMP_ERR_LOG("tcp_dialer: start failed for starting dial tracker failed");
-            PUMP_ASSERT(false);
+            PUMP_DEBUG_LOG("tcp_dialer: start failed for starting dial tracker failed");
             return ERROR_FAULT;
         }
 
@@ -112,7 +111,7 @@ namespace transport {
         auto next_status = success ? TRANSPORT_FINISHED : TRANSPORT_ERROR;
         if (!__set_state(TRANSPORT_STARTING, next_status) &&
             !__set_state(TRANSPORT_STARTED, next_status)) {
-            PUMP_WARN_LOG("tcp_dialer: handle send event failed for dialer had stopped or timeouted");
+            PUMP_DEBUG_LOG("tcp_dialer: handle send event failed for not in started");
             __close_dial_flow();
             __trigger_interrupt_callbacks();
             return;
@@ -124,12 +123,15 @@ namespace transport {
             if (tcp_transport) {
                 tcp_transport->init(flow->unbind(), local_address, remote_address);
             } else {
-                PUMP_WARN_LOG("tcp_dialer: handle send event failed for creating transport failed");
-                __close_dial_flow();
+                PUMP_WARN_LOG(
+                    "tcp_dialer: handle send event failed for creating transport failed");
                 success = false;
             }
         } else {
             PUMP_DEBUG_LOG("tcp_dialer: handle send event failed for dialing failed");
+        }
+
+        if (!success) {
             __close_dial_flow();
         }
 
@@ -155,11 +157,12 @@ namespace transport {
         flow_.reset(
             object_create<flow::flow_tcp_dialer>(),
             object_delete<flow::flow_tcp_dialer>);
-        PUMP_DEBUG_COND_FAIL(
-            !flow_, 
-            return false);
+        if (!flow_) {
+            PUMP_WARN_LOG("tcp_dialer: open flow failed for creating flow failed");
+            return false;
+        }
         if (flow_->init(shared_from_this(), local_address_) != flow::FLOW_ERR_NO) {
-            PUMP_ERR_LOG("tcp_dialer: opend dal flow failed for flow init failed");
+            PUMP_DEBUG_LOG("tcp_dialer: open flow failed for initing flow failed");
             return false;
         }
 
@@ -184,10 +187,7 @@ namespace transport {
         cbs.stopped_cb = pump_bind(&tcp_sync_dialer::on_stopped);
 
         dialer_ = tcp_dialer::create(local_address, remote_address, timeout);
-        PUMP_DEBUG_COND_FAIL(
-            !dialer_, 
-            return base_transport_sptr());
-        if (dialer_->start(sv, cbs) != ERROR_OK) {
+        if (!dialer_ || dialer_->start(sv, cbs) != ERROR_OK) {
             return base_transport_sptr();
         }
 

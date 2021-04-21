@@ -484,13 +484,13 @@ namespace tls {
                             hash_algo, 
                             SERVER_SIGNATURE_CONTEXT, 
                             ssl::sum_hash(transcript_));
-        auto signed_msg_base64 = codec::base64_encode(signed_msg);
-        auto signature_base64 = codec::base64_encode(cert_verify->signature);
-        PUMP_DEBUG_LOG("client handshaker verify signature sign: %d hash: %ld msg: %s signature: %s", 
-            sign_algo,
-            hash_algo,
-            signed_msg_base64.c_str(),
-            signature_base64.c_str());
+        //auto signed_msg_base64 = codec::base64_encode(signed_msg);
+        //auto signature_base64 = codec::base64_encode(cert_verify->signature);
+        //PUMP_DEBUG_LOG("client handshaker verify signature sign: %d hash: %ld msg: %s signature: %s", 
+        //    sign_algo,
+        //    hash_algo,
+        //    signed_msg_base64.c_str(),
+        //    signature_base64.c_str());
         if (!ssl::verify_x509_signature(
                 session_.peer_certs[0], 
                 sign_algo, 

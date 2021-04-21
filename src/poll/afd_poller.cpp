@@ -101,19 +101,13 @@ namespace poll {
                             0,
                             nullptr,
                             0);
-        if (status != STATUS_SUCCESS) {
-            PUMP_ERR_LOG("afd_create_device_handle: create nt file fialed");
-            PUMP_ABORT(true);
-            return nullptr;
-        }
+        PUMP_COND_ABORT(status != STATUS_SUCCESS,
+            "afd_create_device_handle: create NT file failed");
 
-        if (CreateIoCompletionPort(afd_device_handle, iocp_handle, 0, 0) == nullptr ||
-            SetFileCompletionNotificationModes(afd_device_handle, FILE_SKIP_SET_EVENT_ON_HANDLE) == FALSE) {
-            CloseHandle(afd_device_handle);
-            PUMP_ERR_LOG("afd_create_device_handle: nt file bind iocp handle fialed");
-            PUMP_ABORT(true);
-            return nullptr;
-        }
+        PUMP_COND_ABORT(
+            CreateIoCompletionPort(afd_device_handle, iocp_handle, 0, 0) == nullptr ||
+            SetFileCompletionNotificationModes(afd_device_handle, FILE_SKIP_SET_EVENT_ON_HANDLE) == FALSE,
+            "afd_create_device_handle: NT file bind iocp handle failed");
 
         return afd_device_handle;
     }
@@ -127,24 +121,18 @@ namespace poll {
         cur_event_count_(0) {
 #if defined(PUMP_HAVE_IOCP)
         iocp_handler_ = CreateIoCompletionPort(INVALID_HANDLE_VALUE, nullptr, 0, 0);
-        if (iocp_handler_ == nullptr) {
-            PUMP_ERR_LOG("afd_poller: create iocp headler fialed");
-            PUMP_ABORT(true);
-            return;
-        }
+        PUMP_COND_ABORT(iocp_handler_ == nullptr,
+            "afd_poller: create iocp headler failed");
 
         afd_device_handler_ = afd_create_device_handle(iocp_handler_);
-        if (afd_device_handler_ == nullptr) {
-            PUMP_ERR_LOG("afd_poller: create afd device headler fialed");
-            PUMP_ABORT(true);
-            return;
-        }
+        PUMP_COND_ABORT(afd_device_handler_ == nullptr,
+            "afd_poller: create afd device headler failed");
 
         events_ = pump_malloc(sizeof(OVERLAPPED_ENTRY) * max_event_count_);
-        if (events_ == nullptr) {
-            PUMP_ERR_LOG("afd_poller: malloc afd events fialed");
-            PUMP_ABORT(true);
-        }
+        PUMP_COND_ABORT(events_ == nullptr,
+            "afd_poller: allocate afd events memory failed");
+#else
+        PUMP_ABORT();
 #endif
     }
 
@@ -160,10 +148,12 @@ namespace poll {
     }
 
     bool afd_poller::__install_channel_tracker(channel_tracker *tracker) {
+#if defined(PUMP_HAVE_IOCP)
         if (__resume_channel_tracker(tracker)) {
             cur_event_count_.fetch_add(1, std::memory_order_relaxed);
             return true;
         }
+#endif
         PUMP_DEBUG_LOG("afd_poller: install channel tracker failed");
         return false;
     }
@@ -171,7 +161,6 @@ namespace poll {
     bool afd_poller::__uninstall_channel_tracker(channel_tracker *tracker) {
 #if defined(PUMP_HAVE_IOCP)
         auto event = tracker->get_event();
-
         if (event->iosb.Status != STATUS_PENDING) {
             cur_event_count_.fetch_sub(1, std::memory_order_relaxed);
             return true;
@@ -224,8 +213,6 @@ namespace poll {
         PUMP_DEBUG_LOG(
             "afd_poller: resume channel tracker fialed %d", 
             net::last_errno());
-#else
-        PUMP_ERR_LOG("afd_poller: resume channel tracker failed for not support");
 #endif
         return false;
     }

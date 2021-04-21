@@ -52,7 +52,7 @@ namespace pump {
 
     bool service::start() {
         if (running_) {
-            PUMP_WARN_LOG("service: start failed for having started");
+            PUMP_DEBUG_LOG("service: start failed for having started");
             return false;
         }
 

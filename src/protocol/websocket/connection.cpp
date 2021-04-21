@@ -50,12 +50,14 @@ namespace websocket {
         bool client, 
         const upgrade_callbacks &ucbs) {
         auto transp = transp_;
-        PUMP_DEBUG_COND_FAIL(
+        PUMP_DEBUG_FAILED_RUN(
             !transp || transp->is_started(),
+            "websocket::connection: start upgrade failed for transport invalid or already started",
             return false);
 
-        PUMP_DEBUG_COND_FAIL (
+        PUMP_DEBUG_FAILED_RUN (
             !ucbs.pocket_cb || !ucbs.error_cb,
+            "websocket::connection: start upgrade failed for callbacks invalid",
             return false);
         ucbs_ = ucbs;
 

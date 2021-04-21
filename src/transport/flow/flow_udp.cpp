@@ -29,8 +29,9 @@ namespace flow {
     int32_t flow_udp::init(
         poll::channel_sptr &&ch, 
         const address &bind_address) {
-        PUMP_DEBUG_COND_FAIL(
-            !ch,  
+        PUMP_DEBUG_FAILED_RUN(
+            !ch, 
+            "flow_udp: init failed for channel invalid",
             return FLOW_ERR_ABORT);
         ch_ = ch;
 
@@ -55,11 +56,11 @@ namespace flow {
             return FLOW_ERR_ABORT;
         }
         if (!net::bind(fd_, (sockaddr*)bind_address.get(), bind_address.len())) {
-            PUMP_DEBUG_LOG("flow_udp: init failed for socket bind address failed");
+            PUMP_DEBUG_LOG("flow_udp: init failed for binding socket address failed");
             return FLOW_ERR_ABORT;
         }
         if (!net::set_udp_conn_reset(fd_, false)) {
-            PUMP_DEBUG_LOG("flow_udp: init failed for setting socket conn reset failed");
+            PUMP_DEBUG_LOG("flow_udp: init failed for setting conn reset failed");
             return FLOW_ERR_ABORT;
         }
 

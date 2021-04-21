@@ -36,38 +36,40 @@ namespace transport {
         tracker_.reset(
             object_create<poll::channel_tracker>(ch, poll::TRACK_READ),
             object_delete<poll::channel_tracker>);
-        PUMP_DEBUG_COND_FAIL(
-            !tracker_,
-            return false
-        );
+        if (!tracker_) {
+            PUMP_WARN_LOG("base_acceptor: start failed for creating tracker failed");
+            return false;
+        }
+        
         if (!get_service()->add_channel_tracker(tracker_, READ_POLLER_ID)) {
-            PUMP_WARN_LOG("base_acceptor: start tracker failed");
+            PUMP_WARN_LOG("base_acceptor: start tracker failed for adding tracker");
             return false;
         }
 
-        PUMP_DEBUG_LOG("base_acceptor: start tracker");
         return true;
     }
 
     bool base_acceptor::__resume_accept_tracker() {
         auto tracker = tracker_.get();
-        PUMP_DEBUG_COND_FAIL(
-            tracker == nullptr,
-            return false);
+        if (tracker == nullptr) {
+            PUMP_WARN_LOG("base_acceptor: resume tracker failed for tracker invalid");
+            return false;
+        }
+
         auto poller = tracker_->get_poller();
-        PUMP_DEBUG_COND_FAIL(
-            poller == nullptr,
-            return false);
+        if (poller == nullptr) {
+            PUMP_WARN_LOG("base_acceptor: resume tracker failed for poller invalid");
+            return false;
+        }
+        
         return poller->resume_channel_tracker(tracker);
     }
 
     void base_acceptor::__stop_accept_tracker() {
         auto tracker = tracker_;
-        if (!tracker) {
-            return;
+        if (tracker) {
+            get_service()->remove_channel_tracker(tracker, READ_POLLER_ID);
         }
-        get_service()->remove_channel_tracker(tracker, READ_POLLER_ID);
-        PUMP_DEBUG_LOG("base_acceptor: stop tracker");
     }
 
     void base_acceptor::__trigger_interrupt_callbacks() {

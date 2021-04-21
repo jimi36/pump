@@ -495,11 +495,11 @@ namespace tls {
         }
         auto signed_msg_base64 = codec::base64_encode(signed_msg);
         auto signature_base64 = codec::base64_encode(cert_verify->signature);
-        PUMP_DEBUG_LOG("client handshaker verify signature sign: %d hash: %ld msg: %s signature: %s", 
-            sign_algo,
-            hash_algo,
-            signed_msg_base64.c_str(),
-            signature_base64.c_str());
+        //PUMP_DEBUG_LOG("client handshaker verify signature sign: %d hash: %ld msg: %s signature: %s", 
+        //    sign_algo,
+        //    hash_algo,
+        //    signed_msg_base64.c_str(),
+        //    signature_base64.c_str());
 
         PUMP_DEBUG_LOG("server_handshaker send certificate verify message");
         __send_handshake_message(msg);

@@ -30,8 +30,9 @@ namespace flow {
     int32_t flow_tcp_dialer::init(
         poll::channel_sptr &&ch, 
         const address &bind_address) {
-        PUMP_DEBUG_COND_FAIL(
+        PUMP_DEBUG_FAILED_RUN(
             !ch, 
+            "flow_tcp_dialer: init failed for channel invalid",
             return FLOW_ERR_ABORT);
         ch_ = ch;
 
@@ -65,7 +66,9 @@ namespace flow {
 
     int32_t flow_tcp_dialer::post_connect(const address &remote_address) {
         if (!net::connect(fd_, (sockaddr*)remote_address.get(), remote_address.len())) {
-            PUMP_DEBUG_LOG("flow_tcp_dialer: post connect task failed for connecting failed");
+            PUMP_DEBUG_LOG(
+                "flow_tcp_dialer: post connect failed for %d", 
+                net::last_errno());
             return FLOW_ERR_ABORT;
         }
         return FLOW_ERR_NO;
@@ -80,7 +83,8 @@ namespace flow {
         }
 
         if (!net::update_connect_context(fd_)) {
-            PUMP_DEBUG_LOG("flow_tcp_dialer: connect failed for updating connect context failed");
+            PUMP_DEBUG_LOG(
+                "flow_tcp_dialer: connect failed for updating connect context failed");
             return net::get_socket_error(fd_);
         }
 

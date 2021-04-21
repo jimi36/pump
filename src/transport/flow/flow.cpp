@@ -21,7 +21,7 @@ namespace transport {
 namespace flow {
 
     flow_base::flow_base() noexcept 
-        : fd_(-1){
+      : fd_(-1){
     }
 
     pump_socket flow_base::unbind() {

@@ -133,9 +133,9 @@ namespace http {
     DEFINE_ALL_POINTER_TYPE(uri);
 
     /*********************************************************************************
-     * Get uri type string
+     * Get uri class name
      ********************************************************************************/
-    LIB_PUMP std::string get_ut_string(int32_t ut);
+    LIB_PUMP const std::string& get_uri_class_name(int32_t uc);
 
     /*********************************************************************************
      * Parse url

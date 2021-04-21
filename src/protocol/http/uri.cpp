@@ -138,7 +138,7 @@ namespace http {
         }
 
         std::string url;
-        url = get_ut_string(uc_) + "://" + host_ + path_;
+        url = get_uri_class_name(uc_) + "://" + host_ + path_;
 
         std::vector<std::string> tmps;
         for (auto p : params_) {

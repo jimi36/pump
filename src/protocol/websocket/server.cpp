@@ -43,14 +43,16 @@ namespace websocket {
     bool server::start(
         service *sv, 
         const server_callbacks &scbs) {
-        if (sv == nullptr) {
-            return false;
-        }
-        if (!scbs.upgraded_cb) {
-            return false;
-        }
-
+        PUMP_DEBUG_FAILED_RUN(
+            sv == nullptr, 
+            "websocket::server: start failed for service invalid",
+            return false);
         sv_ = sv;
+
+        PUMP_DEBUG_FAILED_RUN(
+            !scbs.upgraded_cb,
+            "websocket::server: start failed for callbacks invalid",
+            return false);
         cbs_ = scbs;
 
         transport::acceptor_callbacks cbs;

@@ -35,13 +35,15 @@ namespace flow {
         pump_socket fd,
         void *xcred,
         bool client) {
-        PUMP_DEBUG_COND_FAIL(
-            !ch,  
+        PUMP_DEBUG_FAILED_RUN(
+            !ch, 
+            "flow_tls: init failed for channel invalid",
             return FLOW_ERR_ABORT);
         ch_ = ch;
 
-        PUMP_DEBUG_COND_FAIL(
-            fd < 0,  
+        PUMP_DEBUG_FAILED_RUN(
+            fd < 0, 
+            "flow_tls: init failed for fd invalid",
             return FLOW_ERR_ABORT);
         fd_ = fd;
 
@@ -54,8 +56,9 @@ namespace flow {
     }
 
     int32_t flow_tls::want_to_send(toolkit::io_buffer *iob) {
-        PUMP_DEBUG_COND_FAIL(
-            iob == nullptr,  
+        PUMP_DEBUG_FAILED_RUN(
+            iob == nullptr, 
+            "flow_tls: want to send failed for io buffer invalid",
             return FLOW_ERR_ABORT);
         send_iob_ = iob;
         
@@ -65,9 +68,8 @@ namespace flow {
             if (send_iob_->shift(size) > 0) {
                 return FLOW_ERR_AGAIN;
             }
-
             send_iob_->reset();
-
+            send_iob_ = nullptr;
             return FLOW_ERR_NO;
         } else if (PUMP_UNLIKELY(size < 0)) {
             // Send again
@@ -87,9 +89,8 @@ namespace flow {
             if (send_iob_->shift(size) > 0) {
                 return FLOW_ERR_AGAIN;
             }
-
             send_iob_->reset();
-
+            send_iob_ = nullptr;
             return FLOW_ERR_NO;
         } else if (PUMP_UNLIKELY(size < 0)) {
             // Send again

@@ -103,9 +103,10 @@ namespace http {
         }
 
         conn_.reset(new connection(false, transp));
-        PUMP_DEBUG_COND_FAIL(
-            !conn_, 
-            return false);
+        if (!conn_) {
+            PUMP_WARN_LOG("http::client: create connection failed");
+            return false;
+        }
 
         http_callbacks cbs;
         client_wptr cli = shared_from_this();

@@ -40,13 +40,14 @@ namespace poll {
             PUMP_ERR_LOG(
                 "epoll_poller: epoll_create1 failed %d", 
                 net::last_errno());
-            PUMP_ABORT(true);
+            PUMP_ABORT();
         }
         
-        if ((events_ = pump_malloc(sizeof(struct epoll_event) * max_event_count_)) == nullptr) {
-            PUMP_ERR_LOG("epoll_poller: malloc epoll events fialed");
-            PUMP_ABORT(true);
-        }
+        events_ = pump_malloc(sizeof(struct epoll_event) * max_event_count_);
+        PUMP_COND_ABORT(events_ == nullptr,
+            "epoll_poller: allocate epoll events memory failed");
+#else
+        PUMP_ABORT();
 #endif
     }
 
@@ -77,11 +78,9 @@ namespace poll {
             return true;
         }
 
-        PUMP_WARN_LOG(
+        PUMP_DEBUG_LOG(
             "epoll_poller: add channel tracker failed %d", 
             net::last_errno());
-#else
-        PUMP_ERR_LOG("epoll_poller: add channel tracker failed for not support");
 #endif
         return false;
     }
@@ -94,11 +93,9 @@ namespace poll {
             return true;           
         }
 
-        PUMP_WARN_LOG(
+        PUMP_DEBUG_LOG(
             "epoll_poller: remove channel tracker failed %d", 
             net::last_errno());
-#else
-        PUMP_ERR_LOG("epoll_poller: remove channel tracker failed for not support");
 #endif
         return false;
     }
@@ -118,11 +115,9 @@ namespace poll {
             return true;
         }
 
-        PUMP_WARN_LOG(
+        PUMP_DEBUG_LOG(
             "epoll_poller: resume channel tracker failed %d", 
             net::last_errno());
-#else
-        PUMP_ERR_LOG("epoll_poller: resume channel tracker failed for not support");
 #endif
         return false;
     }

@@ -37,15 +37,15 @@ namespace ssl {
 #if defined(PUMP_HAVE_GNUTLS)
         gnutls_certificate_credentials_t xcred;
         if (gnutls_certificate_allocate_credentials(&xcred) != 0) {
-            PUMP_ERR_LOG(
+            PUMP_WARN_LOG(
                 "ssl_helper: create tls client certificate failed for gnutls_certificate_allocate_credentials failed");
             return nullptr;
         }
         return xcred;
 #elif defined(PUMP_HAVE_OPENSSL)
         SSL_CTX *xcred = SSL_CTX_new(TLS_client_method());
-        if (!xcred) {
-            PUMP_ERR_LOG(
+        if (xcred == nullptr) {
+            PUMP_WARN_LOG(
                 "ssl_helper: create tls_client certificate failed for SSL_CTX_new failed");
             return nullptr;
         }
@@ -64,7 +64,7 @@ namespace ssl {
         gnutls_certificate_credentials_t xcred;
         int32_t ret = gnutls_certificate_allocate_credentials(&xcred);
         if (ret != 0) {
-            PUMP_ERR_LOG(
+            PUMP_WARN_LOG(
                 "ssl_helper: create tls certificate by file failed for gnutls_certificate_allocate_credentials failed");
             return nullptr;
         }
@@ -72,7 +72,7 @@ namespace ssl {
         ret = gnutls_certificate_set_x509_key_file(
             xcred, cert.c_str(), key.c_str(), GNUTLS_X509_FMT_PEM);
         if (ret != 0) {
-            PUMP_ERR_LOG(
+            PUMP_DEBUG_LOG(
                 "ssl_helper: create tls certificate by file failed for gnutls_certificate_set_x509_key_file failed");
             gnutls_certificate_free_credentials(xcred);
             return nullptr;
@@ -86,8 +86,8 @@ namespace ssl {
         } else {
             xcred = SSL_CTX_new(TLS_server_method());
         }
-        if (!xcred) {
-            PUMP_ERR_LOG(
+        if (xcred == nullptr) {
+            PUMP_WARN_LOG(
                 "ssl_helper: create tls certificate by file failed for SSL_CTX_new failed");
             return nullptr;
         }
@@ -95,13 +95,13 @@ namespace ssl {
         /* Set the key and cert */
         if (SSL_CTX_use_certificate_file(xcred, cert.c_str(), SSL_FILETYPE_PEM) <= 0) {
             SSL_CTX_free(xcred);
-            PUMP_ERR_LOG(
+            PUMP_DEBUG_LOG(
                 "ssl_helper: create tls certificate by file failed for SSL_CTX_use_certificate_file failed");
             return nullptr;
         }
         if (SSL_CTX_use_PrivateKey_file(xcred, key.c_str(), SSL_FILETYPE_PEM) <= 0) {
             SSL_CTX_free(xcred);
-            PUMP_ERR_LOG(
+            PUMP_DEBUG_LOG(
                 "ssl_helper: create tls certificate by file failed for SSL_CTX_use_PrivateKey_file failed");
             return nullptr;
         }
@@ -117,9 +117,8 @@ namespace ssl {
         const std::string &key) {
 #if defined(PUMP_HAVE_GNUTLS)
         gnutls_certificate_credentials_t xcred;
-        int32_t ret = gnutls_certificate_allocate_credentials(&xcred);
-        if (ret != 0) {
-            PUMP_ERR_LOG(
+        if (gnutls_certificate_allocate_credentials(&xcred) != 0) {
+            PUMP_WARN_LOG(
                 "ssl_helper: create tls certificate by buffer failed for gnutls_certificate_allocate_credentials failed");
             return nullptr;
         }
@@ -132,9 +131,12 @@ namespace ssl {
         gnutls_key.data = (uint8_t*)key.data();
         gnutls_key.size = (uint32_t)key.size();
 
-        int32_t ret2 = gnutls_certificate_set_x509_key_mem(xcred, &gnutls_cert, &gnutls_key, GNUTLS_X509_FMT_PEM);
-        if (ret2 != 0) {
-            PUMP_ERR_LOG(
+        if (gnutls_certificate_set_x509_key_mem(
+                xcred, 
+                &gnutls_cert, 
+                &gnutls_key, 
+                GNUTLS_X509_FMT_PEM) != 0) {
+            PUMP_DEBUG_LOG(
                 "ssl_helper: create tls certificate by buffer failed for gnutls_certificate_set_x509_key_mem failed");
             gnutls_certificate_free_credentials(xcred);
             return nullptr;
@@ -148,27 +150,40 @@ namespace ssl {
         } else {
             xcred = SSL_CTX_new(TLS_server_method());
         }
-        if (!xcred) {
-            PUMP_ERR_LOG(
+        if (xcred == nullptr) {
+            PUMP_WARN_LOG(
                 "ssl_helper: create tls certificate by buffer failed for SSL_CTX_new failed");
             return nullptr;
         }
 
         BIO *cert_bio = BIO_new_mem_buf((void*)cert.c_str(), -1);
-        X509 *x509_cert = PEM_read_bio_X509(cert_bio, NULL, NULL, NULL);
+        if (cert_bio == nullptr) {
+            PUMP_WARN_LOG(
+                "ssl_helper: create tls certificate by buffer failed for BIO_new_mem_buf failed");
+            SSL_CTX_free(xcred);
+            return nullptr;
+        }
+        X509 *x509_cert = PEM_read_bio_X509(cert_bio, nullptr, nullptr, nullptr);
         BIO_free(cert_bio);
         if (!x509_cert) {
-            PUMP_ERR_LOG(
+            PUMP_DEBUG_LOG(
                 "ssl_helper: create tls certificate by buffer failed for PEM_read_bio_X509 failed");
             SSL_CTX_free(xcred);
             return nullptr;
         }
 
         BIO *key_bio = BIO_new_mem_buf((void*)key.c_str(), -1);
-        EVP_PKEY *evp_key = PEM_read_bio_PrivateKey(key_bio, NULL, 0, NULL);
+        if (key_bio == nullptr) {
+            PUMP_DEBUG_LOG(
+                "ssl_helper: create tls certificate by buffer failed for BIO_new_mem_buf failed");
+            SSL_CTX_free(xcred);
+            X509_free(x509_cert);
+            return nullptr;
+        }
+        EVP_PKEY *evp_key = PEM_read_bio_PrivateKey(key_bio, nullptr, 0, nullptr);
         BIO_free(key_bio);
-        if (!evp_key) {
-            PUMP_ERR_LOG(
+        if (evp_key == nullptr) {
+            PUMP_DEBUG_LOG(
                 "ssl_helper: create tls certificate by buffer failed for PEM_read_bio_PrivateKey failed");
             SSL_CTX_free(xcred);
             X509_free(x509_cert);
@@ -178,7 +193,7 @@ namespace ssl {
         /* Set the key and cert */
         if (SSL_CTX_use_certificate(xcred, x509_cert) <= 0 ||
             SSL_CTX_use_PrivateKey(xcred, evp_key) <= 0) {
-            PUMP_ERR_LOG(
+            PUMP_DEBUG_LOG(
                 "ssl_helper: create tls certificate by buffer failed for SSL_CTX_use_PrivateKey failed");
             SSL_CTX_free(xcred);
             X509_free(x509_cert);
@@ -196,15 +211,13 @@ namespace ssl {
     }
 
     void destory_tls_certificate(void *xcred) {
+        if (xcred != nullptr) {
 #if defined(PUMP_HAVE_GNUTLS)
-        if (xcred) {
             gnutls_certificate_free_credentials((gnutls_certificate_credentials_t)xcred);
-        }
 #elif defined(PUMP_HAVE_OPENSSL)
-        if (xcred) {
             SSL_CTX_free((SSL_CTX*)xcred);
-        }
 #endif
+        }
     }
 
     tls_session* create_tls_session(
@@ -213,6 +226,9 @@ namespace ssl {
         bool client) {
 #if defined(PUMP_HAVE_GNUTLS)
         tls_session *session = object_create<tls_session>();
+        if (session == nullptr) {
+            return nullptr;
+        }
         gnutls_session_t ssl_ctx = nullptr;
         if (client) {
             gnutls_init(&ssl_ctx, GNUTLS_CLIENT | GNUTLS_NONBLOCK);
@@ -232,7 +248,14 @@ namespace ssl {
         return session;
 #elif defined(PUMP_HAVE_OPENSSL)
         tls_session *session = object_create<tls_session>();
+        if (session == nullptr) {
+            return nullptr;
+        }
         SSL *ssl_ctx = SSL_new((SSL_CTX*)xcred);
+        if (ssl_ctx == nullptr) {
+            object_delete(session);
+            return  nullptr;
+        }
         SSL_set_fd(ssl_ctx, fd);
         if (client) {
             SSL_set_connect_state(ssl_ctx);
@@ -249,19 +272,17 @@ namespace ssl {
     }
 
     void destory_tls_session(tls_session *session) {
-        if (!session) {
+        if (session == nullptr) {
             return;
         }
 
+        if (session->ssl_ctx != nullptr) {
 #if defined(PUMP_HAVE_GNUTLS)
-        if (session->ssl_ctx) {
             gnutls_deinit((gnutls_session_t)session->ssl_ctx);
-        }
 #elif defined(PUMP_HAVE_OPENSSL)
-        if (session->ssl_ctx) {
             SSL_free((SSL*)session->ssl_ctx);
-        }
 #endif
+        }
         object_delete(session);
     }
 

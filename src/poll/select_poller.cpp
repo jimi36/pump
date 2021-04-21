@@ -19,7 +19,7 @@
 namespace pump {
 namespace poll {
 
-    PUMP_INLINE static bool is_selectable(pump_socket fd) {
+    PUMP_INLINE static bool __is_selectable(pump_socket fd) {
         return fd < 1024 && fd >= 0;
     }
 
@@ -29,6 +29,8 @@ namespace poll {
         FD_ZERO(&write_fds_);
         tv_.tv_sec = 0;
         tv_.tv_usec = 0;
+#else
+        PUMP_ABORT();
 #endif
     }
 
@@ -70,7 +72,7 @@ namespace poll {
             }
 
             fd = tracker->get_fd();
-            if (!is_selectable(fd)) {
+            if (!__is_selectable(fd)) {
                 continue;
             }
 
@@ -110,7 +112,6 @@ namespace poll {
             auto tracker = beg->second.get();
             auto ch = tracker->get_channel();
             if (PUMP_UNLIKELY(!ch)) {
-                PUMP_DEBUG_LOG("select_poller: remove tracker for invalid channel");
                 trackers_.erase(beg++);
                 continue;
             }

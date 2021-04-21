@@ -40,21 +40,25 @@ namespace transport {
     int32_t tls_acceptor::start(
         service *sv, 
         const acceptor_callbacks &cbs) {
-        PUMP_DEBUG_COND_FAIL(
+        PUMP_DEBUG_FAILED_RUN(
             xcred_ == nullptr, 
+            "tls_acceptor: start failed for cert invalid",
             return ERROR_INVALID);
 
-        PUMP_DEBUG_COND_FAIL(
+        PUMP_DEBUG_FAILED_RUN(
             !__set_state(TRANSPORT_INITED, TRANSPORT_STARTING), 
+            "tls_acceptor: start failed for transport state incorrect",
             return ERROR_INVALID);
 
-        PUMP_DEBUG_COND_FAIL(
+        PUMP_DEBUG_FAILED_RUN(
             sv == nullptr, 
+            "tls_acceptor: start failed for service invalid",
             return ERROR_INVALID);
         __set_service(sv);
 
-        PUMP_DEBUG_COND_FAIL(
-            !cbs.accepted_cb || !cbs.stopped_cb, 
+        PUMP_DEBUG_FAILED_RUN(
+            !cbs.accepted_cb || !cbs.stopped_cb,
+            "tls_acceptor: start failed for callbacks invalid", 
             return ERROR_INVALID);
         cbs_ = cbs;
 
@@ -65,14 +69,12 @@ namespace transport {
         });
 
         if (!__open_accept_flow()) {
-            PUMP_ERR_LOG("tls_acceptor: start failed for opening flow failed");
-            PUMP_ASSERT(false);
+            PUMP_DEBUG_LOG("tls_acceptor: start failed for opening flow failed");
             return ERROR_FAULT;
         }
 
         if (!__start_accept_tracker(shared_from_this())) {
-            PUMP_ERR_LOG("tls_acceptor: start failed for starting tracker failed");
-            PUMP_ASSERT(false);
+            PUMP_WARN_LOG("tls_acceptor: start failed for starting tracker failed");
             return ERROR_FAULT;
         }
 
@@ -108,30 +110,36 @@ namespace transport {
                 // acceptor stopped befere here, we shuold stop handshaking.
                 handshaker->init(fd, false, xcred_, local_address, remote_address);
                 if (handshaker->start(get_service(), handshake_timeout_, handshaker_cbs)) {
-                    if (!__is_state(TRANSPORT_STARTING) &&
-                        !__is_state(TRANSPORT_STARTED)) {
-                        PUMP_DEBUG_LOG("tls_acceptor: handle read event failed for acceptor had stopped");
+                    if (!__is_state(TRANSPORT_STARTING) && !__is_state(TRANSPORT_STARTED)) {
+                        PUMP_DEBUG_LOG("tls_acceptor: handle read event failed for not in started");
                         handshaker->stop();
                     }
                 } else {
-                    PUMP_DEBUG_LOG("tls_acceptor: handle read event failed for handshaker start failed");
+                    PUMP_DEBUG_LOG(
+                        "tls_acceptor: handle read event failed for starting handshaker failed");
                     __remove_handshaker(handshaker);
                 }
             } else {
-                PUMP_DEBUG_LOG("tls_acceptor: handle read event failed for creating handshaker failed");
+                PUMP_WARN_LOG(
+                    "tls_acceptor: handle read event failed for creating handshaker failed");
                 net::close(fd);
             }
         }
 
         if (__is_state(TRANSPORT_STARTING) || __is_state(TRANSPORT_STARTED)) {
-            PUMP_DEBUG_CHECK(__resume_accept_tracker());
-            return;
+            if(__resume_accept_tracker()) {
+                return;
+            }
+            PUMP_WARN_LOG(
+                "tls_acceptor: handle read event failed for resuming tracker failed");
         }
 
+        // Stop all handshakers for cleaning.
         __stop_all_handshakers();
-
+        // Stop accept tracker for cleaning.
         __stop_accept_tracker();
 
+        // Trigger interrupt callbacks.
         __trigger_interrupt_callbacks();
     }
 
@@ -141,7 +149,6 @@ namespace transport {
         bool succ) {
         auto acceptor = wptr.lock();
         if (!acceptor) {
-            PUMP_DEBUG_LOG("tls_acceptor: handle handshaked event failed for invalid acceptor");
             handshaker->stop();
             return;
         }
@@ -165,11 +172,9 @@ namespace transport {
         tls_acceptor_wptr wptr,
         tls_handshaker *handshaker) {
         auto acceptor = wptr.lock();
-        if (!acceptor) {
-            PUMP_DEBUG_LOG("tls_acceptor: handle handshaked stopped event failed for invalid acceptor");
-            return;
+        if (acceptor) {
+            acceptor->__remove_handshaker(handshaker);
         }
-        acceptor->__remove_handshaker(handshaker);
     }
 
     bool tls_acceptor::__open_accept_flow() {
@@ -177,11 +182,12 @@ namespace transport {
         flow_.reset(
             object_create<flow::flow_tls_acceptor>(),
             object_delete<flow::flow_tls_acceptor>);
-        PUMP_DEBUG_COND_FAIL(
-            !flow_, 
-            return false);
+        if (!flow_) { 
+            PUMP_WARN_LOG("tls_acceptor: open flow failed for creating flow failed");
+            return false;
+        }
         if (flow_->init(shared_from_this(), listen_address_) != flow::FLOW_ERR_NO) {
-            PUMP_WARN_LOG("tls_acceptor: open flow failed for flow init failed");
+            PUMP_DEBUG_LOG("tls_acceptor: open flow failed for initing flow failed");
             return false;
         }
 
@@ -200,9 +206,10 @@ namespace transport {
         tls_handshaker_sptr handshaker(
             object_create<tls_handshaker>(),
             object_delete<tls_handshaker>);
-        PUMP_DEBUG_COND_FAIL(
-            !handshaker, 
-            return nullptr);
+        if (!handshaker) {
+            PUMP_WARN_LOG("tls_acceptor: create handshaker failed");
+            return nullptr;
+        }
         std::lock_guard<std::mutex> lock(handshaker_mx_);
         handshakers_[handshaker.get()] = handshaker;
         return handshaker.get();

@@ -47,12 +47,14 @@ namespace http {
     bool connection::start(
         service *sv, 
         const http_callbacks &cbs) {
-        PUMP_DEBUG_COND_FAIL(
+        PUMP_DEBUG_FAILED_RUN(
             sv == nullptr || !transp_, 
+            "http::connection: start fialed for service or transport invalid",
             return false);
 
-        PUMP_DEBUG_COND_FAIL(
+        PUMP_DEBUG_FAILED_RUN(
             !cbs.pocket_cb || !cbs.error_cb, 
+            "http::connection: start fialed for callbacks invalid",
             return false);
         http_cbs_ = cbs;
 
@@ -84,7 +86,7 @@ namespace http {
     bool connection::send(const pocket *pk) {
         auto transp = transp_;
         PUMP_ASSERT(transp);
-        if (!transp) {
+        if (transp) {
             std::string data;
             int32_t size = pk->serialize(data);
             PUMP_ASSERT(size > 0);
@@ -98,7 +100,7 @@ namespace http {
     bool connection::send(const body *b) {
         auto transp = transp_;
         PUMP_ASSERT(transp);
-        if (!transp) {
+        if (transp) {
             std::string data;
             int32_t size = b->serialize(data);
             PUMP_ASSERT(size > 0);
@@ -138,7 +140,9 @@ namespace http {
         int32_t size) {
         auto pk = incoming_pocket_.get();
         if (pk == nullptr) {
-            PUMP_ABORT((pk = create_incoming_pocket_()) == nullptr);
+            if((pk = create_incoming_pocket_()) == nullptr) {
+                return;
+            }
             incoming_pocket_.reset(pk, object_delete<pocket>);
         }
 

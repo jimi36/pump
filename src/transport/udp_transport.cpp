@@ -32,17 +32,20 @@ namespace transport {
     int32_t udp_transport::start(
         service *sv, 
         const transport_callbacks &cbs) {
-        PUMP_DEBUG_COND_FAIL(
+        PUMP_DEBUG_FAILED_RUN(
             !__set_state(TRANSPORT_INITED, TRANSPORT_STARTING), 
+            "udp_transport: start failed for transport state incorrect",
             return ERROR_INVALID);
 
-        PUMP_DEBUG_COND_FAIL(
-            sv == nullptr,  
+        PUMP_DEBUG_FAILED_RUN(
+            sv == nullptr, 
+            "udp_transport: start failed for service invalid",
             return ERROR_INVALID);
         __set_service(sv);
 
-        PUMP_DEBUG_COND_FAIL(
+        PUMP_DEBUG_FAILED_RUN(
             !cbs.read_from_cb || !cbs.stopped_cb, 
+            "udp_transport: start failed for callbacks invalid",
             return ERROR_INVALID);
         cbs_ = cbs;
 
@@ -52,8 +55,7 @@ namespace transport {
         });
 
         if (!__open_transport_flow()) {
-            PUMP_ERR_LOG("udp_transport: start failed for opening flow failed");
-            PUMP_ASSERT(false);
+            PUMP_DEBUG_LOG("udp_transport: start failed for opening flow failed");
             return ERROR_FAULT;
         }
 
@@ -98,20 +100,22 @@ namespace transport {
         const block_t *b,
         int32_t size,
         const address &address) {
-        PUMP_DEBUG_COND_FAIL(
-            b == nullptr || size <= 0,  
+        PUMP_DEBUG_FAILED_RUN(
+            b == nullptr || size <= 0, 
+            "udp_transport: send failed for buffer invalid",
             return ERROR_INVALID);
 
         if (PUMP_UNLIKELY(!__is_state(TRANSPORT_STARTED))) {
-            PUMP_ERR_LOG("udp_transport: send failed for transport no statred");
+            PUMP_DEBUG_LOG("udp_transport: send failed for not in statred");
             return ERROR_UNSTART;
         }
 
-        if (PUMP_LIKELY(flow_->send(b, size, address) > 0)) {
-            return ERROR_OK;
+        if (PUMP_UNLIKELY(flow_->send(b, size, address) < 0)) {
+            PUMP_DEBUG_LOG("udp_transport: send failed");
+            return ERROR_AGAIN;
         }
 
-        return ERROR_AGAIN;
+        return ERROR_OK;
     }
 
     void udp_transport::on_read_event() {
@@ -144,18 +148,22 @@ namespace transport {
             return;
         }
 
-        PUMP_DEBUG_CHECK(__resume_read_tracker());
+        if (!__resume_read_tracker()) {
+            PUMP_WARN_LOG("udp_transport: handle read event failed for resuming tracker failed");
+        }
     }
 
     bool udp_transport::__open_transport_flow() {
         // Init udp transport flow.
-        PUMP_ASSERT(!flow_);
         flow_.reset(
             object_create<flow::flow_udp>(), 
             object_delete<flow::flow_udp>);
-
+        if (!flow_) {
+            PUMP_WARN_LOG("udp_transport: open flow failed for creating flow failed");
+            return false;
+        }
         if (flow_->init(shared_from_this(), local_address_) != flow::FLOW_ERR_NO) {
-            PUMP_ERR_LOG("udp_transport: open transport flow failed for flow init failed");
+            PUMP_DEBUG_LOG("udp_transport: open flow failed for initing flow failed");
             return false;
         }
 
@@ -174,7 +182,7 @@ namespace transport {
         }
 
         if (!__start_read_tracker()) {
-            PUMP_ERR_LOG("udp_transport: async read failed for starting read tracker fialed");
+            PUMP_WARN_LOG("udp_transport: async read failed for starting tracker failed");
             return ERROR_FAULT;
         }
 

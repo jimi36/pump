@@ -8,7 +8,7 @@ int main(int argc, const char **argv) {
 
     pump::init();
 
-    pump::service_ptr sv = new pump::service;
+    pump::service *sv = new pump::service;
     sv->start();
 
     std::string type = argv[1];

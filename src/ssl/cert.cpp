@@ -71,7 +71,6 @@ namespace ssl {
                     break;
                 }
                 if (eckey == nullptr) {
-                    PUMP_WARN_LOG("generate_x509_certificate: new ec key failed");
                     break;
                 }
                 EC_KEY_set_asn1_flag(eckey, OPENSSL_EC_NAMED_CURVE);
@@ -79,6 +78,7 @@ namespace ssl {
 
                 EVP_PKEY *pkey = EVP_PKEY_new();
                 if (pkey == nullptr) {
+                    PUMP_DEBUG_LOG("generate_x509_certificate: EVP_PKEY_new failed");
                     EC_KEY_free(eckey);
                     break;
                 }
@@ -137,6 +137,7 @@ namespace ssl {
             BUF_MEM *buf = nullptr;
             BIO_get_mem_ptr(bio, &buf);
             if (buf == nullptr) {
+                BIO_free(bio);
                 break;
             }
             out.assign(buf->data, buf->length);
@@ -299,15 +300,10 @@ namespace ssl {
 
     bool has_x509_scts(x509_certificate *xcert) {
 #if defined(PUMP_HAVE_OPENSSL)
-        if (X509_get_ext_by_NID(
-                xcert->cert, 
-                NID_ct_precert_scts, 
-                -1) 
-            >= 0) {
-            return true;
-        }
-#endif
+       return X509_get_ext_by_NID(xcert->cert, NID_ct_precert_scts, -1) >= 0;
+#else
         return false;
+#endif
     }
 
     bool get_x509_scts(

@@ -287,12 +287,12 @@ namespace transport {
                             poll::TRACK_READ);
                 r_tracker_.reset(tracker, object_delete<poll::channel_tracker>);
                 if (!get_service()->add_channel_tracker(r_tracker_, READ_POLLER_ID)) {
-                    PUMP_WARN_LOG("base_transport: start read tracker failed");
+                    PUMP_DEBUG_LOG("base_transport: start read tracker failed");
                     return false;
                 }
             } else {
                 if (!tracker->get_poller()->resume_channel_tracker(tracker)) {
-                    PUMP_WARN_LOG("base_transport: resume read tracker failed");
+                    PUMP_DEBUG_LOG("base_transport: resume read tracker failed");
                     return false;
                 }
             }
@@ -306,12 +306,12 @@ namespace transport {
                             poll::TRACK_SEND);
                 s_tracker_.reset(tracker, object_delete<poll::channel_tracker>);
                 if (!get_service()->add_channel_tracker(s_tracker_, SEND_POLLER_ID)) {
-                    PUMP_WARN_LOG("base_transport: start send tracker failed");
+                    PUMP_DEBUG_LOG("base_transport: start send tracker failed");
                     return false;
                 }
             } else {
                 if (!tracker->get_poller()->resume_channel_tracker(tracker)) {
-                    PUMP_WARN_LOG("base_transport: resume send tracker failed");
+                    PUMP_DEBUG_LOG("base_transport: resume send tracker failed");
                     return false;
                 }
             }

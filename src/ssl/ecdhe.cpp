@@ -42,7 +42,6 @@ namespace ssl {
         } else if (curve == TLS_CURVE_P521) {
             return NID_secp521r1;
         }
-        PUMP_DEBUG_LOG("curve group to curve id failed %d", curve);
         return -1;
     }
 
@@ -60,18 +59,16 @@ namespace ssl {
             return nullptr;
         }
         
-        if ((pctx = EVP_PKEY_CTX_new_id(NID_X25519, nullptr)) == nullptr) {
-            goto end;
-        }
-        if (EVP_PKEY_keygen_init(pctx) == 0) {
-            goto end;
-        }
-        if (EVP_PKEY_keygen(pctx, &pkey) == 0) {
+        pctx = EVP_PKEY_CTX_new_id(NID_X25519, nullptr);
+        if (pctx == nullptr ||
+            EVP_PKEY_keygen_init(pctx) == 0 || 
+            EVP_PKEY_keygen(pctx, &pkey) == 0) {
             goto end;
         }
 
         bio = BIO_new(BIO_s_mem());
-        if (PEM_write_bio_PrivateKey(bio, pkey, nullptr, nullptr, 0, nullptr, nullptr) == 0) {
+        if (bio == nullptr ||
+            PEM_write_bio_PrivateKey(bio, pkey, nullptr, nullptr, 0, nullptr, nullptr) == 0) {
             goto end;
         }
         len = BIO_get_mem_data(bio, &pb);
@@ -79,7 +76,8 @@ namespace ssl {
         BIO_free(bio);
 
         bio = BIO_new(BIO_s_mem());
-        if (PEM_write_bio_PUBKEY(bio, pkey) == 0) {
+        if (bio == nullptr ||
+            PEM_write_bio_PUBKEY(bio, pkey) == 0) {
             goto end;
         }
         len = BIO_get_mem_data(bio, &pb);
@@ -120,32 +118,34 @@ namespace ssl {
 
         // Load peer public key.
         bio = BIO_new_mem_buf(pubkey.data(), (int32_t)pubkey.size());
-        if ((pub_key = PEM_read_bio_PUBKEY(bio, nullptr, nullptr, nullptr)) == nullptr) {
+        if (bio == nullptr ||
+            (pub_key = PEM_read_bio_PUBKEY(bio, nullptr, nullptr, nullptr)) == nullptr) {
             goto end;
         }
         BIO_free(bio);
 
         // Load private key.
         bio = BIO_new_mem_buf(ctx->prikey.data(), (int32_t)ctx->prikey.size());
-        if ((pri_key = PEM_read_bio_PrivateKey(bio, nullptr, nullptr, nullptr)) == nullptr) {
+        if (bio == nullptr ||
+            (pri_key = PEM_read_bio_PrivateKey(bio, nullptr, nullptr, nullptr)) == nullptr) {
             goto end;
         }
 
-        if ((pctx = EVP_PKEY_CTX_new(pri_key, nullptr)) == nullptr) {
-            goto end;
-        }
-        if (EVP_PKEY_derive_init(pctx) != 1 ||
-            EVP_PKEY_derive_set_peer(pctx, pub_key) != 1) {
+        pctx = EVP_PKEY_CTX_new(pri_key, nullptr);
+        if (pctx == nullptr ||
+            EVP_PKEY_derive_init(pctx) != 1 ||
+            EVP_PKEY_derive_set_peer(pctx, pub_key) != 1 || 
+            EVP_PKEY_derive(pctx, nullptr, &shared_key_len) != 1) {
             goto end;
         }
 
-        if (EVP_PKEY_derive(pctx, nullptr, &shared_key_len) != 1) {
-            goto end;
-        }
         shared_key.resize(shared_key_len);
         if (EVP_PKEY_derive(pctx, (uint8_t*)shared_key.data(), &shared_key_len) != 1) {
             goto end;
 	    }
+        if (shared_key.size() != shared_key_len) {
+            shared_key.resize(shared_key_len);
+        }
 
       end:
         if (bio) {
@@ -180,15 +180,12 @@ namespace ssl {
         if ((key = EC_KEY_new_by_curve_name(__to_ssl_curve_id(curve))) == nullptr) {
             goto end;
         }
-
         if (EC_KEY_generate_key(key) <= 0) {
             goto end;
         }
-
         if ((group = EC_KEY_get0_group(key)) == nullptr) {
             goto end;
         }
-
         if ((point = EC_KEY_get0_public_key(key)) == nullptr) {
             goto end;
         }
@@ -237,11 +234,9 @@ namespace ssl {
         if ((key = EC_KEY_new_by_curve_name(__to_ssl_curve_id(ctx->group))) == nullptr) {
             return shared_key;
         }
-
         if ((group = EC_KEY_get0_group(key)) == nullptr) {
             goto end;
         }
-
         /* 1==> Set ecdh1's public and privat key. */
         if ((p_ecdh1_public = EC_POINT_new(group)) == nullptr) {
             goto end;

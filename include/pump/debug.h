@@ -24,6 +24,9 @@
 // Pump assert
 #define PUMP_ASSERT(x) assert(x)
 
+// Pump static assert
+#define PUMP_STATIC_ASSERT(x, msg) static_assert((x), msg)
+
 // Pump debug check
 #if defined(NDEBUG)
 #define PUMP_DEBUG_CHECK(x) x
@@ -38,19 +41,21 @@
 #define PUMP_DEBUG_COND_CHECK(x, cmp, val) PUMP_ASSERT((x) cmp val)
 #endif
 
-// Pump debug assign
-#define PUMP_DEBUG_COND_FAIL(c, x) \
-    if (c) { \
+// Pump debug condition fail
+#define PUMP_DEBUG_FAILED_RUN(c, log, x) \
+    if (PUMP_UNLIKELY(c)) { \
+        PUMP_DEBUG_LOG(log); \
         PUMP_ASSERT(false); \
         x; \
     }
 
-// Pump static assert
-#define PUMP_STATIC_ASSERT(x, msg) static_assert((x), msg)
-
 // Pump abort
-#define PUMP_ABORT(x) \
+#define PUMP_ABORT() abort()
+
+// Pump condition abort
+#define PUMP_COND_ABORT(x, log) \
     if (x) { \
+        PUMP_ERR_LOG(log); \
         abort(); \
     }
 

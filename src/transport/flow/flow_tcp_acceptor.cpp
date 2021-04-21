@@ -34,8 +34,9 @@ namespace flow {
     int32_t flow_tcp_acceptor::init(
         poll::channel_sptr &&ch, 
         const address &listen_address) {
-        PUMP_DEBUG_COND_FAIL(
+        PUMP_DEBUG_FAILED_RUN(
             !ch, 
+            "flow_tcp_acceptor: init failed for channel invalid",
             return FLOW_ERR_ABORT);
         ch_ = ch;
 
@@ -81,7 +82,9 @@ namespace flow {
         int32_t addrlen = ADDRESS_MAX_LEN;
         pump_socket client_fd = net::accept(fd_, (struct sockaddr*)iob_->buffer(), &addrlen);
         if (client_fd == INVALID_SOCKET) {
-            PUMP_DEBUG_LOG("flow_tcp_acceptor: accept failed");
+            PUMP_DEBUG_LOG(
+                "flow_tcp_acceptor: accept failed for %d", 
+                net::last_errno());
             return -1;
         }
             
@@ -93,7 +96,8 @@ namespace flow {
 
         if (!net::set_noblock(client_fd, 1) || 
             !net::set_nodelay(client_fd, 1)) {
-            PUMP_DEBUG_LOG("flow_tcp_acceptor: accept failed for setting socket noblock or nodelay fialed");
+            PUMP_DEBUG_LOG(
+                "flow_tcp_acceptor: accept failed for setting noblock or nodelay failed");
             net::close(client_fd);
             return -1;
         }

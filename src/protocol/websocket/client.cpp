@@ -39,17 +39,20 @@ namespace websocket {
     bool client::start(
         service *sv, 
         const client_callbacks &cbs) {
-        PUMP_DEBUG_COND_FAIL(
+        PUMP_DEBUG_FAILED_RUN(
             started_.exchange(true),
+            "websocket::client: start failed for already started",
             return false)
 
-        PUMP_DEBUG_COND_FAIL(
+        PUMP_DEBUG_FAILED_RUN(
             sv == nullptr, 
+            "websocket::client: start failed for service invalid",
             return false);
         sv_ = sv;
 
-        PUMP_DEBUG_COND_FAIL(
+        PUMP_DEBUG_FAILED_RUN(
             !cbs.started_cb ||!cbs.data_cb || !cbs.error_cb,
+            "websocket::client: start failed for callbacks invalid",
             return false);
         cbs_ = cbs;
 

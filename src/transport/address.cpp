@@ -49,16 +49,20 @@ namespace transport {
     bool address::set(
         const std::string &ip, 
         uint16_t port) {
-        if (net::string_to_address(ip, port, (struct sockaddr*)addr_, &addrlen_)) {
-            if (addrlen_ == sizeof(struct sockaddr_in6)) {
-                is_v6_ = true;
-            } else {
-                is_v6_ = false;
-            }
-        } else {
+        if (!net::string_to_address(
+                ip, 
+                port, 
+                (struct sockaddr*)addr_, 
+                &addrlen_)) {
             return false;
         }
 
+        if (addrlen_ == sizeof(struct sockaddr_in6)) {
+            is_v6_ = true;
+        } else {
+            is_v6_ = false;
+        }
+        
         return true;
     }
 

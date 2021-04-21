@@ -53,24 +53,23 @@ namespace ssl {
             return false;
         }
 
-        if ((pctx = EVP_PKEY_CTX_new_id(EVP_PKEY_HKDF, nullptr)) == nullptr) {
-            goto end;
-        }
-
-        if (EVP_PKEY_derive_init(pctx) != 1 ||
+        pctx = EVP_PKEY_CTX_new_id(EVP_PKEY_HKDF, nullptr);
+        if (pctx == nullptr ||
+            EVP_PKEY_derive_init(pctx) != 1 ||
             EVP_PKEY_CTX_hkdf_mode(pctx, EVP_PKEY_HKDEF_MODE_EXTRACT_ONLY) != 1 ||
             EVP_PKEY_CTX_set_hkdf_md(pctx, new_md_func()) != 1 ||
             EVP_PKEY_CTX_set1_hkdf_salt(pctx, salt.data(), (int32_t)salt.size()) != 1 ||
-            EVP_PKEY_CTX_set1_hkdf_key(pctx, key.data(), (int32_t)key.size()) != 1) {
+            EVP_PKEY_CTX_set1_hkdf_key(pctx, key.data(), (int32_t)key.size()) != 1 || 
+            EVP_PKEY_derive(pctx, nullptr, &out_len) != 1) {
             goto end;
         }
 
-        if (EVP_PKEY_derive(pctx, nullptr, &out_len) != 1) {
-            goto end;
-        }
         out.resize(out_len);
         if (EVP_PKEY_derive(pctx, (uint8_t*)out.data(), &out_len) != 1) {
             goto end;
+        }
+        if (out.size() != out_len) {
+            out.resize(out_len);
         }
 
         ret = true;
@@ -101,12 +100,10 @@ namespace ssl {
         } else {
             return false;
         }
-        
-        if ((pctx = EVP_PKEY_CTX_new_id(EVP_PKEY_HKDF, NULL)) == nullptr) {
-            return false;
-        }
 
-        if (EVP_PKEY_derive_init(pctx) != 1 ||
+        pctx = EVP_PKEY_CTX_new_id(EVP_PKEY_HKDF, nullptr);
+        if (pctx == nullptr ||
+            EVP_PKEY_derive_init(pctx) != 1 ||
             EVP_PKEY_CTX_hkdf_mode(pctx, EVP_PKEY_HKDEF_MODE_EXPAND_ONLY) != 1 ||
             EVP_PKEY_CTX_set_hkdf_md(pctx, new_md_func()) != 1 ||
             EVP_PKEY_CTX_set1_hkdf_key(pctx, key.data(), (int32_t)key.size()) != 1 ||

@@ -31,25 +31,23 @@ namespace transport {
         tracker_.reset(
             object_create<poll::channel_tracker>(ch, poll::TRACK_SEND),
             object_delete<poll::channel_tracker>);
-        PUMP_DEBUG_COND_FAIL(
-            !tracker_, 
-            return false);
+        if (!tracker_) {
+            PUMP_WARN_LOG("base_dialer: start tracker failed for creating tracker");
+            return false;
+        }
         if (!get_service()->add_channel_tracker(tracker_, SEND_POLLER_ID)) {
-            PUMP_WARN_LOG("base_dialer: start tracker failed");
+            PUMP_WARN_LOG("base_dialer: start tracker failed for adding tracker");
             return false;
         }
 
-        PUMP_DEBUG_LOG("base_dialer: start tracker");
         return true;
     }
 
     void base_dialer::__stop_dial_tracker() {
         auto tracker = tracker_;
-        if (!tracker) {
-            return;
+        if (tracker) {
+            get_service()->remove_channel_tracker(tracker, SEND_POLLER_ID);
         }
-        get_service()->remove_channel_tracker(tracker, SEND_POLLER_ID);
-        PUMP_DEBUG_LOG("base_dialer: stop tracker");
     }
 
     bool base_dialer::__start_dial_timer(const time::timer_callback &cb) {
@@ -58,9 +56,10 @@ namespace transport {
         }
 
         connect_timer_ = time::timer::create(connect_timeout_, cb);
-        PUMP_DEBUG_COND_FAIL(
-            !connect_timer_, 
-            return false);
+        if (!connect_timer_) {
+            PUMP_WARN_LOG("base_dialer: start dial timer failed for creating timer");
+            return false;
+        }
 
         return get_service()->start_timer(connect_timer_);
     }

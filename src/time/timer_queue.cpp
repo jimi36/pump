@@ -33,14 +33,19 @@ namespace time {
         if (!started_.load()) {
             started_.store(true);
 
-            PUMP_DEBUG_COND_FAIL(
+            PUMP_DEBUG_FAILED_RUN(
                 !cb,
+                "timer_queue: start failed for callback invalid",
                 return false);
             pending_cb_ = cb;
 
             observer_.reset(
                 object_create<std::thread>(pump_bind(&timer_queue::__observe_thread, this)),
                 object_delete<std::thread>);
+            if (!observer_) {
+                PUMP_WARN_LOG("timer_queue: start failed for creating observer thread failed");
+                started_.store(false);
+            }
         }
 
         return started_.load();
@@ -53,24 +58,27 @@ namespace time {
     }
 
     bool timer_queue::start_timer(timer_sptr &ptr) {
-        if (!started_.load()) {
+        if (PUMP_UNLIKELY(!started_.load())) {
+            PUMP_DEBUG_LOG("timer_queue: start timer failed for no statred");
             return false;
         }
-        if (!ptr->__start(this)) {
+        if (PUMP_UNLIKELY(!ptr->__start(this))) {
+            PUMP_DEBUG_LOG("timer_queue: start timer failed");
             return false;
         }
-        
-        PUMP_DEBUG_CHECK(new_timers_.enqueue(ptr));
-
+        PUMP_COND_ABORT(!new_timers_.enqueue(ptr),
+            "timer_queue: start timer failed for pushing to queue failed");
         return true;
     }
 
     bool timer_queue::restart_timer(timer_sptr &&ptr) {
-        if (started_.load()) {
-            PUMP_DEBUG_CHECK(new_timers_.enqueue(std::move(ptr)));
-            return true;
+        if (PUMP_UNLIKELY(!started_.load())) {
+            PUMP_DEBUG_LOG("timer_queue: restart timer failed for no started");
+            return false;
         }
-        return false;
+        PUMP_COND_ABORT(!new_timers_.enqueue(std::move(ptr)),
+            "timer_queue: restart timer failed for pushing to queue failed");
+        return true;
     }
 
     void timer_queue::__observe_thread() {

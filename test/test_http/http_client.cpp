@@ -2,9 +2,9 @@
 
 #include "http.h"
 
-int loop = 100;
+int loop = 1;
 
-void start_http_client(pump::service_ptr sv, const std::vector<std::string> &urls) {
+void start_http_client(pump::service *sv, const std::vector<std::string> &urls) {
     http::client_sptr cli = http::client::create(sv);
 
     for (int ii = 0; ii < (int)urls.size(); ii++) {

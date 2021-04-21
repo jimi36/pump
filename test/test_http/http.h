@@ -11,8 +11,8 @@
 
 using namespace pump::protocol;
 
-void start_http_client(pump::service_ptr sv, const std::vector<std::string> &urls);
+void start_http_client(pump::service *sv, const std::vector<std::string> &urls);
 
-void start_http_server(pump::service_ptr sv, const std::string &ip, int port);
+void start_http_server(pump::service *sv, const std::string &ip, int port);
 
 #endif

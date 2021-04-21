@@ -45,14 +45,12 @@ namespace transport {
             __stop_read_tracker();
             __stop_send_tracker();
             __close_transport_flow();
-
             cbs_.disconnected_cb();
 
         } else if (__set_state(TRANSPORT_STOPPING, TRANSPORT_STOPPED)) {
             __stop_read_tracker();
             __stop_send_tracker();
             __close_transport_flow();
-
             cbs_.stopped_cb();
 
         }
