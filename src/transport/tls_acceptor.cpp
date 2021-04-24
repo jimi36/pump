@@ -40,23 +40,23 @@ namespace transport {
     int32_t tls_acceptor::start(
         service *sv, 
         const acceptor_callbacks &cbs) {
-        PUMP_DEBUG_FAILED_RUN(
+        PUMP_DEBUG_FAILED(
             xcred_ == nullptr, 
             "tls_acceptor: start failed for cert invalid",
             return ERROR_INVALID);
 
-        PUMP_DEBUG_FAILED_RUN(
+        PUMP_DEBUG_FAILED(
             !__set_state(TRANSPORT_INITED, TRANSPORT_STARTING), 
             "tls_acceptor: start failed for transport state incorrect",
             return ERROR_INVALID);
 
-        PUMP_DEBUG_FAILED_RUN(
+        PUMP_DEBUG_FAILED(
             sv == nullptr, 
             "tls_acceptor: start failed for service invalid",
             return ERROR_INVALID);
         __set_service(sv);
 
-        PUMP_DEBUG_FAILED_RUN(
+        PUMP_DEBUG_FAILED(
             !cbs.accepted_cb || !cbs.stopped_cb,
             "tls_acceptor: start failed for callbacks invalid", 
             return ERROR_INVALID);
@@ -138,7 +138,6 @@ namespace transport {
         __stop_all_handshakers();
         // Stop accept tracker for cleaning.
         __stop_accept_tracker();
-
         // Trigger interrupt callbacks.
         __trigger_interrupt_callbacks();
     }

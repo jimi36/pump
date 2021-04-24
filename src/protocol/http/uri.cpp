@@ -21,7 +21,7 @@ namespace pump {
 namespace protocol {
 namespace http {
 
-    const std::vector<std::string> uri_class_names = {
+    const std::vector<std::string> uri_protocol_names = {
         "", 
         "http", 
         "https", 
@@ -29,36 +29,39 @@ namespace http {
         "wss"
     };
 
-    const std::string& get_uri_class_name(uri_class uc) {
-        return uri_class_names[uc];
+    const std::string& get_uri_protocol_name(uri_protocol uc) {
+        return uri_protocol_names[uc];
     }
 
     bool parse_url(
         const std::string &url,
-        uri_class &uc,
+        uri_protocol &proto,
         std::string &host,
         std::string &path,
         std::map<std::string, std::string> &params) {
-        std::string suc;
+        std::string proto_name;
         {
             auto result = split_string(url, "[:]");
             if (result.size() >= 2) {
-                suc = result[0];
+                proto_name = result[0];
             } else {
-                suc = "https";
+                proto_name = "https";
             }
         }
 
         const block_t *p = url.c_str();
-        for (uc = URI_HTTP; uc < URI_END; uc++) {
-            const std::string &uc_name = get_uri_class_name(uc);
-            if (pump_strncasecmp(uc_name.c_str(), suc.c_str(), suc.size()) == 0) {
-                p += uc_name.size();
+        for (proto = URI_HTTP; proto < URI_END; proto++) {
+            const std::string &name = get_uri_protocol_name(proto);
+            if (pump_strncasecmp(
+                    name.c_str(), 
+                    proto_name.c_str(), 
+                    proto_name.size()) == 0) {
+                p += name.size();
                 break;
             }
         }
-        if (uc == URI_END) {
-            uc = UIR_UNKNOWN;
+        if (proto == URI_END) {
+            proto = UIR_UNKNOWN;
             return false;
         }
 
@@ -68,20 +71,22 @@ namespace http {
         p += 3;
 
         const block_t *end = strstr(p, "/");
-        if (!end) {
+        if (end == nullptr) {
             host.assign(p);
             path.assign("/");
             return true;
+        } else {
+            host.assign(p, end);
         }
-        host.assign(p, end);
         p = end;
 
         end = strstr(p, "?");
-        if (!end) {
+        if (end == nullptr) {
             path.assign(p);
             return true;
+        } else {
+            path.assign(p, end);
         }
-        path.assign(p, end);
         p = end + 1;
 
         std::string new_params;
@@ -89,7 +94,6 @@ namespace http {
         if (!url_decode(raw_params, new_params)) {
             return false;
         }
-
         auto kvs = split_string(new_params, "[=&]");
         uint32_t cnt = (uint32_t)kvs.size();
         if (cnt % 2 != 0) {
@@ -103,7 +107,7 @@ namespace http {
     }
 
     uri::uri() noexcept
-      : uc_(UIR_UNKNOWN) {
+      : proto_(UIR_UNKNOWN) {
     }
 
     uri::uri(const std::string &url) noexcept {
@@ -111,14 +115,14 @@ namespace http {
     }
 
     void uri::reset() {
-        uc_ = UIR_UNKNOWN;
+        proto_ = UIR_UNKNOWN;
         params_.clear();
         host_.clear();
         path_.clear();
     }
 
     bool uri::parse(const std::string &url) {
-        return parse_url(url, uc_, host_, path_, params_);
+        return parse_url(url, proto_, host_, path_, params_);
     }
 
     bool uri::get_param(
@@ -133,27 +137,27 @@ namespace http {
     }
 
     std::string uri::to_url() const {
-        if (uc_ == UIR_UNKNOWN || uc_ == URI_END) {
+        if (proto_ <= UIR_UNKNOWN || proto_ >= URI_END) {
             return std::string();
+        }
+
+        std::string raw_url;
+        raw_url = get_uri_protocol_name(proto_) + "://" + host_ + path_;
+
+        std::vector<std::string> param_val;
+        for (auto p : params_) {
+            param_val.push_back(p.first + "=" + p.second);
+        }
+        if (!param_val.empty()) {
+            raw_url += "?" + join_strings(param_val, "&");
         }
 
         std::string url;
-        url = get_uri_class_name(uc_) + "://" + host_ + path_;
-
-        std::vector<std::string> tmps;
-        for (auto p : params_) {
-            tmps.push_back(p.first + "=" + p.second);
-        }
-        if (!tmps.empty()) {
-            url += "?" + join_strings(tmps, "&");
-        }
-
-        std::string en_url;
-        if (!url_encode(url, en_url)) {
+        if (!url_encode(raw_url, url)) {
             return std::string();
         }
 
-        return en_url;
+        return url;
     }
 
 }  // namespace http

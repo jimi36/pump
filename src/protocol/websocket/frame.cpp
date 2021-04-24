@@ -111,7 +111,7 @@ namespace websocket {
             }
         }
 
-        return int32_t(r.used_bc() / 8);
+        return int32_t(r.read_bc() / 8);
     }
 
     int32_t encode_frame_header(
@@ -150,7 +150,7 @@ namespace websocket {
             }
         }
 
-        return w.used_bc() / 8;
+        return w.written_bc() / 8;
     }
 
     void mask_transform(

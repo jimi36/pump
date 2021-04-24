@@ -30,9 +30,9 @@ namespace flow {
         return fd;
     }
 
-    void flow_base::shutdown() {
+    void flow_base::shutdown(int32_t how) {
         if (fd_ > 0) {
-            net::shutdown(fd_);
+            net::shutdown(fd_, how);
         }
     }
 

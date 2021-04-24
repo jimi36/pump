@@ -34,15 +34,11 @@ namespace websocket {
         bool has_mask) noexcept
       : sv_(sv),
         transp_(transp),
-        rt_(READ_NONE),
+        read_category_(READ_NONE),
+        cahce_(nullptr),
         has_mask_(has_mask),
         decode_phase_(DECODE_FRAME_HEADER) {
-        if (has_mask_) {
-            *(uint32_t*)(mask_key_) = (uint32_t)::time(0);
-        } else {
-            memset(mask_key_, 0, sizeof(mask_key_));
-        }
-
+        *(uint32_t*)(mask_key_) = (uint32_t)::time(0);
         closed_.clear();
     }
 
@@ -50,16 +46,46 @@ namespace websocket {
         bool client, 
         const upgrade_callbacks &ucbs) {
         auto transp = transp_;
-        PUMP_DEBUG_FAILED_RUN(
+        PUMP_DEBUG_FAILED(
             !transp || transp->is_started(),
             "websocket::connection: start upgrade failed for transport invalid or already started",
             return false);
 
-        PUMP_DEBUG_FAILED_RUN (
+        PUMP_DEBUG_FAILED (
             !ucbs.pocket_cb || !ucbs.error_cb,
             "websocket::connection: start upgrade failed for callbacks invalid",
             return false);
         ucbs_ = ucbs;
+
+        PUMP_DEBUG_FAILED(
+            cahce_ != nullptr,
+            "websocket::connection: start upgrade failed for cahce already exists",
+            return false);
+
+        if ((cahce_ = toolkit::io_buffer::create()) == nullptr) {
+            PUMP_WARN_LOG("websocket::connection: start upgrade failed for creating cache failed");
+            return false;
+        }
+
+        if (client) {
+            pocket_.reset(
+                object_create<http::response>(), 
+                object_delete<http::response>);
+        } else {
+            pocket_.reset(
+                object_create<http::request>(), 
+                object_delete<http::request>);
+        }
+        if (!pocket_) {
+            PUMP_WARN_LOG("websocket::connection: start upgrade failed for creating pocket failed");
+            return false;
+        }
+
+        PUMP_DEBUG_FAILED (
+            read_category_ != READ_NONE,
+            "websocket::connection: start failed for read type incorrect",
+            return false);
+        read_category_ = READ_POCKET;
 
         transport::transport_callbacks tcbs;
         connection_wptr wptr = shared_from_this();
@@ -67,18 +93,11 @@ namespace websocket {
         tcbs.stopped_cb = pump_bind(&connection::on_stopped, wptr);
         tcbs.disconnected_cb = pump_bind(&connection::on_disconnected, wptr);
         if (transp->start(sv_, tcbs) != transport::ERROR_OK) {
+            PUMP_DEBUG_LOG("websocket::connection: start upgrade failed for starting transport failed");
             return false;
         }
-
-        rt_ = READ_POCKET;
-
-        if (client) {
-            pocket_.reset(new http::response);
-        } else {
-            pocket_.reset(new http::request);
-        }
-
         if (transp->read_for_once() != transport::ERROR_OK) {
+            PUMP_DEBUG_LOG("websocket::connection: start upgrade failed for reading once failed");
             return false;
         }
 
@@ -86,23 +105,26 @@ namespace websocket {
     }
 
     bool connection::start(const connection_callbacks &cbs) {
-        PUMP_ASSERT(!pocket_);
-        PUMP_ASSERT(decode_phase_ == DECODE_FRAME_HEADER);
-
         auto transp = transp_;
-        if (!transp || !transp->is_started()) {
-            return false;
-        }
+        PUMP_DEBUG_FAILED(
+            !transp || !transp->is_started(),
+            "websocket::connection: start failed for transport invalid",
+            return false);
 
-        if (!cbs.frame_cb || !cbs.error_cb) {
-            return false;
-        }
-
+        PUMP_DEBUG_FAILED(
+            !cbs.frame_cb || !cbs.error_cb,
+            "websocket::connection: start failed for callbacks invalid",
+            return false);
         cbs_ = cbs;
 
-        rt_ = READ_FRAME;
+        PUMP_DEBUG_FAILED (
+            read_category_ != READ_POCKET,
+            "websocket::connection: start failed for read type incorrect",
+            return false);
+        read_category_ = READ_FRAME;
 
         if (transp->read_for_loop() != transport::ERROR_OK) {
+            PUMP_DEBUG_LOG("websocket::connection: start failed for reading once failed");
             return false;
         }
 
@@ -123,33 +145,17 @@ namespace websocket {
         }
     }
 
-    bool connection::async_read_next_frame() {
-        PUMP_ASSERT(!pocket_);
-        PUMP_ASSERT(decode_phase_ == DECODE_FRAME_HEADER);
-
-        auto transp = transp_;
-        if (!transp || !transp->is_started()) {
-            return false;
-        }
-
-        rt_ = READ_FRAME;
-
-        if (transp->read_for_once() != transport::ERROR_OK) {
-            return false;
-        }
-
-        return true;
-    }
-
-    bool connection::send_raw(
+    bool connection::send(
         const block_t *b, 
         int32_t size) {
         auto transp = transp_;
         if (!transp || !transp->is_started()) {
+            PUMP_DEBUG_LOG("websocket::connection: send failed for transport invalid");
             return false;
         }
 
         if (transp->send(b, size) != transport::ERROR_OK) {
+            PUMP_DEBUG_LOG("websocket::connection: send failed for transport sending failed");
             return false;
         }
 
@@ -161,6 +167,7 @@ namespace websocket {
         int32_t size) {
         auto transp = transp_;
         if (!transp || !transp->is_started()) {
+            PUMP_DEBUG_LOG("websocket::connection: send frame failed for transport invalid");
             return false;
         }
 
@@ -169,21 +176,26 @@ namespace websocket {
         int32_t hdr_size = get_frame_header_size(&hdr);
 
         // Encode frame header
-        std::string buffer(hdr_size, 0);
+        std::string buffer(hdr_size + size, 0);
         if (encode_frame_header(&hdr, (block_t*)buffer.c_str(), hdr_size) == 0) {
-            PUMP_ASSERT(false);
+            PUMP_DEBUG_LOG("websocket::connection: send frame failed for encoding frame header failed");
+            return false;
         }
 
-        // Append frame payload
-        buffer.append(b, size);
-        // Make mask payload data if having mask
+        // Copy frame payload
+        memcpy((void*)(buffer.data() + hdr_size), b, size);
+
+        // Mark payload data if having mask
         if (has_mask_) {
-            mask_transform((uint8_t*)(buffer.data() + hdr_size), size, mask_key_);
+            mask_transform(
+                (uint8_t*)(buffer.data() + hdr_size), 
+                size, 
+                mask_key_);
         }
 
         // Send frame
-        if (transp->send(buffer.c_str(), (int32_t)buffer.size()) !=
-            transport::ERROR_OK) {
+        if (transp->send(buffer.c_str(), (int32_t)buffer.size()) != transport::ERROR_OK) {
+            PUMP_DEBUG_LOG("websocket::connection: send frame failed for transport sending failed");
             return false;
         }
 
@@ -196,17 +208,22 @@ namespace websocket {
         int32_t size) {
         auto conn = wptr.lock();
         if (conn) {
-            if (!conn->read_cache_.empty()) {
-                conn->read_cache_.append(b, size);
-                b = conn->read_cache_.data();
-                size = (int32_t)conn->read_cache_.size();
+            if (conn->cahce_->data_size() > 0) {
+                if (!conn->cahce_->append(b, size)) {
+                    PUMP_WARN_LOG("websocket::connection: read failed for cache appending failed");
+                    return;
+                }
+                b = conn->cahce_->data();
+                size = (int32_t)conn->cahce_->data_size();
             }
 
             int32_t used_size = -1;
-            if (conn->rt_ == READ_FRAME) {
+            if (conn->read_category_ == READ_FRAME) {
                 used_size = conn->__handle_frame(b, size);
-            } else if (conn->rt_ > READ_FRAME) {
+            } else if (conn->read_category_ == READ_POCKET) {
                 used_size = conn->__handle_pocket(b, size);
+            } else {
+                PUMP_ABORT();
             }
 
             if (used_size < 0) {
@@ -214,12 +231,12 @@ namespace websocket {
                 return;
             }
 
-            if (conn->read_cache_.empty()) {
+            if (conn->cahce_->data_size() == 0) {
                 if (size > used_size) {
-                    conn->read_cache_.append(b + used_size, size - used_size);
+                    conn->cahce_->append(b + used_size, size - used_size);
                 }
             } else {
-                conn->read_cache_ = conn->read_cache_.substr(used_size);
+                conn->cahce_->shift(used_size);
             }
         }
     }
@@ -227,7 +244,7 @@ namespace websocket {
     void connection::on_disconnected(connection_wptr wptr) {
         auto conn = wptr.lock();
         if (conn) {
-            if (!conn->closed_.test_and_set()) {
+            if (!conn->closed_.test_and_set() && conn->cbs_.error_cb) {
                 conn->cbs_.error_cb("websocket connection disconnected");
             }
         }
@@ -236,7 +253,7 @@ namespace websocket {
     void connection::on_stopped(connection_wptr wptr) {
         auto conn = wptr.lock();
         if (conn) {
-            if (!conn->closed_.test_and_set()) {
+            if (!conn->closed_.test_and_set() && conn->cbs_.error_cb) {
                 conn->cbs_.error_cb("websocket connection stopped");
             }
         }
@@ -245,90 +262,105 @@ namespace websocket {
     int32_t connection::__handle_pocket(
         const block_t *b, 
         int32_t size) {
-        auto pk = pocket_.get();
-        PUMP_ASSERT(pk);
-
-        int32_t parse_size = -1;
-        if (read_cache_.empty()) {
-            parse_size = pk->parse(b, size);
-            if (parse_size >= 0 && parse_size < size) {
-                read_cache_.append(b + parse_size, size - parse_size);
-            }
-        } else {
-            read_cache_.append(b, size);
-            parse_size = pk->parse(read_cache_.data(), (int32_t)read_cache_.size());
-            if (parse_size > 0) {
-                read_cache_ = read_cache_.substr(parse_size);
-            }
+        if (!pocket_) {
+            return -1;
         }
-
-        if (parse_size == -1) {
+        int32_t parse_size = pocket_->parse(b, size);
+        if (parse_size < 0) {
+            PUMP_DEBUG_LOG(
+                "websocket::connection: handle pocket failed for parsing pocket failed");
             return -1;
         }
 
-        if (pk->is_parse_finished()) {
+        if (pocket_->is_parse_finished()) {
             ucbs_.pocket_cb(std::move(pocket_));
         } else {
-            transp_->read_for_once();
+            if (transp_->read_for_once() != transport::ERROR_OK) {
+                PUMP_DEBUG_LOG(
+                    "websocket::connection: handle pocket failed for reading once failed");
+                return -1;
+            }
         }
-
+        
         return parse_size;
     }
 
     int32_t connection::__handle_frame(const block_t *b, int32_t size) {
-        int32_t hdr_size = 0;
-        int32_t payload_size = 0;
+        int32_t parse_size = 0;
 
-        if (decode_phase_ == DECODE_FRAME_HEADER) {
-            hdr_size = decode_frame_header(b, size, &decode_hdr_);
-            if (hdr_size <= 0) {
-                return hdr_size;
-            }
-
-            decode_phase_ = DECODE_FRAME_PAYLOAD;
-        }
-
-        if (decode_phase_ == DECODE_FRAME_PAYLOAD) {
-            payload_size = (int32_t)decode_hdr_.payload_len;
-            if (payload_size > 126) {
-                payload_size = (int32_t)decode_hdr_.ex_payload_len;
-            }
-
-            if (hdr_size + payload_size > size) {
-                return hdr_size;
-            }
-
-            decode_phase_ = DECODE_FRAME_HEADER;
-
-            if (payload_size > 0 && decode_hdr_.mask == 1) {
-                mask_transform((uint8_t*)(b + hdr_size), payload_size, decode_hdr_.mask_key);
-            }
-
-            uint32_t optcode = decode_hdr_.optcode;
-            if (optcode == FRAME_OPTCODE_SEQUEL || optcode == FRAME_OPTCODE_TEXT ||
-                optcode == FRAME_OPTCODE_BINARY) {
-                cbs_.frame_cb(b + hdr_size, payload_size, decode_hdr_.fin == 1);
-            } else if (optcode == FRAME_OPTCODE_CLOSE) {
-                if (!closed_.test_and_set()) {
-                    // Send close frame response
-                    __send_close_frame();
-                    // Stop http connection
-                    transp_->stop();
-                    // Tagger error callback
-                    cbs_.error_cb("websocket connection closed");
+        do {
+            if (decode_phase_ == DECODE_FRAME_HEADER) {
+                if ((parse_size = decode_frame_header(b, size, &decode_hdr_)) <= 0) {
+                    PUMP_DEBUG_LOG(
+                        "websocket::connection: handle frame failed for decoding frame header failed");
+                    break;
                 }
-            } else if (optcode == FRAME_OPTCODE_PING) {
-                __send_pong_frame();
-            } else if (optcode == FRAME_OPTCODE_PONG) {
-                // TODO:
-            } else {
-                return -1;
+
+                decode_phase_ = DECODE_FRAME_PAYLOAD;
             }
 
-            transp_->read_for_once();
+            if (decode_phase_ == DECODE_FRAME_PAYLOAD) {
+                int32_t frame_payload_size = (int32_t)decode_hdr_.payload_len;
+                if (frame_payload_size > 126) {
+                    frame_payload_size = (int32_t)decode_hdr_.ex_payload_len;
+                }
+                if (parse_size + frame_payload_size > size) {
+                    break;
+                }
+                if (frame_payload_size > 0 && decode_hdr_.mask == 1) {
+                    mask_transform(
+                        (uint8_t*)(b + parse_size), 
+                        frame_payload_size, 
+                        decode_hdr_.mask_key);
+                }
+
+                switch (decode_hdr_.optcode)
+                {
+                case FRAME_OPTCODE_SEQUEL:
+                case FRAME_OPTCODE_TEXT:
+                case FRAME_OPTCODE_BINARY:
+                    cbs_.frame_cb(
+                        b + parse_size, 
+                        frame_payload_size, 
+                        decode_hdr_.fin == 1);
+                    break;
+                case FRAME_OPTCODE_CLOSE:
+                {
+                    if (!closed_.test_and_set()) {
+                        // Send close frame response
+                        __send_close_frame();
+                        // Stop http connection
+                        transp_->stop();
+                        // Tagger error callback
+                        cbs_.error_cb("websocket connection closed");
+                    }
+                    break;
+                }
+                case FRAME_OPTCODE_PING:
+                    __send_pong_frame();
+                    break;
+                case FRAME_OPTCODE_PONG:
+                    // TODO: do nothing?
+                    break;
+                default:
+                    PUMP_DEBUG_LOG(
+                        "websocket::connection: handle frame failed for unknown frame");
+                    return -1;
+                }
+
+                parse_size += frame_payload_size;
+
+                decode_phase_ = DECODE_FRAME_HEADER;
+            }
+        } while(false);
+
+        if (transp_->read_for_once() != transport::ERROR_OK) {
+            PUMP_DEBUG_LOG(
+                "websocket::connection: handle frame failed for reading once failed");
+            return -1;
         }
 
-        return hdr_size + payload_size;
+        return parse_size;
     }
 
     void connection::__send_ping_frame() {
@@ -338,10 +370,15 @@ namespace websocket {
 
         std::string buffer(hdr_size, 0);
         if (encode_frame_header(&hdr, (block_t*)buffer.c_str(), hdr_size) == 0) {
-            PUMP_ASSERT(false);
+            PUMP_DEBUG_LOG(
+                "websocket::connection: send ping frame failed for encoding frame header failed");
+            return;
         }
 
-        transp_->send(buffer.c_str(), (int32_t)buffer.size());
+        if (transp_->send(buffer.c_str(), (int32_t)buffer.size()) != transport::ERROR_OK) {
+            PUMP_DEBUG_LOG(
+                "websocket::connection: send ping frame failed for sending frame failed");
+        }
     }
 
     void connection::__send_pong_frame() {
@@ -351,10 +388,15 @@ namespace websocket {
 
         std::string buffer(hdr_size, 0);
         if (encode_frame_header(&hdr, (block_t*)buffer.c_str(), hdr_size) == 0) {
-            PUMP_ASSERT(false);
+            PUMP_DEBUG_LOG(
+                "websocket::connection: send pong frame failed for encoding frame header failed");
+            return;
         }
 
-        transp_->send(buffer.c_str(), (int32_t)buffer.size());
+        if (transp_->send(buffer.c_str(), (int32_t)buffer.size()) != transport::ERROR_OK) {
+            PUMP_DEBUG_LOG(
+                "websocket::connection: send ping frame failed for sending frame failed");
+        }
     }
 
     void connection::__send_close_frame() {
@@ -364,10 +406,15 @@ namespace websocket {
 
         std::string buffer(hdr_size, 0);
         if (encode_frame_header(&hdr, (block_t*)buffer.c_str(), hdr_size) == 0) {
-            PUMP_ASSERT(false);
+            PUMP_DEBUG_LOG(
+                "websocket::connection: send close frame failed for encoding frame header failed");
+            return;
         }
 
-        transp_->send(buffer.c_str(), (int32_t)buffer.size());
+        if (transp_->send(buffer.c_str(), (int32_t)buffer.size()) != transport::ERROR_OK) {
+            PUMP_DEBUG_LOG(
+                "websocket::connection: send ping frame failed for sending frame failed");
+        }
     }
 
 }  // namespace websocket

@@ -56,10 +56,10 @@ namespace toolkit {
             uint64_t *val);
 
         /*********************************************************************************
-         * Get used bit count
+         * Get read bit count
          ********************************************************************************/
-        PUMP_INLINE uint32_t used_bc() const {
-            return used_bc_;
+        PUMP_INLINE uint32_t read_bc() const {
+            return read_bc_;
         }
 
       private:
@@ -70,12 +70,12 @@ namespace toolkit {
         uint8_t __read_from_byte(uint32_t bc);
 
       private:
-        // Left bit count
-        uint32_t left_bc_;
-        // Used bit count
-        uint32_t used_bc_;
-        // All bit count
-        uint32_t all_bc_;
+        // Unread bit count
+        uint32_t unread_bc_;
+        // Read bit count
+        uint32_t read_bc_;
+        // Byte left bit count
+        uint32_t byte_left_bc_;
         // Current byte pos
         const uint8_t *byte_pos_;
     };
@@ -112,10 +112,10 @@ namespace toolkit {
             uint64_t val);
 
         /*********************************************************************************
-         * Get used bit count
+         * Get written bit count
          ********************************************************************************/
-        PUMP_INLINE uint32_t used_bc() const {
-            return used_bc_;
+        PUMP_INLINE uint32_t written_bc() const {
+            return written_bc_;
         }
 
       private:
@@ -128,12 +128,12 @@ namespace toolkit {
             uint8_t val);
 
       private:
+        // Unwritten bit count
+        uint32_t unwritten_bc_;
+        // Written bit count
+        uint32_t written_bc_;
         // Left bit count
-        uint32_t left_bc_;
-        // Used bit count
-        uint32_t used_bc_;
-        // All bit count
-        uint32_t all_bc_;
+        uint32_t byte_left_bc_;
         // Current byte pos
         uint8_t *byte_pos_;
     };

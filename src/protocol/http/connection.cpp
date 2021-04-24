@@ -25,7 +25,8 @@ namespace http {
     connection::connection(
         bool server, 
         transport::base_transport_sptr &transp) noexcept
-      : incoming_pocket_(nullptr),
+      : cache_(nullptr),
+        incoming_pocket_(nullptr),
         transp_(transp) {
         if (server) {
             create_incoming_pocket_ = []() {
@@ -42,21 +43,28 @@ namespace http {
         if (transp_) {
             transp_->force_stop();
         }
+        if (cache_ != nullptr) {
+            cache_->sub_refence();
+        }
     }
 
     bool connection::start(
         service *sv, 
         const http_callbacks &cbs) {
-        PUMP_DEBUG_FAILED_RUN(
+        PUMP_DEBUG_FAILED(
             sv == nullptr || !transp_, 
             "http::connection: start fialed for service or transport invalid",
             return false);
 
-        PUMP_DEBUG_FAILED_RUN(
+        PUMP_DEBUG_FAILED(
             !cbs.pocket_cb || !cbs.error_cb, 
             "http::connection: start fialed for callbacks invalid",
             return false);
         http_cbs_ = cbs;
+
+        if (cache_ != nullptr || (cache_ = toolkit::io_buffer::create()) == nullptr) {
+            return false;
+        }
 
         transport::transport_callbacks tcbs;
         connection_wptr wptr = shared_from_this();
@@ -76,7 +84,6 @@ namespace http {
 
     bool connection::read_next_pocket() {
         auto transp = transp_;
-        PUMP_ASSERT(transp);
         if (transp && transp->read_for_once() == transport::ERROR_OK) {
             return true;
         }
@@ -85,7 +92,6 @@ namespace http {
 
     bool connection::send(const pocket *pk) {
         auto transp = transp_;
-        PUMP_ASSERT(transp);
         if (transp) {
             std::string data;
             int32_t size = pk->serialize(data);
@@ -99,7 +105,6 @@ namespace http {
 
     bool connection::send(const body *b) {
         auto transp = transp_;
-        PUMP_ASSERT(transp);
         if (transp) {
             std::string data;
             int32_t size = b->serialize(data);
@@ -117,25 +122,25 @@ namespace http {
         int32_t size) {
         auto conn = wptr.lock();
         if (conn) {
-            conn->__handle_http_data(b, size);
+            conn->__handle_http_pocket(b, size);
         }
     }
 
     void connection::on_disconnected(connection_wptr wptr) {
         auto conn = wptr.lock();
-        if (conn) {
+        if (conn && conn->http_cbs_.error_cb) {
             conn->http_cbs_.error_cb("http connection disconnected");
         }
     }
 
     void connection::on_stopped(connection_wptr wptr) {
         auto conn = wptr.lock();
-        if (conn) {
+        if (conn && conn->http_cbs_.error_cb) {
             conn->http_cbs_.error_cb("http connection stopped");
         }
     }
 
-    void connection::__handle_http_data(
+    void connection::__handle_http_pocket(
         const block_t *b, 
         int32_t size) {
         auto pk = incoming_pocket_.get();
@@ -147,16 +152,16 @@ namespace http {
         }
 
         int32_t parse_size = -1;
-        if (read_cache_.empty()) {
+        if (cache_->data_size() == 0) {
             parse_size = pk->parse(b, size);
             if (parse_size >= 0 && parse_size < size) {
-                read_cache_.append(b + parse_size, uint32_t(size - parse_size));
+                cache_->append(b + parse_size, uint32_t(size - parse_size));
             }
         } else {
-            read_cache_.append(b, size);
-            parse_size = pk->parse(read_cache_.data(), (int32_t)read_cache_.size());
+            cache_->append(b, size);
+            parse_size = pk->parse(cache_->data(), (int32_t)cache_->data_size());
             if (parse_size > 0) {
-                read_cache_ = read_cache_.substr(parse_size);
+                cache_->shift(parse_size);
             }
         }
 

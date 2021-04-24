@@ -43,23 +43,23 @@ namespace transport {
         service *sv,
         int64_t timeout,
         const tls_handshaker_callbacks &cbs) {
-        PUMP_DEBUG_FAILED_RUN(
+        PUMP_DEBUG_FAILED(
             !flow_, 
             "tls_handshaker: start failed for flow invalid",
             return false);
 
-        PUMP_DEBUG_FAILED_RUN(
+        PUMP_DEBUG_FAILED(
             !__set_state(TRANSPORT_INITED, TRANSPORT_STARTING), 
             "tls_handshaker: start failed for transport state incorrect",
             return false);
 
-        PUMP_DEBUG_FAILED_RUN(
+        PUMP_DEBUG_FAILED(
             sv == nullptr, 
             "tls_handshaker: start failed for service invalid",
             return false);
         __set_service(sv);
 
-        PUMP_DEBUG_FAILED_RUN(
+        PUMP_DEBUG_FAILED(
             !cbs.handshaked_cb || !cbs.stopped_cb, 
             "tls_handshaker: start failed for callbacks invalid",
             return false);
@@ -89,7 +89,7 @@ namespace transport {
 
         // Start handshake timeout timer
         if (!__start_handshake_timer(timeout)) {
-            PUMP_DEBUG_LOG("tls_handshaker: start failed for starting timer failed");
+            PUMP_WARN_LOG("tls_handshaker: start failed for starting timer failed");
             return false;
         }
 
@@ -171,17 +171,26 @@ namespace transport {
             return;
         case ssl::TLS_HANDSHAKE_READ:
             tracker_->set_expected_event(poll::TRACK_READ);
-            PUMP_DEBUG_CHECK(tracker_->get_poller()->resume_channel_tracker(tracker_.get()));
+            if (!tracker_->get_poller()->resume_channel_tracker(tracker_.get())) {
+                PUMP_WARN_LOG(
+                    "tcp_transport: process handshake failed for resuming tracker failed");
+                break;
+            }
             return;
         case ssl::TLS_HANDSHAKE_SEND:
             tracker_->set_expected_event(poll::TRACK_SEND);
-            PUMP_DEBUG_CHECK(tracker_->get_poller()->resume_channel_tracker(tracker_.get()));
-            return;
-        default:
-            if (__set_state(TRANSPORT_STARTED, TRANSPORT_ERROR)) {
-                __handshake_finished();
+            if (!tracker_->get_poller()->resume_channel_tracker(tracker_.get())) {
+                PUMP_WARN_LOG(
+                    "tcp_transport: process handshake failed for resuming tracker failed");
+                break;
             }
             return;
+        default:
+            break;
+        }
+
+        if (__set_state(TRANSPORT_STARTED, TRANSPORT_ERROR)) {
+            __handshake_finished();
         }
     }
 
@@ -222,7 +231,7 @@ namespace transport {
     void tls_handshaker::__handshake_finished() {
         // Stop handshake timer
         __stop_handshake_timer();
-
+        // Stop tracker.
         __stop_handshake_tracker();
 
         if (__is_state(TRANSPORT_FINISHED)) {

@@ -103,7 +103,7 @@ namespace transport {
          ********************************************************************************/
         PUMP_INLINE void __shutdown_transport_flow() {
             if (flow_) {
-                flow_->shutdown();
+                flow_->shutdown(SHUT_BOTH);
             }
         }
 

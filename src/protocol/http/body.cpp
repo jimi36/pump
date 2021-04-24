@@ -22,16 +22,20 @@ namespace http {
 
     body::body() noexcept
       : parse_finished_(false),
-        is_chunked_(false),
-        next_chunk_size_(0),
+        is_chunk_mode_(false),
         content_length_(0) {
     }
 
     int32_t body::serialize(std::string &buf) const {
-        if (is_chunked_) {
-            block_t tmp[32] = {0};
-            int32_t size = snprintf(tmp, sizeof(tmp) - 1, "%zx%s", data_.size(), HTTP_CR);
-            buf.append(tmp).append(data_).append(HTTP_CR);
+        if (is_chunk_mode_) {
+            block_t chunk_len[64] = {0};
+            int32_t size = snprintf(
+                            chunk_len, 
+                            sizeof(chunk_len) - 1, 
+                            "%zx%s", 
+                            data_.size(), 
+                            HTTP_CR);
+            buf.append(chunk_len).append(data_).append(HTTP_CR);
             return size + (int32_t)data_.size() + HTTP_CR_LEN;
         } else {
             if (data_.empty()) {
@@ -45,7 +49,7 @@ namespace http {
     int32_t body::parse(
         const block_t *b, 
         int32_t size) {
-        if (is_chunked_) {
+        if (is_chunk_mode_) {
             return __parse_by_chunk(b, size);
         } else {
             return __parse_by_length(b, size);
@@ -74,39 +78,37 @@ namespace http {
         const block_t *pos = b;
 
         while (1) {
-            const block_t *chunk_pos = pos;
-            const block_t *line_end = find_http_line_end(chunk_pos, size - int32_t(chunk_pos - b));
+            const block_t *line_end = find_http_line_end(pos, size - int32_t(pos - b));
             if (line_end == nullptr) {
                 break;
             }
-
             line_end -= HTTP_CR_LEN;
-            int32_t next_chunk_size = 0;
-            while (chunk_pos != line_end) {
-                next_chunk_size = next_chunk_size * 16 + hexchar_to_decnum(*(chunk_pos++));
+            
+            int32_t chunk_size = 0;
+            const block_t *chunk_pos = pos;
+            for (;chunk_pos != line_end; chunk_pos++) {
+                chunk_size = chunk_size * 16 + hexchar_to_decnum(*chunk_pos);
             }
             chunk_pos += HTTP_CR_LEN;
 
-            if (next_chunk_size == 0) {
+            if (chunk_size == 0) {
                 if (chunk_pos + HTTP_CR_LEN > b + size) {
                     break;
                 }
-
                 if (memcmp(chunk_pos, HTTP_CR, HTTP_CR_LEN) != 0) {
                     return -1;
                 }
-
                 pos = chunk_pos + HTTP_CR_LEN;
                 parse_finished_ = true;
                 break;
             }
 
-            if (chunk_pos + next_chunk_size + HTTP_CR_LEN > b + size) {
+            if (chunk_pos + chunk_size + HTTP_CR_LEN > b + size) {
                 break;
             }
-            data_.append(chunk_pos, next_chunk_size);
+            data_.append(chunk_pos, chunk_size);
 
-            pos = chunk_pos + next_chunk_size + HTTP_CR_LEN;
+            pos = chunk_pos + chunk_size + HTTP_CR_LEN;
         }
 
         return int32_t(pos - b);

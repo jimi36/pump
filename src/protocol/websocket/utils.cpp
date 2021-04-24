@@ -80,7 +80,7 @@ namespace websocket {
 
         std::string data;
         resp.serialize(data);
-        conn->send_raw(data.c_str(), (uint32_t)data.size());
+        conn->send(data.c_str(), (uint32_t)data.size());
     }
 
 }  // namespace websocket

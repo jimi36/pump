@@ -25,13 +25,13 @@ namespace pump {
 namespace protocol {
 namespace http {
 
-    typedef int32_t uri_class;
-    const static uri_class UIR_UNKNOWN  = 0;
-    const static uri_class URI_HTTP     = 1;
-    const static uri_class URI_HTTPS    = 2;
-    const static uri_class URI_WS       = 3;
-    const static uri_class URI_WSS      = 4;
-    const static uri_class URI_END      = 5;
+    typedef int32_t uri_protocol;
+    const static uri_protocol UIR_UNKNOWN  = 0;
+    const static uri_protocol URI_HTTP     = 1;
+    const static uri_protocol URI_HTTPS    = 2;
+    const static uri_protocol URI_WS       = 3;
+    const static uri_protocol URI_WSS      = 4;
+    const static uri_protocol URI_END      = 5;
 
     class LIB_PUMP uri {
 
@@ -60,15 +60,15 @@ namespace http {
         /*********************************************************************************
          * Set uri type
          ********************************************************************************/
-        PUMP_INLINE void set_type(uri_class uc) {
-            uc_ = uc;
+        PUMP_INLINE void set_protocol(uri_protocol proto) {
+            proto_ = proto;
         }
 
         /*********************************************************************************
          * Get uri type
          ********************************************************************************/
-        PUMP_INLINE uri_class get_type() const {
-            return uc_;
+        PUMP_INLINE uri_protocol get_type() const {
+            return proto_;
         }
 
         /*********************************************************************************
@@ -121,8 +121,8 @@ namespace http {
         std::string to_url() const;
 
       private:
-        // Uri class
-        uri_class uc_;
+        // Uri protocol
+        uri_protocol proto_;
         // Uri host
         std::string host_;
         // Uri path
@@ -133,16 +133,16 @@ namespace http {
     DEFINE_ALL_POINTER_TYPE(uri);
 
     /*********************************************************************************
-     * Get uri class name
+     * Get uri protocol name
      ********************************************************************************/
-    LIB_PUMP const std::string& get_uri_class_name(int32_t uc);
+    LIB_PUMP const std::string& get_uri_protocol_name(int32_t proto);
 
     /*********************************************************************************
      * Parse url
      ********************************************************************************/
     LIB_PUMP bool parse_url(
         const std::string &url,
-        uri_class &uc,
+        uri_protocol &proto,
         std::string &host,
         std::string &path,
         std::map<std::string, std::string> &params);

@@ -71,7 +71,7 @@ namespace http {
         http_code_desc_map[505] = "HTTP Version Not Supported";
     }
 
-    static const std::string &get_http_code_desc(int32_t code) {
+    static const std::string& get_http_code_desc(int32_t code) {
         auto it = http_code_desc_map.find(code);
         if (it != http_code_desc_map.end()) {
             return it->second;
@@ -113,7 +113,7 @@ namespace http {
         if (parse_status_ == PARSE_HEADER) {
             parse_size = __parse_header(pos, size);
             if (parse_size < 0) {
-                return parse_size;
+                return -1;
             } else if (parse_size == 0) {
                 return int32_t(pos - b);
             }
@@ -121,40 +121,41 @@ namespace http {
             pos  += parse_size;
             size -= parse_size;
 
-            if (__is_header_parsed()) {
-                parse_status_ = PARSE_CONTENT;
+            if (!__is_header_parsed()) {
+                return int32_t(pos - b);
             }
+
+            parse_status_ = PARSE_CONTENT;
         }
 
         if (parse_status_ == PARSE_CONTENT) {
-            body *body_ptr = body_.get();
-            if (body_ptr == nullptr) {
-                int32_t content_length = 0;
-                if (get_head("Content-Length", content_length)) {
-                    if (content_length > 0) {
-                        body_ptr = new body();
-                        body_.reset(body_ptr);
-                        body_ptr->set_length_to_parse(content_length);
-                    } else {
-                        parse_status_ = PARSE_FINISHED;
+            body *rb = body_.get();
+            if (rb == nullptr) {
+                int32_t length = 0;
+                if (get_head("Content-Length", length)) {
+                    if (length > 0) {
+                        if ((rb = object_create<body>()) == nullptr) {
+                            return -1;
+                        }
+                        rb->set_length(length);
+                        body_.reset(rb, object_delete<body>);
                     }
                 } else {
                     std::string transfer_encoding;
-                    if (get_head("Transfer-Encoding", transfer_encoding) &&
-                        transfer_encoding == "chunked") {
-                        body_ptr = new body();
-                        body_.reset(body_ptr);
-                        body_ptr->set_chunked();
-                    } else {
-                        parse_status_ = PARSE_FINISHED;
+                    if (get_head("Transfer-Encoding", transfer_encoding) && transfer_encoding == "chunked") {
+                        if ((rb = object_create<body>()) == nullptr) {
+                            return -1;
+                        }
+                        rb->set_chunked();
+                        body_.reset(rb, object_delete<body>);
                     }
                 }
             }
 
-            if (body_ptr != nullptr) {
-                parse_size = body_ptr->parse(pos, size);
+            if (rb != nullptr) {
+                parse_size = rb->parse(pos, size);
                 if (parse_size < 0) {
-                    return parse_size;
+                    return -1;
                 } else if (parse_size == 0) {
                     return int32_t(pos - b);
                 }
@@ -162,9 +163,11 @@ namespace http {
                 pos  += parse_size;
                 size -= parse_size;
 
-                if (body_ptr->is_parse_finished()) {
+                if (rb->is_parse_finished()) {
                     parse_status_ = PARSE_FINISHED;
                 }
+            } else {
+                parse_status_ = PARSE_FINISHED;
             }
         }
 

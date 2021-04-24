@@ -74,9 +74,7 @@ namespace poll {
         /*********************************************************************************
          * Stop
          ********************************************************************************/
-        virtual void stop() {
-            started_.store(false);
-        }
+        virtual void stop();
 
         /*********************************************************************************
          * Wait stopped
@@ -96,14 +94,7 @@ namespace poll {
         /*********************************************************************************
          * Resume channel tracker
          ********************************************************************************/
-        PUMP_INLINE bool resume_channel_tracker(channel_tracker *tracker) {
-            if (PUMP_LIKELY(tracker->track())) {
-                return __resume_channel_tracker(tracker);
-            }
-            PUMP_DEBUG_LOG(
-                "poller: resume channel tracker failed for tracker already tracked");
-            return false;
-        }
+        bool resume_channel_tracker(channel_tracker *tracker);
 
         /*********************************************************************************
          * Push channel event

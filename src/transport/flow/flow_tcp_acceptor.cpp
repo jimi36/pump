@@ -27,14 +27,14 @@ namespace flow {
 
     flow_tcp_acceptor::~flow_tcp_acceptor() {
         if (iob_) {
-            iob_->sub_ref();
+            iob_->sub_refence();
         }
     }
 
     int32_t flow_tcp_acceptor::init(
         poll::channel_sptr &&ch, 
         const address &listen_address) {
-        PUMP_DEBUG_FAILED_RUN(
+        PUMP_DEBUG_FAILED(
             !ch, 
             "flow_tcp_acceptor: init failed for channel invalid",
             return FLOW_ERR_ABORT);

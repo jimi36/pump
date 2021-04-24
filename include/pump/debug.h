@@ -42,7 +42,7 @@
 #endif
 
 // Pump debug condition fail
-#define PUMP_DEBUG_FAILED_RUN(c, log, x) \
+#define PUMP_DEBUG_FAILED(c, log, x) \
     if (PUMP_UNLIKELY(c)) { \
         PUMP_DEBUG_LOG(log); \
         PUMP_ASSERT(false); \

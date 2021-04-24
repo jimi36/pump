@@ -30,9 +30,6 @@ namespace http {
     const static int32_t METHOD_PUT = 4;
     const static int32_t METHOD_DELETE = 5;
 
-    class request;
-    DEFINE_ALL_POINTER_TYPE(request);
-
     class LIB_PUMP request 
       : public pocket {
 
@@ -125,6 +122,7 @@ namespace http {
         // Request method
         int32_t method_;
     };
+    DEFINE_ALL_POINTER_TYPE(request);
 
 }  // namespace http
 }  // namespace protocol

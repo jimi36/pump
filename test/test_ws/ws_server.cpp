@@ -2,7 +2,7 @@
 
 websocket::connection_sptr ws_conn;
 
-void on_receive(websocket::connection_ptr conn,
+void on_receive(websocket::connection *conn,
                 const block_t *b,
                 int32_t size,
                 bool msg_end) {
@@ -13,7 +13,7 @@ void on_receive(websocket::connection_ptr conn,
     conn->send_frame(b, size);
 }
 
-void on_error(websocket::connection_ptr conn, const std::string &msg) {
+void on_error(websocket::connection *conn, const std::string &msg) {
     printf("disconnected\n");
     ws_conn.reset();
 }
@@ -33,7 +33,7 @@ void on_new_connection(const std::string &path, websocket::connection_sptr conn)
     ws_conn = conn;
 }
 
-void start_ws_server(pump::service_ptr sv, const std::string &ip, int port) {
+void start_ws_server(pump::service *sv, const std::string &ip, int port) {
     pump::transport::address bind_address(ip, port);
     websocket::server_sptr server = websocket::server::create(bind_address);
     //websocket::server_sptr server = websocket::server::create(bind_address, "cert.pem", "key.pem");

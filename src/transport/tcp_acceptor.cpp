@@ -27,18 +27,18 @@ namespace transport {
     int32_t tcp_acceptor::start(
         service *sv, 
         const acceptor_callbacks &cbs) {
-        PUMP_DEBUG_FAILED_RUN(
+        PUMP_DEBUG_FAILED(
             !__set_state(TRANSPORT_INITED, TRANSPORT_STARTING), 
             "tcp_acceptor: start failed for transport state incorrect",
             return ERROR_INVALID);
 
-        PUMP_DEBUG_FAILED_RUN(
+        PUMP_DEBUG_FAILED(
             sv == nullptr, 
             "tcp_acceptor: start failed for service invalid",
             return ERROR_INVALID);
         __set_service(sv);
 
-        PUMP_DEBUG_FAILED_RUN(
+        PUMP_DEBUG_FAILED(
             !cbs.accepted_cb || !cbs.stopped_cb, 
             "tcp_acceptor: start failed for callbacks invalid",
             return ERROR_INVALID);

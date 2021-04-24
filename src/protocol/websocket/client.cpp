@@ -39,18 +39,18 @@ namespace websocket {
     bool client::start(
         service *sv, 
         const client_callbacks &cbs) {
-        PUMP_DEBUG_FAILED_RUN(
+        PUMP_DEBUG_FAILED(
             started_.exchange(true),
             "websocket::client: start failed for already started",
             return false)
 
-        PUMP_DEBUG_FAILED_RUN(
+        PUMP_DEBUG_FAILED(
             sv == nullptr, 
             "websocket::client: start failed for service invalid",
             return false);
         sv_ = sv;
 
-        PUMP_DEBUG_FAILED_RUN(
+        PUMP_DEBUG_FAILED(
             !cbs.started_cb ||!cbs.data_cb || !cbs.error_cb,
             "websocket::client: start failed for callbacks invalid",
             return false);
@@ -109,7 +109,7 @@ namespace websocket {
             ucbs.pocket_cb = pump_bind(&client::on_upgrade_response, wptr, _1);
             ucbs.error_cb = pump_bind(&client::on_error, wptr, _1);
             cli->conn_.reset(new connection(cli->sv_, transp, true));
-            if (cli->conn_->start_upgrade(true, ucbs)) {
+            if (!cli->conn_->start_upgrade(true, ucbs)) {
                 cli->cbs_.error_cb("client transport start error");
                 return;
             }
@@ -117,7 +117,7 @@ namespace websocket {
             std::string data;
             PUMP_ASSERT(cli->upgrade_req_);
             cli->upgrade_req_->serialize(data);
-            if (!cli->conn_->send_raw(data.c_str(), (int32_t)data.size())) {
+            if (!cli->conn_->send(data.c_str(), (int32_t)data.size())) {
                 cli->cbs_.error_cb("client connection send upgrade request error");
             }
 
@@ -205,10 +205,10 @@ namespace websocket {
         // Init bind address
         transport::address bind_address("0.0.0.0", 0);
         // Create transport dialer
-        if (u->get_type() == http::URI_WSS) {
+        if (u->get_type() == http::URI_WS) {
             auto peer_address = http::host_to_address(true, u->get_host());
             dialer_ = transport::tcp_dialer::create(bind_address, peer_address, 3000);
-        } else if (u->get_type() == http::URI_WS) {
+        } else if (u->get_type() == http::URI_WSS) {
             auto peer_address = http::host_to_address(false, u->get_host());
             dialer_ = transport::tls_dialer::create(bind_address, peer_address, 3000, 3000);
         } else {
@@ -219,7 +219,7 @@ namespace websocket {
         cbs.dialed_cb = pump_bind(&client::on_dialed, shared_from_this(), _1, _2);
         cbs.timeouted_cb = pump_bind(&client::on_dial_timeouted, shared_from_this());
         cbs.stopped_cb = pump_bind(&client::on_dial_stopped, shared_from_this());
-        if (!dialer_->start(sv_, cbs)) {
+        if (dialer_->start(sv_, cbs) != transport::ERROR_OK) {
             return false;
         }
 

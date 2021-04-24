@@ -33,7 +33,7 @@ namespace time {
         if (!started_.load()) {
             started_.store(true);
 
-            PUMP_DEBUG_FAILED_RUN(
+            PUMP_DEBUG_FAILED(
                 !cb,
                 "timer_queue: start failed for callback invalid",
                 return false);

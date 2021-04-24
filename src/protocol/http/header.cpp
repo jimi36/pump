@@ -30,12 +30,9 @@ namespace http {
     void header::set_head(
         const std::string &name,
         int32_t value) {
-        block_t tmp[HTTP_HEAD_VALUE_MAX_LEN + 1] = {0};
-        PUMP_DEBUG_COND_CHECK(
-            pump_snprintf(tmp, sizeof(tmp) - 1, "%d", value), 
-            <, 
-            (int32_t)sizeof(tmp));
-        headers_[name].push_back(tmp);
+        block_t strval[64] = {0};
+        pump_snprintf(strval, sizeof(strval) - 1, "%d", value);
+        headers_[name].push_back(strval);
     }
 
     void header::set_head(
@@ -53,12 +50,9 @@ namespace http {
     void header::set_unique_head(
         const std::string &name, 
         int32_t value) {
-        block_t tmp[HTTP_HEAD_VALUE_MAX_LEN + 1] = {0};
-        PUMP_DEBUG_COND_CHECK(
-            pump_snprintf(tmp, sizeof(tmp) - 1, "%d", value),
-            <,
-            (int32_t)sizeof(tmp));
-        headers_[name] = std::vector<std::string>(1, tmp);
+        block_t strval[64] = {0};
+        pump_snprintf(strval, sizeof(strval) - 1, "%d", value);
+        headers_[name] = std::vector<std::string>(1, strval);
     }
 
     void header::set_unique_head(

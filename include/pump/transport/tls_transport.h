@@ -118,9 +118,9 @@ namespace transport {
         /*********************************************************************************
          * Shutdown transport flow
          ********************************************************************************/
-        PUMP_INLINE void __shutdown_transport_flow() {
+        PUMP_INLINE void __shutdown_transport_flow(int32_t how) {
             if (flow_) {
-                flow_->shutdown();
+                flow_->shutdown(how);
             }
         }
 
@@ -151,7 +151,7 @@ namespace transport {
         /*********************************************************************************
          * Try doing transport dissconnected process
          ********************************************************************************/
-        void __try_doing_disconnected_process();
+        bool __try_handling_disconnected();
 
         /*********************************************************************************
          * Clear send pockets
@@ -162,7 +162,7 @@ namespace transport {
          * Reset last sent io buffer
          ********************************************************************************/
         PUMP_INLINE void __reset_last_sent_iobuffer() {
-            last_send_iob_->sub_ref();
+            last_send_iob_->sub_refence();
             last_send_iob_ = nullptr;
         }
 
@@ -176,7 +176,7 @@ namespace transport {
         //volatile toolkit::io_buffer *last_send_iob_;
 
         // Pending send count
-        std::atomic_int32_t pending_send_cnt_;
+        std::atomic_int32_t pending_opt_cnt_;
 
         // Send buffer list
         toolkit::freelock_multi_queue<toolkit::io_buffer*, 8> sendlist_;

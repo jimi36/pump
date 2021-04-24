@@ -315,8 +315,8 @@ namespace net {
         return size;
     }
 
-    void shutdown(pump_socket fd) {
-        ::shutdown(fd, 0);
+    void shutdown(pump_socket fd, int32_t how) {
+        ::shutdown(fd, how);
     }
 
     bool close(pump_socket fd) {

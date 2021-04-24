@@ -31,19 +31,19 @@ namespace http {
         service *sv,
         const transport::address &listen_address,
         const server_callbacks &cbs) {
-        PUMP_DEBUG_FAILED_RUN(
+        PUMP_DEBUG_FAILED(
             !!acceptor_,
             "http::server: start failed for acceptor alread exists",
             return false);
 
-        PUMP_DEBUG_FAILED_RUN(
+        PUMP_DEBUG_FAILED(
             sv == nullptr,
             "http::server: start failed for service invalid",
             return false);
         sv_ = sv;
 
         // Check callbacks
-        PUMP_DEBUG_FAILED_RUN(
+        PUMP_DEBUG_FAILED(
             !cbs.request_cb || !cbs.stopped_cb,
             "http::server: start failed for callbacks invalid",
             return false);
@@ -70,19 +70,19 @@ namespace http {
         const std::string &keyfile,
         const transport::address &listen_address,
         const server_callbacks &cbs) {
-        PUMP_DEBUG_FAILED_RUN(
+        PUMP_DEBUG_FAILED(
             !!acceptor_,
             "http::server: start failed for acceptor already exists",
             return false);
 
-        PUMP_DEBUG_FAILED_RUN(
+        PUMP_DEBUG_FAILED(
             sv == nullptr,
             "http::server: start failed for service invalid",
             return false);
         sv_ = sv;
 
         // Check callbacks
-        PUMP_DEBUG_FAILED_RUN(
+        PUMP_DEBUG_FAILED(
             !cbs.request_cb || !cbs.stopped_cb,
             "http::server: start failed for callbacks invalid",
             return false);

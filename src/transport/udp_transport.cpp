@@ -32,18 +32,18 @@ namespace transport {
     int32_t udp_transport::start(
         service *sv, 
         const transport_callbacks &cbs) {
-        PUMP_DEBUG_FAILED_RUN(
+        PUMP_DEBUG_FAILED(
             !__set_state(TRANSPORT_INITED, TRANSPORT_STARTING), 
             "udp_transport: start failed for transport state incorrect",
             return ERROR_INVALID);
 
-        PUMP_DEBUG_FAILED_RUN(
+        PUMP_DEBUG_FAILED(
             sv == nullptr, 
             "udp_transport: start failed for service invalid",
             return ERROR_INVALID);
         __set_service(sv);
 
-        PUMP_DEBUG_FAILED_RUN(
+        PUMP_DEBUG_FAILED(
             !cbs.read_from_cb || !cbs.stopped_cb, 
             "udp_transport: start failed for callbacks invalid",
             return ERROR_INVALID);
@@ -100,7 +100,7 @@ namespace transport {
         const block_t *b,
         int32_t size,
         const address &address) {
-        PUMP_DEBUG_FAILED_RUN(
+        PUMP_DEBUG_FAILED(
             b == nullptr || size <= 0, 
             "udp_transport: send failed for buffer invalid",
             return ERROR_INVALID);

@@ -6,9 +6,9 @@ namespace toolkit {
     bits_reader::bits_reader(
         const uint8_t *b, 
         uint32_t size) noexcept
-      : left_bc_(8), 
-        used_bc_(0), 
-        all_bc_(size * 8), 
+      : unread_bc_(size * 8), 
+        read_bc_(0), 
+        byte_left_bc_(8), 
         byte_pos_(b) {
         PUMP_ASSERT(b);
         PUMP_ASSERT(size > 0);
@@ -17,7 +17,7 @@ namespace toolkit {
     bool bits_reader::read(
         uint32_t bc,
         uint8_t *val) {
-        if (bc > 8 || bc > all_bc_) {
+        if (bc > 8 || bc > unread_bc_) {
             return false;
         }
 
@@ -29,33 +29,25 @@ namespace toolkit {
     bool bits_reader::read(
         uint32_t bc, 
         uint16_t *val) {
-        if (bc > 16 || bc > all_bc_) {
+        if (bc > 16 || bc > unread_bc_) {
             return false;
         }
 
-        uint8_t tmp[2] = {0};
-        uint32_t left = bc % 8;
-
 #if defined(LITTLE_ENDIAN)
-        int32_t idx = bc / 8 + (left > 0 ? 0 : -1);
+        int32_t idx = (bc + 7) / 8 - 1;
         int32_t s = -1;
 #elif defined(BIG_ENDIAN)
         int32_t idx = 0;
         int32_t s = 1;
 #endif
-        if (left > 0) {
-            tmp[idx] = __read_from_byte(left);
-            bc -= left;
-            idx += s;
+        uint32_t rc = bc % 8;
+        if (rc == 0) {
+            rc = 8;
         }
 
-        while (bc > 0) {
-            tmp[idx] = __read_from_byte(8);
-            bc -= 8;
-            idx += s;
+        for (; bc > 0; bc -= rc, rc = 8, idx += s) {
+            *((uint8_t*)val + idx) = __read_from_byte(rc);
         }
-
-        *val = *((uint16_t*)tmp);
 
         return true;
     }
@@ -63,33 +55,25 @@ namespace toolkit {
     bool bits_reader::read(
         uint32_t bc, 
         uint32_t *val) {
-        if (bc > 32 || bc > all_bc_) {
+        if (bc > 32 || bc > unread_bc_) {
             return false;
         }
 
-        uint8_t tmp[4] = {0};
-        uint32_t left = bc % 8;
-
 #if defined(LITTLE_ENDIAN)
-        int32_t idx = bc / 8 + (left > 0 ? 0 : -1);
+        int32_t idx = (bc + 7) / 8 - 1;
         int32_t s = -1;
 #elif defined(BIG_ENDIAN)
         int32_t idx = 0;
         int32_t s = 1;
 #endif
-        if (left > 0) {
-            tmp[idx] = __read_from_byte(left);
-            bc -= left;
-            idx += s;
+        uint32_t rc = bc % 8;
+        if (rc == 0) {
+            rc = 8;
         }
 
-        while (bc > 0) {
-            tmp[idx] = __read_from_byte(8);
-            bc -= 8;
-            idx += s;
+        for (; bc > 0; bc -= rc, rc = 8, idx += s) {
+            *((uint8_t*)val + idx) = __read_from_byte(rc);
         }
-
-        *val = *((uint32_t*)tmp);
 
         return true;
     }
@@ -97,33 +81,25 @@ namespace toolkit {
     bool bits_reader::read(
         uint32_t bc, 
         uint64_t *val) {
-        if (bc > 64 || bc > all_bc_) {
+        if (bc > 64 || bc > unread_bc_) {
             return false;
         }
 
-        uint8_t tmp[8] = {0};
-        uint32_t left = bc % 8;
-
 #if defined(LITTLE_ENDIAN)
-        int32_t idx = bc / 8 + (left > 0 ? 0 : -1);
+        int32_t idx = (bc + 7) / 8 - 1;
         int32_t s = -1;
 #elif defined(BIG_ENDIAN)
         int32_t idx = 0;
         int32_t s = 1;
 #endif
-        if (left > 0) {
-            tmp[idx] = __read_from_byte(left);
-            bc -= left;
-            idx += s;
+        uint32_t rc = bc % 8;
+        if (rc == 0) {
+            rc = 8;
         }
 
-        while (bc > 0) {
-            tmp[idx] = __read_from_byte(8);
-            bc -= 8;
-            idx += s;
+        for (; bc > 0; bc -= rc, rc = 8, idx += s) {
+            *((uint8_t*)val + idx) = __read_from_byte(rc);
         }
-
-        *val = *((uint64_t*)tmp);
 
         return true;
     }
@@ -131,18 +107,17 @@ namespace toolkit {
     uint8_t bits_reader::__read_from_byte(uint32_t bc) {
         uint8_t val = 0;
         while (bc > 0) {
-            uint8_t rc = left_bc_ > bc ? bc : left_bc_;
-            val = (val << rc) | (uint8_t((*byte_pos_) << (8 - left_bc_)) >> (8 - rc));
+            uint8_t rc = byte_left_bc_ > bc ? bc : byte_left_bc_;
+            val = (val << rc) | (uint8_t((*byte_pos_) << (8 - byte_left_bc_)) >> (8 - rc));
 
-            bc -= rc;
-            left_bc_ -= rc;
-            used_bc_ += rc;
-            all_bc_ -= rc;
-
-            if (left_bc_ == 0) {
+            if ((byte_left_bc_ -= rc) == 0) {
+                byte_left_bc_ = 8;
                 byte_pos_++;
-                left_bc_ = 8;
             }
+
+            unread_bc_ -= rc;
+            read_bc_ += rc;
+            bc -= rc;
         }
         return val;
     }
@@ -150,9 +125,9 @@ namespace toolkit {
     bits_writer::bits_writer(
         uint8_t *b, 
         uint32_t size) noexcept
-      : left_bc_(8), 
-        used_bc_(0), 
-        all_bc_(size * 8), 
+      : unwritten_bc_(size * 8), 
+        written_bc_(0), 
+        byte_left_bc_(8),      
         byte_pos_(b) {
         PUMP_ASSERT(b);
         PUMP_ASSERT(size > 0);
@@ -161,7 +136,7 @@ namespace toolkit {
     bool bits_writer::write(
         uint32_t bc, 
         uint8_t val) {
-        if (bc > 8 || bc > all_bc_) {
+        if (bc > 8 || bc > unwritten_bc_) {
             return false;
         }
 
@@ -173,30 +148,24 @@ namespace toolkit {
     bool bits_writer::write(
         uint32_t bc, 
         uint16_t val) {
-        if (bc > 16 || bc > all_bc_) {
+        if (bc > 16 || bc > unwritten_bc_) {
             return false;
         }
 
-        uint32_t left = bc % 8;
-        uint8_t *tmp = (uint8_t*)(&val);
-
 #if defined(LITTLE_ENDIAN)
-        int32_t idx = bc / 8 + (left > 0 ? 0 : -1);
+        int32_t idx = (bc + 7) / 8 - 1;
         int32_t s = -1;
 #elif defined(BIG_ENDIAN)
         int32_t idx = 0;
         int32_t s = 1;
 #endif
-        if (left > 0) {
-            __write_to_byte(left, tmp[idx]);
-            bc -= left;
-            idx += s;
+        uint32_t rc = bc % 8;
+        if (rc == 0) {
+            rc = 8;
         }
 
-        while (bc > 0) {
-            __write_to_byte(8, tmp[idx]);
-            bc -= 8;
-            idx += s;
+        for (; bc > 0; bc -= rc, rc = 8, idx += s) {
+            __write_to_byte(rc, *((uint8_t*)&val + idx));
         }
 
         return true;
@@ -205,30 +174,24 @@ namespace toolkit {
     bool bits_writer::write(
         uint32_t bc, 
         uint32_t val) {
-        if (bc > 32 || bc > all_bc_) {
+        if (bc > 32 || bc > unwritten_bc_) {
             return false;
         }
 
-        uint32_t left = bc % 8;
-        uint8_t *tmp = (uint8_t*)(&val);
-
 #if defined(LITTLE_ENDIAN)
-        int32_t idx = bc / 8 + (left > 0 ? 0 : -1);
+        int32_t idx = (bc + 7) / 8 - 1;
         int32_t s = -1;
 #elif defined(BIG_ENDIAN)
         int32_t idx = 0;
         int32_t s = 1;
 #endif
-        if (left > 0) {
-            __write_to_byte(left, tmp[idx]);
-            bc -= left;
-            idx += s;
+        uint32_t rc = bc % 8;
+        if (rc == 0) {
+            rc = 8;
         }
 
-        while (bc > 0) {
-            __write_to_byte(8, tmp[idx]);
-            bc -= 8;
-            idx += s;
+        for (; bc > 0; bc -= rc, rc = 8, idx += s) {
+            __write_to_byte(rc, *((uint8_t*)&val + idx));
         }
 
         return true;
@@ -237,57 +200,51 @@ namespace toolkit {
     bool bits_writer::write(
         uint32_t bc, 
         uint64_t val) {
-        if (bc > 64 || bc > all_bc_) {
+        if (bc > 64 || bc > unwritten_bc_) {
             return false;
         }
 
-        uint32_t left = bc % 8;
-        uint8_t *tmp = (uint8_t*)(&val);
-
 #if defined(LITTLE_ENDIAN)
-        int32_t idx = bc / 8 + (left > 0 ? 0 : -1);
+        int32_t idx = (bc + 7) / 8 - 1;
         int32_t s = -1;
 #elif defined(BIG_ENDIAN)
         int32_t idx = 0;
         int32_t s = 1;
 #endif
-        if (left > 0) {
-            __write_to_byte(left, tmp[idx]);
-            bc -= left;
-            idx += s;
+        uint32_t rc = bc % 8;
+        if (rc == 0) {
+            rc = 8;
         }
 
-        while (bc > 0) {
-            __write_to_byte(8, tmp[idx]);
-            bc -= 8;
-            idx += s;
+        for (; bc > 0; bc -= rc, rc = 8, idx += s) {
+            __write_to_byte(rc, *((uint8_t*)&val + idx));
         }
-
+        
         return true;
     }
 
     void bits_writer::__write_to_byte(
         uint32_t bc, 
         uint8_t val) {
-        if (left_bc_ < bc) {
-            *byte_pos_ |= ((val & (0xff >> (8 - left_bc_))) >> (bc - left_bc_));
-            bc -= left_bc_;
-            used_bc_ += left_bc_;
-            all_bc_ -= left_bc_;
+        if (byte_left_bc_ < bc) {
+            *byte_pos_ |= ((val & (0xff >> (8 - byte_left_bc_))) >> (bc - byte_left_bc_));
+            unwritten_bc_ -= byte_left_bc_;
+            written_bc_ += byte_left_bc_;
+            bc -= byte_left_bc_;
 
-            left_bc_ = 8;
+            byte_left_bc_ = 8;
             byte_pos_++;
         }
 
-        *byte_pos_ |= ((val & (0xff >> (8 - bc))) << (left_bc_ - bc));
-        left_bc_ -= bc;
-        used_bc_ += bc;
-        all_bc_ -= bc;
+        *byte_pos_ |= ((val & (0xff >> (8 - bc))) << (byte_left_bc_ - bc));
+        unwritten_bc_ -= bc;
+        written_bc_ += bc;
 
-        if (left_bc_ == 0) {
-            left_bc_ = 8;
+        if ((byte_left_bc_ -= bc) == 0) {
+            byte_left_bc_ = 8;
             byte_pos_++;
         }
     }
+
 }  // namespace toolkit
 }  // namespace pump

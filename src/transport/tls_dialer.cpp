@@ -45,25 +45,25 @@ namespace transport {
     int32_t tls_dialer::start(
         service *sv, 
         const dialer_callbacks &cbs) {
-        PUMP_DEBUG_FAILED_RUN(
+        PUMP_DEBUG_FAILED(
             xcred_ == nullptr, 
             "tls_dialer: start failed for cert invalid",
             return ERROR_INVALID);
 
-        PUMP_DEBUG_FAILED_RUN(
+        PUMP_DEBUG_FAILED(
             !__set_state(TRANSPORT_INITED, TRANSPORT_STARTING), 
-            "tcp_transport: start failed for transport state incorrect",
+            "tls_dialer: start failed for transport state incorrect",
             return ERROR_INVALID);
 
-        PUMP_DEBUG_FAILED_RUN(
+        PUMP_DEBUG_FAILED(
             sv == nullptr,
-            "tcp_transport: start failed for service invalid",
+            "tls_dialer: start failed for service invalid",
             return ERROR_INVALID);
         __set_service(sv);
 
-        PUMP_DEBUG_FAILED_RUN(
+        PUMP_DEBUG_FAILED(
             !cbs.dialed_cb || !cbs.stopped_cb || !cbs.timeouted_cb, 
-            "tcp_transport: start failed for callbacks invalid",
+            "tls_dialer: start failed for callbacks invalid",
             return ERROR_INVALID);
         cbs_ = cbs;
 

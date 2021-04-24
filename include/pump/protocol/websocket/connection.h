@@ -18,6 +18,7 @@
 #define pump_protocol_websocket_connection_h
 
 #include "pump/service.h"
+#include "pump/toolkit/buffer.h"
 #include "pump/transport/base_transport.h"
 
 #include "pump/protocol/http/request.h"
@@ -85,15 +86,10 @@ namespace websocket {
         void stop();
 
         /*********************************************************************************
-         * Async read next frame
-         ********************************************************************************/
-        bool async_read_next_frame();
-
-        /*********************************************************************************
          * Send raw data
          * Send raw data without packing as frame.
          ********************************************************************************/
-        bool send_raw(
+        bool send(
             const block_t *b,
             int32_t size);
 
@@ -171,11 +167,11 @@ namespace websocket {
         // Transport
         transport::base_transport_sptr transp_;
 
-        // Read type
-        int32_t rt_;
+        // Read category
+        int32_t read_category_;
 
         // Read Cache
-        std::string read_cache_;
+        toolkit::io_buffer *cahce_;
 
         // Pocket
         http::pocket_sptr pocket_;

@@ -44,6 +44,12 @@
 #define pump_socket int32_t
 #endif 
 
+#if defined(PUMP_HAVE_WINSOCK)
+#define SHUT_RD   SD_RECEIVE
+#define SHUT_RW   SD_SEND
+#define SHUT_BOTH SD_BOTH
+#endif
+
 #ifndef INVALID_SOCKET
 #define INVALID_SOCKET -1
 #endif
@@ -192,7 +198,7 @@ namespace net {
     /*********************************************************************************
      * Close the ability of writing
      ********************************************************************************/
-    void shutdown(pump_socket fd);
+    void shutdown(pump_socket fd, int32_t how);
 
     /*********************************************************************************
      * Close socket

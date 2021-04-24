@@ -30,13 +30,13 @@ namespace flow {
     int32_t flow_tcp::init(
         poll::channel_sptr &&ch, 
         pump_socket fd) {
-        PUMP_DEBUG_FAILED_RUN(
+        PUMP_DEBUG_FAILED(
             !ch, 
             "flow_tcp: init failed for channel invalid",
             return FLOW_ERR_ABORT);
         ch_ = ch;
 
-        PUMP_DEBUG_FAILED_RUN(
+        PUMP_DEBUG_FAILED(
             fd < 0, 
             "flow_tcp: init failed for fd invalid",
             return FLOW_ERR_ABORT);
@@ -46,7 +46,7 @@ namespace flow {
     }
 
     int32_t flow_tcp::want_to_send(toolkit::io_buffer *iob) {
-        PUMP_DEBUG_FAILED_RUN(
+        PUMP_DEBUG_FAILED(
             iob == nullptr,  
             "flow_tcp: want to send failed for io buffer invalid",
             return FLOW_ERR_ABORT);

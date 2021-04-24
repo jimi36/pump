@@ -172,16 +172,16 @@ namespace toolkit {
         }
 
         /*********************************************************************************
-         * Add ref
+         * Add refence
          ********************************************************************************/
-        PUMP_INLINE void add_ref() {
+        PUMP_INLINE void add_refence() {
             ref_cnt_.fetch_add(1);
         }
 
         /*********************************************************************************
-         * Sub ref
+         * Sub refence
          ********************************************************************************/
-        PUMP_INLINE void sub_ref() {
+        PUMP_INLINE void sub_refence() {
             if (ref_cnt_.fetch_sub(1) == 1) {
                 INLINE_OBJECT_DELETE(this, io_buffer);
             }

@@ -18,6 +18,7 @@
 #define pump_protocol_http_connection_h
 
 #include "pump/memory.h"
+#include "pump/toolkit/buffer.h"
 #include "pump/protocol/http/pocket.h"
 #include "pump/transport/tcp_transport.h"
 
@@ -79,18 +80,11 @@ namespace http {
         bool send(const body *b);
 
         /*********************************************************************************
-         * Check connection is valid or not
+         * Get connection transport
          ********************************************************************************/
-        PUMP_INLINE transport::base_transport_sptr get_transport() {
-            return transp_;
-        }
-
-        /*********************************************************************************
-         * Check connection is valid or not
-         ********************************************************************************/
-        PUMP_INLINE transport::base_transport_sptr pop_transport() {
-            return std::move(transp_);
-        }
+        //PUMP_INLINE transport::base_transport_sptr get_transport() {
+        //    return transp_;
+        //}
 
         /*********************************************************************************
          * Check connection is valid or not
@@ -120,9 +114,9 @@ namespace http {
 
       private:
         /*********************************************************************************
-         * Handle http data
+         * Handle http pocket
          ********************************************************************************/
-        void __handle_http_data(
+        void __handle_http_pocket(
             const block_t *b, 
             int32_t size);
 
@@ -137,7 +131,7 @@ namespace http {
 
       private:
         // Read cache
-        std::string read_cache_;
+        toolkit::io_buffer *cache_;
 
         // Incoming http pocket
         pocket_sptr incoming_pocket_;

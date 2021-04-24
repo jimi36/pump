@@ -10,8 +10,8 @@
 
 using namespace pump::protocol;
 
-void start_ws_client(pump::service_ptr sv, const std::string &url);
+void start_ws_client(pump::service *sv, const std::string &url);
 
-void start_ws_server(pump::service_ptr sv, const std::string &ip, int port);
+void start_ws_server(pump::service *sv, const std::string &ip, int port);
 
 #endif

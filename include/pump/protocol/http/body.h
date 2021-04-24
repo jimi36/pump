@@ -40,16 +40,16 @@ namespace http {
          * Set chunked mode
          ********************************************************************************/
         PUMP_INLINE void set_chunked() {
-            is_chunked_ = true;
+            is_chunk_mode_ = true;
         }
 
         /*********************************************************************************
          * Append data
          ********************************************************************************/
-        void append(const std::string &data) {
+        PUMP_INLINE void append(const std::string &data) {
             data_.append(data);
         }
-        void append(
+        PUMP_INLINE void append(
             const block_t *b, 
             int32_t size) {
             data_.append(b, size);
@@ -76,10 +76,10 @@ namespace http {
         }
 
         /*********************************************************************************
-         * Set body length to parse
-         * If chunked mode is set, content length will be ignore.
+         * Set body content length
+         * If using chunked mode, content length will be ignore.
          ********************************************************************************/
-        PUMP_INLINE void set_length_to_parse(int32_t len) {
+        PUMP_INLINE void set_length(int32_t len) {
             content_length_ = len;
         }
 
@@ -113,11 +113,10 @@ namespace http {
         std::string data_;
 
         // Chunk mode flag
-        bool is_chunked_;
-        // Next chunk size for chunk mode
-        int32_t next_chunk_size_;
+        bool is_chunk_mode_;
    
-        // Content length for content length mode
+        // Content length
+        // Ignore if using chunked mode.
         int32_t content_length_;
     };
     DEFINE_ALL_POINTER_TYPE(body);

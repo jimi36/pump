@@ -29,7 +29,7 @@ namespace flow {
     int32_t flow_udp::init(
         poll::channel_sptr &&ch, 
         const address &bind_address) {
-        PUMP_DEBUG_FAILED_RUN(
+        PUMP_DEBUG_FAILED(
             !ch, 
             "flow_udp: init failed for channel invalid",
             return FLOW_ERR_ABORT);

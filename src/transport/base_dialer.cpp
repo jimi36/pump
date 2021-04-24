@@ -46,7 +46,8 @@ namespace transport {
     void base_dialer::__stop_dial_tracker() {
         auto tracker = tracker_;
         if (tracker) {
-            get_service()->remove_channel_tracker(tracker, SEND_POLLER_ID);
+            PUMP_ASSERT(tracker_->get_poller() != nullptr);
+            tracker_->get_poller()->remove_channel_tracker(tracker);
         }
     }
 

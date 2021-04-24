@@ -28,14 +28,14 @@ namespace poll {
     }
 
     bool poller::start() {
-        if (started_.load()) {
+        if (started_.load(std::memory_order_relaxed)) {
             return false;
         }
         started_.store(true);
 
         worker_.reset(
             object_create<std::thread>([&]() {
-                while (started_.load()) {
+                while (started_.load(std::memory_order_relaxed)) {
                     __handle_channel_events();
                     __handle_channel_tracker_events();
                     if (cev_cnt_.load(std::memory_order_acquire) > 0 ||
@@ -49,6 +49,10 @@ namespace poll {
             object_delete<std::thread>);
 
         return true;
+    }
+
+    void poller::stop() {
+        started_.store(false);
     }
 
     void poller::wait_stopped() {
@@ -78,10 +82,11 @@ namespace poll {
         }
 
         // Set channel tracker installed.
-        if(!tracker->set_installed(true)) {
-            PUMP_DEBUG_LOG("poller: add channel tracker failed for marking tracker installed failed");
-            return false;
-        }
+        //if(!tracker->set_installed(true)) {
+        //    PUMP_DEBUG_LOG(
+        //        "poller: add channel tracker failed for marking tracker installed failed");
+        //    return false;
+        //}
 
         // Create tracker event
         PUMP_COND_ABORT(!tevents_.push(object_create<tracker_event>(tracker, TRACKER_EVENT_ADD)),
@@ -99,13 +104,14 @@ namespace poll {
             return;
         }
 
-        if (PUMP_UNLIKELY(!tracker->stop())) {
-            PUMP_DEBUG_LOG("poller: remove channel tracker failed for tracker no started");
+        if (!tracker->stop()) {
+            PUMP_DEBUG_LOG(
+                "poller: remove channel tracker failed for tracker no started");
             return;
         }
 
         // Wait channel tracker installed.
-        while(!tracker->installed());
+        //while(!tracker->installed());
 
         // Uninstall channel tracker.
         __uninstall_channel_tracker(tracker.get());
@@ -116,6 +122,15 @@ namespace poll {
 
         // Add pending trakcer event count
         tev_cnt_.fetch_add(1, std::memory_order_relaxed);
+    }
+
+    bool poller::resume_channel_tracker(channel_tracker *tracker) {
+        if (PUMP_UNLIKELY(!tracker->track())) {
+            PUMP_DEBUG_LOG(
+                "poller: resume channel tracker failed for tracker tracking failed");
+            return false;
+        }
+        return __resume_channel_tracker(tracker);
     }
 
     bool poller::push_channel_event(

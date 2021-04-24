@@ -43,13 +43,13 @@ namespace websocket {
     bool server::start(
         service *sv, 
         const server_callbacks &scbs) {
-        PUMP_DEBUG_FAILED_RUN(
+        PUMP_DEBUG_FAILED(
             sv == nullptr, 
             "websocket::server: start failed for service invalid",
             return false);
         sv_ = sv;
 
-        PUMP_DEBUG_FAILED_RUN(
+        PUMP_DEBUG_FAILED(
             !scbs.upgraded_cb,
             "websocket::server: start failed for callbacks invalid",
             return false);
@@ -59,7 +59,8 @@ namespace websocket {
         server_wptr wptr = shared_from_this();
         cbs.stopped_cb = pump_bind(&server::on_stopped, wptr);
         cbs.accepted_cb = pump_bind(&server::on_accepted, wptr, _1);
-        if (acceptor_->start(sv, cbs) != transport::ERROR_OK) {
+        if (!acceptor_ || acceptor_->start(sv, cbs) != transport::ERROR_OK) {
+            PUMP_DEBUG_LOG("websocket::server: start failed for acceptor invalid");
             return false;
         }
 
@@ -82,19 +83,24 @@ namespace websocket {
                 sv = svr->select_service_cb_();
             }
 
-            connection_sptr conn(new connection(sv, transp, false));
-            {
-                std::unique_lock<std::mutex> w_lock(svr->conn_mx_);
-                svr->conns_[conn.get()] = conn;
+            connection_sptr conn(
+                object_create<connection>(sv, transp, false), 
+                object_delete<connection>);
+            if (!conn) {
+                PUMP_WARN_LOG("websocket::server: accept failed for creating connection failed");
+                return;
             }
 
             upgrade_callbacks ucbs;
             ucbs.pocket_cb = pump_bind(&server::on_upgrade_request, wptr, conn.get(), _1);
             ucbs.error_cb = pump_bind(&server::on_error, wptr, conn.get(), _1);
+
+            std::unique_lock<std::mutex> w_lock(svr->conn_mx_);
             if (!conn->start_upgrade(false, ucbs)) {
-                std::unique_lock<std::mutex> w_lock(svr->conn_mx_);
-                svr->conns_.erase(conn.get());
+                PUMP_WARN_LOG("websocket::server: accept failed for starting upgrade connection failed");
+                return;
             }
+            svr->conns_[conn.get()] = conn;
         }
     }
 
@@ -221,7 +227,7 @@ namespace websocket {
 
         std::string data;
         resp.serialize(data);
-        return conn->send_raw(data.c_str(), (int32_t)data.size());
+        return conn->send(data.c_str(), (int32_t)data.size());
     }
 
     void server::__stop_all_upgrading_conns() {

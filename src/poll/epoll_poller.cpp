@@ -72,8 +72,7 @@ namespace poll {
         } else if (expected_event & IO_EVENT_SEND) {
             event->events = EL_SEND_EVENT;
         }
-        if (epoll_ctl(fd_, EPOLL_CTL_ADD, tracker->get_fd(), event) == 0 ||
-            epoll_ctl(fd_, EPOLL_CTL_MOD, tracker->get_fd(), event) == 0) {
+        if (epoll_ctl(fd_, EPOLL_CTL_ADD, tracker->get_fd(), event) == 0) {
             cur_event_count_.fetch_add(1, std::memory_order_relaxed);
             return true;
         }
@@ -91,6 +90,8 @@ namespace poll {
         if (epoll_ctl(fd_, EPOLL_CTL_DEL, tracker->get_fd(), event) == 0) {
             cur_event_count_.fetch_sub(1, std::memory_order_relaxed);
             return true;           
+        } else if (errno == ENOENT) {
+            return true;
         }
 
         PUMP_DEBUG_LOG(
@@ -110,8 +111,7 @@ namespace poll {
         } else if (expected_event & IO_EVENT_SEND) {
             event->events = EL_SEND_EVENT;
         }
-        if (epoll_ctl(fd_, EPOLL_CTL_MOD, tracker->get_fd(), event) == 0 ||
-            epoll_ctl(fd_, EPOLL_CTL_ADD, tracker->get_fd(), event) == 0) {
+        if (epoll_ctl(fd_, EPOLL_CTL_MOD, tracker->get_fd(), event) == 0) {
             return true;
         }
 
