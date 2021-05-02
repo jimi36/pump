@@ -29,8 +29,9 @@ namespace transport {
         __stop_send_tracker();
     }
 
-    int32_t udp_transport::start(
+    error_code udp_transport::start(
         service *sv, 
+        read_mode mode,
         const transport_callbacks &cbs) {
         PUMP_DEBUG_FAILED(
             !__set_state(TRANSPORT_INITED, TRANSPORT_STARTING), 
@@ -42,6 +43,12 @@ namespace transport {
             "udp_transport: start failed for service invalid",
             return ERROR_INVALID);
         __set_service(sv);
+
+        PUMP_DEBUG_FAILED(
+            mode != READ_MODE_ONCE && mode != READ_MODE_LOOP,
+            "tcp_transport: start failed for transport state incorrect",
+            return ERROR_INVALID);
+        rmode_ = mode;
 
         PUMP_DEBUG_FAILED(
             !cbs.read_from_cb || !cbs.stopped_cb, 
@@ -68,7 +75,9 @@ namespace transport {
 
     void udp_transport::stop() {
         while (__is_state(TRANSPORT_STARTED)) {
+            // Change state from started to stopping.
             if (__set_state(TRANSPORT_STARTED, TRANSPORT_STOPPING)) {
+                // Shutdown transport flow and post channel event.
                 __shutdown_transport_flow();
                 __post_channel_event(shared_from_this(), 0);
                 return;
@@ -76,27 +85,25 @@ namespace transport {
         }
     }
 
-    int32_t udp_transport::read_for_once() {
-        while (__is_state(TRANSPORT_STARTED)) {
-            int32_t err = __async_read(READ_ONCE);
-            if (err != ERROR_AGAIN) {
-                return err;
-            }
+    error_code udp_transport::read_continue() {
+        if (!is_started()) {
+            PUMP_DEBUG_LOG("tcp_transport: read for once failed for not in started");
+            return ERROR_UNSTART;
         }
-        return ERROR_UNSTART;
+
+        if (rmode_ != READ_MODE_ONCE) {
+                return ERROR_FAULT;
+        }
+
+        if (!__change_read_state(READ_NONE, READ_PENDING) ||
+            !__resume_read_tracker()) {
+                return ERROR_FAULT;
+        }
+
+        return ERROR_OK;
     }
 
-    int32_t udp_transport::read_for_loop() {
-        while (__is_state(TRANSPORT_STARTED)) {
-            int32_t err = __async_read(READ_LOOP);
-            if (err != ERROR_AGAIN) {
-                return err;
-            }
-        }
-        return ERROR_UNSTART;
-    }
-
-    int32_t udp_transport::send(
+    error_code udp_transport::send(
         const block_t *b,
         int32_t size,
         const address &address) {
@@ -122,32 +129,30 @@ namespace transport {
         auto flow = flow_.get();
 
         address from_addr;
-        block_t b[MAX_UDP_BUFFER_SIZE];
-        int32_t size = flow->read_from(b, sizeof(b), &from_addr);
+        block_t data[MAX_UDP_BUFFER_SIZE];
+        int32_t size = flow->read_from(data, sizeof(data), &from_addr);
         if (PUMP_LIKELY(size > 0)) {
-            // If read state is READ_ONCE, change it to READ_PENDING.
-            // If read state is READ_LOOP, last state will be seted to READ_LOOP.
-            int32_t last_state = READ_ONCE;
-            read_state_.compare_exchange_strong(last_state, READ_PENDING);
+            // If not in started, do nothing.
+            if (!is_started()) {
+                return;
+            }
 
-            // Do read callback.
-            cbs_.read_from_cb(b, size, from_addr);
-
-            // If last read state is READ_ONCE, try to change read state to READ_NONE.
-            if (last_state == READ_ONCE) {
-                last_state = READ_PENDING;
-                if (read_state_.compare_exchange_strong(last_state, READ_NONE)) {
+            if (rmode_ == READ_MODE_ONCE) {
+                // Change read state from READ_PENDING to READ_NONE.
+                if (!__change_read_state(READ_PENDING, READ_NONE)) {
+                    PUMP_WARN_LOG("udp_transport: handle read failed for changing read state");
                     return;
                 }
+                // Callback read data.
+                cbs_.read_cb(data, size);
+                return;
+            } else {
+                // Callback read data.
+                cbs_.read_cb(data, size);
             }
         }
 
-        // If transport is not in started state, try to interrupt the transport.
-        if (!__is_state(TRANSPORT_STARTED)) {
-            __interrupt_and_trigger_callbacks();
-            return;
-        }
-
+        // Resume read tracker to read next time.
         if (!__resume_read_tracker()) {
             PUMP_WARN_LOG("udp_transport: handle read event failed for resuming tracker failed");
         }
@@ -171,22 +176,6 @@ namespace transport {
         poll::channel::__set_fd(flow_->get_fd());
 
         return true;
-    }
-
-    int32_t udp_transport::__async_read(int32_t state) {
-        int32_t current_state = __change_read_state(state);
-        if (current_state >= READ_PENDING) {
-            return ERROR_OK;
-        } else if (current_state == READ_INVALID) {
-            return ERROR_AGAIN;
-        }
-
-        if (!__start_read_tracker()) {
-            PUMP_WARN_LOG("udp_transport: async read failed for starting tracker failed");
-            return ERROR_FAULT;
-        }
-
-        return ERROR_OK;
     }
 
 }  // namespace transport

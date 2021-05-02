@@ -47,8 +47,9 @@ namespace transport {
          * Start
          * max_pending_send_size is ignore on udp transport.
          ********************************************************************************/
-        virtual int32_t start(
+        virtual error_code start(
             service *sv, 
+            read_mode mode,
             const transport_callbacks &cbs) override;
 
         /*********************************************************************************
@@ -64,19 +65,14 @@ namespace transport {
         }
 
         /*********************************************************************************
-         * Read for once
+         * Read continue for read once mode
          ********************************************************************************/
-        virtual int32_t read_for_once();
-
-        /*********************************************************************************
-         * Read for loop
-         ********************************************************************************/
-        virtual int32_t read_for_loop();
+        virtual error_code read_continue() override;
 
         /*********************************************************************************
          * Send
          ********************************************************************************/
-        virtual int32_t send(
+        virtual error_code send(
             const block_t *b,
             int32_t size,
             const address &address) override;
@@ -103,7 +99,7 @@ namespace transport {
          ********************************************************************************/
         PUMP_INLINE void __shutdown_transport_flow() {
             if (flow_) {
-                flow_->shutdown(SHUT_BOTH);
+                flow_->shutdown(SHUT_RDWR);
             }
         }
 
@@ -115,11 +111,6 @@ namespace transport {
                 flow_->close();
             }
         }
-
-        /*********************************************************************************
-         * Async read
-         ********************************************************************************/
-        int32_t __async_read(int32_t state);
 
       private:
         // Udp flow

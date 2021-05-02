@@ -23,21 +23,11 @@ namespace transport {
         __interrupt_and_trigger_callbacks();
     }
 
-    int32_t base_transport::__change_read_state(int32_t state) {
-        int32_t current_state = read_state_.load();
-        if (current_state >= READ_PENDING) {
-            if (!read_state_.compare_exchange_strong(current_state, state)) {
-                return READ_INVALID;
-            }
-            return current_state;
+    bool base_transport::__change_read_state(read_state from, read_state to) {
+        if (rstate_.compare_exchange_strong(from, to)) {
+            return true;
         }
-
-        current_state = READ_NONE;
-        if (read_state_.compare_exchange_strong(current_state, state)) {
-            return current_state;
-        }
-
-        return READ_INVALID;
+        return false;
     }
 
     void base_transport::__interrupt_and_trigger_callbacks() {

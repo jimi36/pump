@@ -71,7 +71,7 @@ namespace http {
         tcbs.read_cb = pump_bind(&connection::on_read, wptr, _1, _2);
         tcbs.stopped_cb = pump_bind(&connection::on_stopped, wptr);
         tcbs.disconnected_cb = pump_bind(&connection::on_disconnected, wptr);
-        if (transp_->start(sv, tcbs) != transport::ERROR_OK) {
+        if (transp_->start(sv, transport::READ_MODE_ONCE, tcbs) != transport::ERROR_OK) {
             return false;
         }
 
@@ -84,7 +84,7 @@ namespace http {
 
     bool connection::read_next_pocket() {
         auto transp = transp_;
-        if (transp && transp->read_for_once() == transport::ERROR_OK) {
+        if (transp && transp->read_continue() == transport::ERROR_OK) {
             return true;
         }
         return false;
@@ -173,7 +173,7 @@ namespace http {
         if (pk->is_parse_finished()) {
             http_cbs_.pocket_cb(std::move(incoming_pocket_));
         } else {
-            transp_->read_for_once();
+            transp_->read_continue();
         }
     }
 

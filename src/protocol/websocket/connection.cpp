@@ -92,14 +92,14 @@ namespace websocket {
         tcbs.read_cb = pump_bind(&connection::on_read, wptr, _1, _2);
         tcbs.stopped_cb = pump_bind(&connection::on_stopped, wptr);
         tcbs.disconnected_cb = pump_bind(&connection::on_disconnected, wptr);
-        if (transp->start(sv_, tcbs) != transport::ERROR_OK) {
+        if (transp->start(sv_, transport::READ_MODE_ONCE, tcbs) != transport::ERROR_OK) {
             PUMP_DEBUG_LOG("websocket::connection: start upgrade failed for starting transport failed");
             return false;
         }
-        if (transp->read_for_once() != transport::ERROR_OK) {
-            PUMP_DEBUG_LOG("websocket::connection: start upgrade failed for reading once failed");
-            return false;
-        }
+        //if (transp->read_for_once() != transport::ERROR_OK) {
+        //    PUMP_DEBUG_LOG("websocket::connection: start upgrade failed for reading once failed");
+        //    return false;
+        //}
 
         return true;
     }
@@ -123,7 +123,7 @@ namespace websocket {
             return false);
         read_category_ = READ_FRAME;
 
-        if (transp->read_for_loop() != transport::ERROR_OK) {
+        if (transp->read_continue() != transport::ERROR_OK) {
             PUMP_DEBUG_LOG("websocket::connection: start failed for reading once failed");
             return false;
         }
@@ -275,7 +275,7 @@ namespace websocket {
         if (pocket_->is_parse_finished()) {
             ucbs_.pocket_cb(std::move(pocket_));
         } else {
-            if (transp_->read_for_once() != transport::ERROR_OK) {
+            if (transp_->read_continue() != transport::ERROR_OK) {
                 PUMP_DEBUG_LOG(
                     "websocket::connection: handle pocket failed for reading once failed");
                 return -1;
@@ -354,7 +354,7 @@ namespace websocket {
             }
         } while(false);
 
-        if (transp_->read_for_once() != transport::ERROR_OK) {
+        if (transp_->read_continue() != transport::ERROR_OK) {
             PUMP_DEBUG_LOG(
                 "websocket::connection: handle frame failed for reading once failed");
             return -1;

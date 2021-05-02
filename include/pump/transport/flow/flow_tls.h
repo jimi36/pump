@@ -50,7 +50,7 @@ namespace flow {
         int32_t init(
             poll::channel_sptr &ch,
             pump_socket fd,
-            void *xcred,
+            void *tls_cred,
             bool client);
 
         /*********************************************************************************

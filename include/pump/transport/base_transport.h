@@ -59,23 +59,31 @@ namespace transport {
     const int32_t TRANSPORT_ERROR = 11;
 
     /*********************************************************************************
+     * Transport read mode
+     ********************************************************************************/
+    typedef int32_t read_mode;
+    const read_mode READ_MODE_NONE = 0;
+    const read_mode READ_MODE_ONCE = 1;
+    const read_mode READ_MODE_LOOP = 2;
+
+    /*********************************************************************************
      * Transport read state
      ********************************************************************************/
-    const int32_t READ_NONE = 0;
-    const int32_t READ_INVALID = 1;
-    const int32_t READ_PENDING = 2;
-    const int32_t READ_ONCE = 3;
-    const int32_t READ_LOOP = 4;
+    typedef int32_t read_state;
+    const read_state READ_NONE = 0;
+    const read_state READ_PENDING = 3;
+    const read_state READ_INVALID = 4;
 
     /*********************************************************************************
      * Transport error
      ********************************************************************************/
-    const int32_t ERROR_OK = 0;
-    const int32_t ERROR_UNSTART = 1;
-    const int32_t ERROR_INVALID = 2;
-    const int32_t ERROR_DISABLE = 3;
-    const int32_t ERROR_AGAIN = 4;
-    const int32_t ERROR_FAULT = 5;
+    typedef int32_t error_code;
+    const error_code ERROR_OK = 0;
+    const error_code ERROR_UNSTART = 1;
+    const error_code ERROR_INVALID = 2;
+    const error_code ERROR_DISABLE = 3;
+    const error_code ERROR_AGAIN   = 4;
+    const error_code ERROR_FAULT   = 5;
 
     class LIB_PUMP base_channel
       : public service_getter,
@@ -165,7 +173,8 @@ namespace transport {
             service *sv, 
             int32_t fd)
           : base_channel(type, sv, fd),
-            read_state_(READ_NONE),
+            rmode_(READ_MODE_NONE),
+            rstate_(READ_NONE),
             pending_send_size_(0) {
         }
 
@@ -178,8 +187,9 @@ namespace transport {
         /*********************************************************************************
          * Start
          ********************************************************************************/
-        virtual int32_t start(
+        virtual error_code start(
             service *sv, 
+            read_mode mode,
             const transport_callbacks &cbs) = 0;
 
         /*********************************************************************************
@@ -193,23 +203,14 @@ namespace transport {
         virtual void force_stop() = 0;
 
         /*********************************************************************************
-         * Read for once
+         * Read continue for read once mode
          ********************************************************************************/
-        virtual int32_t read_for_once() {
-            return ERROR_DISABLE;
-        }
-
-        /*********************************************************************************
-         * Read for loop
-         ********************************************************************************/
-        virtual int32_t read_for_loop() {
-            return ERROR_DISABLE;
-        }
+        virtual error_code read_continue() = 0;
 
         /*********************************************************************************
          * Send
          ********************************************************************************/
-        virtual int32_t send(
+        virtual error_code send(
             const block_t *b, 
             int32_t size) {
             return ERROR_DISABLE;
@@ -219,14 +220,14 @@ namespace transport {
          * Send io buffer
          * The ownership of io buffer will be transferred.
          ********************************************************************************/
-        virtual int32_t send(toolkit::io_buffer *iob) {
+        virtual error_code send(toolkit::io_buffer *iob) {
             return ERROR_DISABLE;
         }
 
         /*********************************************************************************
          * Send
          ********************************************************************************/
-        virtual int32_t send(
+        virtual error_code send(
             const block_t *b,
             int32_t size,
             const address &address) {
@@ -267,9 +268,10 @@ namespace transport {
         virtual void __close_transport_flow() = 0;
 
         /*********************************************************************************
-         * Chane read state
+         * Change read state
          ********************************************************************************/
-        int32_t __change_read_state(int32_t state);
+        bool __change_read_state(read_state from, read_state to);
+
 
         /*********************************************************************************
          * Interrupt and trigger callbacks
@@ -323,14 +325,14 @@ namespace transport {
          ********************************************************************************/
         PUMP_INLINE void __stop_read_tracker() {
             if (r_tracker_) {
-                PUMP_DEBUG_LOG("base_transport: stop read tracker");
-                get_service()->remove_channel_tracker(r_tracker_, READ_POLLER_ID);
+                PUMP_ASSERT(r_tracker_->get_poller() != nullptr);
+                r_tracker_->get_poller()->remove_channel_tracker(r_tracker_);
             }
         }
         PUMP_INLINE void __stop_send_tracker() {
             if (s_tracker_) {
-                PUMP_DEBUG_LOG("base_transport: stop send tracker");
-                get_service()->remove_channel_tracker(s_tracker_, SEND_POLLER_ID);
+                PUMP_ASSERT(s_tracker_->get_poller() != nullptr);
+                s_tracker_->get_poller()->remove_channel_tracker(s_tracker_);
             }
         }
 
@@ -358,8 +360,9 @@ namespace transport {
         poll::channel_tracker_sptr r_tracker_;
         poll::channel_tracker_sptr s_tracker_;
 
-        // Transport read state
-        std::atomic_int32_t read_state_;
+        // Transport read mode
+        read_mode rmode_;
+        std::atomic<read_state> rstate_;
 
         // Pending send buffer size
         std::atomic_int32_t pending_send_size_;

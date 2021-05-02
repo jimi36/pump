@@ -223,7 +223,8 @@ namespace poll {
         if (PUMP_UNLIKELY(cur_event_count > max_event_count_)) {
             max_event_count_ = cur_event_count;
             events_ = pump_realloc(events_, sizeof(OVERLAPPED_ENTRY) * max_event_count_);
-            PUMP_ASSERT(events_);
+            PUMP_COND_ABORT(events_ == nullptr,
+                "afd_poller: allocate afd events memory failed");
         }
 
         DWORD completion_count = 0;

@@ -55,8 +55,9 @@ namespace transport {
         /*********************************************************************************
          * Start tls transport
          ********************************************************************************/
-        virtual int32_t start(
+        virtual error_code start(
             service *sv, 
+            read_mode mode,
             const transport_callbacks &cbs) override;
 
         /*********************************************************************************
@@ -71,19 +72,14 @@ namespace transport {
         virtual void force_stop() override;
 
         /*********************************************************************************
-         * Read for once
+         * Read continue for read once mode
          ********************************************************************************/
-        virtual int32_t read_for_once();
-
-        /*********************************************************************************
-         * Read for loop
-         ********************************************************************************/
-        virtual int32_t read_for_loop();
+        virtual error_code read_continue() override;
 
         /*********************************************************************************
          * Send
          ********************************************************************************/
-        virtual int32_t send(
+        virtual error_code send(
             const block_t *b, 
             int32_t size) override;
 
@@ -91,7 +87,7 @@ namespace transport {
          * Send io buffer
          * The ownership of io buffer will be transferred.
          ********************************************************************************/
-        virtual int32_t send(toolkit::io_buffer *iob) override;
+        virtual error_code send(toolkit::io_buffer *iob) override;
 
       protected:
         /*********************************************************************************
@@ -134,11 +130,6 @@ namespace transport {
         }
 
         /*********************************************************************************
-         * Async read
-         ********************************************************************************/
-        int32_t __async_read(int32_t state);
-
-        /*********************************************************************************
          * Async send
          ********************************************************************************/
         bool __async_send(toolkit::io_buffer *iob);
@@ -146,7 +137,7 @@ namespace transport {
         /*********************************************************************************
          * Send once
          ********************************************************************************/
-        int32_t __send_once(flow::flow_tls *flow);
+        error_code __send_once(flow::flow_tls *flow);
 
         /*********************************************************************************
          * Try doing transport dissconnected process

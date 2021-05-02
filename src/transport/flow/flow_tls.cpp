@@ -33,7 +33,7 @@ namespace flow {
     int32_t flow_tls::init(
         poll::channel_sptr &ch,
         pump_socket fd,
-        void *xcred,
+        void *tls_cred,
         bool client) {
         PUMP_DEBUG_FAILED(
             !ch, 
@@ -47,7 +47,7 @@ namespace flow {
             return FLOW_ERR_ABORT);
         fd_ = fd;
 
-        session_ = ssl::create_tls_session(xcred, (int32_t)fd, client);
+        session_ = ssl::create_tls_session(tls_cred, (int32_t)fd, client);
         if (!session_) {
             return FLOW_ERR_ABORT;
         }

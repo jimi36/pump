@@ -3,7 +3,7 @@
 static int count = 1;
 static int send_loop = 1;
 static int send_pocket_size = 1024 * 4;
-static int send_pocket_count =  1024 * 100;
+static int send_pocket_count =  1024 * 10000;
 
 class my_tcp_dialer;
 
@@ -49,11 +49,9 @@ class my_tcp_dialer : public std::enable_shared_from_this<my_tcp_dialer> {
             pump_bind(&my_tcp_dialer::on_disconnected_callback, this, transp.get());
 
         transport_ = std::static_pointer_cast<pump::tcp_transport>(transp);
-        if (transport_->start(sv, cbs) != 0) {
+        if (transport_->start(sv, READ_MODE_LOOP, cbs) != 0) {
             return;
         }
-
-        transport_->read_for_loop();
 
         printf("tcp client dialed\n");
 
@@ -121,12 +119,14 @@ class my_tcp_dialer : public std::enable_shared_from_this<my_tcp_dialer> {
         if (!transport_) {
             return false;
         }
+        /*
         if (left_send_pocket_count_ == 0) {
             transport_->force_stop();
             return false;
         } else if (left_send_pocket_count_ > 0) {
             left_send_pocket_count_--;
         }
+        */
         if (transport_->send(send_data_.data(), (int32_t)send_data_.size()) != 0) {
             printf("send error\n");
             return false;
@@ -198,13 +198,13 @@ class time_report {
             read_size += b->second->read_size_;
             b->second->read_size_ = 0;
 
-            /*
-            if (b->second->all_read_size_ >= 100 * 1024 * 1024 &&
+            
+            if (b->second->all_read_size_ >= send_pocket_count * send_pocket_size &&
                 b->second->transport_->is_started()) {
-                b->second->transport_->stop();
+                //b->second->transport_->stop();
                 //start_once_dialer();
             }
-            */
+            
         }
         dial_mx.unlock();
 

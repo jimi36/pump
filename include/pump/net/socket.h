@@ -46,8 +46,8 @@
 
 #if defined(PUMP_HAVE_WINSOCK)
 #define SHUT_RD   SD_RECEIVE
-#define SHUT_RW   SD_SEND
-#define SHUT_BOTH SD_BOTH
+#define SHUT_WR   SD_SEND
+#define SHUT_RDWR SD_BOTH
 #endif
 
 #ifndef INVALID_SOCKET

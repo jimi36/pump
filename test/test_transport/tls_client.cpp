@@ -33,10 +33,8 @@ class my_tls_dialer : public std::enable_shared_from_this<my_tls_dialer> {
         cbs.disconnected_cb =
             pump_bind(&my_tls_dialer::on_disconnected_callback, this, transp.get());
 
-        if (transport_->start(sv, cbs) != 0)
+        if (transport_->start(sv, READ_MODE_LOOP, cbs) != 0)
             return;
-
-        transport_->read_for_loop();
 
         printf("tls client dialed\n");
 

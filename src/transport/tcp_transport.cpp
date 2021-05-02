@@ -44,8 +44,9 @@ namespace transport {
         poll::channel::__set_fd(fd);
     }
 
-    int32_t tcp_transport::start(
+    error_code tcp_transport::start(
         service *sv, 
+        read_mode mode,
         const transport_callbacks &cbs) {
         PUMP_DEBUG_FAILED(
             !!flow_, 
@@ -62,6 +63,12 @@ namespace transport {
             "tcp_transport: start failed for service invalid",
             return ERROR_INVALID);
         __set_service(sv);
+
+        PUMP_DEBUG_FAILED(
+            mode != READ_MODE_ONCE && mode != READ_MODE_LOOP,
+            "tcp_transport: start failed for transport state incorrect",
+            return ERROR_INVALID);
+        rmode_ = mode;
         
         PUMP_DEBUG_FAILED(
             !cbs.read_cb || !cbs.disconnected_cb || !cbs.stopped_cb,
@@ -75,6 +82,12 @@ namespace transport {
             return ERROR_FAULT;
         }
 
+        PUMP_DEBUG_CHECK(__change_read_state(READ_NONE, READ_PENDING));
+        if (!__start_read_tracker()) {
+            PUMP_WARN_LOG("tcp_transport: start failed for starting tracker failed");
+            return ERROR_FAULT;
+        }
+
         __set_state(TRANSPORT_STARTING, TRANSPORT_STARTED);
 
         return ERROR_OK;
@@ -82,15 +95,14 @@ namespace transport {
 
     void tcp_transport::stop() {
         while (__is_state(TRANSPORT_STARTED)) {
-            // When in started status at the moment, stopping can be done, Then
-            // tracker event callback will be triggered, we can trigger stopped
-            // callabck at there.
+            // Change state from started to stopping.
             if (__set_state(TRANSPORT_STARTED, TRANSPORT_STOPPING)) {
-                // Wait pending send count reduce to zero.
+                // Wait pending opt count reduce to zero.
                 while (pending_opt_cnt_.load(std::memory_order_relaxed) != 0);
-                // If there is data to send, waiting sending finished.
+                // If no data to send, shutdown transport flow and post channel event,
+                // else shutdown transport flow read and wait finishing send.
                 if (pending_send_size_.load(std::memory_order_acquire) == 0) {
-                    __shutdown_transport_flow(SHUT_BOTH);
+                    __shutdown_transport_flow(SHUT_RDWR);
                     __post_channel_event(shared_from_this(), 0);
                 } else {
                     __shutdown_transport_flow(SHUT_RD);
@@ -99,10 +111,9 @@ namespace transport {
             }
         }
 
-        // If in disconnecting status at the moment, it means transport is
-        // disconnected but hasn't triggered tracker event callback yet. So we just
-        // set stopping status to transport, and when tracker event callback
-        // triggered, we will trigger stopped callabck at there.
+        // If in disconnecting state at the moment, it means transport is
+        // disconnected but hasn't triggered callback yet. So we just change
+        // state to stopping, and then transport will trigger stopped callabck.
         if (__set_state(TRANSPORT_DISCONNECTING, TRANSPORT_STOPPING)) {
             return;
         }
@@ -110,68 +121,54 @@ namespace transport {
 
     void tcp_transport::force_stop() {
         while (__is_state(TRANSPORT_STARTED)) {
-            // When in started status at the moment, stopping can be done, Then
-            // tracker event callback will be triggered, we can trigger stopped
-            // callabck at there.
+            // Change state from started to stopping.
             if (__set_state(TRANSPORT_STARTED, TRANSPORT_STOPPING)) {
-                // Wait pending send count reduce to zero.
+                // Wait pending opt count reduce to zero.
                 while (pending_opt_cnt_.load(std::memory_order_relaxed) != 0);
-                // Shutdown transport flow.
-                __shutdown_transport_flow(SHUT_BOTH);
+                // Shutdown transport flow and post channel event.
+                __shutdown_transport_flow(SHUT_RDWR);
                 __post_channel_event(shared_from_this(), 0);
                 return;
             }
         }
 
-        // If in disconnecting status at the moment, it means transport is
-        // disconnected but hasn't triggered tracker event callback yet. So we just
-        // set stopping status to transport, and when tracker event callback
-        // triggered, we will trigger stopped callabck at there.
+        // If in disconnecting state at the moment, it means transport is
+        // disconnected but hasn't triggered callback yet. So we just change
+        // state to stopping, and then transport will trigger stopped callabck.
         if (__set_state(TRANSPORT_DISCONNECTING, TRANSPORT_STOPPING)) {
             return;
         }
     }
 
-    int32_t tcp_transport::read_for_once() {
-        int32_t ec = ERROR_OK;
+    error_code tcp_transport::read_continue() {
+        if (!is_started()) {
+            PUMP_DEBUG_LOG("tcp_transport: read for once failed for not in started");
+            return ERROR_UNSTART;
+        }
 
-        // Add pending opt count.
-        pending_opt_cnt_.fetch_add(1);
-        while (true) {
-            if (!__is_state(TRANSPORT_STARTED)) {
+        error_code ec = ERROR_OK;
+
+        pending_opt_cnt_.fetch_add(1, std::memory_order_relaxed);
+        do {
+            if (!is_started()) {
+                PUMP_DEBUG_LOG("tcp_transport: read for once failed for not in started");
                 ec = ERROR_UNSTART;
                 break;
-            } else if ((ec = __async_read(READ_ONCE)) != ERROR_AGAIN) {
+            } else if (rmode_ != READ_MODE_ONCE) {
+                ec = ERROR_FAULT;
                 break;
             }
-        }
-        // Resuce pending opt count.
-        pending_opt_cnt_.fetch_sub(1);
+            if (!__change_read_state(READ_NONE, READ_PENDING) || 
+                !__resume_read_tracker()) {
+                ec = ERROR_FAULT;
+            }
+        } while (false);
+        pending_opt_cnt_.fetch_sub(1, std::memory_order_relaxed);
 
         return ec;
     }
 
-    int32_t tcp_transport::read_for_loop() {
-        int32_t ec = ERROR_OK;
-
-        // Add pending opt count.
-        pending_opt_cnt_.fetch_add(1);
-        while (true) {
-            if (!__is_state(TRANSPORT_STARTED)) {
-                ec = ERROR_UNSTART;
-                break;
-            }
-            else if ((ec = __async_read(READ_LOOP)) != ERROR_AGAIN) {
-                break;
-            }
-        }
-        // Resuce pending opt count.
-        pending_opt_cnt_.fetch_sub(1);
-
-        return ec;
-    }
-
-    int32_t tcp_transport::send(
+    error_code tcp_transport::send(
         const block_t *b, 
         int32_t size) {
         PUMP_DEBUG_FAILED(
@@ -179,12 +176,15 @@ namespace transport {
             "tcp_transport: send failed for buffer invalid",
             return ERROR_INVALID);
 
-        int32_t ec = ERROR_OK;
+        if (!is_started()) {
+            PUMP_DEBUG_LOG("tcp_transport: send failed for not in started");
+            return ERROR_UNSTART;
+        }
 
-        // Add pending opt count.
-        pending_opt_cnt_.fetch_add(1);
+        error_code ec = ERROR_OK;
+        pending_opt_cnt_.fetch_add(1, std::memory_order_relaxed);
         do {
-            if (PUMP_UNLIKELY(!__is_state(TRANSPORT_STARTED))) {
+            if (PUMP_UNLIKELY(!is_started())) {
                 PUMP_DEBUG_LOG("tcp_transport: send failed for not in started");
                 ec = ERROR_UNSTART;
                 break;
@@ -206,25 +206,27 @@ namespace transport {
                 break;
             }
         } while(false);
-        // Resuce pending opt count.
-        pending_opt_cnt_.fetch_sub(1);
+        pending_opt_cnt_.fetch_sub(1, std::memory_order_relaxed);
 
         return ec;
     }
 
-    int32_t tcp_transport::send(toolkit::io_buffer *iob) {
+    error_code tcp_transport::send(toolkit::io_buffer *iob) {
         PUMP_DEBUG_FAILED(
             iob == nullptr || iob->data_size() == 0, 
             "tcp_transport: send failed for io buffer invalid",
             return ERROR_INVALID);
 
-        int32_t ec = ERROR_OK;
-        
-        // Add pending send count.
-        pending_opt_cnt_.fetch_add(1);
+        if (!is_started()) {
+            PUMP_DEBUG_LOG("tcp_transport: send failed for not in started");
+            return ERROR_UNSTART;
+        }
+
+        error_code ec = ERROR_OK;
+        pending_opt_cnt_.fetch_add(1, std::memory_order_relaxed);
         do
         {
-            if (PUMP_UNLIKELY(!__is_state(TRANSPORT_STARTED))) {
+            if (PUMP_UNLIKELY(!is_started())) {
                 PUMP_DEBUG_LOG("tcp_transport: send failed for not in started");
                 ec = ERROR_UNSTART;
                 break;
@@ -237,46 +239,41 @@ namespace transport {
                 break;
             }
         } while (false);
-        // Resuce pending send count.
-        pending_opt_cnt_.fetch_sub(1);
+        pending_opt_cnt_.fetch_sub(1, std::memory_order_relaxed);
 
         return ec;
     }
 
     void tcp_transport::on_read_event() {
-        block_t b[MAX_TCP_BUFFER_SIZE];
-        int32_t size = flow_->read(b, sizeof(b));
+        block_t data[MAX_TCP_BUFFER_SIZE];
+        int32_t size = flow_->read(data, sizeof(data));
         if (PUMP_LIKELY(size != 0)) {
-            // If not in started, do nothing.
+            // Do nothing if not in started.
             if (!is_started()) {
+                PUMP_DEBUG_LOG("tcp_transport: handle read failed for not in started");
                 return;
             }
 
-            // When read state is READ_ONCE, change it to READ_PENDING.
-            int32_t last_state = READ_ONCE;
-            read_state_.compare_exchange_strong(last_state, READ_PENDING);
-
-            // Read callback
-            cbs_.read_cb(b, size);
-
-            // If last read state is READ_ONCE, try to change read state to READ_NONE.
-            if (last_state == READ_ONCE) {
-                last_state = READ_PENDING;
-                if (read_state_.compare_exchange_strong(last_state, READ_NONE)) {
-                    return;
+            if (rmode_ == READ_MODE_ONCE) {
+                // Change read state from READ_PENDING to READ_NONE.
+                if (!__change_read_state(READ_PENDING, READ_NONE)) {
+                    PUMP_WARN_LOG("tcp_transport: handle read failed for changing read state");
+                    goto disconnected;
+                }
+                // Callback read data.
+                cbs_.read_cb(data, size);
+            } else {
+                // Callback read data.
+                cbs_.read_cb(data, size);
+                // Resume read tracker to read next time.
+                if (!__resume_read_tracker()) {
+                    PUMP_WARN_LOG("tcp_transport: handle read failed for resuming tracker failed");
+                    goto disconnected;
                 }
             }
-
-            if (!__resume_read_tracker()) {
-                PUMP_WARN_LOG("tcp_transport: handle read failed for resuming tracker failed");
-                goto disconnected;
-            } else {
-                return;
-            }
-
+            return;
         } else {
             PUMP_DEBUG_LOG("tcp_transport: handle read failed");
-            goto disconnected;
         }
 
     disconnected:
@@ -294,16 +291,14 @@ namespace transport {
                 // Reduce pending send size.
                 if (pending_send_size_.fetch_sub(last_send_iob_size_) > last_send_iob_size_) {
                     goto continue_send;
-                } else {
-                    goto end;
                 }
+                goto end;
             } else if (ret == flow::FLOW_ERR_AGAIN) {
                 if (!__resume_send_tracker()) {
                     PUMP_WARN_LOG("tcp_transport: handle send failed for resuming tracker failed");
                     goto disconnected;
-                } else {
-                    return;
                 }
+                return;
             } else {
                 PUMP_DEBUG_LOG("tcp_transport: handle send failed for sending failed");
                 goto disconnected;
@@ -318,9 +313,8 @@ namespace transport {
             if (!__resume_send_tracker()) {
                 PUMP_WARN_LOG("tcp_transport: handle send failed for resuming tracker failed");
                 goto end;
-            } else {
-                return;
             }
+            return;
         } else {
             PUMP_DEBUG_LOG("tcp_transport: handle send failed for sending once failed");
             goto disconnected;
@@ -354,22 +348,6 @@ namespace transport {
         return true;
     }
 
-    int32_t tcp_transport::__async_read(int32_t state) {
-        int32_t current_state = __change_read_state(state);
-        if (current_state >= READ_PENDING) {
-            return ERROR_OK;
-        } else if (current_state == READ_INVALID) {
-            return ERROR_AGAIN;
-        }
-
-        if (!__start_read_tracker()) {
-            PUMP_WARN_LOG("tcp_transport: async read failed for starting tracker failed");
-            return ERROR_FAULT;
-        }
-
-        return ERROR_OK;
-    }
-
     bool tcp_transport::__async_send(toolkit::io_buffer *iob) {
         // Push buffer to sendlist.
         PUMP_DEBUG_CHECK(sendlist_.push(iob));
@@ -400,7 +378,7 @@ namespace transport {
         return false;
     }
 
-    int32_t tcp_transport::__send_once() {
+    error_code tcp_transport::__send_once() {
         PUMP_ASSERT(!last_send_iob_);
         // Pop next buffer from sendlist to send.
         PUMP_DEBUG_CHECK(sendlist_.pop(last_send_iob_));
