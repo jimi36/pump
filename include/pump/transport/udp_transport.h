@@ -97,20 +97,12 @@ namespace transport {
         /*********************************************************************************
          * Shutdown transport flow
          ********************************************************************************/
-        PUMP_INLINE void __shutdown_transport_flow() {
-            if (flow_) {
-                flow_->shutdown(SHUT_RDWR);
-            }
-        }
+        virtual void __shutdown_transport_flow(int32_t how) override;
 
         /*********************************************************************************
          * Close transport flow
          ********************************************************************************/
-        virtual void __close_transport_flow() override {
-            if (flow_) {
-                flow_->close();
-            }
-        }
+        virtual void __close_transport_flow() override;
 
       private:
         // Udp flow

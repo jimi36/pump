@@ -83,7 +83,7 @@ namespace transport {
         /*********************************************************************************
          * Start
          ********************************************************************************/
-        virtual int32_t start(
+        virtual error_code start(
             service *sv, 
             const acceptor_callbacks &cbs) override;
 
@@ -141,7 +141,7 @@ namespace transport {
         /*********************************************************************************
          * Remove handshaker
          ********************************************************************************/
-        void __remove_handshaker(tls_handshaker *handshaker);
+        bool __remove_handshaker(tls_handshaker *handshaker);
 
         /*********************************************************************************
          * Stop all handshakers

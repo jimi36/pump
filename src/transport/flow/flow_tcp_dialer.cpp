@@ -27,13 +27,13 @@ namespace flow {
     flow_tcp_dialer::~flow_tcp_dialer() {
     }
 
-    int32_t flow_tcp_dialer::init(
+    error_code flow_tcp_dialer::init(
         poll::channel_sptr &&ch, 
         const address &bind_address) {
         PUMP_DEBUG_FAILED(
             !ch, 
             "flow_tcp_dialer: init failed for channel invalid",
-            return FLOW_ERR_ABORT);
+            return ERROR_FAULT);
         ch_ = ch;
 
         is_ipv6_ = bind_address.is_ipv6();
@@ -41,27 +41,27 @@ namespace flow {
 
         if ((fd_ = net::create_socket(domain, SOCK_STREAM)) == INVALID_SOCKET) {
             PUMP_DEBUG_LOG("flow_tcp_dialer: init failed for creating socket failed");
-            return FLOW_ERR_ABORT;
+            return ERROR_FAULT;
         }
 
         if (!net::set_reuse(fd_, 1)) {
             PUMP_DEBUG_LOG("flow_tcp_dialer: init failed for setting socket reuse failed");
-            return FLOW_ERR_ABORT;
+            return ERROR_FAULT;
         }
         if (!net::set_noblock(fd_, 1)) {
             PUMP_DEBUG_LOG("flow_tcp_dialer: init failed for setting socket noblock failed");
-            return FLOW_ERR_ABORT;
+            return ERROR_FAULT;
         }
         if (!net::set_nodelay(fd_, 1)) {
             PUMP_DEBUG_LOG("flow_tcp_dialer: init failed for setting socket nodelay failed");
-            return FLOW_ERR_ABORT;
+            return ERROR_FAULT;
         }
         if (!net::bind(fd_, (sockaddr*)bind_address.get(), bind_address.len())) {
             PUMP_DEBUG_LOG("flow_tcp_dialer: init failed for binding socket address failed");
-            return FLOW_ERR_ABORT;
+            return ERROR_FAULT;
         }
 
-        return FLOW_ERR_NO;
+        return ERROR_OK;
     }
 
     int32_t flow_tcp_dialer::post_connect(const address &remote_address) {
@@ -69,9 +69,9 @@ namespace flow {
             PUMP_DEBUG_LOG(
                 "flow_tcp_dialer: post connect failed for %d", 
                 net::last_errno());
-            return FLOW_ERR_ABORT;
+            return ERROR_FAULT;
         }
-        return FLOW_ERR_NO;
+        return ERROR_OK;
     }
 
     int32_t flow_tcp_dialer::connect(

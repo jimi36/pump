@@ -40,10 +40,10 @@ namespace flow {
         /*********************************************************************************
          * Init flow
          * Return results:
-         *     FLOW_ERR_NO    => success
-         *     FLOW_ERR_ABORT => error
+         *     ERROR_OK    => success
+         *     ERROR_FAULT => error
          ********************************************************************************/
-        int32_t init(
+        error_code init(
             poll::channel_sptr &&ch, 
             const address &listen_address);
 

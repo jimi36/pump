@@ -35,19 +35,30 @@ namespace transport {
         if (xcred_owner_) {
             ssl::destory_tls_certificate(xcred_);
         }
+        __stop_all_handshakers();
     }
 
-    int32_t tls_acceptor::start(
+    error_code tls_acceptor::start(
         service *sv, 
         const acceptor_callbacks &cbs) {
         PUMP_DEBUG_FAILED(
-            xcred_ == nullptr, 
-            "tls_acceptor: start failed for cert invalid",
-            return ERROR_INVALID);
-
-        PUMP_DEBUG_FAILED(
             !__set_state(TRANSPORT_INITED, TRANSPORT_STARTING), 
             "tls_acceptor: start failed for transport state incorrect",
+            return ERROR_INVALID);
+
+        bool ret = false;
+        toolkit::defer cleanup([&]() {
+            if (ret) {
+                __set_state(TRANSPORT_STARTING, TRANSPORT_STARTED);
+            } else {
+                __set_state(TRANSPORT_STARTING, TRANSPORT_ERROR);
+                __close_accept_flow();
+            }
+        });
+
+        PUMP_DEBUG_FAILED(
+            xcred_ == nullptr, 
+            "tls_acceptor: start failed for cert invalid",
             return ERROR_INVALID);
 
         PUMP_DEBUG_FAILED(
@@ -62,12 +73,6 @@ namespace transport {
             return ERROR_INVALID);
         cbs_ = cbs;
 
-        toolkit::defer cleanup([&]() {
-            __stop_accept_tracker();
-            __close_accept_flow();
-            __set_state(TRANSPORT_STARTING, TRANSPORT_ERROR);
-        });
-
         if (!__open_accept_flow()) {
             PUMP_DEBUG_LOG("tls_acceptor: start failed for opening flow failed");
             return ERROR_FAULT;
@@ -78,9 +83,7 @@ namespace transport {
             return ERROR_FAULT;
         }
 
-        __set_state(TRANSPORT_STARTING, TRANSPORT_STARTED);
-
-        cleanup.clear();
+        ret = true;
 
         return ERROR_OK;
     }
@@ -89,6 +92,7 @@ namespace transport {
         // When stopping done, tracker event will trigger stopped callback.
         if (__set_state(TRANSPORT_STARTED, TRANSPORT_STOPPING)) {
             __close_accept_flow();
+            __stop_all_handshakers();
             __post_channel_event(shared_from_this(), 0);
         }
     }
@@ -104,42 +108,23 @@ namespace transport {
                     pump_bind(&tls_acceptor::on_handshaked, shared_from_this(), _1, _2);
                 handshaker_cbs.stopped_cb = 
                     pump_bind(&tls_acceptor::on_handshake_stopped, shared_from_this(), _1);
-
-                // If handshaker is started error, handshaked callback will be
-                // triggered. So we do nothing at here when started error. But if
-                // acceptor stopped befere here, we shuold stop handshaking.
                 handshaker->init(fd, false, xcred_, local_address, remote_address);
-                if (handshaker->start(get_service(), handshake_timeout_, handshaker_cbs)) {
-                    if (!__is_state(TRANSPORT_STARTING) && !__is_state(TRANSPORT_STARTED)) {
-                        PUMP_DEBUG_LOG("tls_acceptor: handle read event failed for not in started");
-                        handshaker->stop();
-                    }
-                } else {
+                if (!handshaker->start(get_service(), handshake_timeout_, handshaker_cbs)) {
                     PUMP_DEBUG_LOG(
-                        "tls_acceptor: handle read event failed for starting handshaker failed");
+                        "tls_acceptor: handle read failed for starting handshaker failed");
                     __remove_handshaker(handshaker);
                 }
             } else {
                 PUMP_WARN_LOG(
-                    "tls_acceptor: handle read event failed for creating handshaker failed");
+                    "tls_acceptor: handle read failed for creating handshaker failed");
                 net::close(fd);
             }
         }
 
-        if (__is_state(TRANSPORT_STARTING) || __is_state(TRANSPORT_STARTED)) {
-            if(__resume_accept_tracker()) {
-                return;
-            }
+        if(!__resume_accept_tracker()) {
             PUMP_WARN_LOG(
-                "tls_acceptor: handle read event failed for resuming tracker failed");
+                "tls_acceptor: handle read failed for resuming tracker failed");
         }
-
-        // Stop all handshakers for cleaning.
-        __stop_all_handshakers();
-        // Stop accept tracker for cleaning.
-        __stop_accept_tracker();
-        // Trigger interrupt callbacks.
-        __trigger_interrupt_callbacks();
     }
 
     void tls_acceptor::on_handshaked(
@@ -152,9 +137,7 @@ namespace transport {
             return;
         }
 
-        acceptor->__remove_handshaker(handshaker);
-
-        if (succ && acceptor->__is_state(TRANSPORT_STARTED)) {
+        if (acceptor->__remove_handshaker(handshaker) && succ) {
             auto flow = handshaker->unlock_flow();
             address local_address = handshaker->get_local_address();
             address remote_address = handshaker->get_remote_address();
@@ -185,7 +168,7 @@ namespace transport {
             PUMP_WARN_LOG("tls_acceptor: open flow failed for creating flow failed");
             return false;
         }
-        if (flow_->init(shared_from_this(), listen_address_) != flow::FLOW_ERR_NO) {
+        if (flow_->init(shared_from_this(), listen_address_) != ERROR_OK) {
             PUMP_DEBUG_LOG("tls_acceptor: open flow failed for initing flow failed");
             return false;
         }
@@ -214,9 +197,14 @@ namespace transport {
         return handshaker.get();
     }
 
-    void tls_acceptor::__remove_handshaker(tls_handshaker *handshaker) {
+    bool tls_acceptor::__remove_handshaker(tls_handshaker *handshaker) {
         std::lock_guard<std::mutex> lock(handshaker_mx_);
-        handshakers_.erase(handshaker);
+        auto it = handshakers_.find(handshaker);
+        if (it == handshakers_.end()) {
+            return false;
+        }
+        handshakers_.erase(it);
+        return true;
     }
 
     void tls_acceptor::__stop_all_handshakers() {
@@ -224,6 +212,7 @@ namespace transport {
         for (auto hs : handshakers_) {
             hs.second->stop();
         }
+        handshakers_.clear();
     }
 
 }  // namespace transport

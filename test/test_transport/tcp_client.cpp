@@ -3,15 +3,15 @@
 static int count = 1;
 static int send_loop = 1;
 static int send_pocket_size = 1024 * 4;
-static int send_pocket_count =  1024 * 10000;
-
-class my_tcp_dialer;
+//static int send_pocket_count = 1024 * 100;
+static int send_pocket_count = -1;
 
 static service *sv;
 
 static uint16_t server_port;
 static std::string server_ip;
 
+class my_tcp_dialer;
 static std::mutex dial_mx;
 static std::map<my_tcp_dialer *, std::shared_ptr<my_tcp_dialer>> my_dialers;
 
@@ -119,14 +119,6 @@ class my_tcp_dialer : public std::enable_shared_from_this<my_tcp_dialer> {
         if (!transport_) {
             return false;
         }
-        /*
-        if (left_send_pocket_count_ == 0) {
-            transport_->force_stop();
-            return false;
-        } else if (left_send_pocket_count_ > 0) {
-            left_send_pocket_count_--;
-        }
-        */
         if (transport_->send(send_data_.data(), (int32_t)send_data_.size()) != 0) {
             printf("send error\n");
             return false;
@@ -175,18 +167,6 @@ void start_once_dialer() {
     my_dialers[my_dialer.get()] = my_dialer;
 }
 
-void start_send_buffer() {
-    dial_mx.lock();
-
-    for (auto b = my_dialers.begin(); b != my_dialers.end(); b++) {
-        for (int i = 0; i < send_loop; i++) {
-            b->second->send_data();
-        }
-    }
-
-    dial_mx.unlock();
-}
-
 class time_report {
   public:
     static void on_timer_timeout() {
@@ -198,11 +178,10 @@ class time_report {
             read_size += b->second->read_size_;
             b->second->read_size_ = 0;
 
-            
-            if (b->second->all_read_size_ >= send_pocket_count * send_pocket_size &&
+            if (send_pocket_count > 0 &&
+                b->second->all_read_size_ >= send_pocket_count * send_pocket_size &&
                 b->second->transport_->is_started()) {
-                //b->second->transport_->stop();
-                //start_once_dialer();
+                b->second->transport_->stop();
             }
             
         }
@@ -228,9 +207,6 @@ void start_tcp_client(const std::string &ip, uint16_t port, int32_t conn_count) 
         start_once_dialer();
     }
     dial_mx.unlock();
-
-    //std::this_thread::sleep_for(std::chrono::seconds(3));
-    //start_send_buffer();
 
     time::timer_callback cb = pump_bind(&time_report::on_timer_timeout);
     time::timer_sptr t = time::timer::create(1000 * 1, cb, true);

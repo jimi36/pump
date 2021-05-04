@@ -31,13 +31,13 @@ namespace flow {
         }
     }
 
-    int32_t flow_tcp_acceptor::init(
+    error_code flow_tcp_acceptor::init(
         poll::channel_sptr &&ch, 
         const address &listen_address) {
         PUMP_DEBUG_FAILED(
             !ch, 
             "flow_tcp_acceptor: init failed for channel invalid",
-            return FLOW_ERR_ABORT);
+            return ERROR_FAULT);
         ch_ = ch;
 
         is_ipv6_ = listen_address.is_ipv6();
@@ -49,31 +49,31 @@ namespace flow {
         fd_ = net::create_socket(domain, SOCK_STREAM);
         if (fd_ == INVALID_SOCKET) {
             PUMP_DEBUG_LOG("flow_tcp_acceptor: init failed for creating socket failed");
-            return FLOW_ERR_ABORT;
+            return ERROR_FAULT;
         }
 
         if (!net::set_reuse(fd_, 1)) {
             PUMP_DEBUG_LOG("flow_tcp_acceptor: init failed for setting socket reuse failed");
-            return FLOW_ERR_ABORT;
+            return ERROR_FAULT;
         }
         if (!net::set_noblock(fd_, 1)) {
             PUMP_DEBUG_LOG("flow_tcp_acceptor: init failed for setting socket noblock failed");
-            return FLOW_ERR_ABORT;
+            return ERROR_FAULT;
         }
         if (!net::set_nodelay(fd_, 1)) {
             PUMP_DEBUG_LOG("flow_tcp_acceptor: init failed for setting socket nodelay failed");
-            return FLOW_ERR_ABORT;
+            return ERROR_FAULT;
         }
         if (!net::bind(fd_, (sockaddr*)listen_address.get(), listen_address.len())) {
             PUMP_DEBUG_LOG("flow_tcp_acceptor: init failed for binding socket address failed");
-            return FLOW_ERR_ABORT;
+            return ERROR_FAULT;
         }
         if (!net::listen(fd_)) {
             PUMP_DEBUG_LOG("flow_tcp_acceptor: init failed for listening failed");
-            return FLOW_ERR_ABORT;
+            return ERROR_FAULT;
         }
 
-        return FLOW_ERR_NO;
+        return ERROR_OK;
     }
 
     pump_socket flow_tcp_acceptor::accept(

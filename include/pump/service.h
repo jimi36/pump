@@ -101,9 +101,11 @@ namespace pump {
          ********************************************************************************/
         PUMP_INLINE bool post_channel_event(
             poll::channel_sptr &ch, 
-            int32_t event) {
-            if (PUMP_LIKELY(!!pollers_[SEND_POLLER_ID])) {
-                return pollers_[SEND_POLLER_ID]->push_channel_event(ch, event);
+            int32_t event,
+            poller_id pid) {
+            PUMP_ASSERT(pid <= SEND_POLLER_ID);
+            if (PUMP_LIKELY(!!pollers_[pid])) {
+                return pollers_[pid]->push_channel_event(ch, event);
             }
             return false;
         }

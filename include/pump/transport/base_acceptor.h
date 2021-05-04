@@ -44,7 +44,7 @@ namespace transport {
         /*********************************************************************************
          * Start
          ********************************************************************************/
-        virtual int32_t start(
+        virtual error_code start(
             service *sv, 
             const acceptor_callbacks &cbs) = 0;
 

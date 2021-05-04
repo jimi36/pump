@@ -55,20 +55,17 @@ namespace transport {
             PUMP_WARN_LOG("base_acceptor: resume tracker failed for tracker invalid");
             return false;
         }
-
         auto poller = tracker_->get_poller();
         if (poller == nullptr) {
             PUMP_WARN_LOG("base_acceptor: resume tracker failed for poller invalid");
             return false;
         }
-        
         return poller->resume_channel_tracker(tracker);
     }
 
     void base_acceptor::__stop_accept_tracker() {
-        auto tracker = tracker_;
-        if (tracker) {
-            get_service()->remove_channel_tracker(tracker, READ_POLLER_ID);
+        if (tracker_ && tracker_->get_poller() != nullptr) {
+            tracker_->get_poller()->remove_channel_tracker(tracker_);
         }
     }
 

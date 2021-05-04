@@ -44,10 +44,8 @@ namespace transport {
     }
 
     void base_dialer::__stop_dial_tracker() {
-        auto tracker = tracker_;
-        if (tracker) {
-            PUMP_ASSERT(tracker_->get_poller() != nullptr);
-            tracker_->get_poller()->remove_channel_tracker(tracker);
+        if (tracker_ && tracker_->get_poller() != nullptr) {
+            tracker_->get_poller()->remove_channel_tracker(tracker_);
         }
     }
 
@@ -73,8 +71,10 @@ namespace transport {
 
     void base_dialer::__trigger_interrupt_callbacks() {
         if (__set_state(TRANSPORT_TIMEOUTING, TRANSPORT_TIMEOUTED)) {
+            __shutdown_dial_flow();
             cbs_.timeouted_cb();
         } else if (__set_state(TRANSPORT_STOPPING, TRANSPORT_STOPPED)) {
+            __shutdown_dial_flow();
             cbs_.stopped_cb();
         }
     }

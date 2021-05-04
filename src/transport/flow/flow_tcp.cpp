@@ -27,50 +27,49 @@ namespace flow {
     flow_tcp::~flow_tcp() {
     }
 
-    int32_t flow_tcp::init(
+    error_code flow_tcp::init(
         poll::channel_sptr &&ch, 
         pump_socket fd) {
         PUMP_DEBUG_FAILED(
             !ch, 
             "flow_tcp: init failed for channel invalid",
-            return FLOW_ERR_ABORT);
+            return ERROR_FAULT);
         ch_ = ch;
 
         PUMP_DEBUG_FAILED(
             fd < 0, 
             "flow_tcp: init failed for fd invalid",
-            return FLOW_ERR_ABORT);
+            return ERROR_FAULT);
         fd_ = fd;
 
-        return FLOW_ERR_NO;
+        return ERROR_OK;
     }
 
-    int32_t flow_tcp::want_to_send(toolkit::io_buffer *iob) {
+    error_code flow_tcp::want_to_send(toolkit::io_buffer *iob) {
         PUMP_DEBUG_FAILED(
             iob == nullptr,  
             "flow_tcp: want to send failed for io buffer invalid",
-            return FLOW_ERR_ABORT);
+            return ERROR_FAULT);
         send_iob_ = iob;
         
         int32_t size = net::send(fd_, send_iob_->data(), send_iob_->data_size());
         if (PUMP_LIKELY(size > 0)) {
             if (send_iob_->shift(size) == 0) {
                 send_iob_ = nullptr;
-                return FLOW_ERR_NO;
+                return ERROR_OK;
             }
-            return FLOW_ERR_AGAIN;
+            return ERROR_AGAIN;
         } else if (size < 0) {
-            return FLOW_ERR_AGAIN;
+            return ERROR_AGAIN;
         }
 
         PUMP_DEBUG_LOG(
-            "flow_tcp: want to send failed for %d", 
-            net::last_errno());
+            "flow_tcp: want to send failed for %d", net::last_errno());
 
-        return FLOW_ERR_ABORT;
+        return ERROR_FAULT;
     }
 
-    int32_t flow_tcp::send() {
+    error_code flow_tcp::send() {
         PUMP_ASSERT(send_iob_);
         PUMP_ASSERT(send_iob_->data_size() > 0);
         int32_t data_size = (int32_t)send_iob_->data_size();
@@ -78,18 +77,17 @@ namespace flow {
         if (PUMP_LIKELY(size > 0)) {
             if (send_iob_->shift(size) == 0) {
                 send_iob_ = nullptr;
-                return FLOW_ERR_NO;
+                return ERROR_OK;
             }
-            return FLOW_ERR_AGAIN;
+            return ERROR_AGAIN;
         } else if (size < 0) {
-            return FLOW_ERR_AGAIN;
+            return ERROR_AGAIN;
         }
 
         PUMP_DEBUG_LOG(
-            "flow_tcp: send failed for %d", 
-            net::last_errno());
+            "flow_tcp: send failed for %d", net::last_errno());
 
-        return FLOW_ERR_ABORT;
+        return ERROR_FAULT;
     }
 
 }  // namespace flow

@@ -54,7 +54,7 @@
 
 // Pump condition abort
 #define PUMP_COND_ABORT(x, log) \
-    if (x) { \
+    if (PUMP_UNLIKELY(x)) { \
         PUMP_ERR_LOG(log); \
         abort(); \
     }

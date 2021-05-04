@@ -40,20 +40,20 @@ namespace flow {
         /*********************************************************************************
          * Init
          * Return results:
-         *     FLOW_ERR_NO    => success
-         *     FLOW_ERR_ABORT => error
+         *     ERROR_OK    => success
+         *     ERROR_FAULT => error
          ********************************************************************************/
-        int32_t init(
+        error_code init(
             poll::channel_sptr &&ch, 
             const address &bind_address);
 
         /*********************************************************************************
          * Post connect
          * Return results:
-         *     FLOW_ERR_NO    => success
-         *     FLOW_ERR_ABORT => error
+         *     ERROR_OK    => success
+         *     ERROR_FAULT => error
          ********************************************************************************/
-        int32_t post_connect(const address &remote_address);
+        error_code post_connect(const address &remote_address);
 
         /*********************************************************************************
          * Connect

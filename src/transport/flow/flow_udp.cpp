@@ -32,7 +32,7 @@ namespace flow {
         PUMP_DEBUG_FAILED(
             !ch, 
             "flow_udp: init failed for channel invalid",
-            return FLOW_ERR_ABORT);
+            return ERROR_FAULT);
         ch_ = ch;
 
         int32_t domain = AF_INET;
@@ -44,27 +44,27 @@ namespace flow {
 
         if (fd_ == INVALID_SOCKET) {
             PUMP_DEBUG_LOG("flow_udp: init failed for creating socket failed");
-            return FLOW_ERR_ABORT;
+            return ERROR_FAULT;
         }
 
         if (!net::set_reuse(fd_, 1)) {
             PUMP_DEBUG_LOG("flow_udp: init failed for setting socket reuse failed");
-            return FLOW_ERR_ABORT;
+            return ERROR_FAULT;
         }
         if (!net::set_noblock(fd_, 1)) {
             PUMP_DEBUG_LOG("flow_udp: init failed for setting socket noblock failed");
-            return FLOW_ERR_ABORT;
+            return ERROR_FAULT;
         }
         if (!net::bind(fd_, (sockaddr*)bind_address.get(), bind_address.len())) {
             PUMP_DEBUG_LOG("flow_udp: init failed for binding socket address failed");
-            return FLOW_ERR_ABORT;
+            return ERROR_FAULT;
         }
         if (!net::set_udp_conn_reset(fd_, false)) {
             PUMP_DEBUG_LOG("flow_udp: init failed for setting conn reset failed");
-            return FLOW_ERR_ABORT;
+            return ERROR_FAULT;
         }
 
-        return FLOW_ERR_NO;
+        return ERROR_OK;
     }
 
     int32_t flow_udp::send(

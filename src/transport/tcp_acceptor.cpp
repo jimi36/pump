@@ -24,13 +24,23 @@ namespace transport {
       : base_acceptor(TCP_ACCEPTOR, listen_address) {
     }
 
-    int32_t tcp_acceptor::start(
+    error_code tcp_acceptor::start(
         service *sv, 
         const acceptor_callbacks &cbs) {
         PUMP_DEBUG_FAILED(
             !__set_state(TRANSPORT_INITED, TRANSPORT_STARTING), 
             "tcp_acceptor: start failed for transport state incorrect",
             return ERROR_INVALID);
+
+        bool ret = false;
+        toolkit::defer cleanup([&]() {
+            if (ret) {
+                __set_state(TRANSPORT_STARTING, TRANSPORT_STARTED);
+            } else {
+                __set_state(TRANSPORT_STARTING, TRANSPORT_ERROR);
+                __close_accept_flow();
+            }
+        });
 
         PUMP_DEBUG_FAILED(
             sv == nullptr, 
@@ -44,12 +54,6 @@ namespace transport {
             return ERROR_INVALID);
         cbs_ = cbs;
 
-        toolkit::defer cleanup([&]() {
-            __close_accept_flow();
-            __stop_accept_tracker();
-            __set_state(TRANSPORT_STARTING, TRANSPORT_ERROR);
-        });
-
         if (!__open_accept_flow()) {
             PUMP_DEBUG_LOG("tcp_acceptor: start failed for opening flow failed");
             return ERROR_FAULT;
@@ -60,9 +64,7 @@ namespace transport {
             return ERROR_FAULT;
         }
 
-        __set_state(TRANSPORT_STARTING, TRANSPORT_STARTED);
-
-        cleanup.clear();
+        ret = true;
 
         return ERROR_OK;
     }
@@ -91,16 +93,10 @@ namespace transport {
             }
         }
 
-        if (__is_state(TRANSPORT_STARTING) || __is_state(TRANSPORT_STARTED)) {
-            if(__resume_accept_tracker()) {
-                return;
-            }
+        if(!__resume_accept_tracker()) {
             PUMP_WARN_LOG(
                 "tcp_acceptor: handle read event failed for resuming tracker failed");
         }
-
-        __stop_accept_tracker();
-        __trigger_interrupt_callbacks();
     }
 
     bool tcp_acceptor::__open_accept_flow() {
@@ -112,7 +108,7 @@ namespace transport {
             PUMP_WARN_LOG("tcp_acceptor: open flow failed for creating flow failed");
             return false;
         }
-        if (flow_->init(shared_from_this(), listen_address_) != flow::FLOW_ERR_NO) {
+        if (flow_->init(shared_from_this(), listen_address_) != ERROR_OK) {
             PUMP_DEBUG_LOG("tcp_acceptor: open flow failed for initing flow failed");
             return false;
         }

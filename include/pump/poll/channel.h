@@ -155,7 +155,6 @@ namespace poll {
             channel_sptr &ch, 
             int32_t ev) noexcept
           : state_(TRACKER_STATE_INIT),
-            //installed_(false),
             expected_event_(ev),
             fd_(ch->get_fd()), 
             ch_(ch),
@@ -224,20 +223,6 @@ namespace poll {
         }
 
         /*********************************************************************************
-         * Set installed state
-         ********************************************************************************/
-        //PUMP_INLINE bool set_installed(bool installed) {
-        //    return installed_.exchange(installed) == false;
-        //}
-
-        /*********************************************************************************
-         * Check installed state
-         ********************************************************************************/
-        //PUMP_INLINE bool installed() {
-        //    return installed_.load();
-        //}
-
-        /*********************************************************************************
          * Set expected event
          ********************************************************************************/
         PUMP_INLINE void set_expected_event(int32_t ev) {
@@ -302,8 +287,6 @@ namespace poll {
       private:
         // State
         std::atomic_int32_t state_;
-        // Installed state
-        //std::atomic_bool installed_;
         // Track expected event
         int32_t expected_event_;
         // Track fd

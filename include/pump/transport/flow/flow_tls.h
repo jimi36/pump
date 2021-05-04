@@ -44,10 +44,10 @@ namespace flow {
         /*********************************************************************************
          * Init flow
          * Return results:
-         *     FLOW_ERR_NO    => success
-         *     FLOW_ERR_ABORT => error
+         *     ERROR_OK    => success
+         *     ERROR_FAULT => error
          ********************************************************************************/
-        int32_t init(
+        error_code init(
             poll::channel_sptr &ch,
             pump_socket fd,
             void *tls_cred,
@@ -86,21 +86,20 @@ namespace flow {
          * Want to send
          * If using iocp this post an iocp task for sending, else this try sending
          * data. Return results:
-         *     FLOW_ERR_NO      => send completely
-         *     FLOW_ERR_AGAIN   => try again
-         *     FLOW_ERR_ABORT   => error
+         *     ERROR_OK      => send completely
+         *     ERROR_AGAIN   => try again
+         *     ERROR_FAULT   => error
          ********************************************************************************/
-        int32_t want_to_send(toolkit::io_buffer *iob);
+        error_code want_to_send(toolkit::io_buffer *iob);
 
         /*********************************************************************************
          * Send to net
          * Return results:
-         *     FLOW_ERR_NO      => send completely
-         *     FLOW_ERR_AGAIN   => try again
-         *     FLOW_ERR_NO_DATA => no data for sending
-         *     FLOW_ERR_ABORT   => error
+         *     ERROR_OK      => send completely
+         *     ERROR_AGAIN   => try again
+         *     ERROR_FAULT   => error
          ********************************************************************************/
-        int32_t send();
+        error_code send();
 
         /*********************************************************************************
          * Check there are data to send or not

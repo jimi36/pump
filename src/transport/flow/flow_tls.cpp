@@ -30,7 +30,7 @@ namespace flow {
         ssl::destory_tls_session(session_);
     }
 
-    int32_t flow_tls::init(
+    error_code flow_tls::init(
         poll::channel_sptr &ch,
         pump_socket fd,
         void *tls_cred,
@@ -38,68 +38,68 @@ namespace flow {
         PUMP_DEBUG_FAILED(
             !ch, 
             "flow_tls: init failed for channel invalid",
-            return FLOW_ERR_ABORT);
+            return ERROR_FAULT);
         ch_ = ch;
 
         PUMP_DEBUG_FAILED(
             fd < 0, 
             "flow_tls: init failed for fd invalid",
-            return FLOW_ERR_ABORT);
+            return ERROR_FAULT);
         fd_ = fd;
 
         session_ = ssl::create_tls_session(tls_cred, (int32_t)fd, client);
         if (!session_) {
-            return FLOW_ERR_ABORT;
+            return ERROR_FAULT;
         }
 
-        return FLOW_ERR_NO;
+        return ERROR_OK;
     }
 
-    int32_t flow_tls::want_to_send(toolkit::io_buffer *iob) {
+    error_code flow_tls::want_to_send(toolkit::io_buffer *iob) {
         PUMP_DEBUG_FAILED(
             iob == nullptr, 
             "flow_tls: want to send failed for io buffer invalid",
-            return FLOW_ERR_ABORT);
+            return ERROR_FAULT);
         send_iob_ = iob;
         
         int32_t size = ssl::tls_send(session_, send_iob_->buffer(), send_iob_->data_size());
         if (PUMP_LIKELY(size > 0)) {
             // Shift send buffer and check data size.
             if (send_iob_->shift(size) > 0) {
-                return FLOW_ERR_AGAIN;
+                return ERROR_AGAIN;
             }
             send_iob_->reset();
             send_iob_ = nullptr;
-            return FLOW_ERR_NO;
+            return ERROR_OK;
         } else if (PUMP_UNLIKELY(size < 0)) {
             // Send again
-            return FLOW_ERR_AGAIN;
+            return ERROR_AGAIN;
         }
 
         PUMP_DEBUG_LOG("flow_tls: want to send failed");
 
-        return FLOW_ERR_ABORT;
+        return ERROR_FAULT;
     }
 
-    int32_t flow_tls::send() {
+    error_code flow_tls::send() {
         PUMP_ASSERT(send_iob_);
         int32_t size = ssl::tls_send(session_, send_iob_->buffer(), send_iob_->data_size());
         if (PUMP_LIKELY(size > 0)) {
             // Shift send buffer and check data size.
             if (send_iob_->shift(size) > 0) {
-                return FLOW_ERR_AGAIN;
+                return ERROR_AGAIN;
             }
             send_iob_->reset();
             send_iob_ = nullptr;
-            return FLOW_ERR_NO;
+            return ERROR_OK;
         } else if (PUMP_UNLIKELY(size < 0)) {
             // Send again
-            return FLOW_ERR_AGAIN;
+            return ERROR_AGAIN;
         }
 
         PUMP_DEBUG_LOG("flow_tls: send failed");
 
-        return FLOW_ERR_ABORT;
+        return ERROR_FAULT;
     }
 
 }  // namespace flow

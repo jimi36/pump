@@ -112,20 +112,12 @@ namespace transport {
         /*********************************************************************************
          * Shutdown transport flow
          ********************************************************************************/
-        PUMP_INLINE void __shutdown_transport_flow(int32_t how) {
-            if (flow_) {
-                flow_->shutdown(how);
-            }
-        }
+        virtual void __shutdown_transport_flow(int32_t how) override;
 
         /*********************************************************************************
          * Close transport flow
          ********************************************************************************/
-        virtual void __close_transport_flow() override {
-            if (flow_) {
-                flow_->close();
-            }
-        }
+        virtual void __close_transport_flow() override;
 
         /*********************************************************************************
          * Async send
@@ -136,11 +128,6 @@ namespace transport {
          * Send once
          ********************************************************************************/
         error_code __send_once();
-
-        /*********************************************************************************
-         * Try doing dissconnected process
-         ********************************************************************************/
-        bool __try_handling_disconnected();
 
         /*********************************************************************************
          * Clear sendlist

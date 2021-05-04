@@ -51,13 +51,23 @@ namespace transport {
         int64_t timeout,
         const tls_handshaker_callbacks &cbs) {
         PUMP_DEBUG_FAILED(
-            !flow_, 
-            "tls_handshaker: start failed for flow invalid",
-            return false);
-
-        PUMP_DEBUG_FAILED(
             !__set_state(TRANSPORT_INITED, TRANSPORT_STARTING), 
             "tls_handshaker: start failed for transport state incorrect",
+            return false);
+
+        bool ret = false;
+        toolkit::defer cleanup([&]() {
+            if (ret) {
+                __set_state(TRANSPORT_STARTING, TRANSPORT_STARTED);
+            } else  {
+                __set_state(TRANSPORT_STARTING, TRANSPORT_ERROR);
+                __stop_handshake_timer();
+            }
+        });
+
+        PUMP_DEBUG_FAILED(
+            !flow_, 
+            "tls_handshaker: start failed for flow invalid",
             return false);
 
         PUMP_DEBUG_FAILED(
@@ -72,15 +82,9 @@ namespace transport {
             return false);
         cbs_ = cbs;
 
-        toolkit::defer cleanup([&]() {
-            __set_state(TRANSPORT_STARTING, TRANSPORT_ERROR);
-            __close_flow();
-            __stop_handshake_timer();
-        });
-
         // Flow init handshake state
-        auto ret = flow_->handshake();
-        if (ret == ssl::TLS_HANDSHAKE_ERROR) {
+        auto handshake_ret = flow_->handshake();
+        if (handshake_ret == ssl::TLS_HANDSHAKE_ERROR) {
             PUMP_DEBUG_LOG("tls_handshaker: start failed for handshaking failed");
             return false;
         }
@@ -100,7 +104,7 @@ namespace transport {
             return false;
         }
         // Start tracker.
-        if (ret == ssl::TLS_HANDSHAKE_SEND) {
+        if (handshake_ret == ssl::TLS_HANDSHAKE_SEND) {
             tracker_->set_expected_event(poll::TRACK_SEND);
         } else {
             tracker_->set_expected_event(poll::TRACK_READ);
@@ -110,35 +114,66 @@ namespace transport {
             return false;
         }
 
-        __set_state(TRANSPORT_STARTING, TRANSPORT_STARTED);
-
-        cleanup.clear();
+        ret = true;
 
         return true;
     }
 
     void tls_handshaker::stop() {
         if (__set_state(TRANSPORT_STARTED, TRANSPORT_STOPPING)) {
-            __close_flow();
+            __post_channel_event(shared_from_this(), 0);
         } else if (__set_state(TRANSPORT_DISCONNECTING, TRANSPORT_STOPPING) ||
                    __set_state(TRANSPORT_TIMEOUTING, TRANSPORT_STOPPING)) {
             // Do nothing.
         }
     }
 
+    void tls_handshaker::on_channel_event(int32_t ev) {
+        __handshake_finished();
+    }
+
     void tls_handshaker::on_read_event() {
+        // If transport is starting, resume tracker.
+        if (__is_state(TRANSPORT_STARTING, std::memory_order_relaxed)) {
+            PUMP_DEBUG_LOG("tls_handshaker: handle read failed for starting");
+            if (!tracker_->get_poller()->resume_channel_tracker(tracker_.get())) {
+                PUMP_WARN_LOG(
+                    "tls_handshaker: handle read failed for resuming tracker failed");
+                if (__set_state(TRANSPORT_STARTING, TRANSPORT_DISCONNECTING) ||
+                    __set_state(TRANSPORT_STARTED, TRANSPORT_DISCONNECTING)) {
+                    __handshake_finished();
+                }
+            }
+            return;
+        }
+
         __process_handshake();
     }
 
     void tls_handshaker::on_send_event() {
+        // If transport is starting, resume tracker.
+        if (__is_state(TRANSPORT_STARTING, std::memory_order_relaxed)) {
+            PUMP_DEBUG_LOG("tls_handshaker: handle send failed for starting");
+            if (!tracker_->get_poller()->resume_channel_tracker(tracker_.get())) {
+                PUMP_WARN_LOG(
+                    "tls_handshaker: handle send failed for resuming tracker failed");
+                if (__set_state(TRANSPORT_STARTING, TRANSPORT_DISCONNECTING) ||
+                    __set_state(TRANSPORT_STARTED, TRANSPORT_DISCONNECTING)) {
+                    __handshake_finished();
+                }
+            }
+            return;
+        }
+
         __process_handshake();
     }
 
     void tls_handshaker::on_timeout(tls_handshaker_wptr wptr) {
         auto handshaker = wptr.lock();
         if (handshaker) {
-            if (handshaker->__set_state(TRANSPORT_STARTED, TRANSPORT_TIMEOUTING)) {
-                handshaker->__close_flow();
+            if (handshaker->__set_state(TRANSPORT_STARTING, TRANSPORT_TIMEOUTING) ||
+                handshaker->__set_state(TRANSPORT_STARTED, TRANSPORT_TIMEOUTING)) {
+                handshaker->__post_channel_event(handshaker, 0);
             }
         }
     }
@@ -155,7 +190,7 @@ namespace transport {
 
         // Init flow.
         poll::channel_sptr ch = shared_from_this();
-        if (flow_->init(ch, fd, xcred, is_client) != flow::FLOW_ERR_NO) {
+        if (flow_->init(ch, fd, xcred, is_client) != ERROR_OK) {
             PUMP_DEBUG_LOG("tls_handshaker: open flow failed for initing flow failed");
             return false;
         }
@@ -193,6 +228,7 @@ namespace transport {
             break;
         }
 
+        // Handshake failed.
         if (__set_state(TRANSPORT_STARTED, TRANSPORT_ERROR)) {
             __handshake_finished();
         }
@@ -237,8 +273,6 @@ namespace transport {
         } else if (__set_state(TRANSPORT_STOPPING, TRANSPORT_STOPPED)) {
             cbs_.stopped_cb(this);
         }
-        
-        __close_flow();
     }
 
 }  // namespace transport

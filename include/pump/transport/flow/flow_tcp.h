@@ -40,10 +40,10 @@ namespace flow {
         /*********************************************************************************
          * Init
          * Return results:
-         *     FLOW_ERR_NO    => success
-         *     FLOW_ERR_ABORT => error
+         *     ERROR_OK    => success
+         *     ERROR_FAULT => error
          ********************************************************************************/
-        int32_t init(
+        error_code init(
             poll::channel_sptr &&ch, 
             pump_socket fd);
 
@@ -58,22 +58,22 @@ namespace flow {
 
         /*********************************************************************************
          * Want to send
-         * Try sending data as much as possible
+         * Try sending data as much as possible.
          * Return results:
-         *      FLOW_ERR_NO    => send completely
-         *      FLOW_ERR_AGAIN => try again
-         *      FLOW_ERR_ABORT => error
+         *      ERROR_OK    => send completely
+         *      ERROR_AGAIN => try again
+         *      ERROR_FAULT => error
          ********************************************************************************/
-        int32_t want_to_send(toolkit::io_buffer *iob);
+        error_code want_to_send(toolkit::io_buffer *iob);
 
         /*********************************************************************************
          * Send
          * Return results:
-         *     FLOW_ERR_NO      => send completely
-         *     FLOW_ERR_AGAIN   => try again
-         *     FLOW_ERR_ABORT   => error
+         *     ERROR_OK      => send completely
+         *     ERROR_AGAIN   => try again
+         *     ERROR_FAULT   => error
          ********************************************************************************/
-        int32_t send();
+        error_code send();
 
         /*********************************************************************************
          * Check there are data to send or not

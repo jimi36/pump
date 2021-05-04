@@ -81,13 +81,6 @@ namespace poll {
             return false;
         }
 
-        // Set channel tracker installed.
-        //if(!tracker->set_installed(true)) {
-        //    PUMP_DEBUG_LOG(
-        //        "poller: add channel tracker failed for marking tracker installed failed");
-        //    return false;
-        //}
-
         // Create tracker event
         PUMP_COND_ABORT(!tevents_.push(object_create<tracker_event>(tracker, TRACKER_EVENT_ADD)),
             "poller: add channel tracker failed for pushing tracker event failed");
@@ -109,9 +102,6 @@ namespace poll {
                 "poller: remove channel tracker failed for tracker no started");
             return;
         }
-
-        // Wait channel tracker installed.
-        //while(!tracker->installed());
 
         // Uninstall channel tracker.
         __uninstall_channel_tracker(tracker.get());

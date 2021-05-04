@@ -20,6 +20,7 @@
 #include "pump/service.h"
 #include "pump/poll/channel.h"
 #include "pump/toolkit/buffer.h"
+#include "pump/transport/types.h"
 #include "pump/transport/address.h"
 #include "pump/transport/callbacks.h"
 
@@ -30,61 +31,6 @@ namespace transport {
         class flow_base;
     }
 
-    /*********************************************************************************
-     * Transport type
-     ********************************************************************************/
-    const int32_t UDP_TRANSPORT = 0;
-    const int32_t TCP_ACCEPTOR = 1;
-    const int32_t TCP_DIALER = 2;
-    const int32_t TCP_TRANSPORT = 3;
-    const int32_t TLS_ACCEPTOR = 4;
-    const int32_t TLS_DIALER = 5;
-    const int32_t TLS_HANDSHAKER = 6;
-    const int32_t TLS_TRANSPORT = 7;
-
-    /*********************************************************************************
-     * Transport state
-     ********************************************************************************/
-    const int32_t TRANSPORT_INITED = 0;
-    const int32_t TRANSPORT_STARTING = 1;
-    const int32_t TRANSPORT_STARTED = 2;
-    const int32_t TRANSPORT_STOPPING = 3;
-    const int32_t TRANSPORT_STOPPED = 4;
-    const int32_t TRANSPORT_DISCONNECTING = 5;
-    const int32_t TRANSPORT_DISCONNECTED = 6;
-    const int32_t TRANSPORT_TIMEOUTING = 7;
-    const int32_t TRANSPORT_TIMEOUTED = 8;
-    const int32_t TRANSPORT_HANDSHAKING = 9;
-    const int32_t TRANSPORT_FINISHED = 10;
-    const int32_t TRANSPORT_ERROR = 11;
-
-    /*********************************************************************************
-     * Transport read mode
-     ********************************************************************************/
-    typedef int32_t read_mode;
-    const read_mode READ_MODE_NONE = 0;
-    const read_mode READ_MODE_ONCE = 1;
-    const read_mode READ_MODE_LOOP = 2;
-
-    /*********************************************************************************
-     * Transport read state
-     ********************************************************************************/
-    typedef int32_t read_state;
-    const read_state READ_NONE = 0;
-    const read_state READ_PENDING = 3;
-    const read_state READ_INVALID = 4;
-
-    /*********************************************************************************
-     * Transport error
-     ********************************************************************************/
-    typedef int32_t error_code;
-    const error_code ERROR_OK = 0;
-    const error_code ERROR_UNSTART = 1;
-    const error_code ERROR_INVALID = 2;
-    const error_code ERROR_DISABLE = 3;
-    const error_code ERROR_AGAIN   = 4;
-    const error_code ERROR_FAULT   = 5;
-
     class LIB_PUMP base_channel
       : public service_getter,
         public poll::channel {
@@ -94,13 +40,13 @@ namespace transport {
          * Constructor
          ********************************************************************************/
         base_channel(
-            int32_t type, 
+            transport_type type, 
             service *sv, 
             int32_t fd) noexcept
           : service_getter(sv),
             poll::channel(fd),
             type_(type),
-            transport_state_(TRANSPORT_INITED) {
+            state_(TRANSPORT_INITED) {
         }
 
         /*********************************************************************************
@@ -111,7 +57,7 @@ namespace transport {
         /*********************************************************************************
          * Get transport type
          ********************************************************************************/
-        PUMP_INLINE int32_t get_type() const {
+        PUMP_INLINE transport_type get_type() const {
             return type_;
         }
 
@@ -119,7 +65,7 @@ namespace transport {
          * Get started status
          ********************************************************************************/
         PUMP_INLINE bool is_started() const {
-            return __is_state(TRANSPORT_STARTED);
+            return __is_state(TRANSPORT_STARTED, std::memory_order_relaxed);
         }
 
       protected:
@@ -127,37 +73,35 @@ namespace transport {
          * Set channel state
          ********************************************************************************/
         PUMP_INLINE bool __set_state(
-            int32_t expected, 
-            int32_t desired) {
-            return transport_state_.compare_exchange_strong(expected, desired);
+            transport_state expected, 
+            transport_state desired) {
+            return state_.compare_exchange_strong(expected, desired);
         }
 
         /*********************************************************************************
          * Check transport state
          ********************************************************************************/
-        PUMP_INLINE bool __is_state(int32_t status) const {
-            return transport_state_.load(std::memory_order_acquire) == status;
+        PUMP_INLINE bool __is_state(
+            transport_state status, 
+            std::memory_order order = std::memory_order_acquire) const {
+            return state_.load(order) == status;
         }
 
         /*********************************************************************************
          * Post channel event
          ********************************************************************************/
-        PUMP_INLINE void __post_channel_event(
+        PUMP_INLINE bool __post_channel_event(
             poll::channel_sptr &&ch, 
-            int32_t event) {
-            get_service()->post_channel_event(ch, event);
-        }
-        PUMP_INLINE void __post_channel_event(
-            poll::channel_sptr &ch, 
-            int32_t event) {
-            get_service()->post_channel_event(ch, event);
+            int32_t event,
+            poller_id pid = SEND_POLLER_ID) {
+            return get_service()->post_channel_event(ch, event, pid);
         }
 
       protected:
         // Transport type
-        int32_t type_;
+        transport_type type_;
         // Transport state
-        std::atomic_int32_t transport_state_;
+        std::atomic<transport_state> state_;
     };
 
     class LIB_PUMP base_transport : 
@@ -190,22 +134,28 @@ namespace transport {
         virtual error_code start(
             service *sv, 
             read_mode mode,
-            const transport_callbacks &cbs) = 0;
+            const transport_callbacks &cbs) {
+            return ERROR_FAULT;
+        }
 
         /*********************************************************************************
          * Stop
          ********************************************************************************/
-        virtual void stop() = 0;
+        virtual void stop() {
+        }
 
         /*********************************************************************************
          * Force stop
          ********************************************************************************/
-        virtual void force_stop() = 0;
+        virtual void force_stop() {
+        }
 
         /*********************************************************************************
          * Read continue for read once mode
          ********************************************************************************/
-        virtual error_code read_continue() = 0;
+        virtual error_code read_continue() {
+            return ERROR_FAULT;
+        }
 
         /*********************************************************************************
          * Send
@@ -263,37 +213,56 @@ namespace transport {
 
       protected:
         /*********************************************************************************
+         * Shutdown transport flow
+         ********************************************************************************/
+        virtual void __shutdown_transport_flow(int32_t how) {
+        }
+
+        /*********************************************************************************
          * Close transport flow
          ********************************************************************************/
-        virtual void __close_transport_flow() = 0;
+        virtual void __close_transport_flow() {
+        }
 
         /*********************************************************************************
          * Change read state
          ********************************************************************************/
         bool __change_read_state(read_state from, read_state to);
 
+        /*********************************************************************************
+         * Try triggering dissconnected callback
+         ********************************************************************************/
+        bool __try_triggering_disconnected_callback();
 
         /*********************************************************************************
-         * Interrupt and trigger callbacks
+         * Trigger disconnected callbacks
          ********************************************************************************/
-        void __interrupt_and_trigger_callbacks();
+        bool __trigger_disconnected_callback();
+
+        /*********************************************************************************
+         * Trigger stopped callbacks
+         ********************************************************************************/
+        bool __trigger_stopped_callback();
 
         /*********************************************************************************
          * Start trackers
          ********************************************************************************/
         PUMP_INLINE bool __start_read_tracker() {
-            auto tracker = r_tracker_.get();
-            if (PUMP_UNLIKELY(!tracker)) {
-                tracker = object_create<poll::channel_tracker>(
-                            shared_from_this(), 
-                            poll::TRACK_READ);
-                r_tracker_.reset(tracker, object_delete<poll::channel_tracker>);
-                if (!get_service()->add_channel_tracker(r_tracker_, READ_POLLER_ID)) {
+            if (PUMP_UNLIKELY(!r_tracker_)) {
+                r_tracker_.reset(
+                    object_create<poll::channel_tracker>(
+                        shared_from_this(), 
+                        poll::TRACK_READ), 
+                    object_delete<poll::channel_tracker>);
+                if (!r_tracker_ || 
+                    !get_service()->add_channel_tracker(r_tracker_, READ_POLLER_ID)) {
                     PUMP_DEBUG_LOG("base_transport: start read tracker failed");
                     return false;
                 }
             } else {
-                if (!tracker->get_poller()->resume_channel_tracker(tracker)) {
+                auto poller = r_tracker_->get_poller();
+                if (poller == nullptr || 
+                    !poller->resume_channel_tracker(r_tracker_.get())) {
                     PUMP_DEBUG_LOG("base_transport: resume read tracker failed");
                     return false;
                 }
@@ -301,18 +270,21 @@ namespace transport {
             return true;
         }
         PUMP_INLINE bool __start_send_tracker() {
-            auto tracker = s_tracker_.get();
-            if (PUMP_UNLIKELY(!tracker)) {
-                tracker = object_create<poll::channel_tracker>(
-                            shared_from_this(), 
-                            poll::TRACK_SEND);
-                s_tracker_.reset(tracker, object_delete<poll::channel_tracker>);
-                if (!get_service()->add_channel_tracker(s_tracker_, SEND_POLLER_ID)) {
+            if (PUMP_UNLIKELY(!s_tracker_)) {
+                s_tracker_.reset(
+                    object_create<poll::channel_tracker>(
+                        shared_from_this(), 
+                        poll::TRACK_SEND), 
+                    object_delete<poll::channel_tracker>);
+                if (!s_tracker_ || 
+                    !get_service()->add_channel_tracker(s_tracker_, SEND_POLLER_ID)) {
                     PUMP_DEBUG_LOG("base_transport: start send tracker failed");
                     return false;
                 }
             } else {
-                if (!tracker->get_poller()->resume_channel_tracker(tracker)) {
+                auto poller = s_tracker_->get_poller();
+                if (poller == nullptr || 
+                    !poller->resume_channel_tracker(s_tracker_.get())) {
                     PUMP_DEBUG_LOG("base_transport: resume send tracker failed");
                     return false;
                 }
@@ -324,14 +296,12 @@ namespace transport {
          * Stop tracker
          ********************************************************************************/
         PUMP_INLINE void __stop_read_tracker() {
-            if (r_tracker_) {
-                PUMP_ASSERT(r_tracker_->get_poller() != nullptr);
+            if (r_tracker_ && r_tracker_->get_poller() != nullptr) {
                 r_tracker_->get_poller()->remove_channel_tracker(r_tracker_);
             }
         }
         PUMP_INLINE void __stop_send_tracker() {
-            if (s_tracker_) {
-                PUMP_ASSERT(s_tracker_->get_poller() != nullptr);
+            if (s_tracker_ && s_tracker_->get_poller() != nullptr) {
                 s_tracker_->get_poller()->remove_channel_tracker(s_tracker_);
             }
         }

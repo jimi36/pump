@@ -22,6 +22,7 @@
 #include "pump/net/socket.h"
 #include "pump/poll/channel.h"
 #include "pump/toolkit/buffer.h"
+#include "pump/transport/types.h"
 #include "pump/transport/address.h"
 
 namespace pump {
@@ -30,13 +31,6 @@ namespace flow {
 
     #define MAX_TCP_BUFFER_SIZE 4096 // 4KB
     #define MAX_UDP_BUFFER_SIZE 8192 // 8KB
-
-    const int32_t FLOW_ERR_NO = 0;
-    const int32_t FLOW_ERR_ABORT = 1;
-    const int32_t FLOW_ERR_BUSY = 2;
-    const int32_t FLOW_ERR_AGAIN = 3;
-    const int32_t FLOW_ERR_NO_DATA = 4;
-    const int32_t FLOW_ERR_COUNT = 5;
 
     class flow_base 
       : public toolkit::noncopyable {
@@ -90,7 +84,6 @@ namespace flow {
         // Channel
         poll::channel_wptr ch_;
     };
-    DEFINE_ALL_POINTER_TYPE(flow_base);
 
 }  // namespace flow
 }  // namespace transport

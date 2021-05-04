@@ -27,13 +27,27 @@ namespace transport {
       : base_dialer(TCP_DIALER, local_address, remote_address, timeout) {
     }
 
-    int32_t tcp_dialer::start(
+    tcp_dialer::~tcp_dialer() {
+        __stop_dial_tracker();
+    }
+
+    error_code tcp_dialer::start(
         service *sv, 
         const dialer_callbacks &cbs) {
         PUMP_DEBUG_FAILED(
             !__set_state(TRANSPORT_INITED, TRANSPORT_STARTING), 
             "tcp_dialer: start failed for transport state incorrect",
             return ERROR_INVALID);
+
+        bool ret = false;
+        toolkit::defer cleanup([&]() {
+            if (ret) {
+                __set_state(TRANSPORT_STARTING, TRANSPORT_STARTED);
+            } else {
+                __set_state(TRANSPORT_STARTING, TRANSPORT_ERROR);
+                __stop_dial_timer();
+            }
+        });
 
         PUMP_DEBUG_FAILED(
             sv == nullptr, 
@@ -47,13 +61,6 @@ namespace transport {
             return ERROR_INVALID);
         cbs_ = cbs;
 
-        toolkit::defer cleanup([&]() {
-            __stop_dial_tracker();
-            __close_dial_flow();
-            __stop_dial_timer();
-            __set_state(TRANSPORT_STARTING, TRANSPORT_ERROR);
-        });
-
         if (!__open_dial_flow()) {
             PUMP_DEBUG_LOG("tcp_dialer: start failed for opening flow failed");
             return ERROR_FAULT;
@@ -64,7 +71,7 @@ namespace transport {
             return ERROR_FAULT;
         }
 
-        if (flow_->post_connect(remote_address_) != flow::FLOW_ERR_NO) {
+        if (flow_->post_connect(remote_address_) != ERROR_OK) {
             PUMP_DEBUG_LOG("tcp_dialer: start failed for posting connect failed");
             return ERROR_FAULT;
         }
@@ -74,9 +81,7 @@ namespace transport {
             return ERROR_FAULT;
         }
 
-        __set_state(TRANSPORT_STARTING, TRANSPORT_STARTED);
-
-        cleanup.clear();
+        ret = true;
 
         return ERROR_OK;
     }
@@ -85,35 +90,28 @@ namespace transport {
         // When stopping done, tracker event will trigger stopped callback.
         if (__set_state(TRANSPORT_STARTED, TRANSPORT_STOPPING)) {
             __stop_dial_timer();
-            __close_dial_flow();
+            __shutdown_dial_flow();
             __post_channel_event(shared_from_this(), 0);
-            return;
-        }
-
-        // If in timeouting status at the moment, it means that dialer is timeout
-        // but hasn't triggered tracker event callback yet. So we just set it to
-        // stopping status, then tracker event will trigger stopped callabck.
-        if (__set_state(TRANSPORT_TIMEOUTING, TRANSPORT_STOPPING)) {
-            return;
+        } else {
+            // If in timeouting status at the moment, it means that dialer is timeout
+            // but hasn't triggered tracker event callback yet. So we just set it to
+            // stopping status, then tracker event will trigger stopped callabck.
+            __set_state(TRANSPORT_TIMEOUTING, TRANSPORT_STOPPING);
         }
     }
 
     void tcp_dialer::on_send_event() {
         // Stop timeout timer.
         __stop_dial_timer();
-        // Stop tracker.
+        // Stop dial tracker.
         __stop_dial_tracker();
 
-        auto flow = flow_.get();
-
         address local_address, remote_address;
-        bool success = (flow->connect(&local_address, &remote_address) == 0);
+        bool success = (flow_->connect(&local_address, &remote_address) == 0);
         auto next_status = success ? TRANSPORT_FINISHED : TRANSPORT_ERROR;
         if (!__set_state(TRANSPORT_STARTING, next_status) &&
             !__set_state(TRANSPORT_STARTED, next_status)) {
-            PUMP_DEBUG_LOG("tcp_dialer: handle send event failed for not in started");
-            __close_dial_flow();
-            __trigger_interrupt_callbacks();
+            PUMP_DEBUG_LOG("tcp_dialer: handle send failed for not in started");
             return;
         }
 
@@ -121,18 +119,14 @@ namespace transport {
         if (PUMP_LIKELY(success)) {
             tcp_transport = tcp_transport::create();
             if (tcp_transport) {
-                tcp_transport->init(flow->unbind(), local_address, remote_address);
+                tcp_transport->init(flow_->unbind(), local_address, remote_address);
             } else {
                 PUMP_WARN_LOG(
-                    "tcp_dialer: handle send event failed for creating transport failed");
+                    "tcp_dialer: handle send failed for creating transport failed");
                 success = false;
             }
         } else {
-            PUMP_DEBUG_LOG("tcp_dialer: handle send event failed for dialing failed");
-        }
-
-        if (!success) {
-            __close_dial_flow();
+            PUMP_DEBUG_LOG("tcp_dialer: handle send failed for dialing failed");
         }
 
         base_transport_sptr transport = tcp_transport;
@@ -141,14 +135,11 @@ namespace transport {
 
     void tcp_dialer::on_timeout(tcp_dialer_wptr wptr) {
         auto dialer = wptr.lock();
-        if (!dialer) {
-            return;
-        }
-
-        if (dialer->__set_state(TRANSPORT_STARTED, TRANSPORT_TIMEOUTING)) {
-            PUMP_DEBUG_LOG("tcp_dialer: handle dialing timeouted");
-            dialer->__stop_dial_tracker();
-            dialer->__post_channel_event(dialer, 0);
+        if (dialer) {
+            if (dialer->__set_state(TRANSPORT_STARTED, TRANSPORT_TIMEOUTING)) {
+                PUMP_DEBUG_LOG("tcp_dialer: handle dialing timeouted");
+                dialer->__post_channel_event(dialer, 0);
+            }
         }
     }
 
@@ -161,7 +152,7 @@ namespace transport {
             PUMP_WARN_LOG("tcp_dialer: open flow failed for creating flow failed");
             return false;
         }
-        if (flow_->init(shared_from_this(), local_address_) != flow::FLOW_ERR_NO) {
+        if (flow_->init(shared_from_this(), local_address_) != ERROR_OK) {
             PUMP_DEBUG_LOG("tcp_dialer: open flow failed for initing flow failed");
             return false;
         }
@@ -170,6 +161,18 @@ namespace transport {
         poll::channel::__set_fd(flow_->get_fd());
 
         return true;
+    }
+
+    void tcp_dialer::__shutdown_dial_flow() {
+        if (flow_) {
+            flow_->shutdown(SHUT_RDWR);
+        }
+    }
+
+    void tcp_dialer::__close_dial_flow() {
+        if (flow_) {
+            flow_->close();
+        }
     }
 
     base_transport_sptr tcp_sync_dialer::dial(

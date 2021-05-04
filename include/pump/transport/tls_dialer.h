@@ -71,7 +71,7 @@ namespace transport {
         /*********************************************************************************
          * Start
          ********************************************************************************/
-        virtual int32_t start(
+        virtual error_code start(
             service *sv, 
             const dialer_callbacks &cbs) override;
 
@@ -113,12 +113,14 @@ namespace transport {
         virtual bool __open_dial_flow() override;
 
         /*********************************************************************************
+         * Shutdown dial flow
+         ********************************************************************************/
+        virtual void __shutdown_dial_flow() override;
+
+        /*********************************************************************************
          * Close dial flow
          ********************************************************************************/
-        virtual void __close_dial_flow() override {
-            if (flow_)
-                flow_->close();
-        }
+        virtual void __close_dial_flow() override;
 
       private:
         /*********************************************************************************
