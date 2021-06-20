@@ -21,31 +21,27 @@ namespace pump {
 namespace transport {
 
     tls_dialer::tls_dialer(
-        void *xcred,
+        tls_credentials xcred,
         const address &local_address,
         const address &remote_address,
         int64_t dial_timeout,
         int64_t handshake_timeout) noexcept
       : base_dialer(TLS_DIALER, local_address, remote_address, dial_timeout),
         xcred_(xcred),
-        xcred_owner_(false),
         handshake_timeout_(handshake_timeout) {
-        if (!xcred_) {
-            xcred_owner_ = true;
-            xcred_ = ssl::create_tls_client_certificate();
+        if (xcred_ == nullptr) {
+            xcred_ = create_tls_client_credentials();
         }
     }
 
     tls_dialer::~tls_dialer() {
-        if (xcred_owner_) {
-            ssl::destory_tls_certificate(xcred_);
-        }
-
         __stop_dial_tracker();
 
         if (flow_ && handshaker_) {
             flow_->unbind();
         }
+
+        destory_tls_credentials(xcred_);
     }
 
     error_code tls_dialer::start(
@@ -202,13 +198,12 @@ namespace transport {
             if (dialer->__set_state(TRANSPORT_HANDSHAKING, TRANSPORT_FINISHED)) {
                 tls_transport_sptr tls_transport;
                 if (PUMP_LIKELY(succ)) {
-                    auto flow = handshaker->unlock_flow();
-                    auto &local_address = handshaker->get_local_address();
-                    auto &remote_address = handshaker->get_remote_address();
-
                     tls_transport = tls_transport::create();
                     if (tls_transport) {
-                        tls_transport->init(flow, local_address, remote_address);
+                        tls_transport->init(
+                            handshaker->unlock_flow(), 
+                            handshaker->get_local_address(), 
+                            handshaker->get_remote_address());
                     } else {
                         PUMP_WARN_LOG(
                             "tls_dialer: handle handshaked event failed for creating transport failed");

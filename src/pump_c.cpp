@@ -160,11 +160,27 @@ pump_c_acceptor pump_c_tls_acceptor_create(
     int port,
     const char *cert,
     const char *key) {
+    transport::tls_credentials xcred = transport::create_tls_credentials(
+                                        false, 
+                                        false, 
+                                        cert, 
+                                        key);
+    if (xcred == nullptr) {
+        return nullptr;
+    }
+
     pump_c_acceptor_impl *impl = object_create<pump_c_acceptor_impl>();
+    if (impl == nullptr) {
+        transport::destory_tls_credentials(xcred);
+        return nullptr;
+    }
 
     transport::address addr(ip, port);
-    impl->acceptor =
-        transport::tls_acceptor::create_with_memory(cert, key, addr, 1000);
+    impl->acceptor = transport::tls_acceptor::create(xcred, addr, 1000);
+    if (!impl->acceptor) {
+        object_delete(impl);
+        return nullptr;
+    }
 
     impl->cbs.accepted_cb = nullptr;
     impl->cbs.stopped_cb = nullptr;

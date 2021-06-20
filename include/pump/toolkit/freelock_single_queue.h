@@ -49,7 +49,7 @@ namespace toolkit {
         int32_t cache_head;
     };
 
-    template <typename T, int32_t PerBlockElementCount = 128>
+    template <typename T, int32_t PerBlockElementCount = 1024>
     class LIB_PUMP freelock_single_queue
       : public noncopyable {
 

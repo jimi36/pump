@@ -51,7 +51,7 @@ namespace transport {
         }
 
         PUMP_INLINE static tls_dialer_sptr create_with_cred(
-            void *xcred,
+            tls_credentials xcred,
             const address &local_address,
             const address &remote_address,
             int64_t dial_timeout = 0,
@@ -136,13 +136,10 @@ namespace transport {
 
       private:
         // Credentials
-        void *xcred_;
-        // Credentials owner
-        bool xcred_owner_;
+        tls_credentials xcred_;
 
-        // Handshake timeout
-        int64_t handshake_timeout_;
         // Handshaker
+        int64_t handshake_timeout_;
         tls_handshaker_sptr handshaker_;
 
         // Dialer flow

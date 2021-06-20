@@ -27,14 +27,14 @@ namespace flow {
     }
 
     flow_tls::~flow_tls() {
-        ssl::destory_tls_session(session_);
+        transport::destory_tls_session(session_);
     }
 
     error_code flow_tls::init(
-        poll::channel_sptr &ch,
+        poll::channel_sptr& ch,
+        bool client,
         pump_socket fd,
-        void *tls_cred,
-        bool client) {
+        transport::tls_credentials xcred) {
         PUMP_DEBUG_FAILED(
             !ch, 
             "flow_tls: init failed for channel invalid",
@@ -47,8 +47,11 @@ namespace flow {
             return ERROR_FAULT);
         fd_ = fd;
 
-        session_ = ssl::create_tls_session(tls_cred, (int32_t)fd, client);
-        if (!session_) {
+        session_ = transport::create_tls_session(
+                    client,
+                    fd, 
+                    xcred);
+        if (session_ == nullptr) {
             return ERROR_FAULT;
         }
 
@@ -62,7 +65,9 @@ namespace flow {
             return ERROR_FAULT);
         send_iob_ = iob;
         
-        int32_t size = ssl::tls_send(session_, send_iob_->buffer(), send_iob_->data_size());
+        int32_t size = transport::tls_send(
+                        session_, send_iob_->buffer(), 
+                        send_iob_->data_size());
         if (PUMP_LIKELY(size > 0)) {
             // Shift send buffer and check data size.
             if (send_iob_->shift(size) > 0) {
@@ -83,7 +88,10 @@ namespace flow {
 
     error_code flow_tls::send() {
         PUMP_ASSERT(send_iob_);
-        int32_t size = ssl::tls_send(session_, send_iob_->buffer(), send_iob_->data_size());
+        int32_t size = transport::tls_send(
+                        session_, 
+                        send_iob_->buffer(), 
+                        send_iob_->data_size());
         if (PUMP_LIKELY(size > 0)) {
             // Shift send buffer and check data size.
             if (send_iob_->shift(size) > 0) {

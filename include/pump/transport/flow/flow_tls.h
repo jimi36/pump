@@ -17,7 +17,7 @@
 #ifndef pump_transport_flow_tls_h
 #define pump_transport_flow_tls_h
 
-#include "pump/ssl/tls.h"
+#include "pump/transport/tls_utils.h"
 #include "pump/transport/flow/flow.h"
 
 namespace pump {
@@ -49,9 +49,9 @@ namespace flow {
          ********************************************************************************/
         error_code init(
             poll::channel_sptr &ch,
+            bool client,
             pump_socket fd,
-            void *tls_cred,
-            bool client);
+            transport::tls_credentials xcred);
 
         /*********************************************************************************
          * Handshake
@@ -62,16 +62,16 @@ namespace flow {
          *     TLS_HANDSHAKE_ERROR
          ********************************************************************************/
         PUMP_INLINE int32_t handshake() {
-            return ssl::tls_handshake(session_);
+            return transport::tls_handshake(session_);
         }
 
         /*********************************************************************************
          * Read
          ********************************************************************************/
         PUMP_INLINE int32_t read(
-            block_t* b, 
+            block_t *b, 
             int32_t size) {
-            return ssl::tls_read(session_, b, size);
+            return transport::tls_read(session_, b, size);
         }
 
         /*********************************************************************************
@@ -79,7 +79,7 @@ namespace flow {
          ********************************************************************************/
         PUMP_INLINE bool has_unread_data() const {
             PUMP_ASSERT(session_);
-            return ssl::tls_has_unread_data(session_);
+            return transport::tls_has_unread_data(session_);
         }
 
         /*********************************************************************************
@@ -120,7 +120,7 @@ namespace flow {
         // Handshaked status
         bool is_handshaked_;
         // TLS session
-        ssl::tls_session *session_;
+        transport::tls_session *session_;
         // Current sending io buffer
         toolkit::io_buffer *send_iob_;
     };

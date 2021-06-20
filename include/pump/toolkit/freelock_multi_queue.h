@@ -27,7 +27,7 @@
 namespace pump {
 namespace toolkit {
  
-    template <typename T, int32_t PerBlockElementCount = 128>
+    template <typename T, int32_t PerBlockElementCount = 1024>
     class LIB_PUMP freelock_multi_queue
       : public noncopyable {
 
@@ -107,7 +107,8 @@ namespace toolkit {
                 }
 
                 // If next write node is the tail node, list is full and try to extend it.
-                if (next_write_node->next != tail_.load(std::memory_order_acquire)) {
+                if (next_write_node->ready == 0 && 
+                    next_write_node->next != tail_.load(std::memory_order_relaxed)) {
                     // Update list head node to next node.
                     if (head_.compare_exchange_strong(
                             next_write_node,
@@ -121,12 +122,8 @@ namespace toolkit {
                     if (__extend_list(next_write_node)) {
                         break;
                     }
-                    next_write_node = head_.load(std::memory_order_acquire);
                 }
             } while (true);
-
-            // Wait current write node be not ready.
-            while (next_write_node->ready == 1);
 
             // Construct node data.
             new (next_write_node->data) element_type(std::forward<U>(data));
@@ -150,6 +147,7 @@ namespace toolkit {
             do {
                 // Get next read node.
                 next_read_node = current_tail->next;
+
                 // If next read node is not ready just return false.
                 if (next_read_node->ready == 0) {
                     return false;
@@ -159,14 +157,14 @@ namespace toolkit {
                 if (tail_.compare_exchange_strong(
                         current_tail,
                         next_read_node,
-                        std::memory_order_acquire,
+                        std::memory_order_relaxed,
                         std::memory_order_relaxed)) {
                     break;
                 }
             } while (true);
 
             // Pop element data.
-            auto elem = (element_type*)next_read_node->data;
+            element_type *elem = (element_type*)next_read_node->data;
             data = std::move(*elem);
             elem->~element_type();
 
@@ -235,7 +233,7 @@ namespace toolkit {
         /*********************************************************************************
          * Extend list
          ********************************************************************************/
-        bool __extend_list(element_node *head) {
+        bool __extend_list(element_node *&head) {
             // Lock the current head element node.
             if (!head_.compare_exchange_strong(
                     head,

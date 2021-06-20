@@ -48,7 +48,7 @@ namespace transport {
          * Init
          ********************************************************************************/
         void init(
-            flow::flow_tls_sptr &flow,
+            flow::flow_tls_sptr &&flow,
             const address &local_address,
             const address &remote_address);
 

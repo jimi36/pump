@@ -201,8 +201,8 @@ void start_tls_server(const std::string &ip,
         pump_bind(&my_tls_acceptor::on_stopped_accepting_callback, my_acceptor);
 
     address listen_address(ip, port);
-    tls_acceptor_sptr acceptor =
-        tls_acceptor::create_with_memory(cert, key, listen_address);
+    tls_credentials xcerd = create_tls_credentials(false, false, cert, key);
+    tls_acceptor_sptr acceptor = tls_acceptor::create(xcerd, listen_address);
     // tls_acceptor_sptr acceptor =
     // tls_acceptor::create_instance_with_file(cert_file, key_file, listen_address);
     if (acceptor->start(sv, cbs) != 0) {

@@ -19,7 +19,7 @@
 
 #include <unordered_map>
 
-#include "pump/ssl/cert.h"
+#include "pump/transport/tls_utils.h"
 #include "pump/transport/base_acceptor.h"
 #include "pump/transport/tls_handshaker.h"
 #include "pump/transport/flow/flow_tls_acceptor.h"
@@ -38,40 +38,14 @@ namespace transport {
         /*********************************************************************************
          * Create instance
          ********************************************************************************/
-        PUMP_INLINE static tls_acceptor_sptr create_with_file(
-            const std::string &cert,
-            const std::string &key,
-            const address &listen_address,
-            int64_t handshake_timeout = 0) {
-            void *xcred = ssl::create_tls_certificate_by_file(false, cert, key);
-            INLINE_OBJECT_CREATE(
-                obj, 
-                tls_acceptor, 
-                (xcred, true, listen_address, handshake_timeout));
-            return tls_acceptor_sptr(obj, object_delete<tls_acceptor>);
-        }
-
-        PUMP_INLINE static tls_acceptor_sptr create_with_memory(
-            const std::string &cert,
-            const std::string &key,
-            const address &listen_address,
-            int64_t handshake_timeout = 0) {
-            void *xcred = ssl::create_tls_certificate_by_buffer(false, cert, key);
-            INLINE_OBJECT_CREATE(
-                obj, 
-                tls_acceptor, 
-                (xcred, true, listen_address, handshake_timeout));
-            return tls_acceptor_sptr(obj, object_delete<tls_acceptor>);
-        }
-
-        PUMP_INLINE static tls_acceptor_sptr create_with_cred(
-            void *xcerd,
+        PUMP_INLINE static tls_acceptor_sptr create(
+            tls_credentials xcerd,
             const address& listen_address,
             int64_t handshake_timeout = 0) {
             INLINE_OBJECT_CREATE(
                 obj, 
                 tls_acceptor, 
-                (xcerd, false, listen_address, handshake_timeout));
+                (xcerd, listen_address, handshake_timeout));
             return tls_acceptor_sptr(obj, object_delete<tls_acceptor>);
         }
 
@@ -118,8 +92,7 @@ namespace transport {
          * Constructor
          ********************************************************************************/
         tls_acceptor(
-            void *xcred,
-            bool xcred_owner,
+            tls_credentials xcred,
             const address& listen_address,
             int64_t handshake_timeout);
 
@@ -150,9 +123,7 @@ namespace transport {
 
       private:
         // Credentials
-        void *xcred_;
-        // Credentials owner
-        bool xcred_owner_;
+          tls_credentials xcred_;
 
         // Handshake timeout
         int64_t handshake_timeout_;

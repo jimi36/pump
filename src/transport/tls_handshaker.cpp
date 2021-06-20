@@ -19,10 +19,6 @@
 namespace pump {
 namespace transport {
 
-    const int32_t TLS_HANDSHAKE_DONE = 0;
-    const int32_t TLS_HANDSHAKE_DOING = 1;
-    const int32_t TLS_HANDSHAKE_ERROR = 2;
-
     tls_handshaker::tls_handshaker() noexcept
       : base_channel(TLS_HANDSHAKER, nullptr, -1) {
     }
@@ -36,14 +32,14 @@ namespace transport {
     void tls_handshaker::init(
         pump_socket fd,
         bool client,
-        void *xcred,
+        tls_credentials xcred,
         const address &local_address,
         const address &remote_address) {
         // Set addresses.
         local_address_ = local_address;
         remote_address_ = remote_address;
         // Open flow.
-        PUMP_DEBUG_CHECK(__open_flow(fd, xcred, client));
+        PUMP_DEBUG_CHECK(__open_flow(client, fd, xcred));
     }
 
     bool tls_handshaker::start(
@@ -84,7 +80,7 @@ namespace transport {
 
         // Flow init handshake state
         auto handshake_ret = flow_->handshake();
-        if (handshake_ret == ssl::TLS_HANDSHAKE_ERROR) {
+        if (handshake_ret == TLS_HANDSHAKE_ERROR) {
             PUMP_DEBUG_LOG("tls_handshaker: start failed for handshaking failed");
             return false;
         }
@@ -104,7 +100,7 @@ namespace transport {
             return false;
         }
         // Start tracker.
-        if (handshake_ret == ssl::TLS_HANDSHAKE_SEND) {
+        if (handshake_ret == TLS_HANDSHAKE_SEND) {
             tracker_->set_expected_event(poll::TRACK_SEND);
         } else {
             tracker_->set_expected_event(poll::TRACK_READ);
@@ -178,7 +174,7 @@ namespace transport {
         }
     }
 
-    bool tls_handshaker::__open_flow(pump_socket fd, void *xcred, bool is_client) {
+    bool tls_handshaker::__open_flow(bool client, pump_socket fd, void *xcred) {
         // Create flow.
         flow_.reset(
             object_create<flow::flow_tls>(), 
@@ -190,7 +186,7 @@ namespace transport {
 
         // Init flow.
         poll::channel_sptr ch = shared_from_this();
-        if (flow_->init(ch, fd, xcred, is_client) != ERROR_OK) {
+        if (flow_->init(ch, client, fd, xcred) != ERROR_OK) {
             PUMP_DEBUG_LOG("tls_handshaker: open flow failed for initing flow failed");
             return false;
         }
@@ -203,12 +199,12 @@ namespace transport {
 
     void tls_handshaker::__process_handshake() {
         switch (flow_->handshake()) {
-        case ssl::TLS_HANDSHAKE_OK:
+        case TLS_HANDSHAKE_OK:
             if (__set_state(TRANSPORT_STARTED, TRANSPORT_FINISHED)) {
                 __handshake_finished();
             }
             return;
-        case ssl::TLS_HANDSHAKE_READ:
+        case TLS_HANDSHAKE_READ:
             tracker_->set_expected_event(poll::TRACK_READ);
             if (!tracker_->get_poller()->resume_channel_tracker(tracker_.get())) {
                 PUMP_WARN_LOG(
@@ -216,7 +212,7 @@ namespace transport {
                 break;
             }
             return;
-        case ssl::TLS_HANDSHAKE_SEND:
+        case TLS_HANDSHAKE_SEND:
             tracker_->set_expected_event(poll::TRACK_SEND);
             if (!tracker_->get_poller()->resume_channel_tracker(tracker_.get())) {
                 PUMP_WARN_LOG(

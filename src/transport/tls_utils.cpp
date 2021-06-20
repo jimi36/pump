@@ -15,8 +15,7 @@
  */
 
 #include "pump/debug.h"
-#include "pump/config.h"
-#include "pump/ssl/tls.h"
+#include "pump/transport/tls_utils.h"
 
 #if defined(PUMP_HAVE_OPENSSL)
 extern "C" {
@@ -31,14 +30,14 @@ extern "C" {
 #endif
 
 namespace pump {
-namespace ssl {
+namespace transport {
 
-        void* create_tls_client_certificate() {
+    tls_credentials create_tls_client_credentials() {
 #if defined(PUMP_HAVE_GNUTLS)
         gnutls_certificate_credentials_t xcred;
         if (gnutls_certificate_allocate_credentials(&xcred) != 0) {
             PUMP_WARN_LOG(
-                "ssl_helper: create tls client certificate failed for gnutls_certificate_allocate_credentials failed");
+                "tls_utils: create tls client certificate failed for gnutls_certificate_allocate_credentials failed");
             return nullptr;
         }
         return xcred;
@@ -46,7 +45,7 @@ namespace ssl {
         SSL_CTX *xcred = SSL_CTX_new(TLS_client_method());
         if (xcred == nullptr) {
             PUMP_WARN_LOG(
-                "ssl_helper: create tls_client certificate failed for SSL_CTX_new failed");
+                "tls_utils: create tls_client certificate failed for SSL_CTX_new failed");
             return nullptr;
         }
         SSL_CTX_set_options(xcred, SSL_EXT_TLS1_3_ONLY);
@@ -56,7 +55,7 @@ namespace ssl {
 #endif
     }
 
-    void* create_tls_certificate_by_file(
+    tls_credentials __create_credentials_from_file(
         bool client,
         const std::string &cert,
         const std::string &key) {
@@ -64,16 +63,15 @@ namespace ssl {
         gnutls_certificate_credentials_t xcred;
         int32_t ret = gnutls_certificate_allocate_credentials(&xcred);
         if (ret != 0) {
-            PUMP_WARN_LOG(
-                "ssl_helper: create tls certificate by file failed for gnutls_certificate_allocate_credentials failed");
             return nullptr;
         }
 
         ret = gnutls_certificate_set_x509_key_file(
-            xcred, cert.c_str(), key.c_str(), GNUTLS_X509_FMT_PEM);
+                xcred, 
+                cert.c_str(), 
+                key.c_str(), 
+                GNUTLS_X509_FMT_PEM);
         if (ret != 0) {
-            PUMP_DEBUG_LOG(
-                "ssl_helper: create tls certificate by file failed for gnutls_certificate_set_x509_key_file failed");
             gnutls_certificate_free_credentials(xcred);
             return nullptr;
         }
@@ -87,22 +85,12 @@ namespace ssl {
             xcred = SSL_CTX_new(TLS_server_method());
         }
         if (xcred == nullptr) {
-            PUMP_WARN_LOG(
-                "ssl_helper: create tls certificate by file failed for SSL_CTX_new failed");
             return nullptr;
         }
 
-        /* Set the key and cert */
-        if (SSL_CTX_use_certificate_file(xcred, cert.c_str(), SSL_FILETYPE_PEM) <= 0) {
+        if (SSL_CTX_use_certificate_file(xcred, cert.c_str(), SSL_FILETYPE_PEM) != 1 || 
+            SSL_CTX_use_PrivateKey_file(xcred, key.c_str(), SSL_FILETYPE_PEM) != 1) {
             SSL_CTX_free(xcred);
-            PUMP_DEBUG_LOG(
-                "ssl_helper: create tls certificate by file failed for SSL_CTX_use_certificate_file failed");
-            return nullptr;
-        }
-        if (SSL_CTX_use_PrivateKey_file(xcred, key.c_str(), SSL_FILETYPE_PEM) <= 0) {
-            SSL_CTX_free(xcred);
-            PUMP_DEBUG_LOG(
-                "ssl_helper: create tls certificate by file failed for SSL_CTX_use_PrivateKey_file failed");
             return nullptr;
         }
         return xcred;
@@ -111,15 +99,13 @@ namespace ssl {
 #endif
     }
 
-    void* create_tls_certificate_by_buffer(
+    tls_credentials __create_credentials_from_memory(
         bool client,
         const std::string &cert,
         const std::string &key) {
 #if defined(PUMP_HAVE_GNUTLS)
-        gnutls_certificate_credentials_t xcred;
+        gnutls_certificate_credentials_t xcred == nullptr;
         if (gnutls_certificate_allocate_credentials(&xcred) != 0) {
-            PUMP_WARN_LOG(
-                "ssl_helper: create tls certificate by buffer failed for gnutls_certificate_allocate_credentials failed");
             return nullptr;
         }
 
@@ -136,8 +122,6 @@ namespace ssl {
                 &gnutls_cert, 
                 &gnutls_key, 
                 GNUTLS_X509_FMT_PEM) != 0) {
-            PUMP_DEBUG_LOG(
-                "ssl_helper: create tls certificate by buffer failed for gnutls_certificate_set_x509_key_mem failed");
             gnutls_certificate_free_credentials(xcred);
             return nullptr;
         }
@@ -151,31 +135,24 @@ namespace ssl {
             xcred = SSL_CTX_new(TLS_server_method());
         }
         if (xcred == nullptr) {
-            PUMP_WARN_LOG(
-                "ssl_helper: create tls certificate by buffer failed for SSL_CTX_new failed");
             return nullptr;
         }
 
         BIO *cert_bio = BIO_new_mem_buf((void*)cert.c_str(), -1);
         if (cert_bio == nullptr) {
-            PUMP_WARN_LOG(
-                "ssl_helper: create tls certificate by buffer failed for BIO_new_mem_buf failed");
             SSL_CTX_free(xcred);
             return nullptr;
         }
+
         X509 *x509_cert = PEM_read_bio_X509(cert_bio, nullptr, nullptr, nullptr);
         BIO_free(cert_bio);
-        if (!x509_cert) {
-            PUMP_DEBUG_LOG(
-                "ssl_helper: create tls certificate by buffer failed for PEM_read_bio_X509 failed");
+        if (x509_cert == nullptr) {
             SSL_CTX_free(xcred);
             return nullptr;
         }
 
         BIO *key_bio = BIO_new_mem_buf((void*)key.c_str(), -1);
         if (key_bio == nullptr) {
-            PUMP_DEBUG_LOG(
-                "ssl_helper: create tls certificate by buffer failed for BIO_new_mem_buf failed");
             SSL_CTX_free(xcred);
             X509_free(x509_cert);
             return nullptr;
@@ -183,18 +160,13 @@ namespace ssl {
         EVP_PKEY *evp_key = PEM_read_bio_PrivateKey(key_bio, nullptr, 0, nullptr);
         BIO_free(key_bio);
         if (evp_key == nullptr) {
-            PUMP_DEBUG_LOG(
-                "ssl_helper: create tls certificate by buffer failed for PEM_read_bio_PrivateKey failed");
             SSL_CTX_free(xcred);
             X509_free(x509_cert);
             return nullptr;
         }
 
-        /* Set the key and cert */
-        if (SSL_CTX_use_certificate(xcred, x509_cert) <= 0 ||
-            SSL_CTX_use_PrivateKey(xcred, evp_key) <= 0) {
-            PUMP_DEBUG_LOG(
-                "ssl_helper: create tls certificate by buffer failed for SSL_CTX_use_PrivateKey failed");
+        if (SSL_CTX_use_certificate(xcred, x509_cert) != 1 ||
+            SSL_CTX_use_PrivateKey(xcred, evp_key) != 1) {
             SSL_CTX_free(xcred);
             X509_free(x509_cert);
             EVP_PKEY_free(evp_key);
@@ -210,7 +182,20 @@ namespace ssl {
 #endif
     }
 
-    void destory_tls_certificate(void *xcred) {
+    tls_credentials create_tls_credentials(
+        bool client,
+        bool by_file,
+        const std::string& cert,
+        const std::string& key) {
+        if (by_file) {
+            return __create_credentials_from_file(client, cert, key);
+        }
+        else {
+            return __create_credentials_from_memory(client, cert, key);
+        }
+    }
+
+    void destory_tls_credentials(tls_credentials xcred) {
         if (xcred != nullptr) {
 #if defined(PUMP_HAVE_GNUTLS)
             gnutls_certificate_free_credentials((gnutls_certificate_credentials_t)xcred);
@@ -221,9 +206,9 @@ namespace ssl {
     }
 
     tls_session* create_tls_session(
-        void *xcred, 
-        int32_t fd, 
-        bool client) {
+        bool client,
+        pump_socket fd,
+        tls_credentials xcred) {
 #if defined(PUMP_HAVE_GNUTLS)
         tls_session *session = object_create<tls_session>();
         if (session == nullptr) {
@@ -241,7 +226,7 @@ namespace ssl {
         // Set GnuTLS handshake timeout time.
         gnutls_handshake_set_timeout(ssl_ctx, GNUTLS_INDEFINITE_TIMEOUT);
         // Set GnuTLS transport fd.
-        gnutls_transport_set_int(ssl_ctx, fd);
+        gnutls_transport_set_int(ssl_ctx, (int32_t)fd);
 
         session->ssl_ctx = ssl_ctx;
 
@@ -256,7 +241,7 @@ namespace ssl {
             object_delete(session);
             return  nullptr;
         }
-        SSL_set_fd(ssl_ctx, fd);
+        SSL_set_fd(ssl_ctx, (int32_t)fd);
         if (client) {
             SSL_set_connect_state(ssl_ctx);
         } else {
@@ -368,5 +353,5 @@ namespace ssl {
         return 0;
     }
 
-}  // namespace ssl
+}  // namespace transport
 }  // namespace pump
