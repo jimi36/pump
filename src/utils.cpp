@@ -24,50 +24,64 @@
 
 namespace pump {
 
-    uint8_t decnum_to_hexchar(uint8_t n) {
-        if (n >= 0 && n <= 9) {
-            return uint8_t('0') + n;
-        } else if (n >= 10 && n <= 15) {
-            return uint8_t('A') + n - 10;
+    uint8_t dec_to_hex(uint8_t dec) {
+        if (dec >= 0 && dec <= 9) {
+            return uint8_t('0') + dec;
+        } else if (dec >= 10 && dec <= 15) {
+            return uint8_t('A') + dec - 10;
         }
         return 0;
     }
 
-    uint8_t hexchar_to_decnum(uint8_t c) {
-        if (c >= '0' && c <= '9') {
-            return uint8_t(c - '0');
-        } else if (c >= 'a' && c <= 'f') {
-            return (uint8_t(c - 'a') + 10);
-        } else if (c >= 'A' && c <= 'F') {
-            return (uint8_t(c - 'A') + 10);
+    uint8_t hex_to_dec(uint8_t hex) {
+        if (hex >= '0' && hex <= '9') {
+            return uint8_t(hex - '0');
+        } else if (hex >= 'a' && hex <= 'f') {
+            return (uint8_t(hex - 'a') + 10);
+        } else if (hex >= 'A' && hex <= 'F') {
+            return (uint8_t(hex - 'A') + 10);
         }
         return 0;
     }
 
-    uint16_t change_endian(uint16_t val) {
+    uint16_t transform_endian(uint16_t val) {
         return (val >> 8) | (val << 8);
     }
 
-    uint32_t change_endian(uint32_t val) {
+    uint32_t transform_endian(uint32_t val) {
         return ((val >> 24) & 0x000000ff) | 
-            ((val >> 8) & 0x0000ff00) |
-            ((val << 8) & 0x00ff0000) |
-            (val << 24);
+            ((val >> 8)  & 0x0000ff00) |
+            ((val << 8)  & 0x00ff0000) |
+            ((val << 24) & 0xff000000);
     }
 
-    uint32_t to_little_endian(uint32_t val);
+    uint64_t transform_endian(uint64_t val) {
+        return ((val >> 56) & 0x00000000000000ff) |
+            ((val >> 40) & 0x000000000000ff00) |
+            ((val >> 24) & 0x0000000000ff0000) |
+            ((val >> 8)  & 0x00000000ff000000) |
+            ((val << 8)  & 0x000000ff00000000) |
+            ((val << 24) & 0x0000ff0000000000) |
+            ((val << 40) & 0x00ff000000000000) |
+            ((val << 56) & 0xff00000000000000);
+    }
 
-    int32_t ceil_to_pow2(int32_t x) {
+    int32_t ceil_to_power_of_two(int32_t val) {
         // From http://graphics.stanford.edu/~seander/bithacks.html#RoundUpPowerOf2
-        --x;
-        x |= x >> 1;
-        x |= x >> 2;
-        x |= x >> 4;
+        --val;
+        val |= val >> 1;
+        val |= val >> 2;
+        val |= val >> 4;
         for (uint32_t i = 1; i < sizeof(int32_t); i <<= 1) {
-            x |= x >> (i << 3);
+            val |= val >> (i << 3);
         }
-        ++x;
-        return x;
+        ++val;
+        return val;
+    }
+
+    int32_t random() {
+        static std::default_random_engine e;
+        return e();
     }
 
     std::string gbk_to_utf8(const std::string &in) {

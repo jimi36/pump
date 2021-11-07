@@ -66,7 +66,7 @@ namespace time {
             PUMP_DEBUG_LOG("timer_queue: start timer failed");
             return false;
         }
-        PUMP_COND_ABORT(!new_timers_.enqueue(ptr),
+        PUMP_ABORT_WITH_LOG(!new_timers_.enqueue(ptr),
             "timer_queue: start timer failed for pushing to queue failed");
         return true;
     }
@@ -76,7 +76,7 @@ namespace time {
             PUMP_DEBUG_LOG("timer_queue: restart timer failed for no started");
             return false;
         }
-        PUMP_COND_ABORT(!new_timers_.enqueue(std::move(ptr)),
+        PUMP_ABORT_WITH_LOG(!new_timers_.enqueue(std::move(ptr)),
             "timer_queue: restart timer failed for pushing to queue failed");
         return true;
     }

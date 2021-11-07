@@ -14,7 +14,6 @@
 using namespace pump;
 
 int test1(int loop) {
-
     int val;
 
     toolkit::freelock_single_queue<int, 256> sq(1024);
@@ -99,7 +98,7 @@ int test1(int loop) {
         }
         auto end = time::get_clock_milliseconds();
         printf("moodycamel::ReaderWriterQueue push use %dms\n", int(end - beg));
-        });
+    });
 
     beg = time::get_clock_milliseconds();
     for (int i = 0; i < loop;) {
@@ -259,7 +258,7 @@ int main(int argc, const char **argv) {
 
     int loop = atoi(argv[1]);
 
-    test2(loop);
+    test1(loop);
 
     return 0;
 }

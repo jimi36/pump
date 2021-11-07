@@ -100,7 +100,7 @@ namespace tls {
         if (end < p + 2) {
             return nullptr;
         }
-        *((uint16_t*)p) = pump::change_endian(val);
+        *((uint16_t*)p) = pump::transform_endian(val);
         return p + 2;
     }
 
@@ -111,7 +111,7 @@ namespace tls {
         if (end < p + 2) {
             return nullptr;
         }
-        val = pump::change_endian(*((uint16_t*)p));
+        val = pump::transform_endian(*((uint16_t*)p));
         return p + 2;
     }
 
@@ -148,7 +148,7 @@ namespace tls {
         if (end <  p + 4) {
             return nullptr;
         }
-        *((uint32_t*)p) = pump::change_endian(val);
+        *((uint32_t*)p) = pump::transform_endian(val);
         return p + 4;
     }
 
@@ -159,7 +159,7 @@ namespace tls {
         if (end < p + 4) {
             return nullptr;
         }
-        val = pump::change_endian(*((uint32_t*)p));
+        val = pump::transform_endian(*((uint32_t*)p));
         return p + 4;
     }
 
@@ -250,7 +250,7 @@ namespace tls {
         int32_t length) {
         std::string info(10 + label.size() + context.size(), 0);
         uint8_t *p = (uint8_t*)info.data();
-        *(uint16_t*)p = pump::change_endian((uint16_t)ssl::hash_digest_length(algo));
+        *(uint16_t*)p = pump::transform_endian((uint16_t)ssl::hash_digest_length(algo));
         p += 2;
         *(uint8_t*)p = uint8_t(6 + label.size());
         p += 1;

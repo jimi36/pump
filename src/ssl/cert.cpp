@@ -38,8 +38,8 @@ namespace ssl {
 
     struct x509_certificate {
         x509_certificate()
-      : key(nullptr),
-        cert(nullptr) {
+          : key(nullptr),
+            cert(nullptr) {
         }
 #if defined(PUMP_HAVE_OPENSSL)
         EVP_PKEY *key;
@@ -55,66 +55,75 @@ namespace ssl {
         case TLS_SIGN_SCHE_ECDSAWITHP384AndSHA384:
         case TLS_SIGN_SCHE_ECDSAWITHP521AndSHA512:
             {
-                EC_KEY *eckey = nullptr;
+                int32_t ec_nid = -1;
                 const EVP_MD *(*new_md_fn)() = nullptr;
                 if (scheme == TLS_SIGN_SCHE_ECDSAWITHP256AndSHA256) {
                     new_md_fn = EVP_sha256;
-                    eckey = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1);
+                    ec_nid = NID_X9_62_prime256v1;
                 } else if (scheme == TLS_SIGN_SCHE_ECDSAWITHP384AndSHA384) {
                     new_md_fn = EVP_sha384;
-                    eckey = EC_KEY_new_by_curve_name(NID_secp384r1);
+                    ec_nid = NID_secp384r1;
                 } else if (scheme == TLS_SIGN_SCHE_ECDSAWITHP521AndSHA512) {
                     new_md_fn = EVP_sha512;
-                    eckey = EC_KEY_new_by_curve_name(NID_secp521r1);
+                    ec_nid = NID_secp521r1;
                 } else {
-                    PUMP_DEBUG_LOG("generate_x509_certificate: unkonwn signature scheme %d", scheme);
+                    PUMP_DEBUG_LOG("generate_x509_certificate failed: unkonwn signature scheme %d", scheme);
                     break;
                 }
-                if (eckey == nullptr) {
-                    break;
-                }
+
+                EC_KEY *eckey = EC_KEY_new_by_curve_name(ec_nid);
                 EC_KEY_set_asn1_flag(eckey, OPENSSL_EC_NAMED_CURVE);
-                PUMP_DEBUG_COND_CHECK(EC_KEY_generate_key(eckey), ==, 1);
+                PUMP_ABORT_WITH_LOG(
+                    EC_KEY_generate_key(eckey) != 1, 
+                    "");
 
                 EVP_PKEY *pkey = EVP_PKEY_new();
-                if (pkey == nullptr) {
-                    PUMP_DEBUG_LOG("generate_x509_certificate: EVP_PKEY_new failed");
-                    EC_KEY_free(eckey);
-                    break;
-                }
-                PUMP_DEBUG_COND_CHECK(EVP_PKEY_assign_EC_KEY(pkey, eckey), ==, 1);
+                PUMP_ABORT_WITH_LOG(
+                    EVP_PKEY_assign_EC_KEY(pkey, eckey) != 1, 
+                    "");
                 
                 X509 *cert = X509_new();
-                if (cert == nullptr) {
-                    EVP_PKEY_free(pkey);
-                    break;
-                }
-                PUMP_DEBUG_COND_CHECK(X509_set_version(cert, 3), ==, 1);
-                PUMP_DEBUG_COND_CHECK(ASN1_INTEGER_set(X509_get_serialNumber(cert), 3), ==, 1);
-                PUMP_DEBUG_COND_CHECK(X509_gmtime_adj(X509_get_notBefore(cert), 0), !=, nullptr);
-                PUMP_DEBUG_COND_CHECK(X509_gmtime_adj(X509_get_notAfter(cert), 365L * 86400), !=, nullptr);
-                PUMP_DEBUG_COND_CHECK(X509_set_pubkey(cert, pkey), ==, 1);
+                PUMP_ABORT_WITH_LOG(
+                    X509_set_version(cert, 3) == 1, 
+                    "");
+                PUMP_ABORT_WITH_LOG(
+                    ASN1_INTEGER_set(X509_get_serialNumber(cert), 3) != 1, 
+                    "");
+                PUMP_ABORT_WITH_LOG(
+                    X509_gmtime_adj(X509_get_notBefore(cert), 0) == nullptr, 
+                    "");
+                PUMP_ABORT_WITH_LOG(
+                    X509_gmtime_adj(X509_get_notAfter(cert), 365L * 86400) == nullptr, 
+                    "");
+                PUMP_ABORT_WITH_LOG(
+                    X509_set_pubkey(cert, pkey) == 1, 
+                    "");
 
                 X509_NAME *name = X509_get_subject_name(cert);
-                if (name == nullptr) {
-                    EVP_PKEY_free(pkey);
-                    X509_free(cert);
-                    break;
-                }
-                PUMP_DEBUG_COND_CHECK(X509_NAME_add_entry_by_txt(name, "C", MBSTRING_ASC, (uint8_t*)"CA", -1, -1, 0), ==, 1);
-                PUMP_DEBUG_COND_CHECK(X509_NAME_add_entry_by_txt(name, "O", MBSTRING_ASC, (uint8_t*)"MyCompany Inc.", -1, -1, 0), == , 1);
-                PUMP_DEBUG_COND_CHECK(X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC, (uint8_t*)"localhost", -1, -1, 0), ==, 1);
-                PUMP_DEBUG_COND_CHECK(X509_set_issuer_name(cert, name), ==, 1);
-                
-                PUMP_DEBUG_COND_CHECK(X509_sign(cert, pkey, new_md_fn()), >, 0);
+                PUMP_ABORT_WITH_LOG(
+                    X509_NAME_add_entry_by_txt(name, "C", MBSTRING_ASC, (uint8_t*)"CA", -1, -1, 0) != 1, 
+                    "");
+                PUMP_ABORT_WITH_LOG(
+                    X509_NAME_add_entry_by_txt(name, "O", MBSTRING_ASC, (uint8_t*)"MyCompany Inc.", -1, -1, 0) != 1, 
+                    "");
+                PUMP_ABORT_WITH_LOG(
+                    X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC, (uint8_t*)"localhost", -1, -1, 0) != 1, 
+                    "");
+                PUMP_ABORT_WITH_LOG(
+                    X509_set_issuer_name(cert, name) != 1, 
+                    "");
+                PUMP_ABORT_WITH_LOG(
+                    X509_sign(cert, pkey, new_md_fn()) == 0, 
+                    "");
 
-                if ((xcert = object_create<x509_certificate>()) == nullptr) {
-                    EVP_PKEY_free(pkey);
-                    X509_free(cert);
-                } else {
-                    xcert->key = pkey;
-                    xcert->cert = cert;
-                }
+                PUMP_ABORT_WITH_LOG(
+                    (xcert = object_create<x509_certificate>()) == nullptr,
+                    "");
+
+                xcert->cert = cert;
+
+                xcert->key = pkey;
+                
                 break;
             }
         default:
@@ -129,23 +138,19 @@ namespace ssl {
 #if defined(PUMP_HAVE_OPENSSL)
         do {
             BIO *bio = BIO_new(BIO_s_mem());
-            if (bio == nullptr) {
-                break;
-            }
-            PUMP_DEBUG_COND_CHECK(PEM_write_bio_X509(bio, xcert->cert), ==, 1);
+            PUMP_ABORT_WITH_LOG(bio == nullptr, "");
+            PUMP_ABORT_WITH_LOG(
+                PEM_write_bio_X509(bio, xcert->cert) != 1, 
+                "");
 
             BUF_MEM *buf = nullptr;
             BIO_get_mem_ptr(bio, &buf);
-            if (buf == nullptr) {
-                BIO_free(bio);
-                break;
-            }
             out.assign(buf->data, buf->length);
 
             BIO_free(bio);
         } while(false);
 #endif
-        return std::forward<std::string>(out);
+        return std::move(out);
     }
 
     std::string to_x509_certificate_raw(x509_certificate *xcert) {
@@ -155,10 +160,12 @@ namespace ssl {
         if (size > 0) {
             out.resize(size);
             uint8_t *buffer = (uint8_t*)out.data();
-            PUMP_DEBUG_COND_CHECK(i2d_X509(xcert->cert, &buffer), ==, size);
+            PUMP_ABORT_WITH_LOG(
+                i2d_X509(xcert->cert, &buffer) != size, 
+                "");
         }
 #endif
-        return std::forward<std::string>(out);
+        return std::move(out);
     }
 
     x509_certificate* load_x509_certificate_by_pem(
@@ -178,38 +185,33 @@ namespace ssl {
         int32_t key_size) {
         x509_certificate *xcert = nullptr;
 #if defined(PUMP_HAVE_OPENSSL)
-        xcert = object_create<x509_certificate>();
-        if (xcert == nullptr) {
-            return nullptr;
-        }
-
         BIO *bio = BIO_new_mem_buf(cert, cert_size);
-        if (bio == nullptr) {
-            object_delete(xcert);
-            return nullptr;
-        }
-        xcert->cert = PEM_read_bio_X509(bio, nullptr, nullptr, nullptr);
+        PUMP_ABORT_WITH_LOG(bio == nullptr, "");
+ 
+        X509 *x509 = PEM_read_bio_X509(bio, nullptr, nullptr, nullptr);
         BIO_free(bio);
-        if (xcert->cert == nullptr) {
-            object_delete(xcert);
+        if (x509 == nullptr) {
             return nullptr;
         }
 
+        EVP_PKEY *pkey = nullptr;
         if (key != nullptr && key_size > 0) {
             bio = BIO_new_mem_buf(key, key_size);
-            if (bio == nullptr) {
-                X509_free(xcert->cert);
-                object_delete(xcert);
-                return nullptr;
-            }
-            xcert->key = PEM_read_bio_PrivateKey(bio, nullptr, nullptr, nullptr);
+            PUMP_ABORT_WITH_LOG(bio == nullptr, "");
+       
+            pkey = PEM_read_bio_PrivateKey(bio, nullptr, nullptr, nullptr);
             BIO_free(bio);
-            if (xcert->key == nullptr) {
-                X509_free(xcert->cert);
-                object_delete(xcert);
+            if (pkey == nullptr) {
+                X509_free(x509);
                 return nullptr;
             }
         }
+
+        xcert = object_create<x509_certificate>();
+        PUMP_ABORT_WITH_LOG(xcert == nullptr, "");
+
+        xcert->cert = x509;
+        xcert->key = pkey;
 #endif
         return xcert;
     }
@@ -231,27 +233,26 @@ namespace ssl {
         int32_t key_size) {
         x509_certificate *xcert = nullptr;
 #if defined(PUMP_HAVE_OPENSSL)
-        xcert = object_create<x509_certificate>();
-        if (xcert == nullptr) {
+        const uint8_t *p_cert = (const uint8_t*)cert;
+        X509 *x509 = d2i_X509(nullptr, &p_cert, cert_size);
+        if (x509 == nullptr) {
             return nullptr;
         }
 
-        const uint8_t *p_cert = (const uint8_t*)cert;
-        xcert->cert = d2i_X509(nullptr, &p_cert, cert_size);
-        if (xcert->cert == nullptr) {
-            object_delete(xcert);
-            return nullptr;
-        } else {
-            if (key != nullptr && key_size > 0) {
-                const uint8_t *p_key = (const uint8_t*)key;
-                xcert->key = d2i_AutoPrivateKey(nullptr, &p_key, key_size);
-                if (xcert->key == nullptr) {
-                    X509_free(xcert->cert);
-                    object_delete(xcert);
-                    return nullptr;
-                }
+        EVP_PKEY *pkey = nullptr;
+        if (key != nullptr && key_size > 0) {
+            const uint8_t *p_key = (const uint8_t*)key;
+            if ((pkey = d2i_AutoPrivateKey(nullptr, &p_key, key_size)) == nullptr) {
+                X509_free(x509);
+                return nullptr;
             }
         }
+
+        xcert = object_create<x509_certificate>();
+        PUMP_ABORT_WITH_LOG(xcert == nullptr, "");
+
+        xcert->cert = x509;
+        xcert->key = pkey;
 #endif
         return xcert;
     }
@@ -260,39 +261,44 @@ namespace ssl {
         if (xcert == nullptr) {
             return;
         }
-        if (xcert->cert) {
 #if defined(PUMP_HAVE_OPENSSL)
+        if (xcert->cert) {
             X509_free(xcert->cert);
-#endif
         }
         if (xcert->key) {
-#if defined(PUMP_HAVE_OPENSSL)
             EVP_PKEY_free(xcert->key);
-#endif
         }
+#endif
+        object_delete(xcert);
     }
 
     bool verify_x509_certificates(std::vector<x509_certificate*> &xcerts) {
 #if defined(PUMP_HAVE_OPENSSL)
         X509_STORE *store = X509_STORE_new();
         for (int32_t i = 1; i < (int32_t)xcerts.size(); i++) {
-            PUMP_DEBUG_COND_CHECK(X509_STORE_add_cert(store, xcerts[i]->cert), ==, 1);
+            if (X509_STORE_add_cert(store, xcerts[i]->cert) != 1) {
+                X509_STORE_free(store);
+                return false;
+            }
         }
 
         X509_STORE_CTX *ctx = X509_STORE_CTX_new();
-        PUMP_DEBUG_COND_CHECK(X509_STORE_CTX_init(ctx, store, xcerts[0]->cert, nullptr), ==, 1);
-        int32_t ret = X509_verify_cert(ctx);
-        if (ret != 1) {
+        PUMP_ABORT_WITH_LOG(
+            X509_STORE_CTX_init(ctx, store, xcerts[0]->cert, nullptr) != 1, 
+            "");
+
+        bool success = true;
+        if (X509_verify_cert(ctx) != 1) {
             int32_t ec = X509_STORE_CTX_get_error(ctx);
-            if (ec == X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT) {
-                ret = 1;
+            if (ec != X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT) {
+                success = false;
             }
         }
 
         X509_STORE_CTX_free(ctx);
         X509_STORE_free(store);
 
-        return ret == 1;
+        return success;
 #else
         return false;
 #endif
@@ -300,7 +306,7 @@ namespace ssl {
 
     bool has_x509_scts(x509_certificate *xcert) {
 #if defined(PUMP_HAVE_OPENSSL)
-       return X509_get_ext_by_NID(xcert->cert, NID_ct_precert_scts, -1) >= 0;
+        return X509_get_ext_by_NID(xcert->cert, NID_ct_precert_scts, -1) >= 0;
 #else
         return false;
 #endif
@@ -336,9 +342,9 @@ namespace ssl {
             }
             BIO *bio = BIO_new(BIO_s_mem());
             if(X509V3_EXT_print(bio, ext, 0, 0) == 1){
-                BUF_MEM *bptr = nullptr;
-                BIO_get_mem_ptr(bio, &bptr);
-                scts.push_back(bptr->data);
+                BUF_MEM *buf = nullptr;
+                BIO_get_mem_ptr(bio, &buf);
+                scts.push_back(buf->data);
             }
             BIO_free(bio);
         }
@@ -355,32 +361,35 @@ namespace ssl {
         EVP_PKEY *pkey = X509_get0_pubkey(xcert->cert);
         switch (EVP_PKEY_base_id(pkey)) {
         case EVP_PKEY_RSA:
-        {
-            int32_t pkey_size = EVP_PKEY_size(pkey);
-            if (pkey_size == 256) {
-                scheme = TLS_SIGN_SCHE_PSSWITHSHA256;
-            } else if (pkey_size == 384) {
-                scheme = TLS_SIGN_SCHE_PSSWITHSHA384;
-            } else if (pkey_size == 512) {
-                scheme = TLS_SIGN_SCHE_PSSWITHSHA512;
+            {
+                int32_t pkey_size = EVP_PKEY_size(pkey);
+                if (pkey_size == 256) {
+                    scheme = TLS_SIGN_SCHE_PSSWITHSHA256;
+                } else if (pkey_size == 384) {
+                    scheme = TLS_SIGN_SCHE_PSSWITHSHA384;
+                } else if (pkey_size == 512) {
+                    scheme = TLS_SIGN_SCHE_PSSWITHSHA512;
+                }
+                break;
             }
-            break;
-        }
         case EVP_PKEY_EC:
-        {
-            EC_KEY *key = EVP_PKEY_get0_EC_KEY(pkey);
-            int32_t curve = EC_GROUP_get_curve_name(EC_KEY_get0_group(key));
-            if (curve == NID_X9_62_prime256v1) {
-                scheme = TLS_SIGN_SCHE_ECDSAWITHP256AndSHA256;
-            } else if (curve == NID_secp384r1) {
-                scheme = TLS_SIGN_SCHE_ECDSAWITHP384AndSHA384;
-            } else if (curve == NID_secp521r1) {
-                scheme = TLS_SIGN_SCHE_ECDSAWITHP521AndSHA512;
+            {
+                EC_KEY *key = EVP_PKEY_get0_EC_KEY(pkey);
+                int32_t curve = EC_GROUP_get_curve_name(EC_KEY_get0_group(key));
+                if (curve == NID_X9_62_prime256v1) {
+                    scheme = TLS_SIGN_SCHE_ECDSAWITHP256AndSHA256;
+                } else if (curve == NID_secp384r1) {
+                    scheme = TLS_SIGN_SCHE_ECDSAWITHP384AndSHA384;
+                } else if (curve == NID_secp521r1) {
+                    scheme = TLS_SIGN_SCHE_ECDSAWITHP521AndSHA512;
+                }
+                break;
             }
-            break;
-        }
         case EVP_PKEY_ED25519:
-            scheme = TLS_SIGN_SCHE_ED25519;
+            {
+                scheme = TLS_SIGN_SCHE_ED25519;
+                break;
+            }
         }
 #endif
         return scheme;
@@ -405,12 +414,18 @@ namespace ssl {
             return false;
         }
 
-        PUMP_DEBUG_COND_CHECK(EVP_PKEY_sign_init(ctx), ==, 1);
+        PUMP_ABORT_WITH_LOG(
+            EVP_PKEY_sign_init(ctx) != 1, 
+            "");
 
         if (sign_algo == TLS_SIGN_ALGO_PKCS1V15) {
-            PUMP_DEBUG_COND_CHECK(EVP_PKEY_CTX_set_rsa_padding(ctx, RSA_PKCS1_PADDING_SIZE), ==, 1);
+            PUMP_ABORT_WITH_LOG(
+                EVP_PKEY_CTX_set_rsa_padding(ctx, RSA_PKCS1_PADDING_SIZE) != 1, 
+                "");
         } else if (sign_algo == TLS_SIGN_ALGO_RSAPSS) {
-            PUMP_DEBUG_COND_CHECK(EVP_PKEY_CTX_set_rsa_padding(ctx, RSA_PKCS1_PSS_PADDING), ==, 1);
+            PUMP_ABORT_WITH_LOG(
+                EVP_PKEY_CTX_set_rsa_padding(ctx, RSA_PKCS1_PSS_PADDING) != 1, 
+                "");
         } else if (sign_algo == TLS_SIGN_ALGO_ECDSA) {
             // Do nothing.
         } else if (sign_algo == TLS_SIGN_ALGO_ED25519) {
@@ -420,36 +435,35 @@ namespace ssl {
         }
 
         if (hash_algo == HASH_SHA1) {
-            PUMP_DEBUG_COND_CHECK(EVP_PKEY_CTX_set_signature_md(ctx, EVP_sha1()), ==, 1);
+            PUMP_ABORT_WITH_LOG(
+                EVP_PKEY_CTX_set_signature_md(ctx, EVP_sha1()) != 1, 
+                "");
         } else if (hash_algo == HASH_SHA224) {
-            PUMP_DEBUG_COND_CHECK(EVP_PKEY_CTX_set_signature_md(ctx, EVP_sha224()), ==, 1);
+            PUMP_ABORT_WITH_LOG(
+                EVP_PKEY_CTX_set_signature_md(ctx, EVP_sha224()) != 1, 
+                "");
         } else if (hash_algo == HASH_SHA256) {
-            PUMP_DEBUG_COND_CHECK(EVP_PKEY_CTX_set_signature_md(ctx, EVP_sha256()), ==, 1);
+            PUMP_ABORT_WITH_LOG(
+                EVP_PKEY_CTX_set_signature_md(ctx, EVP_sha256()) != 1, "");
         } else if (hash_algo == HASH_SHA384) {
-            PUMP_DEBUG_COND_CHECK(EVP_PKEY_CTX_set_signature_md(ctx, EVP_sha384()), ==, 1);
+            PUMP_ABORT_WITH_LOG(
+                EVP_PKEY_CTX_set_signature_md(ctx, EVP_sha384()) != 1, 
+                "");
         } else if (hash_algo == HASH_SHA512) {
-            PUMP_DEBUG_COND_CHECK(EVP_PKEY_CTX_set_signature_md(ctx, EVP_sha512()), ==, 1);
+            PUMP_ABORT_WITH_LOG(
+                EVP_PKEY_CTX_set_signature_md(ctx, EVP_sha512()) != 1, 
+                "");
         } else {
             goto end;
         }
 
-        PUMP_DEBUG_COND_CHECK(
-            EVP_PKEY_sign(
-                ctx, 
-                nullptr, 
-                &sign_len, 
-                (const uint8_t*)msg.data(), 
-                msg.size()), 
-            ==, 1);
+        PUMP_ABORT_WITH_LOG(
+            EVP_PKEY_sign(ctx, nullptr, &sign_len, (const uint8_t*)msg.data(), msg.size()) != 1, 
+            "");
         sign.resize(sign_len);
-        PUMP_DEBUG_COND_CHECK(
-            EVP_PKEY_sign(
-                ctx, 
-                (uint8_t*)sign.data(), 
-                &sign_len, 
-                (const uint8_t*)msg.data(), 
-                msg.size()), 
-            ==, 1);
+        PUMP_ABORT_WITH_LOG(
+            EVP_PKEY_sign(ctx, (uint8_t*)sign.data(), &sign_len, (const uint8_t*)msg.data(), msg.size()) != 1, 
+            "");
         sign.resize(sign_len);
 
         ret = true;
@@ -481,12 +495,16 @@ namespace ssl {
             return false;
         }
 
-        PUMP_DEBUG_COND_CHECK(EVP_PKEY_verify_init(ctx), ==, 1);
+        PUMP_ABORT_WITH_LOG(EVP_PKEY_verify_init(ctx) != 1, "");
 
         if (sign_algo == TLS_SIGN_ALGO_PKCS1V15) {
-            PUMP_DEBUG_COND_CHECK(EVP_PKEY_CTX_set_rsa_padding(ctx, RSA_PKCS1_PADDING_SIZE), ==, 1);
+            PUMP_ABORT_WITH_LOG(
+                EVP_PKEY_CTX_set_rsa_padding(ctx, RSA_PKCS1_PADDING_SIZE) != 1, 
+                "");
         } else if (sign_algo == TLS_SIGN_ALGO_RSAPSS) {
-            PUMP_DEBUG_COND_CHECK(EVP_PKEY_CTX_set_rsa_padding(ctx, RSA_PKCS1_PSS_PADDING), ==, 1);
+            PUMP_ABORT_WITH_LOG(
+                EVP_PKEY_CTX_set_rsa_padding(ctx, RSA_PKCS1_PSS_PADDING) != 1, 
+                "");
         } else if (sign_algo == TLS_SIGN_ALGO_ECDSA) {
             // Do nothing.
         } else if (sign_algo == TLS_SIGN_ALGO_ED25519) {
@@ -496,15 +514,25 @@ namespace ssl {
         }
 
         if (hash_algo == HASH_SHA1) {
-            PUMP_DEBUG_COND_CHECK(EVP_PKEY_CTX_set_signature_md(ctx, EVP_sha1()), ==, 1);
+            PUMP_ABORT_WITH_LOG(
+                EVP_PKEY_CTX_set_signature_md(ctx, EVP_sha1()) != 1, 
+                "");
         } else if (hash_algo == HASH_SHA224) {
-            PUMP_DEBUG_COND_CHECK(EVP_PKEY_CTX_set_signature_md(ctx, EVP_sha224()), ==, 1);
+            PUMP_ABORT_WITH_LOG(
+                EVP_PKEY_CTX_set_signature_md(ctx, EVP_sha224()) != 1, 
+                "");
         } else if (hash_algo == HASH_SHA256) {
-            PUMP_DEBUG_COND_CHECK(EVP_PKEY_CTX_set_signature_md(ctx, EVP_sha256()), ==, 1);
+            PUMP_ABORT_WITH_LOG(
+                EVP_PKEY_CTX_set_signature_md(ctx, EVP_sha256()) != 1, 
+                "");
         } else if (hash_algo == HASH_SHA384) {
-            PUMP_DEBUG_COND_CHECK(EVP_PKEY_CTX_set_signature_md(ctx, EVP_sha384()), ==, 1);
+            PUMP_ABORT_WITH_LOG(
+                EVP_PKEY_CTX_set_signature_md(ctx, EVP_sha384()) != 1, 
+                "");
         } else if (hash_algo == HASH_SHA512) {
-            PUMP_DEBUG_COND_CHECK(EVP_PKEY_CTX_set_signature_md(ctx, EVP_sha512()), ==, 1);
+            PUMP_ABORT_WITH_LOG(
+                EVP_PKEY_CTX_set_signature_md(ctx, EVP_sha512()) != 1, 
+                "");
         } else {
             goto end;
         }

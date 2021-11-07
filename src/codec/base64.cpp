@@ -63,7 +63,7 @@ namespace codec {
             }
         }
 
-        return out;
+        return std::move(out);
     }
 
     PUMP_INLINE static uint32_t decoded_length(const std::string &in) {
@@ -129,7 +129,7 @@ namespace codec {
             }
         }
 
-        return out;
+        return std::move(out);
     }
 
     PUMP_INLINE void a3_to_a4(uint8_t *a4, uint8_t *a3) {

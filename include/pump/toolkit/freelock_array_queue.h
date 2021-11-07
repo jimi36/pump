@@ -56,7 +56,7 @@ namespace toolkit {
             read_index_(0),
             write_index_(1) {
             // Init array size.
-            size_ = ceil_to_pow2(size);
+            size_ = ceil_to_power_of_two(size);
             // Init array size mask.
             size_mask_ = size_ - 1;
             // Create element nodes.

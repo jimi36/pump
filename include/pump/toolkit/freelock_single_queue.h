@@ -71,7 +71,7 @@ namespace toolkit {
             blk_head_(nullptr),
             blk_tail_(nullptr) {
             // Init block element size.
-            block_element_size_ = ceil_to_pow2(block_element_size_);
+            block_element_size_ = ceil_to_power_of_two(block_element_size_);
             // Init block element size mask.
             block_element_size_mask_ = block_element_size_ - 1;
             // Calculate init block count.

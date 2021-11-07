@@ -87,7 +87,7 @@ namespace http {
             int32_t chunk_size = 0;
             const block_t *chunk_pos = pos;
             for (;chunk_pos != line_end; chunk_pos++) {
-                chunk_size = chunk_size * 16 + hexchar_to_decnum(*chunk_pos);
+                chunk_size = chunk_size * 16 + hex_to_dec(*chunk_pos);
             }
             chunk_pos += HTTP_CR_LEN;
 

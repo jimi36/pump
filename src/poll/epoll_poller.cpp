@@ -44,7 +44,7 @@ namespace poll {
         }
         
         events_ = pump_malloc(sizeof(struct epoll_event) * max_event_count_);
-        PUMP_COND_ABORT(events_ == nullptr,
+        PUMP_ABORT_WITH_LOG(events_ == nullptr,
             "epoll_poller: allocate epoll events memory failed");
 #else
         PUMP_ABORT();

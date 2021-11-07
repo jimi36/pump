@@ -59,35 +59,45 @@ namespace ssl {
         switch (algo) {
         case HASH_SHA1:
             ctx = (hash_context*)pump_malloc(sizeof(hash_context) + sizeof(SHA_CTX));
-            if (SHA1_Init((SHA_CTX*)ctx->_pctx) == 0) {
+            if (ctx == nullptr) {
+                return nullptr;
+            } else if (SHA1_Init((SHA_CTX*)ctx->_pctx) == 0) {
                 pump_free(ctx);
                 return nullptr;
             }
             break;
         case HASH_SHA224:
             ctx = (hash_context*)pump_malloc(sizeof(hash_context) + sizeof(SHA256_CTX));
-            if (SHA224_Init((SHA256_CTX*)ctx->_pctx) == 0) {
+            if (ctx == nullptr) {
+                return nullptr;
+            } else if (SHA224_Init((SHA256_CTX*)ctx->_pctx) == 0) {
                 pump_free(ctx);
                 return nullptr;
             }
             break;
         case HASH_SHA256:
             ctx = (hash_context*)pump_malloc(sizeof(hash_context) + sizeof(SHA256_CTX));
-            if (SHA256_Init((SHA256_CTX*)ctx->_pctx) == 0) {
+            if (ctx == nullptr) {
+                return nullptr;
+            } else if (SHA256_Init((SHA256_CTX*)ctx->_pctx) == 0) {
                 pump_free(ctx);
                 return nullptr;
             }
             break;
         case HASH_SHA384:
             ctx = (hash_context*)pump_malloc(sizeof(hash_context) + sizeof(SHA512_CTX));
-            if (SHA384_Init((SHA512_CTX*)ctx->_pctx) == 0) {
+            if (ctx == nullptr) {
+                return nullptr;
+            } else if (SHA384_Init((SHA512_CTX*)ctx->_pctx) == 0) {
                 pump_free(ctx);
                 return nullptr;
             }
             break;
         case HASH_SHA512:
             ctx = (hash_context*)pump_malloc(sizeof(hash_context) + sizeof(SHA512_CTX));
-            if (SHA512_Init((SHA512_CTX*)ctx->_pctx) == 0) {
+            if (ctx == nullptr) {
+                return nullptr;
+            } else if (SHA512_Init((SHA512_CTX*)ctx->_pctx) == 0) {
                 pump_free(ctx);
                 return nullptr;
             }
@@ -102,7 +112,8 @@ namespace ssl {
     }
 
     void free_hash_context(hash_context *ctx) {
-        if (ctx) {
+        PUMP_ASSERT(ctx != nullptr);
+        if (ctx != nullptr) {
 #if defined(PUMP_HAVE_OPENSSL)
             pump_free(ctx);
 #endif
@@ -110,7 +121,7 @@ namespace ssl {
     }
 
     void reset_hash_context(hash_context *ctx) {
-        PUMP_ASSERT(ctx);
+        PUMP_ASSERT(ctx != nullptr);
 #if defined(PUMP_HAVE_OPENSSL)
         switch (ctx->algo)
         {
@@ -143,6 +154,7 @@ namespace ssl {
         hash_context *ctx, 
         const uint8_t *data, 
         int32_t data_len) {
+        PUMP_ASSERT(ctx != nullptr);
 #if defined(PUMP_HAVE_OPENSSL)
         switch (ctx->algo)
         {
@@ -165,6 +177,7 @@ namespace ssl {
         hash_context *ctx, 
         uint8_t *out, 
         int32_t out_len) {
+        PUMP_ASSERT(ctx != nullptr);
 #if defined(PUMP_HAVE_OPENSSL)
         if (out == nullptr || out_len < hash_digest_length(ctx->algo)) {
             return false;
@@ -219,23 +232,20 @@ namespace ssl {
 
             if (new_md_func != nullptr) {
                 out.resize(out_len);
-                PUMP_DEBUG_COND_CHECK(
-                    HMAC(
-                        new_md_func(), 
+                PUMP_ABORT_WITH_LOG(
+                    HMAC(new_md_func(), 
                         (const void*)key.data(), 
                         (int32_t)key.size(),
                         (const uint8_t*)input.data(), 
                         input.size(),
                         (uint8_t*)out.data(), 
-                        &out_len), 
-                    !=, 
-                    nullptr); 
+                        &out_len) != nullptr,
+                    ""); 
             }
         } while(false);
 #endif
         return std::forward<std::string>(out);
     }
-
 
 }
 }
