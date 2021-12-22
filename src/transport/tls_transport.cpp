@@ -34,17 +34,17 @@ namespace transport {
     }
 
     void tls_transport::init(
-        flow::flow_tls_sptr &flow,
+        flow::flow_tls_sptr &&flow,
         const address &local_address,
         const address &remote_address) {
         local_address_ = local_address;
         remote_address_ = remote_address;
 
         PUMP_ASSERT(flow);
-        flow_ = flow;
+        flow_ = std::move(flow);
 
         // Set channel fd
-        poll::channel::__set_fd(flow->get_fd());
+        poll::channel::__set_fd(flow_->get_fd());
     }
 
     error_code tls_transport::start(

@@ -66,8 +66,7 @@ namespace http {
          ********************************************************************************/
         bool start(
             service *sv,
-            const std::string &crtfile,
-            const std::string &keyfile,
+            transport::tls_credentials xcred,
             const transport::address &listen_address,
             const server_callbacks &cbs);
 

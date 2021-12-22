@@ -64,15 +64,15 @@ namespace transport {
      * Transport read state
      ********************************************************************************/
     typedef int32_t read_state;
-    const read_state READ_NONE = 0;
-    const read_state READ_PENDING = 3;
-    const read_state READ_INVALID = 4;
+    const read_state READ_NONE    = 0;
+    const read_state READ_PENDING = 1;
+    const read_state READ_INVALID = 2;
 
     /*********************************************************************************
      * Transport error
      ********************************************************************************/
     typedef int32_t error_code;
-    const error_code ERROR_OK = 0;
+    const error_code ERROR_OK      = 0;
     const error_code ERROR_UNSTART = 1;
     const error_code ERROR_INVALID = 2;
     const error_code ERROR_DISABLE = 3;

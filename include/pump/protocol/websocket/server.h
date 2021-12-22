@@ -54,15 +54,9 @@ namespace websocket {
          * Create instance
          ********************************************************************************/
         PUMP_INLINE static server_sptr create(
-            const transport::address &listen_address) {
-            INLINE_OBJECT_CREATE(obj, server, (listen_address));
-            return server_sptr(obj, object_delete<server>);
-        }
-        PUMP_INLINE static server_sptr create(
-            const transport::address &listen_address,
-            const std::string &certfile,
-            const std::string &keyfile) {
-            INLINE_OBJECT_CREATE(obj, server, (listen_address, certfile, keyfile));
+            const transport::address& listen_address,
+            transport::tls_credentials xcred = nullptr) {
+            INLINE_OBJECT_CREATE(obj, server, (listen_address, xcred));
             return server_sptr(obj, object_delete<server>);
         }
 
@@ -123,11 +117,9 @@ namespace websocket {
         /*********************************************************************************
          * Constructor
          ********************************************************************************/
-        server(const transport::address &listen_address) noexcept;
         server(
-            const transport::address &listen_address, 
-            const std::string &certfile,
-            const std::string &keyfile) noexcept;
+            const transport::address &listen_address,
+            transport::tls_credentials xcred) noexcept;
 
         /*********************************************************************************
          * Handle http upgrade request

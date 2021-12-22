@@ -24,20 +24,18 @@ namespace pump {
 namespace protocol {
 namespace websocket {
 
-    server::server(const transport::address &listen_address) noexcept 
-      : sv_(nullptr) {
-        acceptor_ = transport::tcp_acceptor::create(listen_address);
-    }
-
     server::server(
-        const transport::address &listen_address,
-        const std::string &certfile,
-        const std::string &keyfile) noexcept 
+        const transport::address& listen_address,
+        transport::tls_credentials xcred) noexcept
       : sv_(nullptr) {
-        acceptor_ = transport::tls_acceptor::create_with_file(
-                        certfile, 
-                        keyfile, 
-                        listen_address);
+        if (xcred == nullptr) {
+            acceptor_ = transport::tcp_acceptor::create(listen_address);
+        }
+        else {
+            acceptor_ = transport::tls_acceptor::create(
+                            xcred, 
+                            listen_address);
+        }
     }
 
     bool server::start(

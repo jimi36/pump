@@ -161,8 +161,9 @@ namespace toolkit {
         /*********************************************************************************
          * Constructor
          ********************************************************************************/
-        light_semaphore(int64_t init_count = 0)
-          : count_(init_count) {
+        light_semaphore(int32_t max_spin = 10000, int64_t init_count = 0)
+          : max_spin_(max_spin),
+            count_(init_count) {
             assert(init_count >= 0);
         }
 
@@ -226,7 +227,7 @@ namespace toolkit {
             // Is there a better way to set the initial spin count?
             // If we lower it to 1000, testBenaphore becomes 15x slower on my Core
             // i7-5930K Windows PC, as threads start hitting the kernel semaphore.
-            int32_t spin = 1024;
+            int32_t spin = max_spin_;
             while (--spin >= 0) {
                 old_count = count_.load(std::memory_order_relaxed);
                 if ((old_count > 0) &&
@@ -273,6 +274,8 @@ namespace toolkit {
 
       private:
         semaphore semaphone_;
+
+        int32_t max_spin_;
         std::atomic_int64_t count_;
     };
 

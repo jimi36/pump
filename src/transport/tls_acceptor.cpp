@@ -21,21 +21,18 @@ namespace pump {
 namespace transport {
 
     tls_acceptor::tls_acceptor(
-        void *xcred,
-        bool xcred_owner,
+        tls_credentials xcred,
         const address& listen_address,
         int64_t handshake_timeout) 
       : base_acceptor(TLS_ACCEPTOR, listen_address), 
         xcred_(xcred), 
-        xcred_owner_(xcred_owner) ,
         handshake_timeout_(handshake_timeout) {
     }
 
     tls_acceptor::~tls_acceptor() {
-        if (xcred_owner_) {
-            ssl::destory_tls_certificate(xcred_);
-        }
         __stop_all_handshakers();
+
+        destory_tls_credentials(xcred_);
     }
 
     error_code tls_acceptor::start(
@@ -132,18 +129,20 @@ namespace transport {
         tls_handshaker *handshaker,
         bool succ) {
         auto acceptor = wptr.lock();
-        if (!acceptor) {
-            handshaker->stop();
+        if (!acceptor || !acceptor->__remove_handshaker(handshaker)) {
             return;
         }
 
-        if (acceptor->__remove_handshaker(handshaker) && succ) {
-            auto flow = handshaker->unlock_flow();
-            address local_address = handshaker->get_local_address();
-            address remote_address = handshaker->get_remote_address();
-
+        if (succ && acceptor->is_started()) {
             tls_transport_sptr tls_transport = tls_transport::create();
-            tls_transport->init(flow, local_address, remote_address);
+            if (!tls_transport) {
+                PUMP_WARN_LOG("tls_acceptor: handle handshaked failed for creating tls transport");
+                return;
+            }
+            tls_transport->init(
+                handshaker->unlock_flow(), 
+                handshaker->get_local_address(), 
+                handshaker->get_remote_address());
 
             base_transport_sptr transport = tls_transport;
             acceptor->cbs_.accepted_cb(transport);

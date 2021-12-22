@@ -56,8 +56,8 @@ namespace http {
                 if (i + 2 >= len) {
                     return false;
                 }
-                ch = hexchar_to_decnum(src[i + 1]) << 4 |
-                     hexchar_to_decnum(src[i + 2]);
+                ch = hex_to_dec(src[i + 1]) << 4 |
+                     hex_to_dec(src[i + 2]);
                 i += 2;
             }
             des.append(1, (block_t)ch);
@@ -79,8 +79,8 @@ namespace http {
                 des.append(1, '+');
             } else {
                 des.append(1, '%');
-                des.append(1, decnum_to_hexchar(val >> 4));
-                des.append(1, decnum_to_hexchar(val % 16));
+                des.append(1, dec_to_hex(val >> 4));
+                des.append(1, dec_to_hex(val % 16));
             }
             ++beg;
         }

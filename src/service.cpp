@@ -15,10 +15,10 @@
  */
 
 #include "pump/service.h"
-#include "pump/time/timer_queue.h"
+#include "pump/time/manager.h"
+#include "pump/poll/afd_poller.h"
 #include "pump/poll/epoll_poller.h"
 #include "pump/poll/select_poller.h"
-#include "pump/poll/afd_poller.h"
 
 namespace pump {
 
@@ -38,7 +38,7 @@ namespace pump {
 #endif
         }
 
-        timers_ = time::timer_queue::create();
+        timers_ = time::manager::create();
     }
 
     service::~service() {
@@ -59,7 +59,7 @@ namespace pump {
         running_ = true;
 
         if (timers_) {
-            timers_->start(pump_bind(&service::__post_pending_timer, this, _1));
+            timers_->start(pump_bind(&service::__post_triggered_timers, this, _1));
         }
         if (pollers_[READ_POLLER_ID]) {
             pollers_[READ_POLLER_ID]->start();
@@ -68,9 +68,9 @@ namespace pump {
             pollers_[SEND_POLLER_ID]->start();
         }
 
-        __start_posted_task_worker();
+        __start_task_worker();
 
-        __start_timeout_timer_worker();
+        __start_timer_callback_worker();
 
         return true;
     }
@@ -107,9 +107,13 @@ namespace pump {
         }
     }
 
-    void service::__start_posted_task_worker() {
+    void service::__post_triggered_timers(time::timer_list_sptr &tl) {
+        triggered_timers_.enqueue(tl);
+    }
+
+    void service::__start_task_worker() {
         auto func = [&]() {
-            posted_task_type task;
+            task_callback task;
             while (running_) {
                 if (posted_tasks_.dequeue(task, std::chrono::seconds(1))) {
                     task();
@@ -121,14 +125,17 @@ namespace pump {
             object_delete<std::thread>);
     }
 
-    void service::__start_timeout_timer_worker() {
+    void service::__start_timer_callback_worker() {
         auto func = [&]() {
-            time::timer_wptr wptr;
+            time::timer_list_sptr tl;
             while (running_) {
-                if (pending_timers_.dequeue(wptr, std::chrono::seconds(1))) {
-                    auto ptr = wptr.lock();
-                    if (PUMP_LIKELY(!!ptr)) {
-                        ptr->handle_timeout();
+                if (triggered_timers_.dequeue(tl, std::chrono::seconds(1))) {
+                    time::timer_sptr ptr;
+                    for (auto b = tl->begin(), e = tl->end(); b != e;) {
+                        ptr = (b++)->lock();
+                        if (PUMP_LIKELY(!!ptr)) {
+                            ptr->handle_timeout();
+                        }
                     }
                 }
             }

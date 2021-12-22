@@ -54,7 +54,7 @@ namespace transport {
         void init(
             pump_socket fd,
             bool client,
-            void *xcred,
+            tls_credentials xcred,
             const address &local_address,
             const address &remote_address);
 
@@ -118,9 +118,9 @@ namespace transport {
          * Open flow
          ********************************************************************************/
         bool __open_flow(
+          bool client,
           pump_socket fd, 
-          void *xcred, 
-          bool client);
+          tls_credentials xcred);
 
         /*********************************************************************************
          * Process handshake

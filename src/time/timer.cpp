@@ -15,7 +15,7 @@
  */
 
 #include "pump/time/timer.h"
-#include "pump/time/timer_queue.h"
+#include "pump/time/manager.h"
 
 namespace pump {
 namespace time {
@@ -50,7 +50,7 @@ namespace time {
         }
     }
 
-    bool timer::__start(timer_queue *queue) {
+    bool timer::__start(manager *queue) {
         if (!__set_state(TIMER_INIT, TIMER_STARTED)) {
             return false;
         }

@@ -17,6 +17,7 @@
 #ifndef pump_time_timer_h
 #define pump_time_timer_h
 
+#include <list>
 #include <atomic>
 
 #include "pump/memory.h"
@@ -26,11 +27,13 @@
 namespace pump {
 namespace time {
 
+    class manager;
+
     class timer;
     DEFINE_ALL_POINTER_TYPE(timer);
 
-    class timer_queue;
-    DEFINE_ALL_POINTER_TYPE(timer_queue);
+    typedef std::list<timer_wptr> timer_list;
+    DEFINE_SMART_POINTER_TYPE(timer_list);
 
     typedef pump_function<void()> timer_callback;
 
@@ -43,7 +46,7 @@ namespace time {
       : public std::enable_shared_from_this<timer> {
 
       protected:
-        friend class timer_queue;
+        friend class manager;
 
       public:
         /*********************************************************************************
@@ -107,7 +110,7 @@ namespace time {
         /*********************************************************************************
          * Start
          ********************************************************************************/
-        bool __start(timer_queue *queue);
+        bool __start(manager *queue);
 
         /*********************************************************************************
          * Set state
@@ -127,7 +130,7 @@ namespace time {
 
       private:
         // Timer queue
-        timer_queue *queue_;
+        manager *queue_;
         // Timer status
         std::atomic_int32_t status_;
         // Timer callback

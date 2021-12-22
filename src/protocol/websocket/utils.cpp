@@ -14,12 +14,9 @@
  * limitations under the License.
  */
 
-// Import random functions
-#include <random>
-
-// Import std::find function
 #include <algorithm>
 
+#include "pump/utils.h"
 #include "pump/codec/sha1.h"
 #include "pump/codec/base64.h"
 #include "pump/protocol/websocket/utils.h"
@@ -28,26 +25,19 @@ namespace pump {
 namespace protocol {
 namespace websocket {
 
-    uint8_t random_uint8() {
-        static std::default_random_engine e((uint32_t)::time(0));
-        static std::uniform_int_distribution<uint16_t> u(0, 255);
-        return (uint8_t)u(e);
-    }
-
     std::string compute_sec_key() {
-        std::string tmp(16, 0);
-        for (int32_t i = 0; i < 8; i++) {
-            tmp[i * 2] = random_uint8();
+        std::string s(16, 0);
+        int32_t *p = (int32_t*)s.data();
+        for (uint32_t i = 0; i < 4; i++) {
+            *(p + i) = random();
         }
-
-        return codec::base64_encode(tmp);
+        return codec::base64_encode(s);
     }
 
     std::string compute_sec_accept_key(const std::string &sec_key) {
         std::string hash(20, 0);
         std::string tmp = sec_key + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
         codec::sha1(tmp.c_str(), (uint32_t)tmp.size(), (uint8_t*)hash.c_str());
-
         return codec::base64_encode(hash);
     }
 

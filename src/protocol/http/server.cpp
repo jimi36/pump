@@ -66,8 +66,7 @@ namespace http {
 
     bool server::start(
         service *sv,
-        const std::string &crtfile,
-        const std::string &keyfile,
+        transport::tls_credentials xcred,
         const transport::address &listen_address,
         const server_callbacks &cbs) {
         PUMP_DEBUG_FAILED(
@@ -93,9 +92,8 @@ namespace http {
         acbs.stopped_cb = pump_bind(&server::on_stopped, wptr);
         acbs.accepted_cb = pump_bind(&server::on_accepted, wptr, _1);
 
-        auto acceptor = transport::tls_acceptor::create_with_file(
-                            crtfile, 
-                            keyfile, 
+        auto acceptor = transport::tls_acceptor::create(
+                            xcred, 
                             listen_address, 
                             1000);
         if (acceptor->start(sv, acbs) != transport::ERROR_OK) {

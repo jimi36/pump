@@ -82,7 +82,7 @@ namespace poll {
         }
 
         // Create tracker event
-        PUMP_COND_ABORT(!tevents_.push(object_create<tracker_event>(tracker, TRACKER_EVENT_ADD)),
+        PUMP_ABORT_WITH_LOG(!tevents_.push(object_create<tracker_event>(tracker, TRACKER_EVENT_ADD)),
             "poller: add channel tracker failed for pushing tracker event failed");
 
         // Add pending trakcer event count
@@ -107,7 +107,7 @@ namespace poll {
         __uninstall_channel_tracker(tracker.get());
 
         // Push tracker event to queue.
-        PUMP_COND_ABORT(!tevents_.push(object_create<tracker_event>(tracker, TRACKER_EVENT_DEL)),
+        PUMP_ABORT_WITH_LOG(!tevents_.push(object_create<tracker_event>(tracker, TRACKER_EVENT_DEL)),
             "poller: remove channel tracker failed for pushing event to queue failed");
 
         // Add pending trakcer event count
@@ -132,7 +132,7 @@ namespace poll {
         }
 
         // Push channel event to queue.
-        PUMP_COND_ABORT(!cevents_.push(object_create<channel_event>(c, event)),
+        PUMP_ABORT_WITH_LOG(!cevents_.push(object_create<channel_event>(c, event)),
             "poller: push channel event failed for pushing to queue failed");
 
         // Add pending channel event count

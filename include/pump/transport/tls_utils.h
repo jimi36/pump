@@ -14,17 +14,17 @@
  * limitations under the License.
  */
 
-#ifndef pump_ssl_tls_h
-#define pump_ssl_tls_h
+#ifndef pump_transport_tls_utils_h
+#define pump_transport_tls_utils_h
 
 #include <string>
 #include <string.h>
 
-#include "pump/types.h"
+#include "pump/net/socket.h"
 #include "pump/toolkit/buffer.h"
 
 namespace pump {
-namespace ssl {
+namespace transport {
 
     const int32_t TLS_HANDSHAKE_OK    = 0;
     const int32_t TLS_HANDSHAKE_READ  = 1;
@@ -32,43 +32,44 @@ namespace ssl {
     const int32_t TLS_HANDSHAKE_ERROR = 3;
 
     /*********************************************************************************
-     * Create tls client certificate.
+     * TLS credentials.
      ********************************************************************************/
-    LIB_PUMP void* create_tls_client_certificate();
+    typedef void* tls_credentials;
 
     /*********************************************************************************
-     * Create tls certificate by file.
-     ********************************************************************************/
-    LIB_PUMP void* create_tls_certificate_by_file(
-        bool client,
-        const std::string &cert,
-        const std::string &key);
+    * TLS session.
+    ********************************************************************************/
+    struct tls_session {
+        void *ssl_ctx;
+    };
 
     /*********************************************************************************
-     * Create tls certificate by buffer.
+     * Create tls client credentials.
      ********************************************************************************/
-    LIB_PUMP void* create_tls_certificate_by_buffer(
+    LIB_PUMP tls_credentials create_tls_client_credentials();
+
+    /*********************************************************************************
+     * Create tls credentials by file.
+     ********************************************************************************/
+    LIB_PUMP tls_credentials create_tls_credentials(
         bool client,
+        bool by_file,
         const std::string &cert,
         const std::string &key);
 
     /*********************************************************************************
      * Destory tls certificate.
      ********************************************************************************/
-    void destory_tls_certificate(void *xcred);
-
-    struct tls_session {
-        void *ssl_ctx;
-    };
+    void destory_tls_credentials(tls_credentials xcred);
 
     /*********************************************************************************
      * Create tls session
      * This will create ssl context, net read buffer and net send buffer.
      ********************************************************************************/
     tls_session* create_tls_session(
-        void *xcred, 
-        int32_t fd, 
-        bool client);
+        bool client,
+        pump_socket fd,
+        tls_credentials xcred);
 
     /*********************************************************************************
      * Destory tls session
@@ -109,7 +110,7 @@ namespace ssl {
         const block_t *b, 
         int32_t size);
 
-}  // namespace ssl
+}  // namespace transport
 }  // namespace pump
 
 #endif

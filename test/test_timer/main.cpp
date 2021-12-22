@@ -1,6 +1,7 @@
 #include <pump/init.h>
 #include <pump/service.h>
 #include <pump/time/timer.h>
+#include <pump/time/timestamp.h>
 #include <stdio.h>
 
 class Timeout : public std::enable_shared_from_this<Timeout> {
@@ -15,21 +16,20 @@ class Timeout : public std::enable_shared_from_this<Timeout> {
     void start() {
         printf("new timeout\n");
         pump::time::timer_callback cb = pump_bind(&Timeout::on_timer_timeout, this);
-        for (int i = 0; i < 1; i++) {
-            auto t = pump::time::timer::create(10, cb, true);
+        for (int i = 1; i <= 2000000; i++) {
+            auto t = pump::time::timer::create(1000, cb, true);
             if (!sv_->start_timer(t)) {
                 printf("start timeout error\n");
             }
             timers_.push_back(t);
         }
-
     }
 
     /*********************************************************************************
      * Timer timeout callback
      ********************************************************************************/
     void on_timer_timeout() {
-
+        
         count_++;
 
         int32_t now = (int32_t)::time(0);
@@ -47,7 +47,7 @@ class Timeout : public std::enable_shared_from_this<Timeout> {
     std::vector<timer_sptr> timers_;
 
     int32_t count_;
-    int32_t last_report_time_;
+    int32_t last_report_time_;   
 };
 
 int main(int argc, const char **argv) {

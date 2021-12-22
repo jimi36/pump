@@ -101,10 +101,10 @@ namespace poll {
                             0,
                             nullptr,
                             0);
-        PUMP_COND_ABORT(status != STATUS_SUCCESS,
+        PUMP_ABORT_WITH_LOG(status != STATUS_SUCCESS,
             "afd_create_device_handle: create NT file failed");
 
-        PUMP_COND_ABORT(
+        PUMP_ABORT_WITH_LOG(
             CreateIoCompletionPort(afd_device_handle, iocp_handle, 0, 0) == nullptr ||
             SetFileCompletionNotificationModes(afd_device_handle, FILE_SKIP_SET_EVENT_ON_HANDLE) == FALSE,
             "afd_create_device_handle: NT file bind iocp handle failed");
@@ -121,15 +121,15 @@ namespace poll {
         cur_event_count_(0) {
 #if defined(PUMP_HAVE_IOCP)
         iocp_handler_ = CreateIoCompletionPort(INVALID_HANDLE_VALUE, nullptr, 0, 0);
-        PUMP_COND_ABORT(iocp_handler_ == nullptr,
+        PUMP_ABORT_WITH_LOG(iocp_handler_ == nullptr,
             "afd_poller: create iocp headler failed");
 
         afd_device_handler_ = afd_create_device_handle(iocp_handler_);
-        PUMP_COND_ABORT(afd_device_handler_ == nullptr,
+        PUMP_ABORT_WITH_LOG(afd_device_handler_ == nullptr,
             "afd_poller: create afd device headler failed");
 
         events_ = pump_malloc(sizeof(OVERLAPPED_ENTRY) * max_event_count_);
-        PUMP_COND_ABORT(events_ == nullptr,
+        PUMP_ABORT_WITH_LOG(events_ == nullptr,
             "afd_poller: allocate afd events memory failed");
 #else
         PUMP_ABORT();
@@ -223,7 +223,7 @@ namespace poll {
         if (PUMP_UNLIKELY(cur_event_count > max_event_count_)) {
             max_event_count_ = cur_event_count;
             events_ = pump_realloc(events_, sizeof(OVERLAPPED_ENTRY) * max_event_count_);
-            PUMP_COND_ABORT(events_ == nullptr,
+            PUMP_ABORT_WITH_LOG(events_ == nullptr,
                 "afd_poller: allocate afd events memory failed");
         }
 

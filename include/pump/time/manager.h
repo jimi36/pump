@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef pump_timer_queue_h
-#define pump_timer_queue_h
+#ifndef pump_time_manager_h
+#define pump_time_manager_h
 
 #include <map>
 #include <mutex>
@@ -32,25 +32,28 @@
 namespace pump {
 namespace time {
 
-    class timer_queue
+    class manager;
+    DEFINE_ALL_POINTER_TYPE(manager);
+
+    class manager
       : public toolkit::noncopyable {
 
       protected:
-        typedef pump_function<void(timer_wptr&&)> timer_pending_callback;
+        typedef pump_function<void(timer_list_sptr &)> timer_pending_callback;
 
       public:
           /*********************************************************************************
          * Create instance
          ********************************************************************************/
-        PUMP_INLINE static timer_queue_sptr create() {
-            INLINE_OBJECT_CREATE(obj, timer_queue, ());
-            return timer_queue_sptr(obj, object_delete<timer_queue>);
+        PUMP_INLINE static manager_sptr create() {
+            INLINE_OBJECT_CREATE(obj, manager, ());
+            return manager_sptr(obj, object_delete<manager>);
         }
 
         /*********************************************************************************
          * Deconstructor
          ********************************************************************************/
-        ~timer_queue();
+        ~manager();
 
         /*********************************************************************************
          * Start
@@ -88,21 +91,30 @@ namespace time {
 
         /*********************************************************************************
          * Observe timers
+         * If there are more timers in queue, it will update next observe time.
          ********************************************************************************/
-        void __observe(uint64_t now);
+        void __observe(timer_list_sptr &tl, uint64_t &next_observe_time, uint64_t now);
+
+        /*********************************************************************************
+         * Observe timers
+         ********************************************************************************/
+        PUMP_INLINE void __queue_timer(timer_list_sptr &tl, timer_sptr &&ptr, uint64_t now) {
+            if (ptr->time() <= now) {
+                tl->push_back(std::move(ptr));
+            } else {
+                timers_[ptr->time()].push_back(std::move(ptr));
+            }
+        }
 
       private:
         /*********************************************************************************
          * Constructor
          ********************************************************************************/
-        timer_queue() noexcept;
+        manager() noexcept;
 
       private:
         // Started status
         std::atomic_bool started_;
-
-        // Next observer time
-        uint64_t next_observe_time_;
 
         // Observer thread
         std::shared_ptr<std::thread> observer_;
@@ -112,13 +124,12 @@ namespace time {
         toolkit::freelock_block_queue<timer_impl_queue> new_timers_;
 
         // Observed Timers
-        std::multimap<uint64_t, timer_wptr> timers_;
+        std::map<uint64_t, timer_list> timers_;
 
         // Timeout callback
         timer_pending_callback pending_cb_;
 
     };
-    DEFINE_ALL_POINTER_TYPE(timer_queue);
 
 }  // namespace time
 }  // namespace pump

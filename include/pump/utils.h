@@ -19,39 +19,70 @@
 
 #include <string>
 #include <vector>
+#include <random>
 
 #include "pump/types.h"
 
 namespace pump {
 
     /*********************************************************************************
-     * Transform dec number to hex char
+     * Transform dec to hex.
      ********************************************************************************/
-    LIB_PUMP uint8_t decnum_to_hexchar(uint8_t n);
+    LIB_PUMP uint8_t dec_to_hex(uint8_t dec);
 
     /*********************************************************************************
-     * Transform hex char to dec number
+     * Transform hex to dec.
      ********************************************************************************/
-    LIB_PUMP uint8_t hexchar_to_decnum(uint8_t c);
+    LIB_PUMP uint8_t hex_to_dec(uint8_t hex);
 
     /*********************************************************************************
-     * Change little endian and big endian
+     * Transform little and big endian.
      ********************************************************************************/
-    LIB_PUMP uint16_t change_endian(uint16_t val);
-    LIB_PUMP uint32_t change_endian(uint32_t val);
+    LIB_PUMP uint16_t transform_endian(uint16_t val);
+    LIB_PUMP uint32_t transform_endian(uint32_t val);
+    LIB_PUMP uint64_t transform_endian(uint64_t val);
 
     /*********************************************************************************
-     * Ceil to pow of 2
+     * Ceil to power of two.
      ********************************************************************************/
-    LIB_PUMP int32_t ceil_to_pow2(int32_t x);
+    LIB_PUMP int32_t ceil_to_power_of_two(int32_t val);
 
     /*********************************************************************************
-     * Transform gbk to utf8
+     * Random a value.
+     ********************************************************************************/
+    LIB_PUMP int32_t random();
+
+    /*********************************************************************************
+     * Random a value between min and max.
+     ********************************************************************************/
+    template <typename T>
+    LIB_PUMP T random(uint32_t seed, T min, T max) {
+        std::default_random_engine e(seed);
+        std::uniform_int_distribution<T> u(min, max);
+        return u(e);
+    }
+
+    /*********************************************************************************
+     * Random an array with value between min and max.
+     ********************************************************************************/
+    template <typename T>
+    LIB_PUMP std::vector<T> random(uint32_t seed, T min, T max, int32_t count) {
+        std::vector<T> out(count, 0);
+        std::default_random_engine e(seed);
+        std::uniform_int_distribution<T> u(min, max);
+        for (int32_t i = 0; i < count; i++) {
+            out[i] = u(e);
+        }
+        return std::move(out);
+    }
+
+    /*********************************************************************************
+     * Transform gbk to utf8 string
      ********************************************************************************/
     LIB_PUMP std::string gbk_to_utf8(const std::string &in);
 
     /*********************************************************************************
-     * Transform utf8 to gbk
+     * Transform utf8 to gbk string
      ********************************************************************************/
     LIB_PUMP std::string utf8_to_gbk(const std::string &in);
 

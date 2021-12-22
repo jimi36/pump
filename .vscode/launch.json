@@ -8,7 +8,7 @@
             "name": "(gdb) 启动",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/build/test_quic",
+            "program": "${workspaceFolder}/build/test_timer",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",

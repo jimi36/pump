@@ -18,10 +18,10 @@
 #define pump_service_h
 
 #include "pump/poll/poller.h"
-#include "pump/time/timer_queue.h"
+#include "pump/time/manager.h"
+#include "pump/toolkit/freelock_block_queue.h"
 #include "pump/toolkit/freelock_multi_queue.h"
 #include "pump/toolkit/freelock_single_queue.h"
-#include "pump/toolkit/freelock_block_queue.h"
 
 namespace pump {
 
@@ -111,11 +111,11 @@ namespace pump {
         }
 
         /*********************************************************************************
-         * Post callback task
+         * Post task callback
          ********************************************************************************/
-        template <typename PostedTaskType>
-        PUMP_INLINE void post(PostedTaskType &&task) {
-            posted_tasks_.enqueue(std::forward<PostedTaskType>(task));
+        template <typename TaskCallbackType>
+        PUMP_INLINE void post(TaskCallbackType &&task) {
+            posted_tasks_.enqueue(std::forward<TaskCallbackType>(task));
         }
 
         /*********************************************************************************
@@ -131,24 +131,22 @@ namespace pump {
 
       private:
         /*********************************************************************************
-        * Post pending timer
+        * Post triggered timers
         ********************************************************************************/
-        PUMP_INLINE void __post_pending_timer(time::timer_wptr &&timer) {
-            pending_timers_.enqueue(std::move(timer));
-        }
+        void __post_triggered_timers(time::timer_list_sptr &tl);
 
         /*********************************************************************************
-         * Start posted task worker
+         * Start task worker
          ********************************************************************************/
-        void __start_posted_task_worker();
+        void __start_task_worker();
 
         /*********************************************************************************
-         * Start timeout timer worker
+         * Start timer callback worker
          ********************************************************************************/
-        void __start_timeout_timer_worker();
+        void __start_timer_callback_worker();
 
       private:
-        // Running status
+        // Status
         bool running_;
 
         // Pollers
@@ -156,17 +154,17 @@ namespace pump {
 
         // Task worker
         std::shared_ptr<std::thread> task_worker_;
-        typedef pump_function<void()> posted_task_type;
-        typedef toolkit::freelock_multi_queue<posted_task_type> task_impl_queue;
-        toolkit::freelock_block_queue<task_impl_queue> posted_tasks_;
+        typedef pump_function<void()> task_callback;
+        typedef toolkit::freelock_multi_queue<task_callback> task_queue;
+        toolkit::freelock_block_queue<task_queue> posted_tasks_;
 
         // Timers
-        time::timer_queue_sptr timers_;
+        time::manager_sptr timers_;
 
         // Timer worker
         std::shared_ptr<std::thread> timer_worker_;
-        typedef toolkit::freelock_single_queue<time::timer_wptr> timer_impl_queue;
-        toolkit::freelock_block_queue<timer_impl_queue> pending_timers_;
+        typedef toolkit::freelock_single_queue<time::timer_list_sptr> timer_queue;
+        toolkit::freelock_block_queue<timer_queue> triggered_timers_;
     };
     DEFINE_ALL_POINTER_TYPE(service);
 

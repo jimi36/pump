@@ -36,7 +36,8 @@ void on_new_connection(const std::string &path, websocket::connection_sptr conn)
 void start_ws_server(pump::service *sv, const std::string &ip, int port) {
     pump::transport::address bind_address(ip, port);
     websocket::server_sptr server = websocket::server::create(bind_address);
-    //websocket::server_sptr server = websocket::server::create(bind_address, "cert.pem", "key.pem");
+    //pump::transport::tls_credentials xcerd = pump::transport::create_tls_credentials(false, false, cert, key);
+    //websocket::server_sptr server = websocket::server::create(bind_address, xcerd);
 
     websocket::server_callbacks cbs;
     cbs.upgraded_cb = pump_bind(&on_new_connection, _1, _2);
