@@ -29,9 +29,9 @@ namespace codec {
         uint8_t a3[3];
         uint8_t a4[4];
 
+        auto input = in.begin();
         uint32_t input_len = (uint32_t)in.size();
-        std::string::const_iterator input = in.begin();
-
+        
         std::string out(encoded_length(in), 0);
 
         while (input_len--) {
@@ -87,9 +87,9 @@ namespace codec {
         uint8_t a3[3];
         uint8_t a4[4];
 
+        auto input = in.begin();
         uint32_t input_len = (uint32_t)in.size();
-        std::string::const_iterator input = in.begin();
-
+        
         std::string out(decoded_length(in), 0);
 
         while (input_len--) {
