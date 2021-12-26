@@ -41,19 +41,19 @@ namespace toolkit {
         virtual ~base_buffer();
 
         /*********************************************************************************
-         * Get buffer raw ptr
+         * Get raw buffer pointer
          ********************************************************************************/
-        PUMP_INLINE const block_t* buffer() const {
+        PUMP_INLINE const block_t* raw() const {
             return raw_;
         }
-        PUMP_INLINE block_t* buffer() {
+        PUMP_INLINE block_t* raw() {
             return raw_;
         }
 
         /*********************************************************************************
-         * Get buffer raw size
+         * Get buffer capacity
          ********************************************************************************/
-        PUMP_INLINE uint32_t buffer_size() const {
+        PUMP_INLINE uint32_t capacity() const {
             return raw_size_;
         }
 
@@ -68,17 +68,13 @@ namespace toolkit {
          * Init by copy
          * Allocate a memory block and copy input buffer to the buffer memory block.
          ********************************************************************************/
-        bool __init_by_copy(
-            const block_t *b, 
-            uint32_t size);
+        bool __init_by_copy(const block_t *b, uint32_t size);
 
         /*********************************************************************************
          * Init by move
          * The input buffer will be moved to the buffer.
          ********************************************************************************/
-        bool __init_by_move(
-            const block_t *b, 
-            uint32_t size);
+        bool __init_by_move(const block_t *b, uint32_t size);
         
       protected:
         // Raw buffer
@@ -112,77 +108,55 @@ namespace toolkit {
          * Append input buffer by copying. If there is no enough memory block to use, the
          * buffer will allocate a new memory block.
          ********************************************************************************/
-        bool append(
-            const block_t *b, 
-            uint32_t size);
+        bool append(const block_t *b, uint32_t size);
 
         /*********************************************************************************
          * Shift
-         * Return data size.
+         * Return current size.
          ********************************************************************************/
         PUMP_INLINE uint32_t shift(uint32_t size) {
-            PUMP_ASSERT(data_size_ >= size);
+            PUMP_ASSERT(size_ >= size);
+            if (size_ == 0 || size_ < size) {
+                return 0;
+            }
             read_pos_ += size;
-            data_size_ -= size;
-            return data_size_;
+            size_ -= size;
+            return size_;
         }
 
         /*********************************************************************************
-         * Get data
+         * Get data pointer
          ********************************************************************************/
         PUMP_INLINE const block_t *data() const {
-            return data_size_ == 0 ? nullptr : (raw_ + read_pos_);
+            return size_ == 0 ? nullptr : (raw_ + read_pos_);
         }
 
         /*********************************************************************************
          * Get data size
          ********************************************************************************/
-        PUMP_INLINE uint32_t data_size() const {
-            return data_size_;
-        }
-
-        /*********************************************************************************
-         * Reset data size
-         ********************************************************************************/
-        PUMP_INLINE bool reset_data_size(uint32_t size) {
-            if (PUMP_LIKELY(size <= raw_size_)) {
-                data_size_ = size;
-                read_pos_ = 0;
-                return true;
-            }
-            return false;
-        }
-
-        /*********************************************************************************
-         * Add data size
-         ********************************************************************************/
-        PUMP_INLINE bool add_data_size(uint32_t size) {
-            if (PUMP_LIKELY(read_pos_ + data_size_ + size <= raw_size_)) {
-                data_size_ += size;
-                return true;
-            }
-            return false;
+        PUMP_INLINE uint32_t size() const {
+            return size_;
         }
 
         /*********************************************************************************
          * Reset
          ********************************************************************************/
         PUMP_INLINE void reset() {
-            read_pos_ = data_size_ = 0;
+            size_ = read_pos_ = 0;
         }
 
         /*********************************************************************************
          * Add refence
          ********************************************************************************/
         PUMP_INLINE void add_refence() {
-            ref_cnt_.fetch_add(1);
+            ref_.fetch_add(1);
         }
 
         /*********************************************************************************
          * Sub refence
          ********************************************************************************/
         PUMP_INLINE void sub_refence() {
-            if (ref_cnt_.fetch_sub(1) == 1) {
+            if (ref_.fetch_sub(1) == 1) {
                 INLINE_OBJECT_DELETE(this, io_buffer);
             }
         }
@@ -192,9 +166,9 @@ namespace toolkit {
          * Constructor
          ********************************************************************************/
         io_buffer() noexcept
-          : data_size_(0), 
+          : size_(0), 
             read_pos_(0), 
-            ref_cnt_(1) {
+            ref_(1) {
         }
 
         /*********************************************************************************
@@ -215,11 +189,11 @@ namespace toolkit {
 
       private:
         // Data size
-        uint32_t data_size_;
+        uint32_t size_;
         // Data read pos
         uint32_t read_pos_;
         // Refence count
-        std::atomic_int ref_cnt_;
+        std::atomic_int ref_;
     };
 
 }  // namespace toolkit

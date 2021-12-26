@@ -19,7 +19,8 @@
 
 #include "pump/memory.h"
 #include "pump/toolkit/buffer.h"
-#include "pump/protocol/http/pocket.h"
+#include "pump/protocol/http/packet.h"
+#include "pump/protocol/http/ws_frame.h"
 #include "pump/transport/tcp_transport.h"
 
 namespace pump {
@@ -30,14 +31,23 @@ namespace http {
     DEFINE_ALL_POINTER_TYPE(connection);
 
     struct http_callbacks {
-        // Http pocket callback
-        pump_function<void(pocket_sptr &&pk)> pocket_cb;
+        // Http packet callback
+        pump_function<void(packet_sptr &pk)> packet_cb;
         // Http connection error callback
         pump_function<void(const std::string &)> error_cb;
     };
 
+    struct websocket_callbacks {
+        // Websocket frame callback
+        pump_function<void(const block_t*, int32_t, bool)> frame_cb;
+        // Websocket connection error callback
+        pump_function<void(const std::string &)> error_cb;
+    };
+    
     class LIB_PUMP connection 
       : public std::enable_shared_from_this<connection> {
+      public:
+        friend class server;
 
       public:
         /*********************************************************************************
@@ -55,42 +65,46 @@ namespace http {
         /*********************************************************************************
          * Start http connection
          ********************************************************************************/
-        bool start(
-            service *sv, 
-            const http_callbacks &cbs);
+        bool start_http(service *sv, const http_callbacks &cbs);
 
         /*********************************************************************************
-         * Stop http connection
+         * Mark upgrading websocket status
+         ********************************************************************************/
+        bool upgrading();
+
+        /*********************************************************************************
+         * Start websocket
+         ********************************************************************************/
+        bool start_websocket(const websocket_callbacks &cbs);
+
+        /*********************************************************************************
+         * Stop connection
          ********************************************************************************/
         void stop();
 
         /*********************************************************************************
-         * Read next http pocket
+         * Read again
          ********************************************************************************/
-        bool read_next_pocket();
+        bool read_again();
 
         /*********************************************************************************
-         * Send http pocket
+         * Send data
          ********************************************************************************/
-        bool send(const pocket *pk);
+        bool send(const block_t *b, int32_t size);
 
         /*********************************************************************************
-         * Send http content
+         * Check connection upgraded status 
          ********************************************************************************/
-        bool send(const body *b);
+        bool is_upgraded() const;
 
         /*********************************************************************************
-         * Get connection transport
-         ********************************************************************************/
-        //PUMP_INLINE transport::base_transport_sptr get_transport() {
-        //    return transp_;
-        //}
-
-        /*********************************************************************************
-         * Check connection is valid or not
+         * Check connection valid status
          ********************************************************************************/
         PUMP_INLINE bool is_valid() const {
-            return transp_ && transp_->is_started();
+            if (!transp_ || !transp_->is_started()) {
+                return false;
+            }
+            return true;
         }
 
       protected:
@@ -114,36 +128,60 @@ namespace http {
 
       private:
         /*********************************************************************************
-         * Handle http pocket
+         * Handle http packet
          ********************************************************************************/
-        void __handle_http_pocket(
-            const block_t *b, 
-            int32_t size);
+        int32_t __handle_http_packet(const block_t *b, int32_t size);
 
         /*********************************************************************************
-         * Stop transport
+         * Handle websocket frame
          ********************************************************************************/
-        PUMP_INLINE void __stop_transport() {
-            if (transp_) {
-                transp_->stop();
-            }
-        }
+        int32_t __handle_websocket_frame(const block_t *b, int32_t size);
 
       private:
+        // Status
+        std::atomic_int32_t status_;
+
         // Read cache
         toolkit::io_buffer *cache_;
 
-        // Incoming http pocket
-        pocket_sptr incoming_pocket_;
-        pump_function<pocket*()> create_incoming_pocket_;
-
-        // Transport
-        transport::base_transport_sptr transp_;
+        // Incoming http packet
+        packet_sptr incoming_packet_;
+        pump_function<packet*()> create_incoming_packet_;
 
         // Http callbacks
         http_callbacks http_cbs_;
+
+        // Websocket frame mask
+        bool ws_has_mask_;
+        uint8_t mask_key_[4];
+
+        // Websocket closed
+        std::atomic_flag closed_;
+
+        // Frame decode info
+        int32_t decode_phase_;
+        ws_frame_header decode_hdr_;
+
+        // Websocket callbacks
+        websocket_callbacks ws_cbs_;
+
+        // Transport
+        transport::base_transport_sptr transp_;
     };
     DEFINE_ALL_POINTER_TYPE(connection);
+
+    /*********************************************************************************
+     * Send http packet
+     ********************************************************************************/
+    bool send_http_packet(connection_sptr &conn, packet *pk);
+
+    /*********************************************************************************
+     * Send http simple response
+     ********************************************************************************/
+    bool send_http_simple_response(
+        connection_sptr &conn,
+        int32_t status_code,
+        const std::string &payload);
 
 }  // namespace http
 }  // namespace protocol

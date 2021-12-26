@@ -66,8 +66,8 @@ namespace flow {
         send_iob_ = iob;
         
         int32_t size = transport::tls_send(
-                        session_, send_iob_->buffer(), 
-                        send_iob_->data_size());
+                        session_, send_iob_->data(), 
+                        send_iob_->size());
         if (PUMP_LIKELY(size > 0)) {
             // Shift send buffer and check data size.
             if (send_iob_->shift(size) > 0) {
@@ -90,8 +90,8 @@ namespace flow {
         PUMP_ASSERT(send_iob_);
         int32_t size = transport::tls_send(
                         session_, 
-                        send_iob_->buffer(), 
-                        send_iob_->data_size());
+                        send_iob_->data(), 
+                        send_iob_->size());
         if (PUMP_LIKELY(size > 0)) {
             // Shift send buffer and check data size.
             if (send_iob_->shift(size) > 0) {

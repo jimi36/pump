@@ -17,14 +17,14 @@
 #ifndef pump_protocol_http_response_h
 #define pump_protocol_http_response_h
 
-#include "pump/protocol/http/pocket.h"
+#include "pump/protocol/http/packet.h"
 
 namespace pump {
 namespace protocol {
 namespace http {
 
     class LIB_PUMP response
-      : public pocket {
+      : public packet {
 
       public:
         /*********************************************************************************
@@ -53,7 +53,7 @@ namespace http {
 
         /*********************************************************************************
          * Parse
-         * This parse http pocket, and return parsed size. 
+         * This parse http packet, and return parsed size. 
          * If parsed error, return -1.
          ********************************************************************************/
         virtual int32_t parse(

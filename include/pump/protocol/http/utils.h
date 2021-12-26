@@ -24,42 +24,44 @@ namespace pump {
 namespace protocol {
 namespace http {
 
-    #define HTTP_CR "\r\n"
+    #define HTTP_CRLF "\r\n"
 
-    #define HTTP_CR_LEN 2
+    #define HTTP_CRLF_LEN 2
 
     #define HTTP_LINE_MAX_LEN 2048
-    #define HTTP_LINE_MIN_LEN HTTP_CR_LEN
+    #define HTTP_LINE_MIN_LEN HTTP_CRLF_LEN
 
     #define HTTP_HEAD_VALUE_MAX_LEN (HTTP_LINE_MAX_LEN - 5)
 
     /*********************************************************************************
      * Find http line end position
      ********************************************************************************/
-    LIB_PUMP const block_t* find_http_line_end(
-        const block_t *src, 
-        int32_t len);
+    LIB_PUMP const block_t* find_http_line_end(const block_t *src, int32_t len);
 
     /*********************************************************************************
      * Decode url string
      ********************************************************************************/
-    LIB_PUMP bool url_decode(
-        const std::string &src, 
-        std::string &des);
+    LIB_PUMP bool url_decode(const std::string &src, std::string &des);
 
     /*********************************************************************************
      * Encode to url string
      ********************************************************************************/
-    LIB_PUMP bool url_encode(
-        const std::string &src, 
-        std::string &des);
+    LIB_PUMP bool url_encode(const std::string &src, std::string &des);
 
     /*********************************************************************************
      * Host to address
      ********************************************************************************/
-    LIB_PUMP transport::address host_to_address(
-        bool https, 
-        const std::string &host);
+    LIB_PUMP transport::address host_to_address(bool https, const std::string &host);
+
+    /*********************************************************************************
+     * Compute Sec-WebSocket-Key
+     ********************************************************************************/
+    std::string compute_sec_key();
+
+    /*********************************************************************************
+     * Compute Sec-WebSocket-Accept
+     ********************************************************************************/
+    std::string compute_sec_accept_key(const std::string &sec_key);
 
 }  // namespace http
 }  // namespace protocol

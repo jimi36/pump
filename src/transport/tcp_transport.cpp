@@ -160,9 +160,11 @@ namespace transport {
                 ec = ERROR_UNSTART;
                 break;
             }
-            if (rmode_ != READ_MODE_ONCE ||
-                !__change_read_state(READ_NONE, READ_PENDING) || 
-                !__resume_read_tracker()) {
+            if (rmode_ != READ_MODE_ONCE) {
+                ec = ERROR_FAULT;
+            } else if (!__change_read_state(READ_NONE, READ_PENDING)) {
+                break;
+            } else if (!__resume_read_tracker()) {
                 ec = ERROR_FAULT;
             }
         } while (false);
@@ -215,7 +217,7 @@ namespace transport {
 
     error_code tcp_transport::send(toolkit::io_buffer *iob) {
         PUMP_DEBUG_FAILED(
-            iob == nullptr || iob->data_size() == 0, 
+            iob == nullptr || iob->size() == 0, 
             "tcp_transport: send failed for io buffer invalid",
             return ERROR_INVALID);
 
@@ -364,7 +366,7 @@ namespace transport {
         PUMP_DEBUG_CHECK(sendlist_.push(iob));
 
         // If there are no more buffers, we should try to get next send chance.
-        if (pending_send_size_.fetch_add(iob->data_size()) > 0) {
+        if (pending_send_size_.fetch_add(iob->size()) > 0) {
             return true;
         }
 
@@ -395,7 +397,7 @@ namespace transport {
         // Pop next buffer from sendlist to send.
         PUMP_DEBUG_CHECK(sendlist_.pop(last_send_iob_));
         // Save last send buffer data size.
-        last_send_iob_size_ = last_send_iob_->data_size();
+        last_send_iob_size_ = last_send_iob_->size();
 
         // Try to send the buffer.
         auto ret = flow_->want_to_send(last_send_iob_);

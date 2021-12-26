@@ -17,7 +17,7 @@
 #ifndef pump_protocol_http_request_h
 #define pump_protocol_http_request_h
 
-#include "pump/protocol/http/pocket.h"
+#include "pump/protocol/http/packet.h"
 
 namespace pump {
 namespace protocol {
@@ -31,7 +31,7 @@ namespace http {
     const static int32_t METHOD_DELETE = 5;
 
     class LIB_PUMP request 
-      : public pocket {
+      : public packet {
 
       public:
         /*********************************************************************************
@@ -88,7 +88,7 @@ namespace http {
 
         /*********************************************************************************
          * Parse
-         * This parse http pocket, and return parsed size. 
+         * This parse http packet, and return parsed size. 
          * If parsed error, return -1.
          ********************************************************************************/
         virtual int32_t parse(
@@ -97,7 +97,7 @@ namespace http {
 
         /*********************************************************************************
          * Serialize
-         * This will serialize http pocket and return serialized size.
+         * This will serialize http packet and return serialized size.
          ********************************************************************************/
         virtual int32_t serialize(std::string &buf) const override;
 

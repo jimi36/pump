@@ -842,11 +842,10 @@ namespace quic {
             return -1;
         }
 
-        const std::string &id = frame->id.id();
-        if (p + id.size() > e) {
+        if (p + frame->id.length() > e) {
             return -1;
         }
-        p = (block_t*)memcpy(p, id.c_str(), id.size()) + frame->id.length();
+        p = (block_t*)memcpy(p, frame->id.data(), frame->id.length()) + frame->id.length();
 
         if (p + sizeof(frame->stateless_reset_token) > e) {
             return -1;

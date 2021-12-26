@@ -80,7 +80,7 @@ namespace http {
     }
 
     response::response() noexcept 
-      : pocket(PK_RESPONSE), 
+      : packet(PK_RESPONSE), 
         status_code_(0) {
         init_http_code_desc_map();
     }
@@ -137,7 +137,7 @@ namespace http {
                         if ((rb = object_create<body>()) == nullptr) {
                             return -1;
                         }
-                        rb->set_length(length);
+                        rb->set_expected_size(length);
                         body_.reset(rb, object_delete<body>);
                     }
                 } else {

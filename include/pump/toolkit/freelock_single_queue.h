@@ -75,10 +75,7 @@ namespace toolkit {
             // Init block element size mask.
             block_element_size_mask_ = block_element_size_ - 1;
             // Calculate init block count.
-            int32_t blk_count = size / (block_element_size_ - 1) + 1;
-            if (blk_count < 3) {
-                blk_count = 3;
-            }
+            int32_t blk_count = size / (block_element_size_ + 1) + 1;
             // Init list
             __init_list(blk_count);
         }
@@ -105,21 +102,15 @@ namespace toolkit {
                     head = (head + 1) & block_element_size_mask_;
                 }
 
-                if (head_blk != tail_blk) {
-                    head_blk = head_blk->next;
-                }
-            } while(head_blk != tail_blk);
-
-            while (head_blk->next != tail_blk) {
-                // Temp block ptr
-                block_node *tmp = head_blk->next;
-                // Free block data
+                // Next block pointer.
+                block_node *next_blk = head_blk->next;
+                // Free block.
                 pump_free(head_blk->data);
-                // Destory block node
                 object_delete(head_blk);
-                // Move to next node
-                head_blk = tmp;
-            }
+                // Move to next node.
+                head_blk = next_blk;
+
+            } while(head_blk != tail_blk);
         }
 
         /*********************************************************************************
@@ -281,30 +272,28 @@ namespace toolkit {
          * Init list
          ********************************************************************************/
         void __init_list(int32_t blk_count) {
-            // Create first block node
+            // Create first block node.
             block_node *head = object_create<block_node>();
             head->data = (block_t*)pump_malloc(block_element_size_ * element_size);
             block_node *tail = head;
-            // Update capacity
-            capacity_ += block_element_size_;
 
-            // Create left block nodes
+            // Create left block nodes.
             for (int32_t i = 1; i < blk_count; i++) {
                 // Create block node.
                 tail->next = object_create<block_node>();
                 tail->next->data = (block_t*)pump_malloc(block_element_size_ * element_size);
                 tail = tail->next;
-
-                // Update capacity
-                capacity_ += block_element_size_;
             }
 
-            // Link tail and head block nodes
+            // Link tail and head block nodes.
             tail->next = head;
 
-            // Store head and tail block node
+            // Store head and tail block node.
             blk_head_.store(head, std::memory_order_release);
             blk_tail_.store(head, std::memory_order_release);
+
+            // Update queue capacity.
+            capacity_ = block_element_size_ * blk_count;
         }
 
       private:

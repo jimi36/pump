@@ -16,7 +16,7 @@ void on_new_request(http::connection_wptr &wconn, http::request_sptr &&req) {
     res.set_body(content);
 
     auto conn = wconn.lock();
-    conn->send(&res);
+    http::send_http_packet(conn, &res);
 }
 
 void on_stopped() { printf("http server stopped\n"); }

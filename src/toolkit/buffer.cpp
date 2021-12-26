@@ -31,9 +31,7 @@ namespace toolkit {
         return false;
     }
 
-    bool base_buffer::__init_by_copy(
-        const block_t *b, 
-        uint32_t size) {
+    bool base_buffer::__init_by_copy(const block_t *b, uint32_t size) {
         try {
             if (raw_ == nullptr && b != nullptr && size > 0) {
                 if ((raw_ = (block_t*)pump_malloc(size)) != nullptr) {
@@ -47,9 +45,7 @@ namespace toolkit {
         return false;
     }
 
-    bool base_buffer::__init_by_move(
-        const block_t *b, 
-        uint32_t size) {
+    bool base_buffer::__init_by_move(const block_t *b, uint32_t size) {
         if (raw_ == nullptr && b != nullptr && size > 0) {
             raw_ = (block_t*)b;
             raw_size_ = size;
@@ -58,42 +54,44 @@ namespace toolkit {
         return false;
     }
 
-    bool io_buffer::append(
-        const block_t *b, 
-        uint32_t size) {
-        if (b == nullptr || size == 0) {
-            return false;
-        }
-
-        if (raw_ == nullptr) {
-            if (!__init_by_copy(b, size)) {
+    bool io_buffer::append(const block_t *b, uint32_t size) {
+        try {
+            if (b == nullptr || size == 0) {
                 return false;
             }
-            data_size_ += size;
-        } else {
-            if (read_pos_ == raw_size_) {
-                reset();
-            }
 
-            uint32_t left = raw_size_ - read_pos_ - data_size_;
-            if (size < left) {
-                memcpy(raw_ + read_pos_ + data_size_, b, size);
-                data_size_ += size;
-            } else if (size + data_size_ < raw_size_) {
-                memmove(raw_, raw_ + read_pos_, data_size_);
-                memcpy(raw_ + data_size_, b, size);
-                data_size_ += size;
-                read_pos_ = 0;
-            } else {
-                uint32_t new_size_ = raw_size_ + size * 2;
-                block_t *new_raw = (block_t*)pump_realloc(raw_, new_size_);
-                if (new_raw == nullptr) {
+            if (raw_ == nullptr) {
+                if (!__init_by_copy(b, size)) {
                     return false;
                 }
-                memcpy(raw_ + read_pos_ + data_size_, b, size);
-                raw_size_ = new_size_;
-                data_size_ += size;
+                size_ += size;
+            } else {
+                if (read_pos_ == raw_size_) {
+                    reset();
+                }
+
+                uint32_t left = raw_size_ - read_pos_ - size_;
+                if (size < left) {
+                    memcpy(raw_ + read_pos_ + size_, b, size);
+                    size_ += size;
+                } else if (size + size_ < raw_size_) {
+                    memmove(raw_, raw_ + read_pos_, size_);
+                    memcpy(raw_ + size_, b, size);
+                    size_ += size;
+                    read_pos_ = 0;
+                } else {
+                    uint32_t new_size_ = raw_size_ + size;
+                    block_t *new_raw = (block_t*)pump_realloc(raw_, new_size_);
+                    if (new_raw == nullptr) {
+                        return false;
+                    }
+                    memcpy(raw_ + read_pos_ + size_, b, size);
+                    raw_size_ = new_size_;
+                    size_ += size;
+                }
             }
+        } catch (const std::exception &) {
+            return false;
         }
 
         return true;

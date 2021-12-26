@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef pump_protocol_http_pocket_h
-#define pump_protocol_http_pocket_h
+#ifndef pump_protocol_http_packet_h
+#define pump_protocol_http_packet_h
 
 #include "pump/protocol/http/uri.h"
 #include "pump/protocol/http/body.h"
@@ -26,7 +26,7 @@ namespace protocol {
 namespace http {
 
     /*********************************************************************************
-     * Http Pocket type
+     * Http packet type
      ********************************************************************************/
     const int32_t PK_UNKNOWN = 0;
     const int32_t PK_REQUEST = 1;
@@ -41,7 +41,7 @@ namespace http {
     const int32_t VERSION_20 = 3;
 
     /*********************************************************************************
-     * Http pocket parse status
+     * Http packet parse status
      ********************************************************************************/
     const int32_t PARSE_NONE = 0;
     const int32_t PARSE_LINE = 1;
@@ -50,27 +50,27 @@ namespace http {
     const int32_t PARSE_FINISHED = 4;
     const int32_t PARSE_FAILED = 5;
 
-    class LIB_PUMP pocket
+    class LIB_PUMP packet
       : public header {
 
       public:
         /*********************************************************************************
          * Constructor
          ********************************************************************************/
-        pocket(int32_t pkt) noexcept
+        packet(int32_t pkt) noexcept
           : pkt_(pkt),
-                version_(VERSION_UNKNOWN),
-                body_(nullptr),
-                parse_status_(PARSE_NONE) {
+            version_(VERSION_UNKNOWN),
+            body_(nullptr),
+            parse_status_(PARSE_NONE) {
         }
 
         /*********************************************************************************
          * Deconstructor
          ********************************************************************************/
-        virtual ~pocket() = default;
+        virtual ~packet() = default;
 
         /*********************************************************************************
-         * Get pocket type
+         * Get packet type
          ********************************************************************************/
         PUMP_INLINE int32_t get_type() const {
             return pkt_;
@@ -78,7 +78,7 @@ namespace http {
 
         /*********************************************************************************
          * Parse
-         * This parse http pocket, and return parsed size. If this return -1, it means
+         * This parse http packet, and return parsed size. If this return -1, it means
          * parsed error.
          ********************************************************************************/
         virtual int32_t parse(
@@ -87,7 +87,7 @@ namespace http {
 
         /*********************************************************************************
          * Serialize
-         * This serialize http pocket and return serialized size.
+         * This serialize http packet and return serialized size.
          ********************************************************************************/
         virtual int32_t serialize(std::string &buffer) const = 0;
 
@@ -141,7 +141,7 @@ namespace http {
         }
 
       protected:
-        // Http pocket type
+        // Http packet type
         int32_t pkt_;
 
         // Http version
@@ -153,7 +153,7 @@ namespace http {
         // Parse status
         int32_t parse_status_;
     };
-    DEFINE_ALL_POINTER_TYPE(pocket);
+    DEFINE_ALL_POINTER_TYPE(packet);
 
 }  // namespace http
 }  // namespace protocol

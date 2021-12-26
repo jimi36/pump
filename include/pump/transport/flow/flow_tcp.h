@@ -79,7 +79,7 @@ namespace flow {
          * Check there are data to send or not
          ********************************************************************************/
         PUMP_INLINE bool has_data_to_send() const {
-            return (send_iob_ && send_iob_->data_size() > 0);
+            return (send_iob_ && send_iob_->size() > 0);
         }
 
       private:

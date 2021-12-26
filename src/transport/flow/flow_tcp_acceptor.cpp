@@ -80,7 +80,7 @@ namespace flow {
         address *local_address, 
         address *remote_address) {
         int32_t addrlen = ADDRESS_MAX_LEN;
-        pump_socket client_fd = net::accept(fd_, (struct sockaddr*)iob_->buffer(), &addrlen);
+        pump_socket client_fd = net::accept(fd_, (struct sockaddr*)iob_->raw(), &addrlen);
         if (client_fd == INVALID_SOCKET) {
             PUMP_DEBUG_LOG(
                 "flow_tcp_acceptor: accept failed for %d", 
@@ -88,11 +88,11 @@ namespace flow {
             return -1;
         }
             
-        remote_address->set((sockaddr*)iob_->buffer(), addrlen);
+        remote_address->set((sockaddr*)iob_->raw(), addrlen);
 
         addrlen = ADDRESS_MAX_LEN;
-        net::local_address(client_fd, (sockaddr*)iob_->buffer(), &addrlen);
-        local_address->set((sockaddr*)iob_->buffer(), addrlen);
+        net::local_address(client_fd, (sockaddr*)iob_->raw(), &addrlen);
+        local_address->set((sockaddr*)iob_->raw(), addrlen);
 
         if (!net::set_noblock(client_fd, 1) || 
             !net::set_nodelay(client_fd, 1)) {

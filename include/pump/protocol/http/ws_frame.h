@@ -14,30 +14,31 @@
  * limitations under the License.
  */
 
-#ifndef pump_protocol_websocket_frame_h
-#define pump_protocol_websocket_frame_h
+#ifndef pump_protocol_http_ws_frame_h
+#define pump_protocol_http_ws_frame_h
 
 #include "pump/types.h"
 
 namespace pump {
 namespace protocol {
-namespace websocket {
+namespace http {
 
-    const uint32_t FRAME_OPTCODE_SEQUEL = 0x0;
-    const uint32_t FRAME_OPTCODE_TEXT = 0x1;
-    const uint32_t FRAME_OPTCODE_BINARY = 0x2;
-    const uint32_t FRAME_OPTCODE_CLOSE = 0x8;
-    const uint32_t FRAME_OPTCODE_PING = 0x9;
-    const uint32_t FRAME_OPTCODE_PONG = 0xA;
+    typedef uint32_t ws_frame_optcode_type;
+    const ws_frame_optcode_type WS_FOT_SEQUEL = 0x00;
+    const ws_frame_optcode_type WS_FOT_TEXT   = 0x01;
+    const ws_frame_optcode_type WS_FOT_BINARY = 0x02;
+    const ws_frame_optcode_type WS_FOT_CLOSE  = 0x08;
+    const ws_frame_optcode_type WS_FOT_PING   = 0x09;
+    const ws_frame_optcode_type WS_FOT_PONG   = 0x0A;
 
-    struct frame_header {
+    struct ws_frame_header {
         uint32_t fin : 1;
 
         uint32_t rsv1 : 1;
         uint32_t rsv2 : 1;
         uint32_t rsv3 : 1;
 
-        uint32_t optcode : 4;
+        ws_frame_optcode_type optcode : 4;
 
         uint32_t mask : 1;
 
@@ -48,41 +49,41 @@ namespace websocket {
     };
 
     /*********************************************************************************
-     * Init frame header
+     * Init websocket frame header
      ********************************************************************************/
-    void init_frame_header(
-        frame_header *hdr,
+    void init_ws_frame_header(
+        ws_frame_header *hdr,
         uint32_t fin,
-        uint32_t optcode,
+        ws_frame_optcode_type optcode,
         uint32_t mask,
         uint8_t mask_key[4],
         uint64_t payload_len);
 
     /*********************************************************************************
-     * Get ws frame header size
+     * Get websocket frame header size
      ********************************************************************************/
-    int32_t get_frame_header_size(const frame_header *hdr);
+    int32_t get_ws_frame_header_size(const ws_frame_header *hdr);
 
     /*********************************************************************************
-     * Decode ws frame header
+     * Decode websocket frame header
      ********************************************************************************/
-    int32_t decode_frame_header(
+    int32_t decode_ws_frame_header(
         const block_t *b,
         int32_t size,
-        frame_header *hdr);
+        ws_frame_header *hdr);
 
     /*********************************************************************************
-     * Encode ws frame header
+     * Encode websocket frame header
      ********************************************************************************/
-    int32_t encode_frame_header(
-        const frame_header *hdr,
+    int32_t encode_ws_frame_header(
+        const ws_frame_header *hdr,
         block_t *b, 
         int32_t size);
 
     /*********************************************************************************
-     * Mask transform
+     * Mask transform websocket payload
      ********************************************************************************/
-    void mask_transform(
+    void mask_transform_ws_payload(
         uint8_t *b, 
         int32_t size, 
         uint8_t mask_key[4]);

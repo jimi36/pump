@@ -41,7 +41,7 @@
 #define PUMP_DEBUG_CHECK(x) x
 #else
 #define PUMP_DEBUG_CHECK(x) \
-    if (PUMP_UNLIKELY(x)) { \
+    if (PUMP_UNLIKELY(!x)) { \
         PUMP_ASSERT(false); \
     }
 #endif

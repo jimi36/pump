@@ -224,7 +224,7 @@ namespace transport {
 
     error_code tls_transport::send(toolkit::io_buffer *iob) {
         PUMP_DEBUG_FAILED(
-            iob == nullptr || iob->data_size() == 0, 
+            iob == nullptr || iob->size() == 0, 
             "tls_transport: send failed for io buffer invalid",
             return ERROR_INVALID);
 
@@ -411,7 +411,7 @@ namespace transport {
         PUMP_DEBUG_CHECK(sendlist_.push(iob));
 
         // If there are no more buffers, we should try to get next send chance.
-        if (pending_send_size_.fetch_add(iob->data_size()) > 0) {
+        if (pending_send_size_.fetch_add(iob->size()) > 0) {
             return true;
         }
 
@@ -442,7 +442,7 @@ namespace transport {
         // Pop next buffer from sendlist.
         PUMP_DEBUG_CHECK(sendlist_.pop(last_send_iob_));
         // Save last send buffer data size.
-        last_send_iob_size_ = last_send_iob_->data_size();
+        last_send_iob_size_ = last_send_iob_->size();
 
         auto ret = flow_->want_to_send(last_send_iob_);
         if (PUMP_LIKELY(ret == ERROR_OK)) {

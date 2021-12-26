@@ -2,7 +2,7 @@
 
 #include "http.h"
 
-int loop = 1;
+int loop = 10;
 
 void start_http_client(pump::service *sv, const std::vector<std::string> &urls) {
     http::client_sptr cli = http::client::create(sv);
@@ -20,7 +20,7 @@ void start_http_client(pump::service *sv, const std::vector<std::string> &urls) 
         int succ = 0;
         auto beg = pump::time::get_clock_milliseconds();
         for (int i = 0; i < loop; i++) {
-            http::response_sptr resp = cli->request(req);
+            http::response_sptr resp = cli->do_request(req);
             if (!resp) {
                 printf("false\n");
                 continue;

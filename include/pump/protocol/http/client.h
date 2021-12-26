@@ -62,11 +62,16 @@ namespace http {
         }
 
         /*********************************************************************************
-         * Request
+         * Do request
          * At first this will create http connection if there no valid http connection, 
          * then send http request to http server.
          ********************************************************************************/
-        response_sptr request(request_sptr &req);
+        response_sptr do_request(request_sptr &req);
+
+        /*********************************************************************************
+         * Open websocket connection
+         ********************************************************************************/
+        connection_sptr open_websocket(const std::string &url);
 
         /*********************************************************************************
          * Close
@@ -96,9 +101,7 @@ namespace http {
         /*********************************************************************************
          * Destroy http connection
          ********************************************************************************/
-        void __notify_response(
-            connection *conn, 
-            response_sptr &&resp);
+        void __notify_response(connection *conn, response_sptr &&resp);
 
       private:
         /*********************************************************************************
@@ -107,7 +110,7 @@ namespace http {
         static void on_response(
             client_wptr wptr, 
             connection *conn, 
-            pocket_sptr &&pk);
+            packet_sptr &pk);
 
         /*********************************************************************************
          * Handel connection disconnected
@@ -130,7 +133,7 @@ namespace http {
         connection_sptr conn_;
 
         // Last request host
-        std::string last_req_host_;
+        std::string last_host_;
 
         // Response condition
         std::mutex resp_mx_;

@@ -77,14 +77,14 @@ namespace http {
         PUMP_DEBUG_FAILED(
             sv == nullptr,
             "http::server: start failed for service invalid",
-            return false);
+            PUMP_ABORT());
         sv_ = sv;
 
         // Check callbacks
         PUMP_DEBUG_FAILED(
             !cbs.request_cb || !cbs.stopped_cb,
             "http::server: start failed for callbacks invalid",
-            return false);
+            PUMP_ABORT());
         cbs_ = cbs;
 
         transport::acceptor_callbacks acbs;
@@ -115,56 +115,58 @@ namespace http {
         server_wptr wptr,
         transport::base_transport_sptr &transp) {
         auto svr = wptr.lock();
-        if (!svr) {
-            return;
-        }
+        if (svr) {
+            connection_sptr conn(new connection(true, transp));
+            do {
+                std::unique_lock<std::mutex> lock(svr->conn_mx_);
+                svr->conns_[conn.get()] = conn;
+            } while (false);
 
-        connection_sptr conn(new connection(true, transp));
-        {
-            std::unique_lock<std::mutex> lock(svr->conn_mx_);
-            svr->conns_[conn.get()] = conn;
-        }
+            http_callbacks cbs;
+            cbs.error_cb = pump_bind(&server::on_http_error, wptr, conn, _1);
+            cbs.packet_cb = pump_bind(&server::on_http_request, wptr, conn, _1);
+            if (!conn->start_http(svr->sv_, cbs)) {
+                std::unique_lock<std::mutex> lock(svr->conn_mx_);
+                svr->conns_.erase(conn.get());
+            }
 
-        http_callbacks cbs;
-        cbs.error_cb = pump_bind(&server::on_http_error, wptr, conn, _1);
-        cbs.pocket_cb = pump_bind(&server::on_http_request, wptr, conn, _1);
-        if (!conn->start(svr->sv_, cbs)) {
-            std::unique_lock<std::mutex> lock(svr->conn_mx_);
-            svr->conns_.erase(conn.get());
+            //PUMP_DEBUG_CHECK(conn->read_again());
         }
-        PUMP_DEBUG_CHECK(conn->read_next_pocket());
     }
 
     void server::on_stopped(server_wptr wptr) {
         auto svr = wptr.lock();
-        if (!svr) {
-            return;
-        }
-
-        {
-            std::unique_lock<std::mutex> lock(svr->conn_mx_);
-            auto beg = svr->conns_.begin();
-            auto end = svr->conns_.end();
-            for (auto it = beg; it != end; it++) {
-                if (it->second->is_valid()) {
+        if (svr) {
+            do {
+                std::unique_lock<std::mutex> lock(svr->conn_mx_);
+                auto beg = svr->conns_.begin();
+                auto end = svr->conns_.end();
+                for (auto it = beg; it != end; it++) {
                     it->second->stop();
                 }
-            }
-        }
+            } while (false);
 
-        svr->cbs_.stopped_cb();
+            svr->cbs_.stopped_cb();
+        }
     }
 
     void server::on_http_request(
         server_wptr wptr,
         connection_wptr wconn,
-        pocket_sptr &&pk) {
+        packet_sptr &pk) {
         auto svr = wptr.lock();
         if (svr) {
             auto conn = wconn.lock();
             if (conn) {
                 svr->cbs_.request_cb(wconn, std::static_pointer_cast<request>(pk));
-                conn->read_next_pocket();
+                if (conn->is_upgraded()) {
+                    std::unique_lock<std::mutex> lock(svr->conn_mx_);
+                    svr->conns_.erase(conn.get());
+                } else {
+                    if (!conn->read_again()) {
+                        conn->stop();
+                    }
+                }
             }
         }
     }
@@ -174,19 +176,16 @@ namespace http {
         connection_wptr wconn,
         const std::string &msg) {
         auto conn = wconn.lock();
-        if (!conn) {
-            return;
-        }
-        conn->stop();
+        if (conn) {
+            auto svr = wptr.lock();
+            if (svr) {
+                std::unique_lock<std::mutex> w_lock(svr->conn_mx_);
+                svr->conns_.erase(conn.get());
+            }
 
-        auto svr = wptr.lock();
-        if (svr) {
-            std::unique_lock<std::mutex> w_lock(svr->conn_mx_);
-            svr->conns_.erase(conn.get());
-            //if (!svr->acceptor_->is_started()) {
-            //    svr->conn_cond_.notify_one();
-            //}
+            conn->stop();
         }
+  
     }
 
 }  // namespace http

@@ -52,7 +52,7 @@ namespace flow {
             return ERROR_FAULT);
         send_iob_ = iob;
         
-        int32_t size = net::send(fd_, send_iob_->data(), send_iob_->data_size());
+        int32_t size = net::send(fd_, send_iob_->data(), send_iob_->size());
         if (PUMP_LIKELY(size > 0)) {
             if (send_iob_->shift(size) == 0) {
                 send_iob_ = nullptr;
@@ -71,8 +71,8 @@ namespace flow {
 
     error_code flow_tcp::send() {
         PUMP_ASSERT(send_iob_);
-        PUMP_ASSERT(send_iob_->data_size() > 0);
-        int32_t data_size = (int32_t)send_iob_->data_size();
+        PUMP_ASSERT(send_iob_->size() > 0);
+        int32_t data_size = (int32_t)send_iob_->size();
         int32_t size = net::send(fd_, send_iob_->data(), data_size);
         if (PUMP_LIKELY(size > 0)) {
             if (send_iob_->shift(size) == 0) {

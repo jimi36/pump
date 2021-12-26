@@ -14,9 +14,13 @@
  * limitations under the License.
  */
 
-#include "pump/protocol/http/client.h"
+
 #include "pump/transport/tcp_dialer.h"
 #include "pump/transport/tls_dialer.h"
+
+#include "pump/protocol/http/ws.h"
+#include "pump/protocol/http/uri.h"
+#include "pump/protocol/http/client.h"
 
 namespace pump {
 namespace protocol {
@@ -32,48 +36,103 @@ namespace http {
     client::~client() {
     }
 
-    response_sptr client::request(request_sptr &req) {
-        std::unique_lock<std::mutex> lock(resp_mx_);
-
-        const uri *uri = req->get_uri();
-        std::string req_host = uri->get_host();
-        if (last_req_host_ != req_host) {
-            __destroy_connection();
-        }
-
-        if (!conn_ || !conn_->is_valid()) {
-            bool https = uri->get_type() == URI_HTTPS;
-            auto peer_address = host_to_address(https, req_host);
-            if (!__create_connection(https, peer_address)) {
-                PUMP_DEBUG_LOG("http::client: create connection failed");
-                return response_sptr();
-            }
-            last_req_host_ = uri->get_host();
-        }
-
-        if (!conn_->send(req.get())) {
-            PUMP_DEBUG_LOG("http::client: send request failed");
-            return response_sptr();
-        }
-        
-        if (!conn_->read_next_pocket()) {
-            PUMP_DEBUG_LOG("http::client: read next pocket failed");
-            return response_sptr();
-        }
-
-        wait_for_response_ = true;
-
+    response_sptr client::do_request(request_sptr &req) {
         response_sptr resp;
-        std::chrono::seconds timeout = std::chrono::seconds(5);
-        if (resp_cond_.wait_for(lock, timeout) != std::cv_status::timeout) {
-            resp = std::move(resp_);
-        } else {
-            __destroy_connection();
-        }
 
-        wait_for_response_ = false;
+        do {
+            std::unique_lock<std::mutex> lock(resp_mx_);
 
+            const uri *uri = req->get_uri();
+            const std::string &host = uri->get_host();
+            if (last_host_ != host) {
+                __destroy_connection();
+            }
+
+            if (!conn_ || !conn_->is_valid()) {
+                bool https = uri->get_type() == URI_HTTPS;
+                auto peer_address = host_to_address(https, host);
+                if (!__create_connection(https, peer_address)) {
+                    PUMP_DEBUG_LOG("http::client: create connection failed");
+                    break;
+                }
+                last_host_ = host;
+            } else {
+                if (!conn_->read_again()) {
+                    PUMP_DEBUG_LOG("http::client: read next packet failed");
+                    break;
+                }
+            }
+
+            if (!send_http_packet(conn_, req.get())) {
+                PUMP_DEBUG_LOG("http::client: send request failed");
+                break;
+            }
+            
+            wait_for_response_ = true;
+            if (resp_cond_.wait_for(lock, std::chrono::seconds(50)) != std::cv_status::timeout) {
+                resp = std::move(resp_);
+            } else {
+                __destroy_connection();
+            }
+            wait_for_response_ = false;
+        } while (false);
+        
         return resp;
+    }
+
+    connection_sptr client::open_websocket(const std::string &url) {
+        connection_sptr conn;
+
+        do
+        {
+            std::unique_lock<std::mutex> lock(resp_mx_);
+
+            uri u(url);
+            const std::string &host = u.get_host();
+            if (last_host_ != host) {
+                __destroy_connection();
+            }
+
+            if (!conn_ || !conn_->is_valid()) {
+                bool https = u.get_type() == URI_HTTPS;
+                auto peer_address = host_to_address(https, host);
+                if (!__create_connection(https, peer_address)) {
+                    PUMP_DEBUG_LOG("http::client: create connection failed");
+                    break;
+                }
+                last_host_ = host;
+            } else {
+                if (!conn_->read_again()) {
+                    PUMP_DEBUG_LOG("http::client: read next packet failed");
+                    break;
+                }
+            }
+
+            conn_->upgrading();
+
+            std::map<std::string, std::string> headers;
+            if (!send_upgrade_websocket_request(conn_, url, headers)) {
+                PUMP_DEBUG_LOG("http::client: send request failed");
+                break;
+            }
+
+            wait_for_response_ = true;
+            if (resp_cond_.wait_for(lock, std::chrono::seconds(5)) == std::cv_status::timeout) {
+                __destroy_connection();
+                break;
+            }
+            wait_for_response_ = false;
+
+            if (!resp_ || !handle_upgrade_websocket_response(conn_, resp_)) {
+                __destroy_connection();
+                break;
+            }
+
+            conn = conn_;
+            conn_.reset();
+        } while (false);
+        
+        return conn;
     }
 
     bool client::__create_connection(
@@ -111,9 +170,8 @@ namespace http {
         http_callbacks cbs;
         client_wptr cli = shared_from_this();
         cbs.error_cb = pump_bind(&client::on_error, cli, conn_.get(), _1);
-        cbs.pocket_cb = pump_bind(&client::on_response, cli, conn_.get(), _1);
-
-        if (!conn_->start(sv_, cbs)) {
+        cbs.packet_cb = pump_bind(&client::on_response, cli, conn_.get(), _1);
+        if (!conn_->start_http(sv_, cbs)) {
             PUMP_DEBUG_LOG("http::client: create connection fialed for starting failed");
             return false;
         }
@@ -128,12 +186,10 @@ namespace http {
         }
     }
 
-    void client::__notify_response(
-        connection *conn, 
-        response_sptr &&resp) {
+    void client::__notify_response(connection *conn, response_sptr &&resp) {
         std::unique_lock<std::mutex> lock(resp_mx_);
         if (wait_for_response_ && conn == conn_.get()) {
-            resp_ = std::move(resp);
+            resp_ = std::forward<response_sptr>(resp);
             resp_cond_.notify_one();
         }
     }
@@ -141,11 +197,10 @@ namespace http {
     void client::on_response(
         client_wptr wptr, 
         connection *conn, 
-        pocket_sptr &&pk) {
-        client_sptr cli =  wptr.lock();
+        packet_sptr &pk) {
+        auto cli =  wptr.lock();
         if (cli) {
-            auto resp = std::static_pointer_cast<response>(pk);
-            cli->__notify_response(conn, std::move(resp));
+            cli->__notify_response(conn, std::static_pointer_cast<response>(pk));
         }
     }
 
@@ -153,7 +208,7 @@ namespace http {
         client_wptr wptr, 
         connection *conn, 
         const std::string &msg) {
-        client_sptr cli = wptr.lock();
+        auto cli = wptr.lock();
         if (cli) {
             cli->__notify_response(conn, response_sptr());
         }

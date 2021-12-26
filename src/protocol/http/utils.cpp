@@ -15,24 +15,24 @@
  */
 
 #include "pump/debug.h"
+#include "pump/codec/sha1.h"
+#include "pump/codec/base64.h"
 #include "pump/protocol/http/utils.h"
 
 namespace pump {
 namespace protocol {
 namespace http {
 
-    const block_t* find_http_line_end(
-        const block_t *src, 
-        int32_t len) {
+    const block_t* find_http_line_end(const block_t *src, int32_t len) {
         len = std::min<int32_t>(len, HTTP_LINE_MAX_LEN);
         if (len < HTTP_LINE_MIN_LEN) {
             return nullptr;
         }
 
-        while (len >= HTTP_CR_LEN) {
+        while (len >= HTTP_CRLF_LEN) {
             if (*src == '\r') {
                 if (*(src + 1) == '\n') {
-                    src += HTTP_CR_LEN;
+                    src += HTTP_CRLF_LEN;
                     return src;
                 }
                 return nullptr;
@@ -44,9 +44,7 @@ namespace http {
         return nullptr;
     }
 
-    bool url_decode(
-        const std::string &src, 
-        std::string &des) {
+    bool url_decode(const std::string &src, std::string &des) {
         uint32_t len = (uint32_t)src.length();
         for (uint32_t i = 0; i < len; i++) {
             uint8_t ch = src[i];
@@ -65,9 +63,7 @@ namespace http {
         return true;
     }
 
-    bool url_encode(
-        const std::string &src, 
-        std::string &des) {
+    bool url_encode(const std::string &src, std::string &des) {
         uint8_t val = 0;
         const block_t *beg = src.c_str();
         const block_t *end = beg + src.size();
@@ -87,9 +83,7 @@ namespace http {
         return true;
     }
 
-    transport::address host_to_address(
-        bool https, 
-        const std::string &host) {
+    transport::address host_to_address(bool https, const std::string &host) {
         auto results = split_string(host, "[:]");
         if (results.empty()) {
             PUMP_ASSERT(false);
@@ -101,6 +95,22 @@ namespace http {
         }
 
         return transport::address(results[0], port);
+    }
+
+    std::string compute_sec_key() {
+        std::string s(16, 0);
+        int32_t *p = (int32_t*)s.data();
+        for (uint32_t i = 0; i < 4; i++) {
+            *(p + i) = random();
+        }
+        return codec::base64_encode(s);
+    }
+
+    std::string compute_sec_accept_key(const std::string &sec_key) {
+        std::string hash(20, 0);
+        std::string tmp = sec_key + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+        codec::sha1(tmp.c_str(), (uint32_t)tmp.size(), (uint8_t*)hash.c_str());
+        return codec::base64_encode(hash);
     }
 
 }  // namespace http

@@ -115,8 +115,8 @@ namespace http {
         const block_t* line_end = nullptr;
         while ((line_end = find_http_line_end(beg, uint32_t(size - (end - b))))) {
             // Check parsed complete
-            if (beg + HTTP_CR_LEN == line_end) {
-                beg += HTTP_CR_LEN;
+            if (beg + HTTP_CRLF_LEN == line_end) {
+                beg += HTTP_CRLF_LEN;
                 header_parsed_ = true;
                 break;
             }
@@ -134,11 +134,11 @@ namespace http {
             while (end < line_end && (*end == ' ' || *end == ':')) {
                 ++end;
             }
-            PUMP_ASSERT(end <= line_end - HTTP_CR_LEN);
+            PUMP_ASSERT(end <= line_end - HTTP_CRLF_LEN);
 
             // Parse header value
             beg = end;
-            end = line_end - HTTP_CR_LEN;
+            end = line_end - HTTP_CRLF_LEN;
             if (end > beg) {
                 value.assign(beg, end);
             }
@@ -173,8 +173,8 @@ namespace http {
             buffer.append(header_line);
         }
 
-        size += HTTP_CR_LEN;
-        buffer.append(HTTP_CR);
+        size += HTTP_CRLF_LEN;
+        buffer.append(HTTP_CRLF);
 
         return size;
     }

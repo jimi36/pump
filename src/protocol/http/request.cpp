@@ -32,7 +32,7 @@ namespace http {
     };
 
     request::request(void *ctx) noexcept
-      : pocket(PK_REQUEST), 
+      : packet(PK_REQUEST), 
         ctx_(ctx), 
         method_(METHOD_UNKNOWN) {
     }
@@ -40,7 +40,7 @@ namespace http {
     request::request(
         const std::string &url,
         void *ctx) noexcept
-      : pocket(PK_REQUEST), 
+      : packet(PK_REQUEST), 
         ctx_(ctx), 
         method_(METHOD_UNKNOWN) {
         uri_.parse(url);
@@ -103,7 +103,7 @@ namespace http {
                         if ((rb = object_create<body>()) == nullptr) {
                             return -1;
                         }
-                        rb->set_length(length);
+                        rb->set_expected_size(length);
                         body_.reset(rb, object_delete<body>);
                     } 
                 } else {

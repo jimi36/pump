@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#include "pump/debug.h"
 #include "pump/protocol/http/body.h"
 
 namespace pump {
@@ -22,8 +23,9 @@ namespace http {
 
     body::body() noexcept
       : parse_finished_(false),
+        expected_size_(0),
         is_chunk_mode_(false),
-        content_length_(0) {
+        parsing_chunk_size_(0) {
     }
 
     int32_t body::serialize(std::string &buf) const {
@@ -34,9 +36,9 @@ namespace http {
                             sizeof(chunk_len) - 1, 
                             "%zx%s", 
                             data_.size(), 
-                            HTTP_CR);
-            buf.append(chunk_len).append(data_).append(HTTP_CR);
-            return size + (int32_t)data_.size() + HTTP_CR_LEN;
+                            HTTP_CRLF);
+            buf.append(chunk_len).append(data_).append(HTTP_CRLF);
+            return size + (int32_t)data_.size() + HTTP_CRLF_LEN;
         } else {
             if (data_.empty()) {
                 return 0;
@@ -46,9 +48,7 @@ namespace http {
         }
     }
 
-    int32_t body::parse(
-        const block_t *b, 
-        int32_t size) {
+    int32_t body::parse(const block_t *b, int32_t size) {
         if (is_chunk_mode_) {
             return __parse_by_chunk(b, size);
         } else {
@@ -56,59 +56,85 @@ namespace http {
         }
     }
 
-    int32_t body::__parse_by_length(
-        const block_t *b, 
-        int32_t size) {
-        int32_t want_parse_size = content_length_ - (int32_t)data_.size();
+    int32_t body::__parse_by_length(const block_t *b, int32_t size) {
+        int32_t want_parse_size = expected_size_ - (int32_t)data_.size();
         if (want_parse_size > size) {
             want_parse_size = size;
         }
         data_.append(b, want_parse_size);
 
-        if ((int32_t)data_.size() == content_length_) {
+        if ((int32_t)data_.size() == expected_size_) {
             parse_finished_ = true;
         }
 
         return want_parse_size;
     }
 
-    int32_t body::__parse_by_chunk(
-        const block_t *b, 
-        int32_t size) {
-        const block_t *pos = b;
+    int32_t body::__parse_by_chunk(const block_t *b, int32_t size) {
+        auto pos = b;
+        auto end = b + size;
 
-        while (1) {
-            const block_t *line_end = find_http_line_end(pos, size - int32_t(pos - b));
-            if (line_end == nullptr) {
-                break;
-            }
-            line_end -= HTTP_CR_LEN;
-            
-            int32_t chunk_size = 0;
-            const block_t *chunk_pos = pos;
-            for (;chunk_pos != line_end; chunk_pos++) {
-                chunk_size = chunk_size * 16 + hex_to_dec(*chunk_pos);
-            }
-            chunk_pos += HTTP_CR_LEN;
-
-            if (chunk_size == 0) {
-                if (chunk_pos + HTTP_CR_LEN > b + size) {
+        while (pos < end) {
+            if (parsing_chunk_size_ == 0) {
+                // Find chunk size field.
+                auto size_field_end = find_http_line_end(pos, end - pos);
+                if (size_field_end == nullptr) {
                     break;
                 }
-                if (memcmp(chunk_pos, HTTP_CR, HTTP_CR_LEN) != 0) {
-                    return -1;
+
+                // Parse chunk size.
+                auto size_pos = pos;
+                auto size_end = size_field_end - HTTP_CRLF_LEN;
+                for (; size_pos != size_end; size_pos++) {
+                    parsing_chunk_size_ = parsing_chunk_size_ * 16 + hex_to_dec(*size_pos);
                 }
-                pos = chunk_pos + HTTP_CR_LEN;
-                parse_finished_ = true;
-                break;
+
+                expected_size_ += parsing_chunk_size_;
+
+                // If chunk size is zero, finish parsing.
+                if (parsing_chunk_size_ == 0) {
+                    if (size_field_end + HTTP_CRLF_LEN > end) {
+                        break;
+                    } else if (memcmp(size_field_end, HTTP_CRLF, HTTP_CRLF_LEN) != 0) {
+                        return -1;
+                    }
+
+                    PUMP_ASSERT(int32_t(data_.size()) == expected_size_);
+
+                    pos = size_field_end + HTTP_CRLF_LEN;
+                    parse_finished_ = true;
+                    
+                    break;
+                }
+
+                parsing_chunk_size_ += HTTP_CRLF_LEN;
+
+                pos = size_field_end;
             }
 
-            if (chunk_pos + chunk_size + HTTP_CR_LEN > b + size) {
-                break;
-            }
-            data_.append(chunk_pos, chunk_size);
+            int32_t parsing_size = end - pos;
+            int32_t diff = parsing_chunk_size_ - parsing_size;
+            if (diff <= 0) {
+                if (parsing_chunk_size_ > HTTP_CRLF_LEN) {
+                    data_.append(pos, parsing_chunk_size_ - HTTP_CRLF_LEN);
+                }
+                pos += parsing_chunk_size_;
+                parsing_chunk_size_ = 0;
+            } else {
+                if (parsing_chunk_size_ == HTTP_CRLF_LEN) {
+                    break;
+                }
 
-            pos = chunk_pos + chunk_size + HTTP_CR_LEN;
+                if (diff >= HTTP_CRLF_LEN) {
+                    data_.append(pos, parsing_size);
+                    pos += parsing_size;
+                    parsing_chunk_size_ -= parsing_size;
+                } else {
+                    data_.append(pos, parsing_chunk_size_ - HTTP_CRLF_LEN);
+                    pos += (parsing_chunk_size_ - HTTP_CRLF_LEN);
+                    parsing_chunk_size_ = HTTP_CRLF_LEN;
+                }
+            }
         }
 
         return int32_t(pos - b);

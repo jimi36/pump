@@ -22,20 +22,26 @@
 #include <vector>
 
 #include "pump/types.h"
+#include "pump/protocol/quic/cid.h"
 
 namespace pump {
 namespace protocol {
 namespace quic {
 
     typedef uint8_t long_packet_type;
-    const static long_packet_type LONG_INITIAL_PACKET   = 0x00;
-    const static long_packet_type LONG_0RTT_PACKET      = 0x01;
-    const static long_packet_type LONG_HANDSHAKE_PACKET = 0x02;
-    const static long_packet_type LONG_RETRY_PACKET     = 0x03;
+    const static long_packet_type LPT_NEGOTIATION = 0xFF;
+    const static long_packet_type LPT_INITIAL     = 0x00;
+    const static long_packet_type LPT_0RTT        = 0x01;
+    const static long_packet_type LPT_HANDSHAKE   = 0x02;
+    const static long_packet_type LPT_RETRY       = 0x03;
 
     struct long_packet_header {
-        // First byte.
-        uint8_t fb;
+        // Long packet type.
+        long_packet_type tp;
+
+        // Packet number length.
+        // Just version negotiation packet and retry packet has no the field.
+        uint8_t packet_number_len;
 
         // The field represents the version of QUIC.
         uint32_t version;
@@ -49,7 +55,7 @@ namespace quic {
 
         // The Destination Connection ID field follows the Destination Connection ID Length field, which indicates 
         // the length of this field.
-        std::string des_connection_id;
+        cid des_id;
 
         // The byte following the Destination Connection ID contains the length in bytes of the Source Connection 
         // ID field that follows it. This length is encoded as an 8-bit unsigned integer. In QUIC version 1, this 
@@ -60,7 +66,17 @@ namespace quic {
 
         // The Source Connection ID field follows the Source Connection ID Length field, which indicates the length 
         // of this field.
-        std::string src_connection_id;
+        cid src_id;
+    };
+
+    struct short_packet_header {
+        // First byte.
+        uint8_t fb;
+
+        // The field represents the length of the destination connection id.
+        //uint8 des_conntion_id_length;
+        // The field represents destination connection id, max length is 20 bytes.
+        cid des_id;
     };
 
     /*
@@ -131,12 +147,11 @@ namespace quic {
             // Packet Number Length (2)
         long_packet_header header;
 
-        // A variable-length integer specifying the length of the Token field, in bytes. 
-        // This value is 0 if no token is present. Initial packets sent by the server 
-        // MUST set the Token Length field to 0; clients that receive an Initial packet 
-        // with a non-zero Token Length field MUST either discard the packet or generate 
-        // a connection error of type PROTOCOL_VIOLATION.
-        uint32_t token_length;
+        // A variable-length integer specifying the length of the Token field, in bytes. This value is 0 if no token is 
+        // present. Initial packets sent by the server MUST set the Token Length field to 0; clients that receive an Initial 
+        // packet  with a non-zero Token Length field MUST either discard the packet or generate a connection error of type
+        // PROTOCOL_VIOLATION.
+        //uint32_t token_length;
         // The value of the token that was previously provided in a Retry packet or NEW_TOKEN frame.
         std::string token;
 
@@ -274,16 +289,6 @@ namespace quic {
         uint8_t retry_integrity_tag;
     };
 
-    struct short_packet_header {
-        // First byte.
-        uint8_t fb;
-
-        // The field represents the length of the destination connection id.
-        //uint8 des_conntion_id_length;
-        // The field represents destination connection id, max length is 20 bytes.
-        std::string des_connection_id;
-    };
-
     /*
     * A 1-RTT packet uses a short packet header. It is used after the version and 1-RTT keys are negotiated.
     */
@@ -299,9 +304,14 @@ namespace quic {
         
         // The field represents the pakcet number.
         uint32_t packet_number;
+
         // The field represents the pakcet payload.
         std::string packet_payload;
     };
+
+    int32_t pack_packet_header(const long_packet_header *hdr, block_t *b, int32_t blen);
+
+    int32_t unpack_packet_header(const block_t *b, int32_t blen, long_packet_header *hdr);
 
     bool is_long_packet(uint8_t b);
 

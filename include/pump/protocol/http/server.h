@@ -95,7 +95,7 @@ namespace http {
         static void on_http_request(
             server_wptr wptr,
             connection_wptr conn,
-            pocket_sptr &&pk);
+            packet_sptr &pk);
 
         /*********************************************************************************
          * Http error callback

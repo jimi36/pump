@@ -106,10 +106,10 @@ namespace toolkit {
                     next_write_node = head_.load(std::memory_order_relaxed);
                 }
 
-                // If next write node is the tail node, list is full and try to extend it.
+                // If next write node is ready or is the tail node, list is full and we 
+                // need try to extend it.
                 if (next_write_node->ready == 0 && 
                     next_write_node->next != tail_.load(std::memory_order_relaxed)) {
-                    // Update list head node to next node.
                     if (head_.compare_exchange_strong(
                             next_write_node,
                             next_write_node->next,
@@ -118,7 +118,6 @@ namespace toolkit {
                         break;
                     }
                 } else {
-                    // Extend list after next wirte node.
                     if (__extend_list(next_write_node)) {
                         break;
                     }
@@ -157,7 +156,7 @@ namespace toolkit {
                 if (tail_.compare_exchange_strong(
                         current_tail,
                         next_read_node,
-                        std::memory_order_relaxed,
+                        std::memory_order_release,
                         std::memory_order_relaxed)) {
                     break;
                 }
@@ -207,14 +206,13 @@ namespace toolkit {
             // Update list capacity.
             capacity_.fetch_add(PerBlockElementCount, std::memory_order_relaxed);
 
-            for (int32_t i = PerBlockElementCount; i < size; i += PerBlockElementCount) {
-                // Create new element block node.
+            for (size -= PerBlockElementCount; size > 0; size -= PerBlockElementCount) {
+                // Insert new block node.
                 block_node *bnode = object_create<block_node>();
-                // Link block node.
                 bnode->next = tail_block_node_;
                 tail_block_node_ = bnode;
 
-                // Update tail element node.
+                // Insert new element nodes.
                 tail->next = bnode->elems + 0;
                 tail = bnode->elems + PerBlockElementCount - 1;
 
@@ -233,28 +231,27 @@ namespace toolkit {
         /*********************************************************************************
          * Extend list
          ********************************************************************************/
-        bool __extend_list(element_node *&head) {
-            // Lock the current head element node.
+        bool __extend_list(element_node *&enode) {
+            // Try to lock the element list head node.
             if (!head_.compare_exchange_strong(
-                    head,
+                    enode,
                     nullptr,
                     std::memory_order_acquire,
                     std::memory_order_relaxed)) {
                 return false;
             }
 
-            // Create new block node.
+            // Insert new block node.
             block_node *bnode = object_create<block_node>();
-            // Link block node.
             bnode->next = tail_block_node_;
             tail_block_node_ = bnode;
 
-            // Append new element nodes to circle element node list.
-            bnode->elems[PerBlockElementCount-1].next = head->next;
-            head->next = bnode->elems;
+            // Insert new element nodes.
+            bnode->elems[PerBlockElementCount-1].next = enode->next;
+            enode->next = bnode->elems;
 
-            // Update head node to the next node of current head node.
-            head_.store(head->next, std::memory_order_release);
+            // Update element list head node to the next node.
+            head_.store(enode->next, std::memory_order_release);
 
             // Update list capacity.
             capacity_.fetch_add(PerBlockElementCount, std::memory_order_relaxed);

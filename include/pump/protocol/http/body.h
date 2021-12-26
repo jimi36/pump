@@ -59,9 +59,7 @@ namespace http {
          * Parse
          * This return parsed size. If return -1, it means parse error.
          ********************************************************************************/
-        int32_t parse(
-            const block_t *b, 
-            int32_t size);
+        int32_t parse(const block_t *b, int32_t size);
 
         /*********************************************************************************
          * Serialize
@@ -76,15 +74,14 @@ namespace http {
         }
 
         /*********************************************************************************
-         * Set body content length
-         * If using chunked mode, content length will be ignore.
+         * Set expected data size
          ********************************************************************************/
-        PUMP_INLINE void set_length(int32_t len) {
-            content_length_ = len;
+        PUMP_INLINE void set_expected_size(int32_t size) {
+            expected_size_ = size;
         }
 
         /*********************************************************************************
-         * Check parse is finished or not
+         * Check parse status
          ********************************************************************************/
         PUMP_INLINE bool is_parse_finished() const {
             return parse_finished_;
@@ -94,16 +91,12 @@ namespace http {
         /*********************************************************************************
          * Parse body by content length mode
          ********************************************************************************/
-        int32_t __parse_by_length(
-            const block_t *b, 
-            int32_t size);
+        int32_t __parse_by_length(const block_t *b, int32_t size);
 
         /*********************************************************************************
          * Parse body by chunk mode
          ********************************************************************************/
-        int32_t __parse_by_chunk(
-            const block_t *b, 
-            int32_t size);
+        int32_t __parse_by_chunk(const block_t *b, int32_t size);
 
       private:
         // Parse finished mark
@@ -112,12 +105,14 @@ namespace http {
         // Body data
         std::string data_;
 
+       // Expected size
+        int32_t expected_size_;
+
         // Chunk mode flag
         bool is_chunk_mode_;
-   
-        // Content length
-        // Ignore if using chunked mode.
-        int32_t content_length_;
+
+        // Parsing chunk size
+        int32_t parsing_chunk_size_; 
     };
     DEFINE_ALL_POINTER_TYPE(body);
 

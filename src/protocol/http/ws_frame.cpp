@@ -18,20 +18,20 @@
 #include <string.h>
 
 #include "pump/toolkit/bits.h"
-#include "pump/protocol/websocket/frame.h"
+#include "pump/protocol/http/ws_frame.h"
 
 namespace pump {
 namespace protocol {
-namespace websocket {
+namespace http {
 
-    void init_frame_header(
-        frame_header *hdr,
+    void init_ws_frame_header(
+        ws_frame_header *hdr,
         uint32_t fin,
-        uint32_t optcode,
+        ws_frame_optcode_type optcode,
         uint32_t mask,
         uint8_t mask_key[4],
         uint64_t payload_len) {
-        memset(hdr, 0, sizeof(frame_header));
+        memset(hdr, 0, sizeof(ws_frame_header));
 
         hdr->fin = fin;
 
@@ -53,7 +53,7 @@ namespace websocket {
         }
     }
 
-    int32_t get_frame_header_size(const frame_header *hdr) {
+    int32_t get_ws_frame_header_size(const ws_frame_header *hdr) {
         int32_t size = 2;
 
         if (hdr->mask == 1) {
@@ -69,12 +69,12 @@ namespace websocket {
         return size;
     }
 
-    int32_t decode_frame_header(
+    int32_t decode_ws_frame_header(
         const block_t *b, 
         int32_t size, 
-        frame_header *hdr) {
-        // Init frame header
-        memset(hdr, 0, sizeof(frame_header));
+        ws_frame_header *hdr) {
+        // Init websocket frame header
+        memset(hdr, 0, sizeof(ws_frame_header));
 
         // Init bits reader
         toolkit::bits_reader r((const uint8_t*)b, size);
@@ -107,15 +107,15 @@ namespace websocket {
                 !r.read(8, &hdr->mask_key[1]) ||
                 !r.read(8, &hdr->mask_key[2]) ||
                 !r.read(8, &hdr->mask_key[3])) {
-                return 0;
+                return -1;
             }
         }
 
         return int32_t(r.read_bc() / 8);
     }
 
-    int32_t encode_frame_header(
-        const frame_header *hdr, 
+    int32_t encode_ws_frame_header(
+        const ws_frame_header *hdr, 
         block_t *b, 
         int32_t size) {
         // Init bits writer
@@ -153,7 +153,7 @@ namespace websocket {
         return w.written_bc() / 8;
     }
 
-    void mask_transform(
+    void mask_transform_ws_payload(
         uint8_t *b, 
         int32_t size, 
         uint8_t mask_key[4]) {
