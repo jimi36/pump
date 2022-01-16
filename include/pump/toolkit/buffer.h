@@ -62,7 +62,7 @@ namespace toolkit {
          * Init by allocate
          * Allocate a memory with the size.
          ********************************************************************************/
-        bool __init_by_allocate(uint32_t size);
+        bool __init_by_alloc(uint32_t size);
 
         /*********************************************************************************
          * Init by copy
@@ -74,9 +74,11 @@ namespace toolkit {
          * Init by move
          * The input buffer will be moved to the buffer.
          ********************************************************************************/
-        bool __init_by_move(const block_t *b, uint32_t size);
+        bool __init_by_move(const block_t *b, uint32_t size, bool ref);
         
       protected:
+        // Ref flag
+        bool ref_;
         // Raw buffer
         block_t *raw_;
         // Raw buffer size
@@ -90,45 +92,95 @@ namespace toolkit {
         /*********************************************************************************
          * Create
          ********************************************************************************/
-        static io_buffer* create() {
-            INLINE_OBJECT_CREATE(obj, io_buffer, ());
+        static io_buffer* create(uint32_t size = 0) {
+            INLINE_OBJECT_CREATE(obj, io_buffer, ())
+            if (obj != nullptr && size > 0 && !obj->__init_by_alloc(size)) {
+                INLINE_OBJECT_DELETE(obj, io_buffer)
+                return nullptr;
+            }
+            return obj;
+        }
+        static io_buffer* create_by_copy(const block_t *b, uint32_t size) {
+            INLINE_OBJECT_CREATE(obj, io_buffer, ())
+            if (obj != nullptr && !obj->__init_by_copy(b, size)) {
+                INLINE_OBJECT_DELETE(obj, io_buffer)
+                return nullptr;
+            }
+
+            obj->size_ = size;
+
+            return obj;
+        }
+        static io_buffer* create_by_move(const block_t *b, uint32_t size, bool ref = false) {
+            INLINE_OBJECT_CREATE(obj, io_buffer, ())
+            if (obj != nullptr && !obj->__init_by_move(b, size, ref)) {
+                INLINE_OBJECT_DELETE(obj, io_buffer)
+                return nullptr;
+            }
+
+            obj->size_ = size;
+
             return obj;
         }
 
         /*********************************************************************************
-         * Init
-         * Allocate a memory with the size.
+         * Write block
          ********************************************************************************/
-        PUMP_INLINE bool init(uint32_t size) {
-            return __init_by_allocate(size);
+        bool write(const block_t *b, uint32_t size);
+
+        /*********************************************************************************
+         * Write one byte block
+         ********************************************************************************/
+        bool write(block_t b);
+
+        /*********************************************************************************
+         * Read block
+         ********************************************************************************/
+        PUMP_INLINE bool read(block_t *b, uint32_t size) {
+            if (size_ < size) {
+                return false;
+            }
+            memcpy(b, raw_ + rpos_, size);
+            rpos_ += size;
+            size_ -= size;
+            return true;
         }
 
         /*********************************************************************************
-         * Append
-         * Append input buffer by copying. If there is no enough memory block to use, the
-         * buffer will allocate a new memory block.
+         * Read one byte block
          ********************************************************************************/
-        bool append(const block_t *b, uint32_t size);
+        PUMP_INLINE bool read(block_t *b) {
+            if (size_ < 1) {
+                return false;
+            }
+            *b = *(raw_ + rpos_);
+            rpos_++;
+            size_--;
+            return true;
+        }
 
         /*********************************************************************************
          * Shift
-         * Return current size.
+         * If success return current size, else return zero.
          ********************************************************************************/
-        PUMP_INLINE uint32_t shift(uint32_t size) {
-            PUMP_ASSERT(size_ >= size);
-            if (size_ == 0 || size_ < size) {
-                return 0;
+        PUMP_INLINE int32_t shift(int32_t size) {
+            PUMP_ASSERT(int32_t(size_) >= size);
+            if (size_ == 0 || int32_t(size_) < size) {
+                return -1;
             }
-            read_pos_ += size;
+            rpos_ += size;
             size_ -= size;
             return size_;
         }
 
         /*********************************************************************************
-         * Get data pointer
+         * Get data
          ********************************************************************************/
         PUMP_INLINE const block_t *data() const {
-            return size_ == 0 ? nullptr : (raw_ + read_pos_);
+            if (size_ > 0) {
+                return raw_ + rpos_;
+            }
+            return nullptr;
         }
 
         /*********************************************************************************
@@ -142,7 +194,7 @@ namespace toolkit {
          * Reset
          ********************************************************************************/
         PUMP_INLINE void reset() {
-            size_ = read_pos_ = 0;
+            size_ = rpos_ = 0;
         }
 
         /*********************************************************************************
@@ -167,7 +219,7 @@ namespace toolkit {
          ********************************************************************************/
         io_buffer() noexcept
           : size_(0), 
-            read_pos_(0), 
+            rpos_(0), 
             ref_(1) {
         }
 
@@ -191,7 +243,7 @@ namespace toolkit {
         // Data size
         uint32_t size_;
         // Data read pos
-        uint32_t read_pos_;
+        uint32_t rpos_;
         // Refence count
         std::atomic_int ref_;
     };

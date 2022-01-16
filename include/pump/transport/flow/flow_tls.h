@@ -68,9 +68,7 @@ namespace flow {
         /*********************************************************************************
          * Read
          ********************************************************************************/
-        PUMP_INLINE int32_t read(
-            block_t *b, 
-            int32_t size) {
+        PUMP_INLINE int32_t read(block_t *b, int32_t size) {
             return transport::tls_read(session_, b, size);
         }
 

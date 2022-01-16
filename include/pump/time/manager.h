@@ -25,9 +25,9 @@
 
 #include "pump/debug.h"
 #include "pump/time/timer.h"
-#include "pump/toolkit/freelock_multi_queue.h"
-#include "pump/toolkit/freelock_single_queue.h"
-#include "pump/toolkit/freelock_block_queue.h"
+#include "pump/toolkit/fl_queue.h"
+#include "pump/toolkit/fl_mc_queue.h"
+#include "pump/toolkit/fl_sc_queue.h"
 
 namespace pump {
 namespace time {
@@ -120,8 +120,8 @@ namespace time {
         std::shared_ptr<std::thread> observer_;
 
         // New timers
-        typedef toolkit::freelock_multi_queue<timer_sptr> timer_impl_queue;
-        toolkit::freelock_block_queue<timer_impl_queue> new_timers_;
+        typedef toolkit::fl_mc_queue<timer_sptr> timer_impl_queue;
+        toolkit::fl_queue<timer_impl_queue> new_timers_;
 
         // Observed Timers
         std::map<uint64_t, timer_list> timers_;

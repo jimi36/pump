@@ -17,9 +17,9 @@
 #ifndef pump_transport_tls_transport_h
 #define pump_transport_tls_transport_h
 
+#include "pump/toolkit/fl_mc_queue.h"
 #include "pump/transport/flow/flow_tls.h"
 #include "pump/transport/base_transport.h"
-#include "pump/toolkit/freelock_multi_queue.h"
 
 namespace pump {
 namespace transport {
@@ -72,16 +72,14 @@ namespace transport {
         virtual void force_stop() override;
 
         /*********************************************************************************
-         * Read continue for read once mode
+         * Continue read for read once mode
          ********************************************************************************/
-        virtual error_code read_continue() override;
+        virtual error_code continue_read() override;
 
         /*********************************************************************************
          * Send
          ********************************************************************************/
-        virtual error_code send(
-            const block_t *b, 
-            int32_t size) override;
+        virtual error_code send(const block_t *b, int32_t size) override;
 
         /*********************************************************************************
          * Send io buffer
@@ -157,7 +155,7 @@ namespace transport {
         std::atomic_int32_t pending_opt_cnt_;
 
         // Send buffer list
-        toolkit::freelock_multi_queue<toolkit::io_buffer*, 8> sendlist_;
+        toolkit::fl_mc_queue<toolkit::io_buffer*, 8> sendlist_;
     };
 
 }  // namespace transport

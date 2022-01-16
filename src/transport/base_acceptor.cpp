@@ -37,12 +37,12 @@ namespace transport {
             object_create<poll::channel_tracker>(ch, poll::TRACK_READ),
             object_delete<poll::channel_tracker>);
         if (!tracker_) {
-            PUMP_WARN_LOG("base_acceptor: start failed for creating tracker failed");
+            PUMP_WARN_LOG("new acceptor's tracker object failed");
             return false;
         }
         
         if (!get_service()->add_channel_tracker(tracker_, READ_POLLER_ID)) {
-            PUMP_WARN_LOG("base_acceptor: start tracker failed for adding tracker");
+            PUMP_WARN_LOG("add acceptor's tracker to service failed");
             return false;
         }
 
@@ -52,12 +52,12 @@ namespace transport {
     bool base_acceptor::__resume_accept_tracker() {
         auto tracker = tracker_.get();
         if (tracker == nullptr) {
-            PUMP_WARN_LOG("base_acceptor: resume tracker failed for tracker invalid");
+            PUMP_WARN_LOG("can't resume invalid acceptor's tracker");
             return false;
         }
         auto poller = tracker_->get_poller();
         if (poller == nullptr) {
-            PUMP_WARN_LOG("base_acceptor: resume tracker failed for poller invalid");
+            PUMP_WARN_LOG("acceptor's tracker is not started before");
             return false;
         }
         return poller->resume_channel_tracker(tracker);

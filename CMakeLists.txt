@@ -16,9 +16,10 @@ SET(pump_BUILD_VERSION 2)
 SET(ROOT_DIR ${PROJECT_SOURCE_DIR})
 
 CMAKE_POLICY(PUSH)
-CMAKE_POLICY(SET CMP0054 OLD)
+#CMAKE_POLICY(SET CMP0054 OLD)
 
 # Include cmake functions
+INCLUDE(TestBigEndian)
 INCLUDE(CheckIncludeFile)
 #INCLUDE(CheckSymbolExists)
 #INCLUDE(CheckLibraryExists)

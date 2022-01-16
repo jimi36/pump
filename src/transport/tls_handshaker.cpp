@@ -46,73 +46,72 @@ namespace transport {
         service *sv,
         int64_t timeout,
         const tls_handshaker_callbacks &cbs) {
-        PUMP_DEBUG_FAILED(
-            !__set_state(TRANSPORT_INITED, TRANSPORT_STARTING), 
-            "tls_handshaker: start failed for transport state incorrect",
-            return false);
+        if (sv == nullptr) { 
+            PUMP_WARN_LOG("service is invalid");
+            return false;
+        }
 
-        bool ret = false;
-        toolkit::defer cleanup([&]() {
-            if (ret) {
-                __set_state(TRANSPORT_STARTING, TRANSPORT_STARTED);
-            } else  {
-                __set_state(TRANSPORT_STARTING, TRANSPORT_ERROR);
-                __stop_handshake_timer();
+        if (!cbs.handshaked_cb || !cbs.stopped_cb) {
+            PUMP_WARN_LOG("callbacks is invalid");
+            return false;
+        }
+
+        if (!flow_) { 
+            PUMP_WARN_LOG("tls handshaker's flow is invalid");
+            return false;
+        }
+
+        if (!__set_state(TRANSPORT_INITED, TRANSPORT_STARTING)) {
+            PUMP_WARN_LOG("tls transport is already started before");
+            return false; 
+        }
+
+        do {
+            cbs_ = cbs;
+
+            __set_service(sv);
+
+            // Flow init handshake state
+            auto handshake_ret = flow_->handshake();
+            if (handshake_ret == TLS_HANDSHAKE_ERROR) {
+                PUMP_WARN_LOG("tls flow handshake failed");
+                break;
             }
-        });
 
-        PUMP_DEBUG_FAILED(
-            !flow_, 
-            "tls_handshaker: start failed for flow invalid",
-            return false);
+            // Start handshake timeout timer
+            if (!__start_handshake_timer(timeout)) {
+                PUMP_WARN_LOG("starting tls handshaker's timer failed");
+                break;
+            }
 
-        PUMP_DEBUG_FAILED(
-            sv == nullptr, 
-            "tls_handshaker: start failed for service invalid",
-            return false);
-        __set_service(sv);
+            // New channel tracker
+            tracker_.reset(
+                object_create<poll::channel_tracker>(shared_from_this(), poll::TRACK_NONE),
+                object_delete<poll::channel_tracker>);
+            if (!tracker_) {
+                PUMP_WARN_LOG("new tls handshaker's tracker object failed");
+                break;
+            }
+            // Start tracker.
+            if (handshake_ret == TLS_HANDSHAKE_SEND) {
+                tracker_->set_expected_event(poll::TRACK_SEND);
+            } else {
+                tracker_->set_expected_event(poll::TRACK_READ);
+            }
+            if (!get_service()->add_channel_tracker(tracker_, SEND_POLLER_ID)) {
+                PUMP_WARN_LOG("add tls handshaker's tracker tp service failed");
+                break;
+            }
 
-        PUMP_DEBUG_FAILED(
-            !cbs.handshaked_cb || !cbs.stopped_cb, 
-            "tls_handshaker: start failed for callbacks invalid",
-            return false);
-        cbs_ = cbs;
+            if (__set_state(TRANSPORT_STARTING, TRANSPORT_STARTED)) {
+                return true;
+            }
+        } while(false);
 
-        // Flow init handshake state
-        auto handshake_ret = flow_->handshake();
-        if (handshake_ret == TLS_HANDSHAKE_ERROR) {
-            PUMP_DEBUG_LOG("tls_handshaker: start failed for handshaking failed");
-            return false;
-        }
+        __set_state(TRANSPORT_STARTING, TRANSPORT_ERROR);
+        __stop_handshake_timer();
 
-        // Start handshake timeout timer
-        if (!__start_handshake_timer(timeout)) {
-            PUMP_WARN_LOG("tls_handshaker: start failed for starting timer failed");
-            return false;
-        }
-
-        // New channel tracker
-        tracker_.reset(
-            object_create<poll::channel_tracker>(shared_from_this(), poll::TRACK_NONE),
-            object_delete<poll::channel_tracker>);
-        if (!tracker_) {
-            PUMP_WARN_LOG("tls_handshaker: start failed for creating tracker failed");
-            return false;
-        }
-        // Start tracker.
-        if (handshake_ret == TLS_HANDSHAKE_SEND) {
-            tracker_->set_expected_event(poll::TRACK_SEND);
-        } else {
-            tracker_->set_expected_event(poll::TRACK_READ);
-        }
-        if (!get_service()->add_channel_tracker(tracker_, SEND_POLLER_ID)) {
-            PUMP_WARN_LOG("tls_handshaker: start failed for adding tracker failed");
-            return false;
-        }
-
-        ret = true;
-
-        return true;
+        return false;
     }
 
     void tls_handshaker::stop() {
@@ -131,10 +130,9 @@ namespace transport {
     void tls_handshaker::on_read_event() {
         // If transport is starting, resume tracker.
         if (__is_state(TRANSPORT_STARTING, std::memory_order_relaxed)) {
-            PUMP_DEBUG_LOG("tls_handshaker: handle read failed for starting");
+            PUMP_DEBUG_LOG("tls handshaker is starting, delay to handle read event");
             if (!tracker_->get_poller()->resume_channel_tracker(tracker_.get())) {
-                PUMP_WARN_LOG(
-                    "tls_handshaker: handle read failed for resuming tracker failed");
+                PUMP_WARN_LOG("resume tls handshaker's tracker failed");
                 if (__set_state(TRANSPORT_STARTING, TRANSPORT_DISCONNECTING) ||
                     __set_state(TRANSPORT_STARTED, TRANSPORT_DISCONNECTING)) {
                     __handshake_finished();
@@ -149,10 +147,9 @@ namespace transport {
     void tls_handshaker::on_send_event() {
         // If transport is starting, resume tracker.
         if (__is_state(TRANSPORT_STARTING, std::memory_order_relaxed)) {
-            PUMP_DEBUG_LOG("tls_handshaker: handle send failed for starting");
+            PUMP_DEBUG_LOG("tls handshaker is starting, delay to handle send event");
             if (!tracker_->get_poller()->resume_channel_tracker(tracker_.get())) {
-                PUMP_WARN_LOG(
-                    "tls_handshaker: handle send failed for resuming tracker failed");
+                PUMP_WARN_LOG("resume tls handshaker's tracker failed");
                 if (__set_state(TRANSPORT_STARTING, TRANSPORT_DISCONNECTING) ||
                     __set_state(TRANSPORT_STARTED, TRANSPORT_DISCONNECTING)) {
                     __handshake_finished();
@@ -180,14 +177,15 @@ namespace transport {
             object_create<flow::flow_tls>(), 
             object_delete<flow::flow_tls>);
         if (!flow_) {
-            PUMP_WARN_LOG("tls_handshaker: open flow failed for creating flow failed");
+            PUMP_WARN_LOG("new tls handshaker's flow object failed");
             return false;
         }
 
         // Init flow.
         poll::channel_sptr ch = shared_from_this();
         if (flow_->init(ch, client, fd, xcred) != ERROR_OK) {
-            PUMP_DEBUG_LOG("tls_handshaker: open flow failed for initing flow failed");
+            PUMP_WARN_LOG("init tls handshaker's flow failed");
+            net::close(fd);
             return false;
         }
 
@@ -207,16 +205,14 @@ namespace transport {
         case TLS_HANDSHAKE_READ:
             tracker_->set_expected_event(poll::TRACK_READ);
             if (!tracker_->get_poller()->resume_channel_tracker(tracker_.get())) {
-                PUMP_WARN_LOG(
-                    "tls_handshaker: process handshake failed for resuming tracker failed");
+                PUMP_WARN_LOG("resume tls handshaker's tracker failed");
                 break;
             }
             return;
         case TLS_HANDSHAKE_SEND:
             tracker_->set_expected_event(poll::TRACK_SEND);
             if (!tracker_->get_poller()->resume_channel_tracker(tracker_.get())) {
-                PUMP_WARN_LOG(
-                    "tls_handshaker: process handshake failed for resuming tracker failed");
+                PUMP_WARN_LOG("resume tls handshaker's tracker failed");
                 break;
             }
             return;

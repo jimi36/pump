@@ -33,52 +33,52 @@ namespace transport {
         service *sv, 
         read_mode mode,
         const transport_callbacks &cbs) {
-        PUMP_DEBUG_FAILED(
-            !__set_state(TRANSPORT_INITED, TRANSPORT_STARTING), 
-            "udp_transport: start failed for transport state incorrect",
-            return ERROR_INVALID);
+        if (sv == nullptr) {
+            PUMP_WARN_LOG("service is invalid");
+            return ERROR_INVALID;
+        }
 
-        bool ret = false;
-        toolkit::defer cleanup([&]() {
-            if (ret) {
-                __set_state(TRANSPORT_STARTING, TRANSPORT_STARTED);
-            } else {
-                __set_state(TRANSPORT_STARTING, TRANSPORT_ERROR);
-                __close_transport_flow();
+        if (mode != READ_MODE_ONCE && mode != READ_MODE_LOOP) {
+            PUMP_WARN_LOG("read mode is invalid");
+            return ERROR_INVALID;
+        }
+
+        if (!cbs.read_from_cb || !cbs.stopped_cb) {
+            PUMP_WARN_LOG("callbacks is invalid");
+            return ERROR_INVALID;
+        }
+
+        if (!__set_state(TRANSPORT_INITED, TRANSPORT_STARTING)) { 
+            PUMP_WARN_LOG("udp transport is already started before");
+            return ERROR_FAULT;
+        }
+
+        do {
+            cbs_ = cbs;
+
+            rmode_ = mode;
+
+            __set_service(sv);
+
+            if (!__open_transport_flow()) {
+                PUMP_WARN_LOG("open udp transport's flow failed");
+                break;
             }
-        });
 
-        PUMP_DEBUG_FAILED(
-            sv == nullptr, 
-            "udp_transport: start failed for service invalid",
-            return ERROR_INVALID);
-        __set_service(sv);
+            if (!__start_read_tracker()) {
+                PUMP_WARN_LOG("start udp transport's read tracker failed");
+                break;
+            }
 
-        PUMP_DEBUG_FAILED(
-            mode != READ_MODE_ONCE && mode != READ_MODE_LOOP,
-            "tcp_transport: start failed for transport state incorrect",
-            return ERROR_INVALID);
-        rmode_ = mode;
+            if (__set_state(TRANSPORT_STARTING, TRANSPORT_STARTED)) {
+                return ERROR_OK;
+            }
+        } while (false);
 
-        PUMP_DEBUG_FAILED(
-            !cbs.read_from_cb || !cbs.stopped_cb, 
-            "udp_transport: start failed for callbacks invalid",
-            return ERROR_INVALID);
-        cbs_ = cbs;
+        __set_state(TRANSPORT_STARTING, TRANSPORT_ERROR);
+        __close_transport_flow();
 
-        if (!__open_transport_flow()) {
-            PUMP_DEBUG_LOG("udp_transport: start failed for opening flow failed");
-            return ERROR_FAULT;
-        }
-
-        if (!__start_read_tracker()) {
-            PUMP_DEBUG_LOG("udp_transport: start failed for starting tracker failed");
-            return ERROR_FAULT;
-        }
-
-        ret = true;
-
-        return ERROR_OK;
+        return ERROR_FAULT;
     }
 
     void udp_transport::stop() {
@@ -94,9 +94,9 @@ namespace transport {
         }
     }
 
-    error_code udp_transport::read_continue() {
+    error_code udp_transport::continue_read() {
         if (!is_started()) {
-            PUMP_DEBUG_LOG("tcp_transport: read for once failed for not in started");
+            PUMP_WARN_LOG("udp transport is not started");
             return ERROR_UNSTART;
         }
 
@@ -113,18 +113,18 @@ namespace transport {
         const block_t *b,
         int32_t size,
         const address &address) {
-        PUMP_DEBUG_FAILED(
-            b == nullptr || size <= 0, 
-            "udp_transport: send failed for buffer invalid",
-            return ERROR_INVALID);
+        if (b == nullptr || size <= 0) { 
+            PUMP_WARN_LOG("sent buffer is invalid");
+            return ERROR_INVALID;
+        }
 
         if (PUMP_UNLIKELY(!__is_state(TRANSPORT_STARTED))) {
-            PUMP_DEBUG_LOG("udp_transport: send failed for not in statred");
+            PUMP_WARN_LOG("udp transport is not started");
             return ERROR_UNSTART;
         }
 
         if (flow_->send(b, size, address) < 0) {
-            PUMP_DEBUG_LOG("udp_transport: send failed");
+            PUMP_WARN_LOG("udp transport's flow send failed");
             return ERROR_AGAIN;
         }
 
@@ -134,37 +134,29 @@ namespace transport {
     void udp_transport::on_read_event() {
         // If transport is in starting, resume read tracker.
         if (__is_state(TRANSPORT_STARTING, std::memory_order_relaxed)) {
-            PUMP_DEBUG_LOG("udp_transport: handle read failed for starting");
+            PUMP_DEBUG_LOG("udp transport is starting, delay to handle read event");
             if (!__resume_read_tracker()) {
-                PUMP_WARN_LOG("udp_transport: handle read failed for resuming tracker failed");
+                PUMP_WARN_LOG("resume udp transport's read tracker failed");
                 return;
             }
         }
 
-        address from_addr;
+        address remote_addr;
         block_t data[MAX_UDP_BUFFER_SIZE];
-        int32_t size = flow_->read_from(data, sizeof(data), &from_addr);
+        int32_t size = flow_->read_from(data, sizeof(data), &remote_addr);
         if (PUMP_LIKELY(size > 0)) {
             if (rmode_ == READ_MODE_ONCE) {
                 // Change read state from READ_PENDING to READ_NONE.
                 if (!__change_read_state(READ_PENDING, READ_NONE)) {
-                    PUMP_WARN_LOG("udp_transport: handle read failed for changing read state");
-                    return;
+                    PUMP_WARN_LOG("change udp transport's read state from pending to none failed");
                 }
-            } else {
-                // Resume read tracker to read next time.
-                if (!__resume_read_tracker()) {
-                    PUMP_WARN_LOG("udp_transport: handle read event failed for resuming tracker failed");
-                    return;
-                }
-                // Callback read data.
-                cbs_.read_cb(data, size);
+            } else if (!__resume_read_tracker()) {
+                PUMP_WARN_LOG("resume udp transport's read tracker failed");
             }
-        } else {
-            // Resume read tracker to read next time.
-            if (!__resume_read_tracker()) {
-                PUMP_WARN_LOG("udp_transport: handle read event failed for resuming tracker failed");
-            }
+            // Callback read data.
+            cbs_.read_from_cb(data, size, remote_addr);
+        } else if (!__resume_read_tracker()) {
+            PUMP_WARN_LOG("resume udp transport's read tracker failed");
         }
     }
 
@@ -174,11 +166,11 @@ namespace transport {
             object_create<flow::flow_udp>(), 
             object_delete<flow::flow_udp>);
         if (!flow_) {
-            PUMP_WARN_LOG("udp_transport: open flow failed for creating flow failed");
+            PUMP_WARN_LOG("mew udp transport's flow object failed");
             return false;
         }
         if (flow_->init(shared_from_this(), local_address_) != ERROR_OK) {
-            PUMP_DEBUG_LOG("udp_transport: open flow failed for initing flow failed");
+            PUMP_WARN_LOG("init udp transport's flow failed");
             return false;
         }
 

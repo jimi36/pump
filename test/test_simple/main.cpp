@@ -5,8 +5,8 @@
 #include <mutex>
 
 #include <pump/time/timestamp.h>
-#include <pump/toolkit/freelock_multi_queue.h>
-#include <pump/toolkit/freelock_single_queue.h>
+#include <pump/toolkit/fl_mc_queue.h>
+#include <pump/toolkit/fl_sc_queue.h>
 
 #include "concurrentqueue.h"
 #include "readerwriterqueue.h"
@@ -16,7 +16,7 @@ using namespace pump;
 int test1(int loop) {
     int val;
 
-    toolkit::freelock_single_queue<int, 256> sq(1024);
+    toolkit::fl_sc_queue<int, 256> sq(1024);
 
     std::thread t1([&]() {
         {
@@ -46,46 +46,38 @@ int test1(int loop) {
 
     t1.join();
 
-    toolkit::freelock_multi_queue<int> q(1024);
+    std::mutex mx;
+    std::queue<int> pq;
+    //std::priority_queue<int> ppq;
 
     std::thread t2([&]() {
-        int loop2 = loop / 2;
         auto beg = time::get_clock_milliseconds();
-        for (int i = 0; i < loop2;) {
-            if (q.push(i)) {
-                i++;
-            }
+        for (int i = 0; i < loop;i++) {
+            mx.lock();
+            pq.push(i);
+            mx.unlock();
         }
         auto end = time::get_clock_milliseconds();
-        printf("freelock_list_queue push use %dms category %d\n", int(end - beg), q.capacity());
+        printf("std_queue push use %dms\n", int(end - beg));
     });
 
-    std::thread t3([&]() {
-        auto beg = time::get_clock_milliseconds();
-        for (int i = loop /2; i < loop;) {
-            if (q.push(i)) {
-                i++;
-            }
-        }
-        auto end = time::get_clock_milliseconds();
-        printf("freelock_list_queue push use %dms category %d\n", int(end - beg), q.capacity());
-        });
 
     beg = time::get_clock_milliseconds();
     for (int i = 0; i < loop;) {
-        if (q.pop(val)) {
-            //if (val != i) {
-            //    printf("multi_freelock_queue pop %d != %d\n", val, i);
-            //    return -1;
-            //}
+        mx.lock();
+        if (!pq.empty()) {
+            
+            val = pq.front();
+            pq.pop();
+            
             i++;
         }
+        mx.unlock();
     }
     end = time::get_clock_milliseconds();
-    printf("freelock_list_queue pop use %dms\n", int(end - beg));
+    printf("std_queue pop use %dms\n", int(end - beg));
 
     t2.join();
-    t3.join();
 
     moodycamel::ReaderWriterQueue<int> cq;
 
@@ -122,7 +114,7 @@ int test2(int loop) {
 
     int val;
 
-    toolkit::freelock_multi_queue<int> q(512);
+    toolkit::fl_mc_queue<int> q(512);
 
     std::thread t1([&]() {
         int loop2 = loop / 2;

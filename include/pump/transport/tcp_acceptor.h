@@ -47,9 +47,7 @@ namespace transport {
         /*********************************************************************************
          * Start
          ********************************************************************************/
-        virtual error_code start(
-            service *sv, 
-            const acceptor_callbacks &cbs) override;
+        virtual error_code start(service *sv, const acceptor_callbacks &cbs) override;
 
         /*********************************************************************************
          * Stop

@@ -60,16 +60,12 @@ namespace net {
     /*********************************************************************************
      * Create socket file descriptor
      ********************************************************************************/
-    pump_socket create_socket(
-        int32_t domain, 
-        int32_t type);
+    pump_socket create_socket(int32_t domain, int32_t type);
 
     /*********************************************************************************
      * Set nonblock flag
      ********************************************************************************/
-    bool set_noblock(
-        pump_socket fd, 
-        int32_t noblock);
+    bool set_noblock(pump_socket fd, int32_t noblock);
 
     /*********************************************************************************
      * Set linger flag
@@ -82,16 +78,12 @@ namespace net {
     /*********************************************************************************
      * Set read buffer size
      ********************************************************************************/
-    bool set_read_bs(
-        pump_socket fd, 
-        int32_t size);
+    bool set_read_bs(pump_socket fd, int32_t size);
 
     /*********************************************************************************
      * Set send buffer size
      ********************************************************************************/
-    bool set_send_bs(
-        pump_socket fd, 
-        int32_t size);
+    bool set_send_bs(pump_socket fd, int32_t size);
 
     /*********************************************************************************
      * Set tcp keeplive
@@ -104,16 +96,12 @@ namespace net {
     /*********************************************************************************
      * Set reuse address
      ********************************************************************************/
-    bool set_reuse(
-        pump_socket fd, 
-        int32_t reuse);
+    bool set_reuse(pump_socket fd, int32_t reuse);
 
     /*********************************************************************************
      * Set tcp no delay
      ********************************************************************************/
-    bool set_nodelay(
-        pump_socket fd, 
-        int32_t nodelay);
+    bool set_nodelay(pump_socket fd, int32_t nodelay);
 
     /*********************************************************************************
      * Update connect context
@@ -124,9 +112,7 @@ namespace net {
      * Set udp connection reset
      * This is for windows system, other system will return true
      ********************************************************************************/
-    bool set_udp_conn_reset(
-        pump_socket fd, 
-        bool enable);
+    bool set_udp_conn_reset(pump_socket fd, bool enable);
 
     /*********************************************************************************
      * Bind address
@@ -139,9 +125,7 @@ namespace net {
     /*********************************************************************************
      * Listen socket
      ********************************************************************************/
-    bool listen(
-        pump_socket fd, 
-        int32_t backlog = 65535);
+    bool listen(pump_socket fd, int32_t backlog = 65535);
 
     /*********************************************************************************
      * Accept socket
@@ -236,9 +220,7 @@ namespace net {
      * On success return string address like 127.0.0.1:80, else return empty
      *string
      ********************************************************************************/
-    std::string address_to_string(
-        struct sockaddr *addr, 
-        int32_t addrlen);
+    std::string address_to_string(struct sockaddr *addr, int32_t addrlen);
 
     /*********************************************************************************
      * Transfrom string to address

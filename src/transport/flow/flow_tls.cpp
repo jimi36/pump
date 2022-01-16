@@ -35,38 +35,41 @@ namespace flow {
         bool client,
         pump_socket fd,
         transport::tls_credentials xcred) {
-        PUMP_DEBUG_FAILED(
-            !ch, 
-            "flow_tls: init failed for channel invalid",
-            return ERROR_FAULT);
-        ch_ = ch;
+        if (!ch) {
+            PUMP_WARN_LOG("channel is invalid");
+            return ERROR_FAULT;
+        }
 
-        PUMP_DEBUG_FAILED(
-            fd < 0, 
-            "flow_tls: init failed for fd invalid",
-            return ERROR_FAULT);
-        fd_ = fd;
+        if (fd < 0) { 
+            PUMP_WARN_LOG("socket fd is invalid");
+            return ERROR_FAULT;
+        }
 
         session_ = transport::create_tls_session(
                     client,
                     fd, 
                     xcred);
         if (session_ == nullptr) {
+            PUMP_WARN_LOG("create tls session failed ");
             return ERROR_FAULT;
         }
+
+        ch_ = ch;
+        fd_ = fd;
 
         return ERROR_OK;
     }
 
     error_code flow_tls::want_to_send(toolkit::io_buffer *iob) {
-        PUMP_DEBUG_FAILED(
-            iob == nullptr, 
-            "flow_tls: want to send failed for io buffer invalid",
-            return ERROR_FAULT);
+        if (iob == nullptr) { 
+            PUMP_WARN_LOG("io buffer is invalid");
+            return ERROR_FAULT;
+        }
         send_iob_ = iob;
         
         int32_t size = transport::tls_send(
-                        session_, send_iob_->data(), 
+                        session_, 
+                        send_iob_->data(), 
                         send_iob_->size());
         if (PUMP_LIKELY(size > 0)) {
             // Shift send buffer and check data size.
@@ -81,7 +84,7 @@ namespace flow {
             return ERROR_AGAIN;
         }
 
-        PUMP_DEBUG_LOG("flow_tls: want to send failed");
+        PUMP_WARN_LOG("send tls buffer failed with ec %d", net::last_errno());
 
         return ERROR_FAULT;
     }
@@ -105,7 +108,7 @@ namespace flow {
             return ERROR_AGAIN;
         }
 
-        PUMP_DEBUG_LOG("flow_tls: send failed");
+        PUMP_WARN_LOG("send tls buffer failed with ec %d", net::last_errno());
 
         return ERROR_FAULT;
     }

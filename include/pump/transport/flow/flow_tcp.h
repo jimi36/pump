@@ -43,16 +43,12 @@ namespace flow {
          *     ERROR_OK    => success
          *     ERROR_FAULT => error
          ********************************************************************************/
-        error_code init(
-            poll::channel_sptr &&ch, 
-            pump_socket fd);
+        error_code init(poll::channel_sptr &&ch, pump_socket fd);
 
         /*********************************************************************************
          * Read
          ********************************************************************************/
-        PUMP_INLINE int32_t read(
-            block_t *b, 
-            int32_t size) {
+        PUMP_INLINE int32_t read(block_t *b, int32_t size) {
             return net::read(fd_, b, size);
         }
 

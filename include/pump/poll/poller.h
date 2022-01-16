@@ -24,7 +24,7 @@
 #include "pump/memory.h"
 #include "pump/net/socket.h"
 #include "pump/poll/channel.h"
-#include "pump/toolkit/freelock_multi_queue.h"
+#include "pump/toolkit/fl_mc_queue.h"
 
 namespace pump {
 namespace poll {
@@ -99,9 +99,7 @@ namespace poll {
         /*********************************************************************************
          * Push channel event
          ********************************************************************************/
-        virtual bool push_channel_event(
-            channel_sptr &c, 
-            int32_t event);
+        virtual bool push_channel_event(channel_sptr &c, int32_t event);
 
       protected:
         /*********************************************************************************
@@ -153,11 +151,11 @@ namespace poll {
 
         // Channel event
         std::atomic_int32_t cev_cnt_;
-        toolkit::freelock_multi_queue<channel_event*> cevents_;
+        toolkit::fl_mc_queue<channel_event*> cevents_;
 
         // Channel tracker event
         std::atomic_int32_t tev_cnt_;
-        toolkit::freelock_multi_queue<tracker_event*> tevents_;
+        toolkit::fl_mc_queue<tracker_event*> tevents_;
 
         // Channel trackers
         std::map<channel_tracker*, channel_tracker_sptr> trackers_;

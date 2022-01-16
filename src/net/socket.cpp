@@ -21,15 +21,11 @@
 namespace pump {
 namespace net {
 
-    pump_socket create_socket(
-        int32_t domain, 
-        int32_t type) {
+    pump_socket create_socket(int32_t domain, int32_t type) {
         return (pump_socket)::socket(domain, type, 0);
     }
 
-    bool set_noblock(
-        pump_socket fd, 
-        int32_t noblock) {
+    bool set_noblock(pump_socket fd, int32_t noblock) {
 #if defined(PUMP_HAVE_WINSOCK)
 #if defined(OS_CYGWIN)
         long cmd = 0x8004667e;
@@ -48,8 +44,7 @@ namespace net {
             return true;
         }
 #endif
-        PUMP_DEBUG_LOG("net: set_noblock failed %d", last_errno());
-        PUMP_ASSERT(false);
+        PUMP_WARN_LOG("socket set noblock failed %d", last_errno());
         return false;
     }
 
@@ -63,30 +58,23 @@ namespace net {
         if (setsockopt(fd, SOL_SOCKET, SO_LINGER, (const block_t*)&lgr, sizeof(lgr)) == 0) {
             return true;
         }
-        PUMP_DEBUG_LOG("net: set_linger failed %d", last_errno());
-        PUMP_ASSERT(false);
+        PUMP_WARN_LOG("socket set linger failed %d", last_errno());
         return false;
     }
 
-    bool set_read_bs(
-        pump_socket fd,
-        int32_t size) {
+    bool set_read_bs(pump_socket fd, int32_t size) {
         if (setsockopt(fd, SOL_SOCKET, SO_RCVBUF, (const block_t*)&size, sizeof(size)) == 0) {
             return true;
         }
-        PUMP_DEBUG_LOG("net: set_read_bs failed %d", last_errno());
-        PUMP_ASSERT(false);
+        PUMP_WARN_LOG("socket set read buffer size failed %d", last_errno());
         return false;
     }
 
-    bool set_send_bs(
-        pump_socket fd, 
-        int32_t size) {
+    bool set_send_bs(pump_socket fd, int32_t size) {
         if (setsockopt(fd, SOL_SOCKET, SO_SNDBUF, (const block_t*)&size, sizeof(size)) == 0) {
             return true;
         }
-        PUMP_DEBUG_LOG("net: set_send_bs failed %d", last_errno());
-        PUMP_ASSERT(false);
+        PUMP_WARN_LOG("socket set send buffer size failed %d", last_errno());
         return false;
     }
 
@@ -96,8 +84,7 @@ namespace net {
         int32_t interval) {
         int32_t on = 1;
         if (setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, (const block_t*)&on, sizeof(on)) == -1) {
-            PUMP_DEBUG_LOG("net: set_keeplive failed %d", last_errno());
-            PUMP_ASSERT(false);
+            PUMP_WARN_LOG("socket set keeplive failed %d", last_errno());
             return false;
         }
 
@@ -117,8 +104,7 @@ namespace net {
                 &bytes,
                 nullptr,
                 nullptr) == -1) {
-            PUMP_DEBUG_LOG("net: set_keeplive failed %d", last_errno());
-            PUMP_ASSERT(false);
+            PUMP_WARN_LOG("socket set keeplive failed %d", last_errno());
             return false;
         }
 #else
@@ -126,33 +112,26 @@ namespace net {
         if (setsockopt(fd, SOL_TCP, TCP_KEEPIDLE, &keeplive, sizeof(keeplive)) == -1 ||
             setsockopt(fd, SOL_TCP, TCP_KEEPINTVL, &interval, sizeof(interval)) == -1 ||
             setsockopt(fd, SOL_TCP, TCP_KEEPCNT, &count, sizeof(count)) == -1) {
-            PUMP_DEBUG_LOG("net: set_keeplive failed %d", last_errno());
-            PUMP_ASSERT(false);
+            PUMP_WARN_LOG("socket set keeplive failed %d", last_errno());
             return false;
         }
 #endif
         return true;
     }
 
-    bool set_reuse(
-        pump_socket fd, 
-        int32_t reuse) {
+    bool set_reuse(pump_socket fd, int32_t reuse) {
         if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (const block_t*)&reuse, sizeof(reuse)) == 0) {
             return true;
         }
-        PUMP_DEBUG_LOG("net: set_reuse failed %d", last_errno());
-        PUMP_ASSERT(false);
+        PUMP_WARN_LOG("socket set reuse address mode failed %d", last_errno());
         return false;
     }
 
-    bool set_nodelay(
-        pump_socket fd, 
-        int32_t nodelay) {
+    bool set_nodelay(pump_socket fd, int32_t nodelay) {
         if (setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, (const block_t*)&nodelay, sizeof(nodelay)) == 0) {
             return true;
         }
-        PUMP_DEBUG_LOG("net: set_nodelay failed %d", last_errno());
-        PUMP_ASSERT(false);
+        PUMP_WARN_LOG("socket set nodelay mode failed %d", last_errno());
         return false;
     }
 
@@ -161,17 +140,14 @@ namespace net {
         if (setsockopt(fd, SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT, nullptr, 0) == 0) {
             return true;
         }
-        PUMP_DEBUG_LOG("net: update_connect_context failed %d", last_errno());
-        PUMP_ASSERT(false);
+        PUMP_WARN_LOG("socket update connect context failed %d", last_errno());
         return false;
 #else
         return true;
 #endif
     }
 
-    bool set_udp_conn_reset(
-        pump_socket fd, 
-        bool enable) {
+    bool set_udp_conn_reset(pump_socket fd, bool enable) {
 #if defined(PUMP_HAVE_WINSOCK)
         DWORD bytes_returned = 0;
         BOOL behavior = enable ? TRUE : FALSE;
@@ -186,8 +162,7 @@ namespace net {
                 nullptr,
                 nullptr) == SOCKET_ERROR &&
             last_errno() != WSAEWOULDBLOCK) {
-            PUMP_DEBUG_LOG("net: set_udp_conn_reset failed %d", last_errno());
-            PUMP_ASSERT(false);
+            PUMP_WARN_LOG("socket set udp conn reset failed %d", last_errno());
             return false;
         }
 #endif
@@ -201,17 +176,15 @@ namespace net {
         if (::bind(fd, addr, addrlen) == 0) {
             return true;
         }
-        PUMP_DEBUG_LOG("net: bind failed %d", last_errno());
+        PUMP_WARN_LOG("socket bind address failed %d", last_errno());
         return false;
     }
 
-    bool listen(
-        pump_socket fd, 
-        int32_t backlog) {
+    bool listen(pump_socket fd, int32_t backlog) {
         if (::listen(fd, backlog) == 0) {
             return true;
         }
-        PUMP_DEBUG_LOG("net: listen failed %d", last_errno());
+        PUMP_WARN_LOG("socket listen failed %d", last_errno());
         return false;
     }
 
@@ -221,7 +194,7 @@ namespace net {
         int32_t *addrlen) {
         pump_socket client = ::accept(fd, addr, (socklen_t*)addrlen);
         if (client < 0) {
-            PUMP_DEBUG_LOG("net: accept failed %d", last_errno());
+            PUMP_WARN_LOG("socket accept failed %d", last_errno());
         }
         return client;
     }
@@ -235,7 +208,7 @@ namespace net {
             if (ec != LANE_EALREADY && 
                 ec != LANE_EWOULDBLOCK && 
                 ec != LANE_EINPROGRESS) {
-                PUMP_DEBUG_LOG("net: connect failed %d", ec);
+                PUMP_WARN_LOG("socket connect failed %d", ec);
                 return false;
             }
         }
@@ -354,8 +327,7 @@ namespace net {
         if (getsockname(fd, addr, (socklen_t*)addrlen) == 0) {
             return true;
         }
-        PUMP_DEBUG_LOG("net: local_address failed %d", last_errno());
-        PUMP_ASSERT(false);
+        PUMP_WARN_LOG("socket get local address failed %d", last_errno());
         return false;
     }
 
@@ -366,14 +338,11 @@ namespace net {
         if (getpeername(fd, addr, (socklen_t*)addrlen) == 0) {
             return true;
         }
-        PUMP_DEBUG_LOG("net: remote_address failed %d", last_errno());
-        PUMP_ASSERT(false);
+        PUMP_WARN_LOG("socket get remote_address failed %d", last_errno());
         return false;
     }
 
-    std::string address_to_string(
-        struct sockaddr *addr, 
-        int32_t addrlen) {
+    std::string address_to_string(struct sockaddr *addr, int32_t addrlen) {
         char host[128] = {0};
         if (addrlen == sizeof(struct sockaddr_in)) {
             struct sockaddr_in *v4 = (struct sockaddr_in*)addr;
@@ -388,8 +357,7 @@ namespace net {
                 return std::string(host);
             }
         }
-        PUMP_DEBUG_LOG("net: address_to_string failed");
-        PUMP_ASSERT(false);
+        PUMP_WARN_LOG("socket address struct to string failed");
         return "";
     }
 
@@ -432,8 +400,7 @@ namespace net {
             freeaddrinfo(res);
         }
 
-        PUMP_DEBUG_LOG("net: string_to_address failed");
-        PUMP_ASSERT(false);
+        PUMP_WARN_LOG("socket address string to sturct failed");
         return false;
     }
 

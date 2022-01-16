@@ -2,7 +2,7 @@
 
 #include "http.h"
 
-int loop = 10;
+int loop = 2;
 
 void start_http_client(pump::service *sv, const std::vector<std::string> &urls) {
     http::client_sptr cli = http::client::create(sv);
@@ -26,10 +26,13 @@ void start_http_client(pump::service *sv, const std::vector<std::string> &urls) 
                 continue;
             }
 
-            if (resp->get_status_code() == 200) succ++;
+            if (resp->get_status_code() == 200) {
+                std::string html = pump::utf8_to_gbk(resp->get_body()->data());
+                std::cout << html.size() <<std::endl;
+                succ++;
+            } 
 
-            std::string html = pump::utf8_to_gbk(resp->get_content()->data());
-            //std::cout << html.size() <<std::endl;
+
         }
         auto end = pump::time::get_clock_milliseconds();
         printf("request used %dms succ %d\n", int32_t(end - beg), succ);

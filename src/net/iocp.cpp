@@ -22,11 +22,9 @@
 #include "pump/net/socket.h"
 
 #if defined(PUMP_HAVE_IOCP)
-
 FnNtCreateFile NtCreateFile = nullptr;
 FnNtDeviceIoControlFile NtDeviceIoControlFile = nullptr;
 FnNtCancelIoFileEx NtCancelIoFileEx = nullptr;
-
 #endif
 
 namespace pump {

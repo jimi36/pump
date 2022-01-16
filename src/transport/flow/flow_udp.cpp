@@ -26,43 +26,35 @@ namespace flow {
     flow_udp::~flow_udp() {
     }
 
-    int32_t flow_udp::init(
-        poll::channel_sptr &&ch, 
-        const address &bind_address) {
-        PUMP_DEBUG_FAILED(
-            !ch, 
-            "flow_udp: init failed for channel invalid",
-            return ERROR_FAULT);
-        ch_ = ch;
-
-        int32_t domain = AF_INET;
-        if (bind_address.is_ipv6()) {
-            domain = AF_INET6;
-        }
-
-        fd_ = net::create_socket(domain, SOCK_DGRAM);
-
-        if (fd_ == INVALID_SOCKET) {
-            PUMP_DEBUG_LOG("flow_udp: init failed for creating socket failed");
+    int32_t flow_udp::init(poll::channel_sptr &&ch, const address &bind_address) {
+        if (!ch) {
+            PUMP_WARN_LOG("channel is invalid");
             return ERROR_FAULT;
         }
 
+        int32_t domain = bind_address.is_ipv6() ? AF_INET6 : AF_INET;
+        if ((fd_ = net::create_socket(domain, SOCK_DGRAM)) == INVALID_SOCKET) {
+            PUMP_DEBUG_LOG("create socket failed with ec %d", net::last_errno());
+            return ERROR_FAULT;
+        }
         if (!net::set_reuse(fd_, 1)) {
-            PUMP_DEBUG_LOG("flow_udp: init failed for setting socket reuse failed");
+            PUMP_DEBUG_LOG("set socket address reuse failed with ec %d", net::last_errno());
             return ERROR_FAULT;
         }
         if (!net::set_noblock(fd_, 1)) {
-            PUMP_DEBUG_LOG("flow_udp: init failed for setting socket noblock failed");
+            PUMP_DEBUG_LOG("set socket noblock failed with ec %d", net::last_errno());
             return ERROR_FAULT;
         }
         if (!net::bind(fd_, (sockaddr*)bind_address.get(), bind_address.len())) {
-            PUMP_DEBUG_LOG("flow_udp: init failed for binding socket address failed");
+            PUMP_DEBUG_LOG("bind socket address failed with ec %d", net::last_errno());
             return ERROR_FAULT;
         }
         if (!net::set_udp_conn_reset(fd_, false)) {
-            PUMP_DEBUG_LOG("flow_udp: init failed for setting conn reset failed");
+            PUMP_DEBUG_LOG("set conn reset failed with ec %d", net::last_errno());
             return ERROR_FAULT;
         }
+
+        ch_ = ch;
 
         return ERROR_OK;
     }

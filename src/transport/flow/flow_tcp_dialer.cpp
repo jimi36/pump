@@ -27,64 +27,55 @@ namespace flow {
     flow_tcp_dialer::~flow_tcp_dialer() {
     }
 
-    error_code flow_tcp_dialer::init(
-        poll::channel_sptr &&ch, 
-        const address &bind_address) {
-        PUMP_DEBUG_FAILED(
-            !ch, 
-            "flow_tcp_dialer: init failed for channel invalid",
-            return ERROR_FAULT);
-        ch_ = ch;
-
-        is_ipv6_ = bind_address.is_ipv6();
-        int32_t domain = is_ipv6_ ? AF_INET6 : AF_INET;
-
-        if ((fd_ = net::create_socket(domain, SOCK_STREAM)) == INVALID_SOCKET) {
-            PUMP_DEBUG_LOG("flow_tcp_dialer: init failed for creating socket failed");
+    error_code flow_tcp_dialer::init(poll::channel_sptr &&ch, const address &bind_address) {
+        if (!ch) {
+            PUMP_WARN_LOG("channel is invalid");
             return ERROR_FAULT;
         }
 
+        int32_t domain = bind_address.is_ipv6() ? AF_INET6 : AF_INET;
+        if ((fd_ = net::create_socket(domain, SOCK_STREAM)) == INVALID_SOCKET) {
+            PUMP_WARN_LOG("create socket failed with ec %d", net::last_errno());
+            return ERROR_FAULT;
+        }
         if (!net::set_reuse(fd_, 1)) {
-            PUMP_DEBUG_LOG("flow_tcp_dialer: init failed for setting socket reuse failed");
+            PUMP_WARN_LOG("set socket address reuse failed with ec %d", net::last_errno());
             return ERROR_FAULT;
         }
         if (!net::set_noblock(fd_, 1)) {
-            PUMP_DEBUG_LOG("flow_tcp_dialer: init failed for setting socket noblock failed");
+            PUMP_WARN_LOG("set socket noblock failed with ec %d", net::last_errno());
             return ERROR_FAULT;
         }
         if (!net::set_nodelay(fd_, 1)) {
-            PUMP_DEBUG_LOG("flow_tcp_dialer: init failed for setting socket nodelay failed");
+            PUMP_WARN_LOG("set socket nodelay failed with ec %d", net::last_errno());
             return ERROR_FAULT;
         }
         if (!net::bind(fd_, (sockaddr*)bind_address.get(), bind_address.len())) {
-            PUMP_DEBUG_LOG("flow_tcp_dialer: init failed for binding socket address failed");
+            PUMP_WARN_LOG("bind socket address failed with ec %d", net::last_errno());
             return ERROR_FAULT;
         }
+
+        ch_ = ch;
 
         return ERROR_OK;
     }
 
     int32_t flow_tcp_dialer::post_connect(const address &remote_address) {
         if (!net::connect(fd_, (sockaddr*)remote_address.get(), remote_address.len())) {
-            PUMP_DEBUG_LOG(
-                "flow_tcp_dialer: post connect failed for %d", 
-                net::last_errno());
+            PUMP_WARN_LOG("socket connect failed with ec %d", net::last_errno());
             return ERROR_FAULT;
         }
         return ERROR_OK;
     }
 
-    int32_t flow_tcp_dialer::connect(
-        address *local_address, 
-        address *remote_address) {
+    int32_t flow_tcp_dialer::connect(address *local_address, address *remote_address) {
         int32_t ec = net::get_socket_error(fd_);
         if (ec != 0) {
             return ec;
         }
 
         if (!net::update_connect_context(fd_)) {
-            PUMP_DEBUG_LOG(
-                "flow_tcp_dialer: connect failed for updating connect context failed");
+            PUMP_WARN_LOG("update socket connect context failed with ec %d", net::last_errno());
             return net::get_socket_error(fd_);
         }
 

@@ -1,11 +1,8 @@
 #include "http.h"
 
-int main(int argc, const char **argv) {
-    if (argc < 2) {
-        printf("usage: test_http [s ip port] [c url]");
-        return -1;
-    }
+#include <regex>
 
+int main(int argc, const char **argv) {
     pump::init();
 
     pump::service *sv = new pump::service;

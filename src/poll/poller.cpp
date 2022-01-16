@@ -64,26 +64,28 @@ namespace poll {
 
     bool poller::add_channel_tracker(channel_tracker_sptr &tracker) {
         if (PUMP_UNLIKELY(!started_.load(std::memory_order_relaxed))) {
-            PUMP_DEBUG_LOG("poller: add channel tracker failed for no started");
+            PUMP_WARN_LOG("poller is not started, can't add channel tracker");
             return false;
         }
 
         tracker->set_poller(this);
 
         if(!tracker->start()) {
-            PUMP_DEBUG_LOG("poller: add channel tracker failed for starting tracker failed");
+            PUMP_WARN_LOG("start tracker failed");
             return false;
         }
 
         // Install channel tracker
         if(!__install_channel_tracker(tracker.get())) {
-            PUMP_DEBUG_LOG("poller: add channel tracker failed for installing tracker failed");
+            PUMP_WARN_LOG("install tracker failed");
             return false;
         }
 
         // Create tracker event
-        PUMP_ABORT_WITH_LOG(!tevents_.push(object_create<tracker_event>(tracker, TRACKER_EVENT_ADD)),
-            "poller: add channel tracker failed for pushing tracker event failed");
+        if (!tevents_.push(object_create<tracker_event>(tracker, TRACKER_EVENT_ADD))) {
+            PUMP_ERR_LOG("push adding tracker event to queue failed");
+            PUMP_ABORT();
+        }
 
         // Add pending trakcer event count
         tev_cnt_.fetch_add(1, std::memory_order_release);
@@ -93,13 +95,12 @@ namespace poll {
 
     void poller::remove_channel_tracker(channel_tracker_sptr &tracker) {
         if (PUMP_UNLIKELY(!started_.load(std::memory_order_relaxed))) {
-            PUMP_DEBUG_LOG("poller: remove channel tracker failed for no started");
+            PUMP_WARN_LOG("poller is not started, can't remove channel tracker");
             return;
         }
 
         if (!tracker->stop()) {
-            PUMP_DEBUG_LOG(
-                "poller: remove channel tracker failed for tracker no started");
+            PUMP_WARN_LOG("stop tracker failed");
             return;
         }
 
@@ -107,8 +108,10 @@ namespace poll {
         __uninstall_channel_tracker(tracker.get());
 
         // Push tracker event to queue.
-        PUMP_ABORT_WITH_LOG(!tevents_.push(object_create<tracker_event>(tracker, TRACKER_EVENT_DEL)),
-            "poller: remove channel tracker failed for pushing event to queue failed");
+        if (!tevents_.push(object_create<tracker_event>(tracker, TRACKER_EVENT_DEL))) {
+            PUMP_ERR_LOG("push removing tracker event to queue failed");
+            PUMP_ABORT();
+        }
 
         // Add pending trakcer event count
         tev_cnt_.fetch_add(1, std::memory_order_relaxed);
@@ -116,24 +119,23 @@ namespace poll {
 
     bool poller::resume_channel_tracker(channel_tracker *tracker) {
         if (PUMP_UNLIKELY(!tracker->track())) {
-            PUMP_DEBUG_LOG(
-                "poller: resume channel tracker failed for tracker tracking failed");
+            PUMP_WARN_LOG("track tracker failed");
             return false;
         }
         return __resume_channel_tracker(tracker);
     }
 
-    bool poller::push_channel_event(
-        channel_sptr &c, 
-        int32_t event) {
+    bool poller::push_channel_event(channel_sptr &c, int32_t event) {
         if (PUMP_UNLIKELY(!started_.load())) {
-            PUMP_DEBUG_LOG("poller: push channel event failed for no started");
+            PUMP_WARN_LOG("poller is not started, can't push channel event");
             return false;
         }
 
         // Push channel event to queue.
-        PUMP_ABORT_WITH_LOG(!cevents_.push(object_create<channel_event>(c, event)),
-            "poller: push channel event failed for pushing to queue failed");
+        if (!cevents_.push(object_create<channel_event>(c, event))) {
+            PUMP_ERR_LOG("push channel event to queue failed");
+            PUMP_ABORT();
+        }
 
         // Add pending channel event count
         cev_cnt_.fetch_add(1, std::memory_order_relaxed);

@@ -32,11 +32,11 @@ namespace transport {
             object_create<poll::channel_tracker>(ch, poll::TRACK_SEND),
             object_delete<poll::channel_tracker>);
         if (!tracker_) {
-            PUMP_WARN_LOG("base_dialer: start tracker failed for creating tracker");
+            PUMP_WARN_LOG("new dialer's tracker object failed");
             return false;
         }
         if (!get_service()->add_channel_tracker(tracker_, SEND_POLLER_ID)) {
-            PUMP_WARN_LOG("base_dialer: start tracker failed for adding tracker");
+            PUMP_WARN_LOG("add dialer's tracker to service failed");
             return false;
         }
 
@@ -56,7 +56,7 @@ namespace transport {
 
         connect_timer_ = time::timer::create(connect_timeout_, cb);
         if (!connect_timer_) {
-            PUMP_WARN_LOG("base_dialer: start dial timer failed for creating timer");
+            PUMP_WARN_LOG("new dialer's timer object failed");
             return false;
         }
 

@@ -18,7 +18,7 @@
 
 #include <regex>
 
-#if defined(HAVE_ICONV_HEADER)
+#if defined(PUMP_HAVE_ICONV_HEADER)
 #include <iconv.h>
 #endif
 
@@ -44,18 +44,27 @@ namespace pump {
         return 0;
     }
 
-    uint16_t transform_endian(uint16_t val) {
+    uint16_t transform_endian_i16(uint16_t val) {
+#if defined(LITTLE_ENDIAN)
         return (val >> 8) | (val << 8);
+#else
+        return val;
+#endif
     }
 
-    uint32_t transform_endian(uint32_t val) {
+    uint32_t transform_endian_i32(uint32_t val) {
+#if defined(LITTLE_ENDIAN)
         return ((val >> 24) & 0x000000ff) | 
             ((val >> 8)  & 0x0000ff00) |
             ((val << 8)  & 0x00ff0000) |
             ((val << 24) & 0xff000000);
+#else
+        return val;
+#endif
     }
 
-    uint64_t transform_endian(uint64_t val) {
+    uint64_t transform_endian_i64(uint64_t val) {
+#if defined(LITTLE_ENDIAN)
         return ((val >> 56) & 0x00000000000000ff) |
             ((val >> 40) & 0x000000000000ff00) |
             ((val >> 24) & 0x0000000000ff0000) |
@@ -64,6 +73,9 @@ namespace pump {
             ((val << 24) & 0x0000ff0000000000) |
             ((val << 40) & 0x00ff000000000000) |
             ((val << 56) & 0xff00000000000000);
+#else
+        return val;
+#endif
     }
 
     int32_t ceil_to_power_of_two(int32_t val) {
@@ -86,7 +98,7 @@ namespace pump {
 
     std::string gbk_to_utf8(const std::string &in) {
         std::string out;
-#if !defined(HAVE_ICONV_HEADER)
+#if !defined(PUMP_HAVE_ICONV_HEADER)
         std::wstring wstr(
             MultiByteToWideChar(CP_ACP, 0, in.c_str(), -1, NULL, 0) - 1, wchar_t(0));
         MultiByteToWideChar(CP_ACP, 0, in.c_str(), -1, (wchar_t*)wstr.data(), (int32_t)wstr.size());
@@ -118,7 +130,7 @@ namespace pump {
 
     std::string utf8_to_gbk(const std::string &in) {
         std::string out;
-#if !defined(HAVE_ICONV_HEADER)
+#if !defined(PUMP_HAVE_ICONV_HEADER)
         std::wstring wstr(
             MultiByteToWideChar(CP_UTF8, 0, in.c_str(), -1, NULL, 0),wchar_t(0));
         MultiByteToWideChar(CP_UTF8, 0, (LPCSTR)in.c_str(), -1, (wchar_t*)wstr.data(), (int32_t)wstr.size() - 1);

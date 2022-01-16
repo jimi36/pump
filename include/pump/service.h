@@ -19,9 +19,9 @@
 
 #include "pump/poll/poller.h"
 #include "pump/time/manager.h"
-#include "pump/toolkit/freelock_block_queue.h"
-#include "pump/toolkit/freelock_multi_queue.h"
-#include "pump/toolkit/freelock_single_queue.h"
+#include "pump/toolkit/fl_queue.h"
+#include "pump/toolkit/fl_mc_queue.h"
+#include "pump/toolkit/fl_sc_queue.h"
 
 namespace pump {
 
@@ -155,16 +155,16 @@ namespace pump {
         // Task worker
         std::shared_ptr<std::thread> task_worker_;
         typedef pump_function<void()> task_callback;
-        typedef toolkit::freelock_multi_queue<task_callback> task_queue;
-        toolkit::freelock_block_queue<task_queue> posted_tasks_;
+        typedef toolkit::fl_mc_queue<task_callback> task_queue;
+        toolkit::fl_queue<task_queue> posted_tasks_;
 
         // Timers
         time::manager_sptr timers_;
 
         // Timer worker
         std::shared_ptr<std::thread> timer_worker_;
-        typedef toolkit::freelock_single_queue<time::timer_list_sptr> timer_queue;
-        toolkit::freelock_block_queue<timer_queue> triggered_timers_;
+        typedef toolkit::fl_sc_queue<time::timer_list_sptr> timer_queue;
+        toolkit::fl_queue<timer_queue> triggered_timers_;
     };
     DEFINE_ALL_POINTER_TYPE(service);
 

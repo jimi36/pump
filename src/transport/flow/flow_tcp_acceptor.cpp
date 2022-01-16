@@ -31,61 +31,55 @@ namespace flow {
         }
     }
 
-    error_code flow_tcp_acceptor::init(
-        poll::channel_sptr &&ch, 
-        const address &listen_address) {
-        PUMP_DEBUG_FAILED(
-            !ch, 
-            "flow_tcp_acceptor: init failed for channel invalid",
-            return ERROR_FAULT);
-        ch_ = ch;
-
-        is_ipv6_ = listen_address.is_ipv6();
-        int32_t domain = is_ipv6_ ? AF_INET6 : AF_INET;
-
-        iob_ = toolkit::io_buffer::create();
-        iob_->init(ADDRESS_MAX_LEN * 3);
-
-        fd_ = net::create_socket(domain, SOCK_STREAM);
-        if (fd_ == INVALID_SOCKET) {
-            PUMP_DEBUG_LOG("flow_tcp_acceptor: init failed for creating socket failed");
+    error_code flow_tcp_acceptor::init(poll::channel_sptr &&ch, const address &listen_address) {
+        if (!ch) {
+            PUMP_WARN_LOG("channel is invalid");
             return ERROR_FAULT;
         }
 
+        iob_ = toolkit::io_buffer::create(ADDRESS_MAX_LEN * 3);
+        if (iob_ == nullptr) {
+            PUMP_WARN_LOG("new io buffer object failed");
+            return ERROR_FAULT;
+        }
+
+        int32_t domain = listen_address.is_ipv6() ? AF_INET6 : AF_INET;
+        if ((fd_ = net::create_socket(domain, SOCK_STREAM)) == INVALID_SOCKET) {
+            PUMP_WARN_LOG("create socket failed with ec %d", net::last_errno());
+            return ERROR_FAULT;
+        }
         if (!net::set_reuse(fd_, 1)) {
-            PUMP_DEBUG_LOG("flow_tcp_acceptor: init failed for setting socket reuse failed");
+            PUMP_WARN_LOG("set socket address reuse failed with ec %d", net::last_errno());
             return ERROR_FAULT;
         }
         if (!net::set_noblock(fd_, 1)) {
-            PUMP_DEBUG_LOG("flow_tcp_acceptor: init failed for setting socket noblock failed");
+            PUMP_WARN_LOG("set socket noblock failed with ec %d", net::last_errno());
             return ERROR_FAULT;
         }
         if (!net::set_nodelay(fd_, 1)) {
-            PUMP_DEBUG_LOG("flow_tcp_acceptor: init failed for setting socket nodelay failed");
+            PUMP_WARN_LOG("set socket nodelay failed with ec %d", net::last_errno());
             return ERROR_FAULT;
         }
         if (!net::bind(fd_, (sockaddr*)listen_address.get(), listen_address.len())) {
-            PUMP_DEBUG_LOG("flow_tcp_acceptor: init failed for binding socket address failed");
+            PUMP_WARN_LOG("bind socket address failed with ec %d", net::last_errno());
             return ERROR_FAULT;
         }
         if (!net::listen(fd_)) {
-            PUMP_DEBUG_LOG("flow_tcp_acceptor: init failed for listening failed");
+            PUMP_WARN_LOG("listen failed with ec %d", net::last_errno());
             return ERROR_FAULT;
         }
+
+        ch_ = ch;
 
         return ERROR_OK;
     }
 
-    pump_socket flow_tcp_acceptor::accept(
-        address *local_address, 
-        address *remote_address) {
+    pump_socket flow_tcp_acceptor::accept(address *local_address, address *remote_address) {
         int32_t addrlen = ADDRESS_MAX_LEN;
         pump_socket client_fd = net::accept(fd_, (struct sockaddr*)iob_->raw(), &addrlen);
         if (client_fd == INVALID_SOCKET) {
-            PUMP_DEBUG_LOG(
-                "flow_tcp_acceptor: accept failed for %d", 
-                net::last_errno());
-            return -1;
+            PUMP_WARN_LOG("accept socket failed with ec %d", net::last_errno());
+            return INVALID_SOCKET;
         }
             
         remote_address->set((sockaddr*)iob_->raw(), addrlen);
@@ -96,10 +90,9 @@ namespace flow {
 
         if (!net::set_noblock(client_fd, 1) || 
             !net::set_nodelay(client_fd, 1)) {
-            PUMP_DEBUG_LOG(
-                "flow_tcp_acceptor: accept failed for setting noblock or nodelay failed");
+            PUMP_WARN_LOG("set socket noblock or nodelay failed with ec %d", net::last_errno());
             net::close(client_fd);
-            return -1;
+            return INVALID_SOCKET;
         }
 
         return client_fd;

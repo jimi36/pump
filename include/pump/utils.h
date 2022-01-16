@@ -38,9 +38,9 @@ namespace pump {
     /*********************************************************************************
      * Transform little and big endian.
      ********************************************************************************/
-    LIB_PUMP uint16_t transform_endian(uint16_t val);
-    LIB_PUMP uint32_t transform_endian(uint32_t val);
-    LIB_PUMP uint64_t transform_endian(uint64_t val);
+    LIB_PUMP uint16_t transform_endian_i16(uint16_t val);
+    LIB_PUMP uint32_t transform_endian_i32(uint32_t val);
+    LIB_PUMP uint64_t transform_endian_i64(uint64_t val);
 
     /*********************************************************************************
      * Ceil to power of two.

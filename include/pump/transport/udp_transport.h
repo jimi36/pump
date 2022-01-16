@@ -65,9 +65,9 @@ namespace transport {
         }
 
         /*********************************************************************************
-         * Read continue for read once mode
+         * Continue read for read once mode
          ********************************************************************************/
-        virtual error_code read_continue() override;
+        virtual error_code continue_read() override;
 
         /*********************************************************************************
          * Send

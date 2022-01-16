@@ -44,7 +44,7 @@
 
 #include <string.h>
 
-#if defined(WITH_STRNCASECMP) && defined(HAVE_STRNGS_HEADER)
+#if defined(WITH_STRNCASECMP) && defined(PUMP_HAVE_STRNGS_HEADER)
 #include <strings.h>
 #endif
 
@@ -66,17 +66,11 @@
 #define PUMP_INLINE
 #endif
 
-#define PUMP_ENDIAD_KEY 0x01
-#if PUMP_ENDIAD_KEY == 0x0201 >> 8
-#if !defined(BIG_ENDIAN)
+#if defined(PUMP_HAVE_BIG_ENDIAN) && !defined(BIG_ENDIAN)
 #define BIG_ENDIAN
 #endif
-#elif PUMP_ENDIAD_KEY == 0x0102 >> 8
-#if !defined(LITTLE_ENDIAN)
+#if defined(PUMP_HAVE_LITTLE_ENDIAN) && !defined(LITTLE_ENDIAN)
 #define LITTLE_ENDIAN
-#endif
-#else
-#error "Unknow endian"
 #endif
 
 #if defined(__GNUC__)
@@ -87,21 +81,21 @@
 #define PUMP_UNLIKELY(x) (x)
 #endif
 
-#if defined(WITH_STRCPYS)
+#if defined(PUMP_HAVE_STRCPYS)
 #define pump_strncpy strcpy_s
-#elif defined(WITH_STRNCPY)
+#elif defined(PUMP_HAVE_STRNCPY)
 #define pump_strncpy strncpy
 #endif
 
-#if defined(WITH_SPRINTFS)
+#if defined(PUMP_HAVE_SPRINTFS)
 #define pump_snprintf sprintf_s
-#elif defined(WITH_SNPRINTF)
+#elif defined(PUMP_HAVE_SNPRINTF)
 #define pump_snprintf snprintf
 #endif
 
-#if defined(WITH_STRNICMP)
+#if defined(PUMP_HAVE_STRNICMP)
 #define pump_strncasecmp _strnicmp
-#elif defined(WITH_SNPRINTF) 
+#elif defined(PUMP_HAVE_STRNCASECMP)
 #define pump_strncasecmp strncasecmp
 #endif
 
@@ -111,11 +105,11 @@
 #define pump_sleep sleep
 #endif
 
-#if defined(WITH_SWTCHTOTHREAD)
+#if defined(PUMP_HAVE_SWTCHTOTHREAD)
 #define pump_sched_yield SwitchToThread
-#elif defined(WITH_SCHEDYIELD)
+#elif defined(PUMP_HAVE_SCHEDYIELD)
 #define pump_sched_yield sched_yield
-#elif defined(WITH_SCHEDSLEEP)
+#elif defined(PUMP_HAVE_SCHEDSLEEP)
 #define pump_sched_yield() pump_sleep(0)
 #endif
 

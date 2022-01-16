@@ -35,54 +35,51 @@ namespace transport {
         destory_tls_credentials(xcred_);
     }
 
-    error_code tls_acceptor::start(
-        service *sv, 
-        const acceptor_callbacks &cbs) {
-        PUMP_DEBUG_FAILED(
-            !__set_state(TRANSPORT_INITED, TRANSPORT_STARTING), 
-            "tls_acceptor: start failed for transport state incorrect",
-            return ERROR_INVALID);
+    error_code tls_acceptor::start(service *sv, const acceptor_callbacks &cbs) {
+        if (sv == nullptr) {
+            PUMP_WARN_LOG("service is invalid");
+            return ERROR_INVALID;
+        }
 
-        bool ret = false;
-        toolkit::defer cleanup([&]() {
-            if (ret) {
-                __set_state(TRANSPORT_STARTING, TRANSPORT_STARTED);
-            } else {
-                __set_state(TRANSPORT_STARTING, TRANSPORT_ERROR);
-                __close_accept_flow();
+        if (!cbs.accepted_cb || !cbs.stopped_cb) {
+            PUMP_WARN_LOG("callbacks is invalid");
+            return ERROR_INVALID;
+        }
+
+        if (xcred_ == nullptr) {
+            PUMP_WARN_LOG("tls acceptor's cert is invalid");
+            return ERROR_INVALID;
+        }
+
+        if (!__set_state(TRANSPORT_INITED, TRANSPORT_STARTING)) {
+            PUMP_WARN_LOG("tls acceptor is already started before");
+            return ERROR_FAULT;
+        }
+
+        do {
+            cbs_ = cbs;
+
+            __set_service(sv);
+
+            if (!__open_accept_flow()) {
+                PUMP_WARN_LOG("open tls acceptor's flow failed");
+                break;
             }
-        });
 
-        PUMP_DEBUG_FAILED(
-            xcred_ == nullptr, 
-            "tls_acceptor: start failed for cert invalid",
-            return ERROR_INVALID);
+            if (!__start_accept_tracker(shared_from_this())) {
+                PUMP_WARN_LOG("start tls acceptor's tracker failed");
+                break;
+            }
 
-        PUMP_DEBUG_FAILED(
-            sv == nullptr, 
-            "tls_acceptor: start failed for service invalid",
-            return ERROR_INVALID);
-        __set_service(sv);
+            if (__set_state(TRANSPORT_STARTING, TRANSPORT_STARTED)) {
+                return ERROR_OK;
+            }
+        } while (false);
 
-        PUMP_DEBUG_FAILED(
-            !cbs.accepted_cb || !cbs.stopped_cb,
-            "tls_acceptor: start failed for callbacks invalid", 
-            return ERROR_INVALID);
-        cbs_ = cbs;
+        __set_state(TRANSPORT_STARTING, TRANSPORT_ERROR);
+        __close_accept_flow();
 
-        if (!__open_accept_flow()) {
-            PUMP_DEBUG_LOG("tls_acceptor: start failed for opening flow failed");
-            return ERROR_FAULT;
-        }
-
-        if (!__start_accept_tracker(shared_from_this())) {
-            PUMP_WARN_LOG("tls_acceptor: start failed for starting tracker failed");
-            return ERROR_FAULT;
-        }
-
-        ret = true;
-
-        return ERROR_OK;
+        return ERROR_FAULT;
     }
 
     void tls_acceptor::stop() {
@@ -107,20 +104,17 @@ namespace transport {
                     pump_bind(&tls_acceptor::on_handshake_stopped, shared_from_this(), _1);
                 handshaker->init(fd, false, xcred_, local_address, remote_address);
                 if (!handshaker->start(get_service(), handshake_timeout_, handshaker_cbs)) {
-                    PUMP_DEBUG_LOG(
-                        "tls_acceptor: handle read failed for starting handshaker failed");
+                    PUMP_WARN_LOG("start tls handshaker failed");
                     __remove_handshaker(handshaker);
                 }
             } else {
-                PUMP_WARN_LOG(
-                    "tls_acceptor: handle read failed for creating handshaker failed");
+                PUMP_WARN_LOG("create tls handshaker failed");
                 net::close(fd);
             }
         }
 
         if(!__resume_accept_tracker()) {
-            PUMP_WARN_LOG(
-                "tls_acceptor: handle read failed for resuming tracker failed");
+            PUMP_WARN_LOG("resume tls acceptor's tracker failed");
         }
     }
 
@@ -136,7 +130,7 @@ namespace transport {
         if (succ && acceptor->is_started()) {
             tls_transport_sptr tls_transport = tls_transport::create();
             if (!tls_transport) {
-                PUMP_WARN_LOG("tls_acceptor: handle handshaked failed for creating tls transport");
+                PUMP_WARN_LOG("new tls transport object failed");
                 return;
             }
             tls_transport->init(
@@ -164,11 +158,11 @@ namespace transport {
             object_create<flow::flow_tls_acceptor>(),
             object_delete<flow::flow_tls_acceptor>);
         if (!flow_) { 
-            PUMP_WARN_LOG("tls_acceptor: open flow failed for creating flow failed");
+            PUMP_WARN_LOG("new tls acceptor's flow failed");
             return false;
         }
         if (flow_->init(shared_from_this(), listen_address_) != ERROR_OK) {
-            PUMP_DEBUG_LOG("tls_acceptor: open flow failed for initing flow failed");
+            PUMP_WARN_LOG("init tls acceptor's flow failed");
             return false;
         }
 
@@ -188,7 +182,7 @@ namespace transport {
             object_create<tls_handshaker>(),
             object_delete<tls_handshaker>);
         if (!handshaker) {
-            PUMP_WARN_LOG("tls_acceptor: create handshaker failed");
+            PUMP_WARN_LOG("new tls handshaker object failed");
             return nullptr;
         }
         std::lock_guard<std::mutex> lock(handshaker_mx_);

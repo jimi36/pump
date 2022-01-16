@@ -151,18 +151,16 @@ namespace transport {
         }
 
         /*********************************************************************************
-         * Read continue for read once mode
+         * Continue read  for read once mode
          ********************************************************************************/
-        virtual error_code read_continue() {
+        virtual error_code continue_read() {
             return ERROR_FAULT;
         }
 
         /*********************************************************************************
          * Send
          ********************************************************************************/
-        virtual error_code send(
-            const block_t *b, 
-            int32_t size) {
+        virtual error_code send(const block_t *b, int32_t size) {
             return ERROR_DISABLE;
         }
 
@@ -256,14 +254,14 @@ namespace transport {
                     object_delete<poll::channel_tracker>);
                 if (!r_tracker_ || 
                     !get_service()->add_channel_tracker(r_tracker_, READ_POLLER_ID)) {
-                    PUMP_DEBUG_LOG("base_transport: start read tracker failed");
+                    PUMP_WARN_LOG("add transport's read tracker to service failed");
                     return false;
                 }
             } else {
                 auto poller = r_tracker_->get_poller();
                 if (poller == nullptr || 
                     !poller->resume_channel_tracker(r_tracker_.get())) {
-                    PUMP_DEBUG_LOG("base_transport: resume read tracker failed");
+                    PUMP_WARN_LOG("resume transport's read tracker failed");
                     return false;
                 }
             }
@@ -278,14 +276,14 @@ namespace transport {
                     object_delete<poll::channel_tracker>);
                 if (!s_tracker_ || 
                     !get_service()->add_channel_tracker(s_tracker_, SEND_POLLER_ID)) {
-                    PUMP_DEBUG_LOG("base_transport: start send tracker failed");
+                    PUMP_WARN_LOG("add transport's send tracker to service failed");
                     return false;
                 }
             } else {
                 auto poller = s_tracker_->get_poller();
                 if (poller == nullptr || 
                     !poller->resume_channel_tracker(s_tracker_.get())) {
-                    PUMP_DEBUG_LOG("base_transport: resume send tracker failed");
+                    PUMP_WARN_LOG("resume transport's send tracker failed");
                     return false;
                 }
             }

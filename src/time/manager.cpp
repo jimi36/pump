@@ -32,18 +32,19 @@ namespace time {
         if (!started_.load()) {
             started_.store(true);
 
-            PUMP_DEBUG_FAILED(
-                !cb,
-                "manager: start failed for callback invalid",
-                return false);
+            if (!cb) {
+                PUMP_WARN_LOG("timer pending callback invalid");
+                return false;
+            }
             pending_cb_ = cb;
 
             observer_.reset(
                 object_create<std::thread>(pump_bind(&manager::__observe_thread, this)),
                 object_delete<std::thread>);
             if (!observer_) {
-                PUMP_WARN_LOG("manager: start failed for creating observer thread failed");
+                PUMP_WARN_LOG("create observer thread failed");
                 started_.store(false);
+                return false;
             }
         }
 
@@ -58,25 +59,29 @@ namespace time {
 
     bool manager::start_timer(timer_sptr &ptr) {
         if (PUMP_UNLIKELY(!started_.load())) {
-            PUMP_DEBUG_LOG("manager: start timer failed for no statred");
+            PUMP_WARN_LOG("manager is not started, can't start timer");
             return false;
         }
         if (PUMP_UNLIKELY(!ptr->__start(this))) {
-            PUMP_DEBUG_LOG("manager: start timer failed");
+            PUMP_WARN_LOG("start timer failed");
             return false;
         }
-        PUMP_ABORT_WITH_LOG(!new_timers_.enqueue(ptr),
-            "manager: start timer failed for pushing to queue failed");
+        if (!new_timers_.enqueue(ptr)) {
+            PUMP_ERR_LOG("push timer to queue failed");
+            PUMP_ABORT();
+        }
         return true;
     }
 
     bool manager::restart_timer(timer_sptr &&ptr) {
         if (PUMP_UNLIKELY(!started_.load())) {
-            PUMP_DEBUG_LOG("manager: restart timer failed for no started");
+            PUMP_WARN_LOG("manager is not started, can't restart timer");
             return false;
         }
-        PUMP_ABORT_WITH_LOG(!new_timers_.enqueue(std::move(ptr)),
-            "manager: restart timer failed for pushing to queue failed");
+        if (!new_timers_.enqueue(std::move(ptr))) {
+            PUMP_ERR_LOG("push timer to queue failed");
+            PUMP_ABORT();
+        }
         return true;
     }
 

@@ -160,11 +160,11 @@ pump_c_acceptor pump_c_tls_acceptor_create(
     int port,
     const char *cert,
     const char *key) {
-    transport::tls_credentials xcred = transport::create_tls_credentials(
-                                        false, 
-                                        false, 
-                                        cert, 
-                                        key);
+    transport::tls_credentials xcred = nullptr;
+    xcred = transport::create_tls_credentials_from_memory(
+                false, 
+                cert, 
+                key);
     if (xcred == nullptr) {
         return nullptr;
     }

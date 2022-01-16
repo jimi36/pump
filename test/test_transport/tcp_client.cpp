@@ -49,7 +49,7 @@ class my_tcp_dialer : public std::enable_shared_from_this<my_tcp_dialer> {
             pump_bind(&my_tcp_dialer::on_disconnected_callback, this, transp.get());
 
         transport_ = std::static_pointer_cast<pump::tcp_transport>(transp);
-        if (transport_->start(sv, READ_MODE_LOOP, cbs) != 0) {
+        if (transport_->start(sv, READ_MODE_ONCE, cbs) != 0) {
             return;
         }
 
@@ -86,6 +86,8 @@ class my_tcp_dialer : public std::enable_shared_from_this<my_tcp_dialer> {
             read_pocket_size_ -= send_pocket_size;
             send_data();
         }
+
+        transp->continue_read();
     }
 
     /*********************************************************************************

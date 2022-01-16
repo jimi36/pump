@@ -21,9 +21,11 @@
 #define PUMP_MINOR_VERSION @pump_MINOR_VERSION@
 #define PUMP_BUILD_VERSION @pump_BUILD_VERSION@
 
-#define @pump_WITH_DEBUG_LOG@
-#if defined(WITH_DEBUG_LOG)
-#define PUMP_HAVE_DEBUG_LOG
+#define @pump_WITH_ENDIAN@
+#if defined(WITH_BIG_ENDIAN)
+#define PUMP_HAVE_BIG_ENDIAN
+#elif defined(WITH_LITTLE_ENDIAN)
+#define PUMP_HAVE_LITTLE_ENDIAN
 #endif
 
 #define @pump_WITH_WINSOCK@
@@ -57,12 +59,49 @@
 #define PUMP_HAVE_JEMALLOC
 #endif
 
-#define @pump_HAVE_STRNGS_HEADER@
-#define @pump_HAVE_ICONV_HEADER@
+#define @pump_FOUND_STRNGS_HEADER@
+#if defined(FOUND_STRNGS_HEADER)
+#define PUMP_HAVE_STRNGS_HEADER
+#endif
 
-#define @pump_WITH_STRNCPY_FUNC@
-#define @pump_WITH_SNPRINTF_FUNC@
+#define @pump_FOUND_ICONV_HEADER@
+#if defined(FOUND_ICONV_HEADER)
+#define PUMP_HAVE_ICONV_HEADER
+#endif
+
+#define @pump_FOUND_STRNCPY_FUNC@
+#if defined(FOUND_STRCPYS)
+#define PUMP_HAVE_STRCPYS
+#elif defined(FOUND_STRNCPY)
+#define PUMP_HAVE_STRNCPY
+#endif
+
+#define @pump_FOUND_SNPRINTF_FUNC@
+#if defined(FOUND_SPRINTFS)
+#define PUMP_HAVE_SPRINTFS
+#elif defined(FOUND_SNPRINTF)
+#define PUMP_HAVE_SNPRINTF
+#endif
+
 #define @pump_WITH_STRNCASECMP_FUNC@
+#if defined(FOUND_STRNICMP)
+#define PUMP_HAVE_STRNICMP
+#elif defined(FOUND_STRNCASECMP)
+#define PUMP_HAVE_STRNCASECMP
+#endif
+
 #define @pump_WITH_SCHEDYIELD_FUNC@
+#if defined(FOUND_SWTCHTOTHREAD)
+#define PUMP_HAVE_SWTCHTOTHREAD
+#elif defined(FOUND_SCHEDYIELD)
+#define PUMP_HAVE_SCHEDYIELD
+#else
+#define PUMP_HAVE_SCHEDSLEEP
+#endif
+
+#define @pump_WITH_DEBUG_LOG@
+#if defined(WITH_DEBUG_LOG)
+#define PUMP_HAVE_DEBUG_LOG
+#endif
 
 #endif

@@ -49,13 +49,18 @@ namespace transport {
     LIB_PUMP tls_credentials create_tls_client_credentials();
 
     /*********************************************************************************
-     * Create tls credentials by file.
+     * Create tls credentials.
      ********************************************************************************/
-    LIB_PUMP tls_credentials create_tls_credentials(
+    LIB_PUMP tls_credentials  create_tls_credentials_from_file(
         bool client,
-        bool by_file,
         const std::string &cert,
-        const std::string &key);
+        const std::string &key
+    );
+    LIB_PUMP tls_credentials  create_tls_credentials_from_memory(
+        bool client,
+        const std::string &cert,
+        const std::string &key
+    );
 
     /*********************************************************************************
      * Destory tls certificate.

@@ -27,29 +27,28 @@ namespace flow {
     flow_tcp::~flow_tcp() {
     }
 
-    error_code flow_tcp::init(
-        poll::channel_sptr &&ch, 
-        pump_socket fd) {
-        PUMP_DEBUG_FAILED(
-            !ch, 
-            "flow_tcp: init failed for channel invalid",
-            return ERROR_FAULT);
-        ch_ = ch;
+    error_code flow_tcp::init(poll::channel_sptr &&ch, pump_socket fd) {
+        if (!ch) {
+            PUMP_WARN_LOG("channel is invalid");
+            return ERROR_FAULT;
+        }
+        
+        if (fd < 0) { 
+            PUMP_WARN_LOG("socket fd is invalid");
+            return ERROR_FAULT;
+        }
 
-        PUMP_DEBUG_FAILED(
-            fd < 0, 
-            "flow_tcp: init failed for fd invalid",
-            return ERROR_FAULT);
+        ch_ = ch;
         fd_ = fd;
 
         return ERROR_OK;
     }
 
     error_code flow_tcp::want_to_send(toolkit::io_buffer *iob) {
-        PUMP_DEBUG_FAILED(
-            iob == nullptr,  
-            "flow_tcp: want to send failed for io buffer invalid",
-            return ERROR_FAULT);
+        if (iob == nullptr) { 
+            PUMP_WARN_LOG("io buffer is invalid");
+            return ERROR_FAULT;
+        }
         send_iob_ = iob;
         
         int32_t size = net::send(fd_, send_iob_->data(), send_iob_->size());
@@ -63,8 +62,7 @@ namespace flow {
             return ERROR_AGAIN;
         }
 
-        PUMP_DEBUG_LOG(
-            "flow_tcp: want to send failed for %d", net::last_errno());
+        PUMP_WARN_LOG("send buffer failed with ec %d", net::last_errno());
 
         return ERROR_FAULT;
     }
@@ -84,8 +82,7 @@ namespace flow {
             return ERROR_AGAIN;
         }
 
-        PUMP_DEBUG_LOG(
-            "flow_tcp: send failed for %d", net::last_errno());
+        PUMP_WARN_LOG("send buffer failed with ec %d", net::last_errno());
 
         return ERROR_FAULT;
     }

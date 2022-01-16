@@ -37,15 +37,15 @@ namespace poll {
         cur_event_count_(0) {
 #if defined(PUMP_HAVE_EPOLL)
         if ((fd_ = ::epoll_create1(0)) < 0) {
-            PUMP_ERR_LOG(
-                "epoll_poller: epoll_create1 failed %d", 
-                net::last_errno());
+            PUMP_ERR_LOG("create epoll fd failed %d", net::last_errno());
             PUMP_ABORT();
         }
         
         events_ = pump_malloc(sizeof(struct epoll_event) * max_event_count_);
-        PUMP_ABORT_WITH_LOG(events_ == nullptr,
-            "epoll_poller: allocate epoll events memory failed");
+        if (events_ == nullptr) {
+            PUMP_ERR_LOG("allocate epoll events memory failed");
+            PUMP_ABORT();
+        }
 #else
         PUMP_ABORT();
 #endif
@@ -76,11 +76,8 @@ namespace poll {
             cur_event_count_.fetch_add(1, std::memory_order_relaxed);
             return true;
         }
-
-        PUMP_DEBUG_LOG(
-            "epoll_poller: add channel tracker failed %d", 
-            net::last_errno());
 #endif
+        PUMP_WARN_LOG("install channel tracker failed %d", net::last_errno());
         return false;
     }
 
@@ -93,11 +90,8 @@ namespace poll {
         } else if (errno == ENOENT) {
             return true;
         }
-
-        PUMP_DEBUG_LOG(
-            "epoll_poller: remove channel tracker failed %d", 
-            net::last_errno());
 #endif
+        PUMP_WARN_LOG("uninstall channel tracker failed %d", net::last_errno());
         return false;
     }
 
@@ -114,11 +108,8 @@ namespace poll {
         if (epoll_ctl(fd_, EPOLL_CTL_MOD, tracker->get_fd(), event) == 0) {
             return true;
         }
-
-        PUMP_DEBUG_LOG(
-            "epoll_poller: resume channel tracker failed %d", 
-            net::last_errno());
 #endif
+        PUMP_WARN_LOG("resume channel tracker failed %d", net::last_errno());
         return false;
     }
 
@@ -128,7 +119,10 @@ namespace poll {
         if (PUMP_UNLIKELY(cur_event_count > max_event_count_)) {
             max_event_count_ = cur_event_count;
             events_ = pump_realloc(events_, sizeof(struct epoll_event) * max_event_count_);
-            PUMP_ASSERT(events_);
+            if (events_ == nullptr) {
+                PUMP_ERR_LOG("reallocate epoll events memory failed");
+                PUMP_ABORT();
+            }
         }
 
         auto count = ::epoll_wait(

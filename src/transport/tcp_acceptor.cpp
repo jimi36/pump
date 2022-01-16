@@ -24,49 +24,46 @@ namespace transport {
       : base_acceptor(TCP_ACCEPTOR, listen_address) {
     }
 
-    error_code tcp_acceptor::start(
-        service *sv, 
-        const acceptor_callbacks &cbs) {
-        PUMP_DEBUG_FAILED(
-            !__set_state(TRANSPORT_INITED, TRANSPORT_STARTING), 
-            "tcp_acceptor: start failed for transport state incorrect",
-            return ERROR_INVALID);
+    error_code tcp_acceptor::start(service *sv, const acceptor_callbacks &cbs) {
+        if (sv == nullptr) {
+            PUMP_WARN_LOG("service is invalid");
+            return ERROR_INVALID;
+        }
 
-        bool ret = false;
-        toolkit::defer cleanup([&]() {
-            if (ret) {
-                __set_state(TRANSPORT_STARTING, TRANSPORT_STARTED);
-            } else {
-                __set_state(TRANSPORT_STARTING, TRANSPORT_ERROR);
-                __close_accept_flow();
+        if (!cbs.accepted_cb || !cbs.stopped_cb) {
+            PUMP_WARN_LOG("callbacks is invalid");
+            return ERROR_INVALID;
+        }
+
+        if (!__set_state(TRANSPORT_INITED, TRANSPORT_STARTING)) {
+            PUMP_WARN_LOG("tcp acceptor is already started before");
+            return ERROR_FAULT;
+        }
+
+        do {
+            cbs_ = cbs;
+
+            __set_service(sv);
+
+            if (!__open_accept_flow()) {
+                PUMP_WARN_LOG("open tcp acceptor's flow failed");
+                break;
             }
-        });
 
-        PUMP_DEBUG_FAILED(
-            sv == nullptr, 
-            "tcp_acceptor: start failed for service invalid",
-            return ERROR_INVALID);
-        __set_service(sv);
+            if (!__start_accept_tracker(shared_from_this())) {
+                PUMP_WARN_LOG("start tcp acceptor's tracker failed");
+                break;
+            }
 
-        PUMP_DEBUG_FAILED(
-            !cbs.accepted_cb || !cbs.stopped_cb, 
-            "tcp_acceptor: start failed for callbacks invalid",
-            return ERROR_INVALID);
-        cbs_ = cbs;
+            if (__set_state(TRANSPORT_STARTING, TRANSPORT_STARTED)) {
+                return ERROR_OK;
+            }
+        } while(false);
+        
+        __set_state(TRANSPORT_STARTING, TRANSPORT_ERROR);
+        __close_accept_flow();
 
-        if (!__open_accept_flow()) {
-            PUMP_DEBUG_LOG("tcp_acceptor: start failed for opening flow failed");
-            return ERROR_FAULT;
-        }
-
-        if (!__start_accept_tracker(shared_from_this())) {
-            PUMP_DEBUG_LOG("tcp_acceptor: start failed for starting tracker failed");
-            return ERROR_FAULT;
-        }
-
-        ret = true;
-
-        return ERROR_OK;
+        return ERROR_FAULT;
     }
 
     void tcp_acceptor::stop() {
@@ -87,15 +84,13 @@ namespace transport {
                 base_transport_sptr transport = tcp_transport;
                 cbs_.accepted_cb(transport);
             } else {
-                PUMP_WARN_LOG(
-                    "tcp_acceptor: handle read event failed for creating transportr failed");
+                PUMP_ERR_LOG("new tcp transport object failed");
                 net::close(fd);
             }
         }
 
         if(!__resume_accept_tracker()) {
-            PUMP_WARN_LOG(
-                "tcp_acceptor: handle read event failed for resuming tracker failed");
+            PUMP_WARN_LOG("resume tcp acceptor's tracker failed");
         }
     }
 
@@ -105,11 +100,11 @@ namespace transport {
             object_create<flow::flow_tcp_acceptor>(),
             object_delete<flow::flow_tcp_acceptor>);
         if (!flow_) { 
-            PUMP_WARN_LOG("tcp_acceptor: open flow failed for creating flow failed");
+            PUMP_WARN_LOG("new tcp acceptor's flow object failed");
             return false;
         }
         if (flow_->init(shared_from_this(), listen_address_) != ERROR_OK) {
-            PUMP_DEBUG_LOG("tcp_acceptor: open flow failed for initing flow failed");
+            PUMP_DEBUG_LOG("init tcp acceptor's flow failed");
             return false;
         }
 

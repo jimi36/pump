@@ -43,9 +43,7 @@ namespace flow {
          *     ERROR_OK    => success
          *     ERROR_FAULT => error
          ********************************************************************************/
-        error_code init(
-            poll::channel_sptr &&ch, 
-            const address &bind_address);
+        error_code init(poll::channel_sptr &&ch, const address &bind_address);
 
         /*********************************************************************************
          * Read from

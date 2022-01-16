@@ -55,7 +55,7 @@ namespace transport {
 #endif
     }
 
-    tls_credentials __create_credentials_from_file(
+    tls_credentials create_tls_credentials_from_file(
         bool client,
         const std::string &cert,
         const std::string &key) {
@@ -99,7 +99,7 @@ namespace transport {
 #endif
     }
 
-    tls_credentials __create_credentials_from_memory(
+    tls_credentials create_tls_credentials_from_memory(
         bool client,
         const std::string &cert,
         const std::string &key) {
@@ -180,19 +180,6 @@ namespace transport {
 #else
         return nullptr;
 #endif
-    }
-
-    tls_credentials create_tls_credentials(
-        bool client,
-        bool by_file,
-        const std::string& cert,
-        const std::string& key) {
-        if (by_file) {
-            return __create_credentials_from_file(client, cert, key);
-        }
-        else {
-            return __create_credentials_from_memory(client, cert, key);
-        }
     }
 
     void destory_tls_credentials(tls_credentials xcred) {
