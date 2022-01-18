@@ -34,6 +34,7 @@ extern "C" {
 namespace pump {
 namespace ssl {
 
+#if defined(PUMP_HAVE_OPENSSL)
     static int32_t __to_ssl_curve_id(curve_group_type curve) {
         if (curve == TLS_CURVE_P256) {
             return NID_X9_62_prime256v1;
@@ -42,8 +43,9 @@ namespace ssl {
         } else if (curve == TLS_CURVE_P521) {
             return NID_secp521r1;
         }
-        return -1;
+	return -1;
     }
+#endif
 
     static ecdhe_context* __new_X25519_context() {
         ecdhe_context *ctx = nullptr;
