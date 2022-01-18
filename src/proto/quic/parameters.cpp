@@ -33,7 +33,7 @@ namespace quic {
         }
 
         auto addr_v6 = (const sockaddr_in6*)preferred_address->ipv6.get();;
-        if (!iob->write((block_t*)&addr_v6->sin6_addr.__in6_u.__u6_addr8, 16) ||
+        if (!iob->write((block_t*)&addr_v6->sin6_addr, 16) ||
             !iob->write((block_t*)&addr_v6->sin6_port, 2)) {
             return false;
         }
@@ -60,7 +60,7 @@ namespace quic {
         preferred_address->ipv4.set((const struct sockaddr*)&addr_v4, sizeof(sockaddr_in));
 
         sockaddr_in6 addr_v6;
-        if (!iob->read((block_t*)addr_v6.sin6_addr.__in6_u.__u6_addr8, 16) ||
+        if (!iob->read((block_t*)&addr_v6.sin6_addr, 16) ||
             !iob->read((block_t*)&addr_v6.sin6_port, 2)) {
             return false;
         }

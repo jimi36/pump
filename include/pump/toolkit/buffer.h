@@ -18,6 +18,7 @@
 #define pump_toolkit_buffer_h
 
 #include <atomic>
+#include <string>
 
 #include "pump/debug.h"
 #include "pump/types.h"

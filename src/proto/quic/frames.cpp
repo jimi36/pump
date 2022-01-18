@@ -332,7 +332,7 @@ namespace quic {
         }
         frame->data.resize(len);
         if (!read_string_from_iob(iob, frame->data)) {
-            return -1;
+            return false;
         }
 
         return true;
@@ -862,7 +862,7 @@ namespace quic {
         }
 
         if (!varint_decode(iob, &frame->ec)) {
-            return -1;
+            return false;
         }
 
         uint64_t len = 0;

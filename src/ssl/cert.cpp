@@ -44,6 +44,9 @@ namespace ssl {
 #if defined(PUMP_HAVE_OPENSSL)
         EVP_PKEY *key;
         X509 *cert;
+#else
+        void *key;
+        void *cert;
 #endif
     };
 
@@ -406,8 +409,8 @@ namespace ssl {
         const std::string &msg,
         std::string &sign) {
         bool ret = false;
-        size_t sign_len = 0;
 #if defined(PUMP_HAVE_OPENSSL)
+        size_t sign_len = 0;
         PUMP_ASSERT(xcert->key != nullptr);
         if (xcert->key == nullptr) {
             return false;
