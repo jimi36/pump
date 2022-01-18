@@ -24,43 +24,43 @@ namespace proto {
 namespace quic {
 
     // Max ack delay exponent
-    const static uint64_t MAX_ACK_DELAY_EXPONENT = 20;
+    const static int64_t MAX_ACK_DELAY_EXPONENT = 20;
 
     // Default ack delay exponent with 3.
-    const static uint64_t DEF_ACK_DELAY_EXPONENT = 3;
+    const static int64_t DEF_ACK_DELAY_EXPONENT = 3;
 
     // MAx max ack delay with 16383 milliseconds.
-    const static uint64_t MAX_MAX_ACK_DELAY = (1 << 14 - 1);
+    const static int64_t MAX_MAX_ACK_DELAY = (1 << 14) - 1;
 
     // Default max ack delay with 25 milliseconds.
-    const static uint64_t DEF_MAX_ACK_DELAY = 25;
+    const static int64_t DEF_MAX_ACK_DELAY = 25;
 
     // Default idle timeout with 30s.
-    const static uint64_t DEF_IDLE_TIMEOUT = 30000;
+    const static int64_t DEF_IDLE_TIMEOUT = 30000;
 
     // Default remote idle timeout for accept with 5s;
-    const static uint64_t DEF_MIN_REMOTE_IDLE_TIMEOUT = 5000;
+    const static int64_t DEF_MIN_REMOTE_IDLE_TIMEOUT = 5000;
 
     // Default idle timeout used before handshake completion with 5s.
-    const static uint64_t DEF_HANDSHAKE_IDLE_TIMEOUT = 5000;
+    const static int64_t DEF_HANDSHAKE_IDLE_TIMEOUT = 5000;
 
     // Default timeout for a connection until the crypto handshake succeeds with 10s.
-    const static uint64_t DEF_HANDSHAKE_TIMEOUT = 10000;
+    const static int64_t DEF_HANDSHAKE_TIMEOUT = 10000;
 
     // Default max time until sending a packet to keep a connection alive with 20s.
     // It should be shorter than the time that NATs clear their mapping.
-    const static uint64_t DEF_MAX_KEEP_ALIVE_INTERVAL = 20000;
+    const static int64_t DEF_MAX_KEEP_ALIVE_INTERVAL = 20000;
 
     // Default min active connection id limit with 2.
-    const static uint64_t DEF_MIN_ACTIVE_CID_LIMIT = 2;
+    const static int64_t DEF_MIN_ACTIVE_CID_LIMIT = 2;
 
     // Default time to keeping closed sessions around in order to retransmit the CONNECTION_CLOSE with 5s.
     // After this time all information about the old connection will be deleted.
-    const static uint64_t DEF_RETIRED_CID_DELETE_TIMEOUT = 5000;
+    const static int64_t DEF_RETIRED_CID_DELETE_TIMEOUT = 5000;
 
     // Max stream count value that can be sent in MAX_STREAMS frames and as the stream count
 	// in the transport parameters.
-    const static uint64_t MAX_STREAM_COUNT = 1 << 60;
+    const static int64_t MAX_STREAM_COUNT = int64_t(1) << 60;
 
 }
 }

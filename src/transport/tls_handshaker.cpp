@@ -29,7 +29,7 @@ namespace transport {
         }
     }
 
-    void tls_handshaker::init(
+    bool tls_handshaker::init(
         pump_socket fd,
         bool client,
         tls_credentials xcred,
@@ -38,8 +38,14 @@ namespace transport {
         // Set addresses.
         local_address_ = local_address;
         remote_address_ = remote_address;
+
         // Open flow.
-        PUMP_DEBUG_CHECK(__open_flow(client, fd, xcred));
+        if (!__open_flow(client, fd, xcred)) {
+            PUMP_WARN_LOG("open tls handshaker's flow falied");
+            return false;
+        }
+
+        return true;
     }
 
     bool tls_handshaker::start(

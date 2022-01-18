@@ -19,12 +19,13 @@
 
 #include <string>
 
-#include "pump/types.h"
 #include "pump/toolkit/buffer.h"
 
 namespace pump {
 namespace proto {
 namespace quic {
+
+    using toolkit::io_buffer;
 
     const int32_t MAX_CID_LENGTH = 20;
 
@@ -41,12 +42,12 @@ namespace quic {
         /*********************************************************************************
          * Read from io buffer
          ********************************************************************************/
-        bool read_from(toolkit::io_buffer *iob, uint32_t len);
+        bool read_from(io_buffer *iob, uint32_t len);
 
         /*********************************************************************************
          * Write to io buffer
          ********************************************************************************/
-        bool write_to(toolkit::io_buffer *iob) const;
+        bool write_to(io_buffer *iob) const;
 
         /*********************************************************************************
          * Format to base64 string

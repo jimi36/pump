@@ -24,145 +24,6 @@ namespace proto {
 namespace quic {
 namespace tls {
 
-    uint8_t* pack_bytes(
-        uint8_t *des, 
-        uint8_t *end, 
-        const uint8_t *src, 
-        int32_t size) {
-        if (end < des + size) {
-            return nullptr;
-        }
-        memcpy(des, src, size);
-        return des + size;
-    }
-
-    uint8_t* pack_bytes(
-        uint8_t *des, 
-        uint8_t *end, 
-        const std::string &src) {
-        if (end < des + (int32_t)src.size()) {
-            return nullptr;
-        }
-        memcpy(des, src.c_str(), (int32_t)src.size());
-        return des + (int32_t)src.size();
-    }
-
-    const uint8_t* unpack_bytes(
-        const uint8_t *src, 
-        const uint8_t *end, 
-        uint8_t *des, 
-        int32_t size) {
-        if (end < src + size) {
-            return nullptr;
-        }
-        memcpy(des, src, size);
-        return src + size;
-    }
-
-    const uint8_t* unpack_bytes(
-        const uint8_t *src, 
-        const uint8_t *end, 
-        std::string &des, 
-        int32_t size) {
-        if (end < src + size) {
-            return nullptr;
-        }
-        des.assign((const char*)src, size);
-        return src + size;
-    }
-
-    uint8_t* pack_uint8(
-        uint8_t *p, 
-        uint8_t *end, 
-        uint8_t val) {
-        if (end < p + 1) {
-            return nullptr;
-        }
-        *(p++) = val;
-        return p;
-    }
-
-    const uint8_t* unpack_uint8(
-        const uint8_t *p, 
-        const uint8_t *end, 
-        uint8_t &val) {
-        if (end < p + 1) {
-            return nullptr;
-        }
-        val = *(p++);
-        return p;
-    }
-
-    uint8_t* pack_uint16(
-        uint8_t *p, 
-        uint8_t *end, 
-        uint16_t val) {
-        if (end < p + 2) {
-            return nullptr;
-        }
-        *((uint16_t*)p) = pump::transform_endian_i16(val);
-        return p + 2;
-    }
-
-    const uint8_t* unpack_uint16(
-        const uint8_t *p, 
-        const uint8_t *end, 
-        uint16_t &val) {
-        if (end < p + 2) {
-            return nullptr;
-        }
-        val = pump::transform_endian_i16(*((uint16_t*)p));
-        return p + 2;
-    }
-
-    uint8_t* pack_uint24(
-        uint8_t *p, 
-        uint8_t *end, 
-        uint32_t val) {
-        if (end < p + 3) {
-            return nullptr;
-        }
-        *(p + 0) = int8_t(val >> 16);
-        *(p + 1) = int8_t(val >> 8);
-        *(p + 2) = int8_t(val);
-        return p + 3;
-    }
-
-    const uint8_t* unpack_uint24(
-        const uint8_t *p, 
-        const uint8_t *end, 
-        uint32_t &val) {
-        if (end < p + 3) {
-            return nullptr;
-        }
-        val = (uint32_t(*(p + 0)) << 16) |
-              (uint32_t(*(p + 1)) << 8) |
-              (uint32_t(*(p + 2))) ;
-        return p + 3;
-    }
-
-    uint8_t* pack_uint32(
-        uint8_t *p, 
-        uint8_t *end, 
-        uint32_t val) {
-        if (end <  p + 4) {
-            return nullptr;
-        }
-        *((uint32_t*)p) = pump::transform_endian_i32(val);
-        return p + 4;
-    }
-
-    const uint8_t* unpack_uint32(
-        const uint8_t *p, 
-        const uint8_t *end, 
-        uint32_t &val) {
-        if (end < p + 4) {
-            return nullptr;
-        }
-        val = pump::transform_endian_i32(*((uint32_t*)p));
-        return p + 4;
-    }
-
     cipher_suite_context* new_cipher_suite_context(cipher_suite_type suite_type) {
         cipher_suite_context *ctx = nullptr;
         switch (suite_type)
@@ -235,9 +96,13 @@ namespace tls {
         std::string out;
         if (key.empty()) {
             std::string new_key(ssl::hash_digest_length(algo), 0);
-            PUMP_DEBUG_CHECK(ssl::hkdf_extract(algo, salt, new_key, out));
+            if (!ssl::hkdf_extract(algo, salt, new_key, out)) {
+                PUMP_WARN_LOG("ssl hkdf extract failed");
+            }
         } else {
-            PUMP_DEBUG_CHECK(ssl::hkdf_extract(algo, salt, key, out));
+            if (!ssl::hkdf_extract(algo, salt, key, out)) {
+                PUMP_WARN_LOG("ssl hkdf extract failed");
+            }
         }
         return std::forward<std::string>(out);
     }
@@ -264,7 +129,9 @@ namespace tls {
         p += context.size();
 
         std::string out(length, 0);
-        PUMP_DEBUG_CHECK(ssl::hkdf_expand(algo, key, info, out));
+        if (!ssl::hkdf_expand(algo, key, info, out)) {
+            PUMP_WARN_LOG("ssl hkdf expand failed");
+        }
         return std::forward<std::string>(out);
     }
 
@@ -325,9 +192,13 @@ namespace tls {
             signed_msg.append(msg.data(), msg.size());
         } else {
             ssl::hash_context *hash_ctx = ssl::create_hash_context(algo);
-            PUMP_DEBUG_CHECK(ssl::update_hash(hash_ctx, signature_padding, (int32_t)sizeof(signature_padding)));
-            PUMP_DEBUG_CHECK(ssl::update_hash(hash_ctx, context));
-            PUMP_DEBUG_CHECK(ssl::update_hash(hash_ctx, msg));
+            if (!ssl::update_hash(hash_ctx, signature_padding, (int32_t)sizeof(signature_padding))) {
+                PUMP_WARN_LOG("ssl update hash failed with signature padding");
+            } else if (!ssl::update_hash(hash_ctx, context)) {
+                PUMP_WARN_LOG("ssl update hash failed with context");
+            } else if (!ssl::update_hash(hash_ctx, msg)) {
+                PUMP_WARN_LOG("ssl update hash failed with message");
+            }
             signed_msg = ssl::sum_hash(hash_ctx);
             ssl::free_hash_context(hash_ctx);
         }

@@ -23,6 +23,9 @@ namespace pump {
 namespace proto {
 namespace quic {
 
+    /*********************************************************************************
+     * Error types
+     ********************************************************************************/
     typedef uint64_t error_code;
     const error_code EC_NO_ERROR                  = 0x00;
     const error_code EC_INTERNAL_ERROR            = 0x01;

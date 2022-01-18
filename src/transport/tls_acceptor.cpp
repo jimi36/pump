@@ -102,7 +102,10 @@ namespace transport {
                     pump_bind(&tls_acceptor::on_handshaked, shared_from_this(), _1, _2);
                 handshaker_cbs.stopped_cb = 
                     pump_bind(&tls_acceptor::on_handshake_stopped, shared_from_this(), _1);
-                handshaker->init(fd, false, xcred_, local_address, remote_address);
+                if (!handshaker->init(fd, false, xcred_, local_address, remote_address)) {
+                    PUMP_WARN_LOG("init tls handshaker failed");
+                    __remove_handshaker(handshaker);
+                }
                 if (!handshaker->start(get_service(), handshake_timeout_, handshaker_cbs)) {
                     PUMP_WARN_LOG("start tls handshaker failed");
                     __remove_handshaker(handshaker);

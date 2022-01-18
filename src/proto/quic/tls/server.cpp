@@ -73,7 +73,7 @@ namespace tls {
 
     alert_code server_handshaker::handshake(handshake_message *msg) {
         alert_code code = ALERT_OK;
-        switch (msg->type)
+        switch (msg->tp)
         {
         case TLS_MSG_CLIENT_HELLO:
             PUMP_DEBUG_LOG("quic server handshaker handle client hello message");
@@ -105,7 +105,7 @@ namespace tls {
             return ALERT_UNEXPECTED_MESSGAE;
         }
 
-        auto client_hello = (client_hello_message*)msg->raw_msg;
+        auto client_hello = (client_hello_message*)msg->msg;
         PUMP_ASSERT(client_hello);
 
         if (client_hello->legacy_version != TLS_VSERVER_12) {
@@ -178,9 +178,12 @@ namespace tls {
         }
 
         client_hello_ = client_hello;
-        msg->raw_msg = nullptr;
+        msg->msg = nullptr;
 
-        __write_transcript(pack_handshake_message(msg));
+        if (!pack_handshake_message(msg)) {
+            return ALERT_INTERNAL_ERROR;
+        }
+        __write_transcript(msg->packed);
 
         if (client_ks == nullptr) {
             return __send_hello_retry_request(selected_cipher_suite, selected_group);
@@ -246,7 +249,7 @@ namespace tls {
         toolkit::defer cleanup([&](){
             delete_handshake_message(msg);
         });
-        auto server_hello = (server_hello_message*)msg->raw_msg;
+        auto server_hello = (server_hello_message*)msg->msg;
 
         server_hello->legacy_version = TLS_VSERVER_12;
 
@@ -262,7 +265,12 @@ namespace tls {
 
         memcpy(server_hello->random, hello_retry_request_random, 32);
   
-        __write_transcript(pack_msg_hash_message(__reset_transcript()));
+        auto iob = pack_msg_hash_message(__reset_transcript());
+        if (iob == nullptr) {
+            return ALERT_INTERNAL_ERROR;
+        }
+        __write_transcript(iob->string());
+        iob->sub_refence();
 
         PUMP_DEBUG_LOG("quic server handshaker send hello request message");
         __send_handshake_message(msg);
@@ -280,7 +288,7 @@ namespace tls {
         if (hello_ == nullptr) {
             return ALERT_INTERNAL_ERROR;
         }
-        auto server_hello = (server_hello_message*)hello_->raw_msg;
+        auto server_hello = (server_hello_message*)hello_->msg;
 
         server_hello->legacy_version = TLS_VSERVER_12;
 
@@ -301,7 +309,10 @@ namespace tls {
             server_hello->random[i]= random();
         }
    
-        __write_transcript(pack_handshake_message(hello_));
+        if (!pack_handshake_message(hello_)) {
+            return ALERT_INTERNAL_ERROR;
+        }
+        __write_transcript(hello_->packed);
 
         {
             auto secret = cipher_suite_device_secret(
@@ -363,7 +374,7 @@ namespace tls {
         toolkit::defer cleanup([&](){
             delete_handshake_message(msg);
         });
-        auto encrypted_extensions = (encrypted_extensions_message*)msg->raw_msg;
+        auto encrypted_extensions = (encrypted_extensions_message*)msg->msg;
 
         encrypted_extensions->is_support_early_data = false;
 
@@ -388,7 +399,7 @@ namespace tls {
         toolkit::defer cleanup([&](){
             delete_handshake_message(msg);
         });
-        auto cert_request = (certificate_req_tls13_message*)msg->raw_msg;
+        auto cert_request = (certificate_req_tls13_message*)msg->msg;
 
         cert_request->is_support_scts = true;
 
@@ -419,7 +430,7 @@ namespace tls {
         toolkit::defer cleanup([&](){
             delete_handshake_message(msg);
         });
-        auto cert_tls13 = (certificate_tls13_message*)msg->raw_msg;
+        auto cert_tls13 = (certificate_tls13_message*)msg->msg;
 
         PUMP_ASSERT(!session_.certs.empty());
         for (auto cert : session_.certs) {
@@ -428,7 +439,9 @@ namespace tls {
 
         // TODO: Support scts? Default not.
         //cert_tls13->is_support_scts = false;
-        PUMP_DEBUG_CHECK(ssl::get_x509_scts(session_.certs[0], cert_tls13->scts));
+        if (!ssl::get_x509_scts(session_.certs[0], cert_tls13->scts)) {
+            return ALERT_CERTIFICATE_UNOBTAINABLE;
+        }
         if (client_hello_->is_support_scts && !cert_tls13->scts.empty()) {
             cert_tls13->is_support_scts = true;
         }
@@ -458,7 +471,7 @@ namespace tls {
         toolkit::defer cleanup([&](){
             delete_handshake_message(msg);
         });
-        auto cert_verify = (certificate_verify_message*)msg->raw_msg;
+        auto cert_verify = (certificate_verify_message*)msg->msg;
 
         PUMP_ASSERT(!session_.certs.empty());
         if (session_.certs.empty()) {
@@ -521,7 +534,7 @@ namespace tls {
         toolkit::defer cleanup([&](){
             delete_handshake_message(msg);
         });
-        auto finished = (finished_message*)msg->raw_msg;
+        auto finished = (finished_message*)msg->msg;
 
         auto finished_key = hkdf_expand_label(
                                 session_.cipher_suite_ctx->algo, 
@@ -536,7 +549,10 @@ namespace tls {
         //auto verify_data_base64 = codec::base64_encode(finished->verify_data);
         //PUMP_DEBUG_LOG("server handshaker server verify_data_base64: %s", verify_data_base64.c_str());
 
-        __write_transcript(pack_handshake_message(msg));
+        if (!pack_handshake_message(msg)) {
+            return ALERT_INTERNAL_ERROR;
+        }
+        __write_transcript(msg->packed);
 
         session_.traffic_secret = cipher_suite_device_secret(
                                     session_.cipher_suite_ctx, 
@@ -575,7 +591,7 @@ namespace tls {
         }
         status_ = HANDSHAKE_CARTIFICATE_RECV;
 
-        auto cert_tls13 = (certificate_tls13_message*)msg->raw_msg;
+        auto cert_tls13 = (certificate_tls13_message*)msg->msg;
         PUMP_ASSERT(cert_tls13);
 
         if (!cert_tls13->certificates.empty()) {
@@ -599,7 +615,10 @@ namespace tls {
             }
         }
 
-        __write_transcript(pack_handshake_message(msg));
+        if (!pack_handshake_message(msg)) {
+            return ALERT_INTERNAL_ERROR;
+        }
+        __write_transcript(msg->packed);
 
         return ALERT_OK;
     }
@@ -614,7 +633,7 @@ namespace tls {
             return ALERT_HANDSHAKE_FAILURE;
         }
 
-        auto cert_verify = (certificate_verify_message*)msg->raw_msg;
+        auto cert_verify = (certificate_verify_message*)msg->msg;
         PUMP_ASSERT(cert_verify);
 
         if (!is_contains(supported_signature_schemes, cert_verify->signature_scheme)) {
@@ -644,7 +663,10 @@ namespace tls {
             return ALERT_DECRYPT_ERROR;
         }
 
-        __write_transcript(pack_handshake_message(msg));
+        if (!pack_handshake_message(msg)) {
+            return ALERT_INTERNAL_ERROR;
+        }
+        __write_transcript(msg->packed);
 
         return ALERT_OK;
     }
@@ -656,7 +678,7 @@ namespace tls {
         }
         status_ = HANDSHAKE_FINISHED_RECV;
 
-        auto finished = (finished_message*)msg->raw_msg;
+        auto finished = (finished_message*)msg->msg;
         PUMP_ASSERT(finished);
 
         // https://tools.ietf.org/html/rfc8446#section-4.4.4
@@ -677,7 +699,10 @@ namespace tls {
             return ALERT_DECRYPT_ERROR;
         }
 
-        __write_transcript(pack_handshake_message(msg));
+        if (!pack_handshake_message(msg)) {
+            return ALERT_INTERNAL_ERROR;
+        }
+        __write_transcript(msg->packed);
 
         status_ = HANDSHAKE_SUCCESS;
 
@@ -702,7 +727,21 @@ namespace tls {
             transcript_ = ssl::create_hash_context(session_.cipher_suite_ctx->algo);
             PUMP_ASSERT(transcript_);
         }
-        PUMP_DEBUG_CHECK(ssl::update_hash(transcript_, data));
+        if (!ssl::update_hash(transcript_, data)) {
+            PUMP_WARN_LOG("update transcript hash failed");
+        }
+    }
+
+    void server_handshaker::__send_handshake_message(handshake_message *msg, bool transcript) {
+        if (!pack_handshake_message(msg)) {
+            PUMP_DEBUG_LOG("pack handhake message failed");  
+        }
+        if (transcript) {
+            __write_transcript(msg->packed);
+        }
+        if (send_callback_) {
+            send_callback_(msg->packed);
+        }
     }
 
 } // namespace tls

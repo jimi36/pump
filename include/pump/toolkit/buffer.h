@@ -74,11 +74,11 @@ namespace toolkit {
          * Init by move
          * The input buffer will be moved to the buffer.
          ********************************************************************************/
-        bool __init_by_move(const block_t *b, uint32_t size, bool ref);
+        bool __init_by_move(const block_t *b, uint32_t size, bool buf_ref);
         
       protected:
-        // Ref flag
-        bool ref_;
+        // Buffer ref flag
+        bool buf_ref_;
         // Raw buffer
         block_t *raw_;
         // Raw buffer size
@@ -111,15 +111,32 @@ namespace toolkit {
 
             return obj;
         }
-        static io_buffer* create_by_move(const block_t *b, uint32_t size, bool ref = false) {
+        static io_buffer* create_by_move(const block_t *b, uint32_t size) {
             INLINE_OBJECT_CREATE(obj, io_buffer, ())
-            if (obj != nullptr && !obj->__init_by_move(b, size, ref)) {
-                INLINE_OBJECT_DELETE(obj, io_buffer)
-                return nullptr;
+            if (obj != nullptr) {
+                if (b != nullptr && size > 0) {
+                    if (!obj->__init_by_move(b, size, false)) {
+                        INLINE_OBJECT_DELETE(obj, io_buffer)
+                        return nullptr;
+                    }
+                    obj->size_ = size;
+                }
             }
-
-            obj->size_ = size;
-
+            return obj;
+        }
+        static io_buffer* create_by_refence(const block_t *b, uint32_t size) {
+            INLINE_OBJECT_CREATE(obj, io_buffer, ())
+            if (obj != nullptr) {
+                if (b != nullptr && size > 0) {
+                    if (!obj->__init_by_move(b, size, true)) {
+                        INLINE_OBJECT_DELETE(obj, io_buffer)
+                        return nullptr;
+                    }
+                    obj->size_ = size;
+                } else {
+                    obj->buf_ref_ = true;
+                }
+            }
             return obj;
         }
 
@@ -127,10 +144,6 @@ namespace toolkit {
          * Write block
          ********************************************************************************/
         bool write(const block_t *b, uint32_t size);
-
-        /*********************************************************************************
-         * Write one byte block
-         ********************************************************************************/
         bool write(block_t b);
 
         /*********************************************************************************
@@ -145,10 +158,6 @@ namespace toolkit {
             size_ -= size;
             return true;
         }
-
-        /*********************************************************************************
-         * Read one byte block
-         ********************************************************************************/
         PUMP_INLINE bool read(block_t *b) {
             if (size_ < 1) {
                 return false;
@@ -189,6 +198,22 @@ namespace toolkit {
         PUMP_INLINE uint32_t size() const {
             return size_;
         }
+
+        /*********************************************************************************
+         * Get string
+         ********************************************************************************/
+        PUMP_INLINE std::string string() const {
+            if (raw_ == nullptr || size_ == 0) {
+                return std::string();
+            }
+            return std::string(raw_ + rpos_, size_);
+        }
+
+        /*********************************************************************************
+         * Reset with buffer
+         * Only io buffer with buffer refence mode can reset with buffer. 
+         ********************************************************************************/
+        bool reset(const block_t *b, uint32_t size);
 
         /*********************************************************************************
          * Reset

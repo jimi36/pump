@@ -20,6 +20,7 @@
 #include <map>
 #include <vector>
 
+#include "pump/toolkit/buffer.h"
 #include "pump/proto/quic/tls/types.h"
 
 namespace pump {
@@ -27,13 +28,15 @@ namespace proto {
 namespace quic {
 namespace tls {
 
+    using toolkit::io_buffer;
+
     /*********************************************************************************
      * TLS handshake message struct.
      ********************************************************************************/
     struct handshake_message {
-        std::string packed_data;
-        message_type type;
-        void *raw_msg;
+        message_type tp;
+        void *msg;
+        std::string packed;
     };
 
     /*********************************************************************************
@@ -49,15 +52,12 @@ namespace tls {
     /*********************************************************************************
      * Pack handshake message.
      ********************************************************************************/
-    LIB_PUMP const std::string& pack_handshake_message(handshake_message *msg);
+    LIB_PUMP bool pack_handshake_message(handshake_message *msg);
 
     /*********************************************************************************
      * Unpack handshake message.
      ********************************************************************************/
-    LIB_PUMP int32_t unpack_handshake_message(
-        const uint8_t *buf, 
-        int32_t size, 
-        handshake_message *msg);
+    LIB_PUMP bool unpack_handshake_message(io_buffer *iob, handshake_message *msg);
 
     /*********************************************************************************
      * TLS handshake key stare struct.
@@ -108,18 +108,12 @@ namespace tls {
     /*********************************************************************************
      * Pack hello request message.
      ********************************************************************************/
-    LIB_PUMP int32_t pack_hello_req_message(
-        const void *msg, 
-        uint8_t *buf, 
-        int32_t max_size);
+    LIB_PUMP bool pack_hello_req_message(void *msg, io_buffer *iob);
 
     /*********************************************************************************
      * Unpack hello request message.
      ********************************************************************************/
-    LIB_PUMP int32_t unpack_hello_req_message(
-        const uint8_t *buf, 
-        int32_t size, 
-        void *msg);
+    LIB_PUMP bool unpack_hello_req_message(io_buffer *iob, void *msg);
 
     /*********************************************************************************
      * When client first connects to a server, it is REQUIRED to send the ClientHello
@@ -323,18 +317,12 @@ namespace tls {
     /*********************************************************************************
      * Pack client hello message.
      ********************************************************************************/
-    LIB_PUMP int32_t pack_client_hello_message(
-        const void *msg, 
-        uint8_t *buf, 
-        int32_t max_size);
+    LIB_PUMP bool pack_client_hello_message(void *msg, io_buffer *iob);
 
     /*********************************************************************************
      * Unpack client hello message.
      ********************************************************************************/
-    LIB_PUMP int32_t unpack_client_hello_message(
-        const uint8_t *buf, 
-        int32_t max_size, 
-        void *msg);
+    LIB_PUMP bool unpack_client_hello_message(io_buffer *iob, void *msg);
 
     /*********************************************************************************
      * The server will send this message in response to a ClientHello message to
@@ -510,18 +498,12 @@ namespace tls {
     /*********************************************************************************
      * Pack server hello message.
      ********************************************************************************/
-    LIB_PUMP int32_t pack_server_hello_message(
-        const void *msg, 
-        uint8_t *buf, 
-        int32_t max_size);
+    LIB_PUMP bool pack_server_hello_message(void *msg, io_buffer *iob);
 
     /*********************************************************************************
      * Unpack server hello message.
      ********************************************************************************/
-    LIB_PUMP int32_t unpack_server_hello_message(
-        const uint8_t *buf, 
-        int32_t size, 
-        void *msg);
+    LIB_PUMP bool unpack_server_hello_message(io_buffer *iob, void *msg);
 
     /*********************************************************************************
      * This message is sent by the server during the TLS handshake before the
@@ -550,18 +532,12 @@ namespace tls {
     /*********************************************************************************
      * Pack new session message.
      ********************************************************************************/
-    LIB_PUMP int32_t pack_new_session_ticket_message(
-        const void *msg, 
-        uint8_t *buf, 
-        int32_t max_size);
+    LIB_PUMP bool pack_new_session_ticket_message(void *msg, io_buffer *iob);
 
     /*********************************************************************************
      * Unpack new session message.
      ********************************************************************************/
-    LIB_PUMP int32_t unpack_new_session_ticket_message(
-        const uint8_t *buf, 
-        int32_t size, 
-        void *msg);
+    LIB_PUMP bool unpack_new_session_ticket_message(io_buffer *iob, void *msg);
 
     /*********************************************************************************
      * At any time after the server has received the client Finished message, it MAY 
@@ -617,18 +593,12 @@ namespace tls {
     /*********************************************************************************
      * Pack new session ticket message.
      ********************************************************************************/
-    LIB_PUMP int32_t pack_new_session_ticket_tls13_message(
-        const void *msg, 
-        uint8_t *buf, 
-        int32_t max_size);
+    LIB_PUMP bool pack_new_session_ticket_tls13_message(void *msg, io_buffer *iob);
 
     /*********************************************************************************
      * Unpack new session ticket message.
      ********************************************************************************/
-    LIB_PUMP int32_t unpack_new_session_ticket_tls13_message(
-        const uint8_t *buf, 
-        int32_t size, 
-        void *msg);
+    LIB_PUMP bool unpack_new_session_ticket_tls13_message(io_buffer *iob, void *msg);
 
     /*********************************************************************************
      * If the server sent an "early_data" extension in EncryptedExtensions, the client 
@@ -653,18 +623,12 @@ namespace tls {
     /*********************************************************************************
      * Pack end early data message.
      ********************************************************************************/
-    LIB_PUMP int32_t pack_end_early_data_message(
-        const void *msg, 
-        uint8_t *buf, 
-        int32_t max_size);
+    LIB_PUMP bool pack_end_early_data_message(void *msg, io_buffer *iob);
 
     /*********************************************************************************
      * Unpack end early data message.
      ********************************************************************************/
-    LIB_PUMP int32_t unpack_end_early_data_message(
-        const uint8_t *buf, 
-        int32_t size, 
-        void *msg);
+    LIB_PUMP bool unpack_end_early_data_message(io_buffer *iob, void *msg);
 
     /*********************************************************************************
      * In all handshakes, the server MUST send the EncryptedExtensions message  
@@ -699,18 +663,12 @@ namespace tls {
     /*********************************************************************************
      * Pack encrypted extensions message.
      ********************************************************************************/
-    LIB_PUMP int32_t pack_encrypted_extensions_message(
-        const void *msg, 
-        uint8_t *buf, 
-        int32_t max_size);
+    LIB_PUMP bool pack_encrypted_extensions_message(void *msg, io_buffer *iob);
 
     /*********************************************************************************
      * Unpack encrypted extensions message.
      ********************************************************************************/
-    LIB_PUMP int32_t unpack_encrypted_extensions_message(
-        const uint8_t *buf, 
-        int32_t size, 
-        void *msg);
+    LIB_PUMP bool unpack_encrypted_extensions_message(io_buffer *iob, void *msg);
 
     /*********************************************************************************
      * This message conveys the endpoint's certificate chain to the peer. The server 
@@ -759,18 +717,12 @@ namespace tls {
     /*********************************************************************************
      * Pack certificate message.
      ********************************************************************************/
-    LIB_PUMP int32_t pack_certificate_message(
-        const void *msg, 
-        uint8_t *buf, 
-        int32_t max_size);
+    LIB_PUMP bool pack_certificate_message(void *msg, io_buffer *iob);
 
     /*********************************************************************************
      * Unpack certificate message.
      ********************************************************************************/
-    LIB_PUMP int32_t unpack_certificate_message(
-        const uint8_t *buf, 
-        int32_t size, 
-        void *msg);
+    LIB_PUMP bool unpack_certificate_message(io_buffer *iob, void *msg);
 
     /*********************************************************************************
      * New certificate tls13 message.
@@ -780,18 +732,12 @@ namespace tls {
     /*********************************************************************************
      * Pack certificate tls13 message.
      ********************************************************************************/
-    LIB_PUMP int32_t pack_certificate_tls13_message(
-        const void *msg, 
-        uint8_t *buf, 
-        int32_t max_size);
+    LIB_PUMP bool pack_certificate_tls13_message(void *msg, io_buffer *iob);
 
     /*********************************************************************************
      * Unpack certificate tls13 message.
      ********************************************************************************/
-    LIB_PUMP int32_t unpack_certificate_tls13_message(
-        const uint8_t *buf, 
-        int32_t size, 
-        void *msg);
+    LIB_PUMP bool unpack_certificate_tls13_message(io_buffer *iob, void *msg);
 
     /*********************************************************************************
      * This message will be sent immediately after the server certificate
@@ -814,18 +760,12 @@ namespace tls {
     /*********************************************************************************
      * Pack server key exchange message.
      ********************************************************************************/
-    LIB_PUMP int32_t pack_server_key_exchange_message(
-        const void *msg, 
-        uint8_t *buf, 
-        int32_t max_size);
+    LIB_PUMP bool pack_server_key_exchange_message(void *msg, io_buffer *iob);
 
     /*********************************************************************************
      * Unpack server key exchange message.
      ********************************************************************************/
-    LIB_PUMP int32_t unpack_server_key_exchange_message(
-        const uint8_t *buf, 
-        int32_t size, 
-        void *msg);
+    LIB_PUMP bool unpack_server_key_exchange_message(io_buffer *iob, void *msg);
 
     /*********************************************************************************
      * When this message will be sent:
@@ -864,18 +804,12 @@ namespace tls {
     /*********************************************************************************
      * Pack certificate request message.
      ********************************************************************************/
-    LIB_PUMP int32_t pack_certificate_req_message(
-        const void *msg, 
-        uint8_t *buf, 
-        int32_t max_size);
+    LIB_PUMP bool pack_certificate_req_message(void *msg, io_buffer *iob);
 
     /*********************************************************************************
      * Unpack certificate request message.
      ********************************************************************************/
-    LIB_PUMP int32_t unpack_certificate_req_message(
-        const uint8_t *buf, 
-        int32_t size, 
-        void *msg);
+    LIB_PUMP bool unpack_certificate_req_message(io_buffer *iob, void *msg);
 
     /*********************************************************************************
      * A server which is authenticating with a certificate MAY optionally request a 
@@ -920,18 +854,12 @@ namespace tls {
     /*********************************************************************************
      * Pack certificate request tls13 message.
      ********************************************************************************/
-    LIB_PUMP int32_t pack_certificate_req_tls13_message(
-        const void *msg, 
-        uint8_t *buf, 
-        int32_t max_size);
+    LIB_PUMP bool pack_certificate_req_tls13_message(void *msg, io_buffer *iob);
 
     /*********************************************************************************
      * Unpack certificate request tls13 message.
      ********************************************************************************/
-    LIB_PUMP int32_t unpack_certificate_req_tls13_message(
-        const uint8_t *buf, 
-        int32_t size, 
-        void *msg);
+    LIB_PUMP bool unpack_certificate_req_tls13_message(io_buffer *iob, void *msg);
 
     /*********************************************************************************
      * The server hello done message is sent by the server to indicate the end of the
@@ -954,18 +882,12 @@ namespace tls {
     /*********************************************************************************
      * Pack server hello done message.
      ********************************************************************************/
-    LIB_PUMP int32_t pack_server_hello_done_message(
-        const void *msg, 
-        uint8_t *buf, 
-        int32_t max_size);
+    LIB_PUMP bool pack_server_hello_done_message(void *msg, io_buffer *iob);
 
     /*********************************************************************************
      * Unpack server hello done message.
      ********************************************************************************/
-    LIB_PUMP int32_t unpack_server_hello_done_message(
-        const uint8_t *buf, 
-        int32_t size, 
-        void *msg);
+    LIB_PUMP bool unpack_server_hello_done_message(io_buffer *iob, void *msg);
 
     /*********************************************************************************
      * This message is used to provide explicit verification of a client certificate. 
@@ -989,18 +911,12 @@ namespace tls {
     /*********************************************************************************
      * Pack certificate verify message.
      ********************************************************************************/
-    LIB_PUMP int32_t pack_certificate_verify_message(
-        const void *msg, 
-        uint8_t *buf, 
-        int32_t max_size);
+    LIB_PUMP bool pack_certificate_verify_message(void *msg, io_buffer *iob);
 
     /*********************************************************************************
      * Unpack certificate verify message.
      ********************************************************************************/
-    LIB_PUMP int32_t unpack_certificate_verify_message(
-        const uint8_t *buf, 
-        int32_t size, 
-        void *msg);
+    LIB_PUMP bool unpack_certificate_verify_message(io_buffer *iob, void *msg);
 
     /*********************************************************************************
      * This message is always sent by the client. It MUST immediately follow the 
@@ -1028,18 +944,12 @@ namespace tls {
     /*********************************************************************************
      * Pack client key exchange message.
      ********************************************************************************/
-    LIB_PUMP int32_t pack_client_key_exchange_message(
-        const void *msg, 
-        uint8_t *buf, 
-        int32_t max_size);
+    LIB_PUMP bool pack_client_key_exchange_message(void *msg, io_buffer *iob);
 
     /*********************************************************************************
      * Unpack client key exchange message.
      ********************************************************************************/
-    LIB_PUMP int32_t unpack_client_key_exchange_message(
-        const uint8_t *buf, 
-        int32_t size, 
-        void *msg);
+    LIB_PUMP bool unpack_client_key_exchange_message(io_buffer *iob, void *msg);
 
     /*********************************************************************************
      * A finished message is always sent immediately after a change cipher spec 
@@ -1065,18 +975,12 @@ namespace tls {
     /*********************************************************************************
      * Pack finished message.
      ********************************************************************************/
-    LIB_PUMP int32_t pack_finished_message(
-        const void *msg, 
-        uint8_t *buf, 
-        int32_t max_size);
+    LIB_PUMP bool pack_finished_message(void *msg, io_buffer *iob);
 
     /*********************************************************************************
      * Unpack finished message.
      ********************************************************************************/
-    LIB_PUMP int32_t unpack_finished_message(
-        const uint8_t *buf, 
-        int32_t size, 
-        void *msg);
+    LIB_PUMP bool unpack_finished_message(io_buffer *iob, void *msg);
 
     /*********************************************************************************
      * Servers that receive a client hello containing the "status_request" extension
@@ -1104,18 +1008,12 @@ namespace tls {
     /*********************************************************************************
      * Pack certificate status message.
      ********************************************************************************/
-    LIB_PUMP int32_t pack_certificate_status_message(
-        const void *msg, 
-        uint8_t *buf, 
-        int32_t max_size);
+    LIB_PUMP bool pack_certificate_status_message(void *msg, io_buffer *iob);
 
     /*********************************************************************************
      * Unpack certificate status message.
      ********************************************************************************/
-    LIB_PUMP int32_t unpack_certificate_status_message(
-        const uint8_t *buf, 
-        int32_t size, 
-        void *msg);
+    LIB_PUMP bool unpack_certificate_status_message(io_buffer *iob, void *msg);
 
     /*********************************************************************************
      * The KeyUpdate handshake message is used to indicate that the sender is updating 
@@ -1143,23 +1041,17 @@ namespace tls {
     /*********************************************************************************
      * Pack key update message.
      ********************************************************************************/
-    LIB_PUMP int32_t pack_key_update_message(
-        const void *msg, 
-        uint8_t *buf, 
-        int32_t max_size);
+    LIB_PUMP bool pack_key_update_message(void *msg, io_buffer *iob);
 
     /*********************************************************************************
      * Unpack key update message.
      ********************************************************************************/
-    LIB_PUMP int32_t unpack_key_update_message(
-        const uint8_t *buf, 
-        int32_t size, 
-        void *msg);
+    LIB_PUMP bool unpack_key_update_message(io_buffer *iob, void *msg);
 
     /*********************************************************************************
      * Pack message hash message.
      ********************************************************************************/
-    LIB_PUMP std::string pack_msg_hash_message(const std::string &hash);
+    LIB_PUMP io_buffer* pack_msg_hash_message(const std::string &hash);
 
 } // namespace tls
 } // namespace quic

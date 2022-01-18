@@ -149,12 +149,15 @@ namespace transport {
                 }
                 return;
             }
-            handshaker_->init(
-                flow_->get_fd(), 
-                true, 
-                xcred_, 
-                local_address, 
-                remote_address);
+
+            pump_socket fd = flow_->get_fd();
+            if (!handshaker_->init(fd, true, xcred_, local_address, remote_address)) {
+                PUMP_WARN_LOG("init tls handshaker failed");
+                if (__set_state(TRANSPORT_HANDSHAKING, TRANSPORT_ERROR)) {
+                    break;
+                }
+                return;
+            }
 
             tls_handshaker::tls_handshaker_callbacks tls_cbs;
             tls_cbs.handshaked_cb =

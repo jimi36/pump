@@ -35,7 +35,7 @@ namespace quic {
         id_.assign(id, len);
     }
 
-    bool cid::read_from(toolkit::io_buffer *iob, uint32_t len) {
+    bool cid::read_from(io_buffer *iob, uint32_t len) {
         if (len == 0) {
             return false;
         } else {
@@ -47,7 +47,7 @@ namespace quic {
         return true;
     }
 
-    bool cid::write_to(toolkit::io_buffer *iob) const {
+    bool cid::write_to(io_buffer *iob) const {
         if (id_.empty()) {
             return false;
         } else if (!iob->write(id_.data(), id_.size())) {

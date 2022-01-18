@@ -137,16 +137,7 @@ namespace tls {
         /*********************************************************************************
          * Send handshake message
          ********************************************************************************/
-        void __send_handshake_message(
-            handshake_message *msg, 
-            bool transcript = true) {
-            if (transcript) {
-                __write_transcript(pack_handshake_message(msg));
-            }
-            if (send_callback_) {
-                send_callback_(pack_handshake_message(msg));
-            }
-        }
+        void __send_handshake_message(handshake_message *msg, bool transcript = true);
 
       private:
         //  Handshake status

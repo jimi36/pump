@@ -20,7 +20,6 @@
 #include <string>
 #include <vector>
 
-#include "pump/toolkit/buffer.h"
 #include "pump/proto/quic/cid.h"
 #include "pump/proto/quic/types.h"
 #include "pump/proto/quic/errors.h"
@@ -29,6 +28,9 @@ namespace pump {
 namespace proto {
 namespace quic {
 
+    /*********************************************************************************
+     * Frame types
+     ********************************************************************************/
     typedef uint8_t frame_type;
     const frame_type FT_PADDING              = 0x00;
     const frame_type FT_PING                 = 0x01;
@@ -55,27 +57,57 @@ namespace quic {
     const frame_type FT_A_CONNECTION_CLOSE   = 0x1d; // application layer close conection
     const frame_type FT_HANDSHAKE_DONE       = 0x1e;   
 
+    /*********************************************************************************
+     * Padding frame
+     ********************************************************************************/
     struct padding_frame {};
 
+    /*********************************************************************************
+     * Get padding frame length
+     ********************************************************************************/
     int32_t length_padding_frame(const padding_frame *frame);
 
-    bool pack_padding_frame(const padding_frame *frame, toolkit::io_buffer *iob);
+    /*********************************************************************************
+     * Pack padding frame
+     ********************************************************************************/
+    bool pack_padding_frame(const padding_frame *frame, io_buffer *iob);
 
-    bool unpack_padding_frame(toolkit::io_buffer *iob, padding_frame *frame);
+    /*********************************************************************************
+     * Unpack padding frame
+     ********************************************************************************/
+    bool unpack_padding_frame(io_buffer *iob, padding_frame *frame);
 
+    /*********************************************************************************
+     * Ping frame
+     ********************************************************************************/
     struct ping_frame {};
 
+    /*********************************************************************************
+     * Get ping frame length
+     ********************************************************************************/
     int32_t length_ping_frame(const ping_frame *frame);
 
-    bool pack_ping_frame(const ping_frame *frame, toolkit::io_buffer *iob);
+    /*********************************************************************************
+     * Pack ping frame
+     ********************************************************************************/
+    bool pack_ping_frame(const ping_frame *frame, io_buffer *iob);
 
-    bool unpack_ping_frame(toolkit::io_buffer *iob, ping_frame *frame);
+    /*********************************************************************************
+     * Unpack ping frame
+     ********************************************************************************/
+    bool unpack_ping_frame(io_buffer *iob, ping_frame *frame);
 
+    /*********************************************************************************
+     * Ack range
+     ********************************************************************************/
     struct ack_range {
         uint64_t smallest;
         uint64_t largest;
     };
 
+    /*********************************************************************************
+     * Ack frame
+     ********************************************************************************/
     struct ack_frame {
         uint64_t ack_delay; // microseconds
         int32_t ack_delay_export;
@@ -85,57 +117,117 @@ namespace quic {
         uint64_t ecnce;
     };
 
+    /*********************************************************************************
+     * Get ack frame length
+     ********************************************************************************/
     int32_t length_ack_frame(const ack_frame *frame);
 
-    bool pack_ack_frame(const ack_frame *frame, toolkit::io_buffer *iob);
+    /*********************************************************************************
+     * Pack ack frame
+     ********************************************************************************/
+    bool pack_ack_frame(const ack_frame *frame, io_buffer *iob);
 
-    bool unpack_ack_frame(toolkit::io_buffer *iob, ack_frame *frame);
+    /*********************************************************************************
+     * Unpack ack frame
+     ********************************************************************************/
+    bool unpack_ack_frame(io_buffer *iob, ack_frame *frame);
 
+    /*********************************************************************************
+     * Rest stream frame
+     ********************************************************************************/
     struct reset_stream_frame {
         uint64_t stream_id;
         uint64_t error_code;
         uint64_t final_size;
     };
 
+    /*********************************************************************************
+     * Get reset stream frame length
+     ********************************************************************************/
     int32_t length_reset_stream_frame(const reset_stream_frame *frame);
 
-    bool pack_reset_stream_frame(const reset_stream_frame *frame, toolkit::io_buffer *iob);
+    /*********************************************************************************
+     * Pack reset frame
+     ********************************************************************************/
+    bool pack_reset_stream_frame(const reset_stream_frame *frame, io_buffer *iob);
 
-    bool unpack_reset_stream_frame(toolkit::io_buffer *iob, reset_stream_frame *frame);
+    /*********************************************************************************
+     * Unpack reset frame
+     ********************************************************************************/
+    bool unpack_reset_stream_frame(io_buffer *iob, reset_stream_frame *frame);
 
+    /*********************************************************************************
+     * Stop sending frame
+     ********************************************************************************/
     struct stop_sending_frame {
         uint64_t stream_id;
         uint64_t error_code;
     };
 
+    /*********************************************************************************
+     * Get stop sedning frame length
+     ********************************************************************************/
     int32_t length_stop_sending_frame(const stop_sending_frame *frame);
 
-    bool pack_stop_sending_frame(const stop_sending_frame *frame, toolkit::io_buffer *iob);
+    /*********************************************************************************
+     * Pack stop sending frame
+     ********************************************************************************/
+    bool pack_stop_sending_frame(const stop_sending_frame *frame, io_buffer *iob);
 
-    bool unpack_stop_sending_frame(toolkit::io_buffer *iob, stop_sending_frame *frame);
+    /*********************************************************************************
+     * Unpack stop sending frame
+     ********************************************************************************/
+    bool unpack_stop_sending_frame(io_buffer *iob, stop_sending_frame *frame);
 
+    /*********************************************************************************
+     * Crypto frame
+     ********************************************************************************/
     struct crypto_frame {
         uint64_t offset;
         std::string data;
 
     };
 
+    /*********************************************************************************
+     * Get crypto frame length
+     ********************************************************************************/
     int32_t length_crypto_frame(const crypto_frame *frame);
 
-    bool pack_crypto_frame(const crypto_frame *frame, toolkit::io_buffer *iob);
+    /*********************************************************************************
+     * Pack crypto frame
+     ********************************************************************************/
+    bool pack_crypto_frame(const crypto_frame *frame, io_buffer *iob);
 
-    bool unpack_crypto_frame(toolkit::io_buffer *iob, crypto_frame *frame);
+    /*********************************************************************************
+     * Unpack crypto frame
+     ********************************************************************************/
+    bool unpack_crypto_frame(io_buffer *iob, crypto_frame *frame);
 
+    /*********************************************************************************
+     * New token frame
+     ********************************************************************************/
     struct new_token_frame {
         std::string token;
     };
 
+    /*********************************************************************************
+     * Get new token frame length
+     ********************************************************************************/
     int32_t length_new_token_frame(const new_token_frame *frame);
 
-    bool pack_new_token_frame(const new_token_frame *frame, toolkit::io_buffer *iob);
+    /*********************************************************************************
+     * Pack new token frame
+     ********************************************************************************/
+    bool pack_new_token_frame(const new_token_frame *frame, io_buffer *iob);
 
-    bool unpack_new_token_frame(toolkit::io_buffer *iob, new_token_frame *frame);
+    /*********************************************************************************
+     * Unpack new token frame
+     ********************************************************************************/
+    bool unpack_new_token_frame(io_buffer *iob, new_token_frame *frame);
 
+    /*********************************************************************************
+     * Stream frame
+     ********************************************************************************/
     struct stream_frame {
         uint64_t stream_id;
         bool stream_fin;
@@ -147,76 +239,160 @@ namespace quic {
         bool has_data_len;
     };
 
+    /*********************************************************************************
+     * Get stream frame length
+     ********************************************************************************/
     int32_t length_stream_frame(const stream_frame *frame);
 
-    bool pack_stream_frame(const stream_frame *frame, toolkit::io_buffer *iob);
+    /*********************************************************************************
+     * Pack stream frame
+     ********************************************************************************/
+    bool pack_stream_frame(const stream_frame *frame, io_buffer *iob);
 
-    bool unpack_stream_frame(toolkit::io_buffer *iob, stream_frame *frame);
+    /*********************************************************************************
+     * Unpack stream frame
+     ********************************************************************************/
+    bool unpack_stream_frame(io_buffer *iob, stream_frame *frame);
 
+    /*********************************************************************************
+     * Max data frame
+     ********************************************************************************/
     struct max_data_frame {
         uint64_t max;
     };
 
+    /*********************************************************************************
+     * Get max data frame length
+     ********************************************************************************/
     int32_t length_max_data_frame(const max_data_frame *frame);
 
-    bool pack_max_data_frame(const max_data_frame *frame, toolkit::io_buffer *iob);
+    /*********************************************************************************
+     * Pack max data frame
+     ********************************************************************************/
+    bool pack_max_data_frame(const max_data_frame *frame, io_buffer *iob);
 
-    bool unpack_max_data_frame(toolkit::io_buffer *iob, max_data_frame *frame);
+    /*********************************************************************************
+     * Unpack max data frame
+     ********************************************************************************/
+    bool unpack_max_data_frame(io_buffer *iob, max_data_frame *frame);
 
+    /*********************************************************************************
+     * Max stream data frame
+     ********************************************************************************/
     struct max_stream_data_frame {
         uint64_t stream_id;
         uint64_t max;
     };
 
+    /*********************************************************************************
+     * Get max stream data frame length
+     ********************************************************************************/
     int32_t length_max_stream_data_frame(const max_stream_data_frame *frame);
 
-    bool pack_max_stream_data_frame(const max_stream_data_frame *frame, toolkit::io_buffer *iob);
+    /*********************************************************************************
+     * Pack max stream data frame
+     ********************************************************************************/
+    bool pack_max_stream_data_frame(const max_stream_data_frame *frame, io_buffer *iob);
 
-    bool unpack_max_stream_data_frame(toolkit::io_buffer *iob, max_stream_data_frame *frame);
+    /*********************************************************************************
+     * Unpack max stream data frame
+     ********************************************************************************/
+    bool unpack_max_stream_data_frame(io_buffer *iob, max_stream_data_frame *frame);
 
+    /*********************************************************************************
+     * Max streams frame
+     ********************************************************************************/
     struct max_streams_frame {
         stream_type st;
         uint64_t max;
     };
 
+    /*********************************************************************************
+     * Get max streams frame length
+     ********************************************************************************/
     int32_t length_max_streams_frame(const max_streams_frame *frame);
 
-    bool pack_max_streams_frame(const max_streams_frame *frame, toolkit::io_buffer *iob);
+    /*********************************************************************************
+     * Pack max streams frame
+     ********************************************************************************/
+    bool pack_max_streams_frame(const max_streams_frame *frame, io_buffer *iob);
 
-    bool unpack_max_streams_frame(toolkit::io_buffer *iob, max_streams_frame *frame);
+    /*********************************************************************************
+     * Unpack max streams frame
+     ********************************************************************************/
+    bool unpack_max_streams_frame(io_buffer *iob, max_streams_frame *frame);
 
+    /*********************************************************************************
+     * Data blocked frame
+     ********************************************************************************/
     struct data_blocked_frame {
         uint64_t max;
     };
 
+    /*********************************************************************************
+     * Get data blocked frame length
+     ********************************************************************************/
     int32_t length_data_blocked_frame(const data_blocked_frame *frame);
 
-    bool pack_data_blocked_frame(const data_blocked_frame *frame, toolkit::io_buffer *iob);
+    /*********************************************************************************
+     * Pack data blocked frame
+     ********************************************************************************/
+    bool pack_data_blocked_frame(const data_blocked_frame *frame, io_buffer *iob);
 
-    bool unpack_data_blocked_frame(toolkit::io_buffer *iob, data_blocked_frame *frame);
+    /*********************************************************************************
+     * Unpack data blocked frame
+     ********************************************************************************/
+    bool unpack_data_blocked_frame(io_buffer *iob, data_blocked_frame *frame);
 
+    /*********************************************************************************
+     * Stream data blocked frame
+     ********************************************************************************/
     struct stream_data_blocked_frame {
         uint64_t stream_id;
         uint64_t max;
     };
 
+    /*********************************************************************************
+     * Get stream data blocked frame length
+     ********************************************************************************/
     int32_t length_stream_data_blocked_frame(const stream_data_blocked_frame *frame);
 
-    bool pack_stream_data_blocked_frame(const stream_data_blocked_frame *frame, toolkit::io_buffer *iob);
+    /*********************************************************************************
+     * Pack stream data blocked frame
+     ********************************************************************************/
+    bool pack_stream_data_blocked_frame(const stream_data_blocked_frame *frame, io_buffer *iob);
 
-    bool pack_stream_data_blocked_frame(toolkit::io_buffer *iob, stream_data_blocked_frame *frame);
+    /*********************************************************************************
+     * Unpack stream data blocked frame
+     ********************************************************************************/
+    bool pack_stream_data_blocked_frame(io_buffer *iob, stream_data_blocked_frame *frame);
 
+    /*********************************************************************************
+     * Stream blocked frame
+     ********************************************************************************/
     struct streams_blocked_frame {
         stream_type st;
         uint64_t max;
     };
 
+    /*********************************************************************************
+     * Get streams blocked frame length
+     ********************************************************************************/
     int32_t length_streams_blocked_frame(const streams_blocked_frame *frame);
 
-    bool pack_streams_blocked_frame(const streams_blocked_frame *frame, toolkit::io_buffer *iob);
+    /*********************************************************************************
+     * Pack stream blocked frame
+     ********************************************************************************/
+    bool pack_streams_blocked_frame(const streams_blocked_frame *frame, io_buffer *iob);
 
-    bool unpack_streams_blocked_frame(toolkit::io_buffer *iob, streams_blocked_frame *frame);
+    /*********************************************************************************
+     * Unpack stream blocked frame
+     ********************************************************************************/
+    bool unpack_streams_blocked_frame(io_buffer *iob, streams_blocked_frame *frame);
 
+    /*********************************************************************************
+     * New connection id frame
+     ********************************************************************************/
     struct new_connection_id_frame {
         uint64_t seq;
         uint64_t retire_prior_to;
@@ -224,44 +400,90 @@ namespace quic {
         block_t stateless_reset_token[16];
     };
 
+    /*********************************************************************************
+     * Get new connection id frame length
+     ********************************************************************************/
     int32_t length_new_connection_id_frame(const new_connection_id_frame *frame);
 
-    bool pack_new_connection_id_frame(const new_connection_id_frame *frame, toolkit::io_buffer *iob);
+    /*********************************************************************************
+     * Pack new connection id frame
+     ********************************************************************************/
+    bool pack_new_connection_id_frame(const new_connection_id_frame *frame, io_buffer *iob);
 
-    bool unpack_new_connection_id_frame(toolkit::io_buffer *iob, new_connection_id_frame *frame);
+    /*********************************************************************************
+     * Unpack new connection id frame
+     ********************************************************************************/
+    bool unpack_new_connection_id_frame(io_buffer *iob, new_connection_id_frame *frame);
 
+    /*********************************************************************************
+     * Retire connection id frame
+     ********************************************************************************/
     struct retire_connection_id_frame {
         uint64_t seq;
     };
 
+    /*********************************************************************************
+     * Get retire connection id frame length
+     ********************************************************************************/
     int32_t length_retire_connection_id_frame(const retire_connection_id_frame *frame);
 
-    bool pack_retire_connection_id_frame(const retire_connection_id_frame *frame, toolkit::io_buffer *iob);
+    /*********************************************************************************
+     * Pack retire connection id frame
+     ********************************************************************************/
+    bool pack_retire_connection_id_frame(const retire_connection_id_frame *frame, io_buffer *iob);
 
-    bool unpack_retire_connection_id_frame(toolkit::io_buffer *iob, retire_connection_id_frame *frame);
+    /*********************************************************************************
+     * Unpack retire connection id frame
+     ********************************************************************************/
+    bool unpack_retire_connection_id_frame(io_buffer *iob, retire_connection_id_frame *frame);
 
+    /*********************************************************************************
+     * Path challenge frame
+     ********************************************************************************/
     struct path_challenge_frame {
         block_t data[8];
     };
 
+    /*********************************************************************************
+     * Get path challenge frame length
+     ********************************************************************************/
     int32_t length_path_challenge_frame(const path_challenge_frame *frame);
 
-    bool pack_path_challenge_frame(const path_challenge_frame *frame, toolkit::io_buffer *iob);
+    /*********************************************************************************
+     * Pack path challenge frame
+     ********************************************************************************/
+    bool pack_path_challenge_frame(const path_challenge_frame *frame, io_buffer *iob);
 
-    bool unpack_path_challenge_frame(toolkit::io_buffer *iob, path_challenge_frame *frame);
+    /*********************************************************************************
+     * Unpack path challenge frame
+     ********************************************************************************/
+    bool unpack_path_challenge_frame(io_buffer *iob, path_challenge_frame *frame);
 
-
+    /*********************************************************************************
+     * Path response frame
+     ********************************************************************************/
     struct path_response_frame {
         block_t data[8];
     };
 
+    /*********************************************************************************
+     * Get path response frame length
+     ********************************************************************************/
     int32_t length_path_response_frame(const path_response_frame *frame);
 
-    bool pack_path_response_frame(const path_response_frame *frame, toolkit::io_buffer *iob);
+    /*********************************************************************************
+     * Pack path response frame
+     ********************************************************************************/
+    bool pack_path_response_frame(const path_response_frame *frame, io_buffer *iob);
 
-    bool unpack_path_response_frame(toolkit::io_buffer *iob, path_response_frame *frame);
+    /*********************************************************************************
+     * Unpack path response frame
+     ********************************************************************************/
+    bool unpack_path_response_frame(io_buffer *iob, path_response_frame *frame);
 
-
+    /*********************************************************************************
+     * Connection close frame
+     ********************************************************************************/
     struct connection_close_frame {
         bool is_application_error;
         error_code ec;
@@ -269,20 +491,40 @@ namespace quic {
         std::string reason;
     };
 
+    /*********************************************************************************
+     * Get connection close frame length
+     ********************************************************************************/
     int32_t length_connection_close_frame(const connection_close_frame *frame);
 
-    bool pack_connection_close_frame(const connection_close_frame *frame, toolkit::io_buffer *iob);
+    /*********************************************************************************
+     * Pack connection close frame
+     ********************************************************************************/
+    bool pack_connection_close_frame(const connection_close_frame *frame, io_buffer *iob);
 
-    bool unpack_connection_close_frame(toolkit::io_buffer *iob, connection_close_frame *frame);
+    /*********************************************************************************
+     * Unpack connection close frame
+     ********************************************************************************/
+    bool unpack_connection_close_frame(io_buffer *iob, connection_close_frame *frame);
 
-    struct handshake_done_frame {
-    };
+    /*********************************************************************************
+     * Handshake done frame
+     ********************************************************************************/
+    struct handshake_done_frame {};
 
+    /*********************************************************************************
+     * Get handshake done frame length
+     ********************************************************************************/
     int32_t length_handshake_done_frame(const handshake_done_frame *frame);
 
-    bool pack_handshake_done_frame(const handshake_done_frame *frame, toolkit::io_buffer *iob);
+    /*********************************************************************************
+     * Pack handshake done frame
+     ********************************************************************************/
+    bool pack_handshake_done_frame(const handshake_done_frame *frame, io_buffer *iob);
 
-    bool unpack_handshake_done_frame(toolkit::io_buffer *iob, handshake_done_frame *frame);
+    /*********************************************************************************
+     * Unpack handshake done frame
+     ********************************************************************************/
+    bool unpack_handshake_done_frame(io_buffer *iob, handshake_done_frame *frame);
 
 }
 }

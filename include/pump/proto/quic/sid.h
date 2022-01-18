@@ -17,19 +17,11 @@
 #ifndef pump_proto_quic_sid_h
 #define pump_proto_quic_sid_h
 
-#include "pump/types.h"
+#include "pump/proto/quic/types.h"
 
 namespace pump {
 namespace proto {
 namespace quic {
-
-    typedef uint8_t stream_type;
-    const stream_type bidi_stream  = 0x00;
-    const stream_type unidi_stream = 0x02;
-
-    typedef uint8_t stream_initiator_type;
-    const stream_initiator_type client_initiator = 0x00;
-    const stream_initiator_type server_initiator = 0x01;
 
     class sid {
       public:
@@ -59,9 +51,9 @@ namespace quic {
          ********************************************************************************/
         PUMP_INLINE stream_type get_stream_type() const {
             if ((stream_type(id_) & 0x02) == 0) {
-                return bidi_stream;
+                return stream_bidirection;
             } else {
-                return unidi_stream;
+                return stream_unidirection;
             }
         }
 

@@ -25,7 +25,7 @@ namespace quic {
 
     static bool __pack_transport_preferred_address(
         const transport_preferred_address *preferred_address,
-        toolkit::io_buffer *iob) {
+        io_buffer *iob) {
         auto addr_v4 = (const sockaddr_in*)preferred_address->ipv4.get();;
         if (!iob->write((block_t*)&addr_v4->sin_addr.s_addr, 4) ||
             !iob->write((block_t*)&addr_v4->sin_port, 2)) {
@@ -50,7 +50,7 @@ namespace quic {
     }
 
     static bool __unpack_transport_preferred_address(
-        toolkit::io_buffer *iob, 
+        io_buffer *iob, 
         transport_preferred_address *preferred_address) {
         sockaddr_in addr_v4;
         if (!iob->read((block_t*)&addr_v4.sin_addr.s_addr, 4) ||
@@ -83,7 +83,7 @@ namespace quic {
     bool pack_transport_parameters(
         stream_initiator_type initiator,
         const transport_parameters *params, 
-        toolkit::io_buffer *iob) {
+        io_buffer *iob) {
 
         if (initiator == server_initiator) {
             if (!varint_encode(PARAM_ORIGINAL_DESTINATION_CONNECTION_ID, iob) || 
@@ -208,7 +208,7 @@ namespace quic {
 
     bool unpack_transport_parameters(
         stream_initiator_type initiator,
-        toolkit::io_buffer *iob, 
+        io_buffer *iob, 
         transport_parameters *params) {
         if (iob == nullptr || params == nullptr) {
             return false;

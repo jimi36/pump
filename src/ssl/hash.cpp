@@ -201,7 +201,9 @@ namespace ssl {
 
     std::string sum_hash(hash_context *ctx) {
         std::string output(hash_digest_length(ctx->algo), 0);
-        PUMP_DEBUG_CHECK(sum_hash(ctx, (uint8_t*)output.data(), (int32_t)output.size()));
+        if (!sum_hash(ctx, (uint8_t*)output.data(), (int32_t)output.size())) {
+            PUMP_WARN_LOG("sum hash failed");
+        }
         return std::forward<std::string>(output);
     }
 
@@ -239,7 +241,7 @@ namespace ssl {
                         (const uint8_t*)input.data(), 
                         input.size(),
                         (uint8_t*)out.data(), 
-                        &out_len) != nullptr,
+                        &out_len) == nullptr,
                     ""); 
             }
         } while(false);

@@ -38,10 +38,10 @@ namespace http {
         transp_(transp) {
         // Init connection buffer cache.
         cache_ = toolkit::io_buffer::create();
-        PUMP_DEBUG_FAILED(
-            cache_ == nullptr, 
-            "create http connection cache failed",
-            PUMP_ABORT());
+        if (cache_ == nullptr) {
+            PUMP_ERR_LOG("create http connection cache failed");
+            PUMP_ABORT();
+        }
 
         if (server) {
             create_pending_packet_ = []() {
@@ -376,7 +376,7 @@ namespace http {
     }
 
     int32_t connection::__handle_websocket_frame(const block_t *b, int32_t size) {
-        auto iob = toolkit::io_buffer::create_by_move(b, size, true);
+        auto iob = toolkit::io_buffer::create_by_refence(b, size);
 
         do {
             // Decode websocket frame header.

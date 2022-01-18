@@ -406,7 +406,7 @@ namespace transport {
 
     bool tls_transport::__async_send(toolkit::io_buffer *iob) {
         // Insert buffer to sendlist.
-        PUMP_DEBUG_CHECK(sendlist_.push(iob));
+        PUMP_ABORT_WITH_LOG(!sendlist_.push(iob), "push io buffer to queue failed");
 
         // If there are no more buffers, we should try to get next send chance.
         if (pending_send_size_.fetch_add(iob->size()) > 0) {
@@ -438,7 +438,7 @@ namespace transport {
     int32_t tls_transport::__send_once() {
         PUMP_ASSERT(!last_send_iob_);
         // Pop next buffer from sendlist.
-        PUMP_DEBUG_CHECK(sendlist_.pop(last_send_iob_));
+        PUMP_ABORT_WITH_LOG(sendlist_.pop(last_send_iob_), "pop io buffer from queue failed");
         // Save last send buffer data size.
         last_send_iob_size_ = last_send_iob_->size();
 

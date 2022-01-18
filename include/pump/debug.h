@@ -36,23 +36,6 @@
         PUMP_ABORT(); \
     }
 
-// Pump debug check
-#if defined(NDEBUG)
-#define PUMP_DEBUG_CHECK(x) x
-#else
-#define PUMP_DEBUG_CHECK(x) \
-    if (PUMP_UNLIKELY(!x)) { \
-        PUMP_ASSERT(false); \
-    }
-#endif
-
-// Pump debug condition fail
-#define PUMP_DEBUG_FAILED(c, log, x) \
-    if (PUMP_UNLIKELY(c)) { \
-        PUMP_WARN_LOG(log); \
-        x; \
-    }
-
 #if defined(PUMP_HAVE_DEBUG_LOG)
 #define PUMP_ERR_LOG(fmt, ...) \
     printf("\033[1;31m[Error][%s][%s:%d] " fmt "\n\033[0m", __FILE__, __FUNCTION__, __LINE__, ##__VA_ARGS__)
@@ -61,11 +44,11 @@
 #define PUMP_DEBUG_LOG(fmt, ...) \
     printf("\033[1;37m[Debug][%s][%s:%d] " fmt "\n\033[0m", __FILE__, __FUNCTION__, __LINE__, ##__VA_ARGS__)
 #else
-#define PUMP_ERR_LOG(...) \
+#define PUMP_ERR_LOG(fmt, ...) \
     printf("\033[1;31m[Error][%s][%s:%d] " fmt "\n\033[0m", __FILE__, __FUNCTION__, __LINE__, ##__VA_ARGS__)
-#define PUMP_WARN_LOG(...) \
+#define PUMP_WARN_LOG(fmt, ...) \
     printf("\033[1;33m[Warn][%s][%s:%d] " fmt "\n\033[0m", __FILE__, __FUNCTION__, __LINE__, ##__VA_ARGS__)
-#define PUMP_DEBUG_LOG(...) void(0)
+#define PUMP_DEBUG_LOG(fmt, ...) void(0)
 #endif
 
 #endif

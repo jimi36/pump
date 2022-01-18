@@ -83,7 +83,7 @@ namespace ssl {
                 }
                 
                 X509 *cert = X509_new();
-                if (X509_set_version(cert, 3) == 1) {
+                if (X509_set_version(cert, 3) != 1) {
                     PUMP_ABORT();
                 }
                 if (ASN1_INTEGER_set(X509_get_serialNumber(cert), 3) != 1) {
@@ -95,7 +95,7 @@ namespace ssl {
                 if (X509_gmtime_adj(X509_get_notAfter(cert), 365L * 86400) == nullptr) {
                     PUMP_ABORT();
                 }
-                if (X509_set_pubkey(cert, pkey) == 1) {
+                if (X509_set_pubkey(cert, pkey) != 1) {
                     PUMP_ABORT();
                 }
 

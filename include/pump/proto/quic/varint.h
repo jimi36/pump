@@ -19,21 +19,34 @@
 
 #include <string>
 
-#include "pump/types.h"
 #include "pump/toolkit/buffer.h"
 
 namespace pump {
 namespace proto {
 namespace quic {
 
+    using toolkit::io_buffer;
+
+    /*********************************************************************************
+     * GEt varint length of value
+     ********************************************************************************/
     int32_t varint_length(uint64_t val);
 
-    bool varint_encode(uint64_t val, toolkit::io_buffer *iob);
+    /*********************************************************************************
+     * Varint encode
+     ********************************************************************************/
+    bool varint_encode(uint64_t val, io_buffer *iob);
 
-    bool varint_decode(toolkit::io_buffer *iob, uint64_t *val);
+    /*********************************************************************************
+     * Varint decode
+     ********************************************************************************/
+    bool varint_decode(io_buffer *iob, uint64_t *val);
 
+    /*********************************************************************************
+     * Varient decode ex
+     ********************************************************************************/
     template <typename T>
-    bool varint_decode_ex(toolkit::io_buffer *iob, T *val){
+    bool varint_decode_ex(io_buffer *iob, T *val){
         uint64_t u64 = 0;
         if (!varint_decode(iob, &u64)) {
             return false;

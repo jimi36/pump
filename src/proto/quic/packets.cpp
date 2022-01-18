@@ -25,7 +25,7 @@ namespace pump {
 namespace proto {
 namespace quic {
 
-    static bool __pack_packet_number(uint8_t len, uint32_t num, toolkit::io_buffer *iob) {
+    static bool __pack_packet_number(uint8_t len, uint32_t num, io_buffer *iob) {
         if (len == 1) {
             return iob->write(num);
         } else if (len == 2) {
@@ -41,7 +41,7 @@ namespace quic {
         return false;
     }
 
-    static bool __unpack_packet_number(toolkit::io_buffer *iob, uint8_t len, uint32_t *num) {
+    static bool __unpack_packet_number(io_buffer *iob, uint8_t len, uint32_t *num) {
         if (len == 1) {
             uint8_t n = 0;
             if (iob->read((block_t*)&n)) {
@@ -70,7 +70,7 @@ namespace quic {
         return false;
     }
 
-    static bool __pack_long_packet_header(const packet_header *hdr, toolkit::io_buffer *b) {
+    static bool __pack_long_packet_header(const packet_header *hdr, io_buffer *b) {
         uint8_t hb = 0xc0;
         if (hdr->packet_type != LPT_NEGOTIATE_VER) {
             hb |= uint8_t(hdr->packet_type << 4);
@@ -92,7 +92,7 @@ namespace quic {
         return true;
     }
 
-    static bool __unpack_long_packet_header(toolkit::io_buffer *iob, uint8_t hb, packet_header *hdr) {
+    static bool __unpack_long_packet_header(io_buffer *iob, uint8_t hb, packet_header *hdr) {
         if (!iob->read((block_t*)&hdr->version, sizeof(hdr->version))) {
             return false;
         }
@@ -124,7 +124,7 @@ namespace quic {
         return true;
     }
 
-    static bool __pack_short_packet_header(const packet_header *hdr, toolkit::io_buffer *b) {
+    static bool __pack_short_packet_header(const packet_header *hdr, io_buffer *b) {
         uint8_t hb = 0xc0;
         hb |= uint8_t(hdr->packet_type << 4);
         if (hdr->packet_type != LPT_RETRY) {
@@ -138,7 +138,7 @@ namespace quic {
         return true;
     }
 
-    static bool __unpack_short_packet_header(toolkit::io_buffer *iob, uint8_t id_len, uint8_t hb, packet_header *hdr) {
+    static bool __unpack_short_packet_header(io_buffer *iob, uint8_t id_len, uint8_t hb, packet_header *hdr) {
         if (!hdr->des_id.read_from(iob, id_len)) {
             return false;
         } 
@@ -148,7 +148,7 @@ namespace quic {
         return true;
     }
 
-    static bool __pack_version_negotiation_packet(const packet *pkt, toolkit::io_buffer *iob) {
+    static bool __pack_version_negotiation_packet(const packet *pkt, io_buffer *iob) {
         auto impl = (version_negotiation_packet*)pkt->ptr;
 
         for (uint32_t version : impl->supported_versions) {
@@ -161,7 +161,7 @@ namespace quic {
         return true;
     }
 
-    static bool __unpack_version_negotiation_packet(toolkit::io_buffer *iob, packet *pkt) {
+    static bool __unpack_version_negotiation_packet(io_buffer *iob, packet *pkt) {
         if (iob->size() % sizeof(uint32_t) != 0) {
             return false;
         }
@@ -179,7 +179,7 @@ namespace quic {
         return true;
     }
 
-    static bool __pack_initial_packet(const packet *pkt, toolkit::io_buffer *iob) {
+    static bool __pack_initial_packet(const packet *pkt, io_buffer *iob) {
         auto impl = (initial_packet*)pkt->ptr;
 
         if (!varint_encode(impl->token.size(), iob)) {
@@ -201,7 +201,7 @@ namespace quic {
 
     }
 
-    static bool __unpack_initial_packet(toolkit::io_buffer *iob, packet *pkt) {
+    static bool __unpack_initial_packet(io_buffer *iob, packet *pkt) {
         auto impl = object_create<initial_packet>();
         if (impl == nullptr) {
             return false;
@@ -313,7 +313,7 @@ namespace quic {
         object_delete(pkt);
     }
 
-    bool pack_packet(const packet *pkt, toolkit::io_buffer *iob) {
+    bool pack_packet(const packet *pkt, io_buffer *iob) {
         if (pkt->header.is_long_pakcet) {
             if (!__pack_long_packet_header(&pkt->header, iob)) {
                 return false;
@@ -328,7 +328,7 @@ namespace quic {
         return true;
     }
 
-    bool unpack_packet(toolkit::io_buffer *iob, uint8_t id_len, packet *pkt) {
+    bool unpack_packet(io_buffer *iob, uint8_t id_len, packet *pkt) {
         uint8_t hb = 0;
         if (!iob->read((block_t*)&hb)) {
             return false;

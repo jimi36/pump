@@ -82,10 +82,10 @@ namespace poll {
         }
 
         // Create tracker event
-        if (!tevents_.push(object_create<tracker_event>(tracker, TRACKER_EVENT_ADD))) {
-            PUMP_ERR_LOG("push adding tracker event to queue failed");
-            PUMP_ABORT();
-        }
+        PUMP_ABORT_WITH_LOG(
+            !tevents_.push(object_create<tracker_event>(tracker, TRACKER_EVENT_ADD)),
+            "push adding tracker event to queue failed"
+        );
 
         // Add pending trakcer event count
         tev_cnt_.fetch_add(1, std::memory_order_release);
@@ -108,10 +108,10 @@ namespace poll {
         __uninstall_channel_tracker(tracker.get());
 
         // Push tracker event to queue.
-        if (!tevents_.push(object_create<tracker_event>(tracker, TRACKER_EVENT_DEL))) {
-            PUMP_ERR_LOG("push removing tracker event to queue failed");
-            PUMP_ABORT();
-        }
+        PUMP_ABORT_WITH_LOG(
+            !tevents_.push(object_create<tracker_event>(tracker, TRACKER_EVENT_DEL)),
+            "push removing tracker event to queue failed"
+        );
 
         // Add pending trakcer event count
         tev_cnt_.fetch_add(1, std::memory_order_relaxed);
@@ -132,10 +132,10 @@ namespace poll {
         }
 
         // Push channel event to queue.
-        if (!cevents_.push(object_create<channel_event>(c, event))) {
-            PUMP_ERR_LOG("push channel event to queue failed");
-            PUMP_ABORT();
-        }
+        PUMP_ABORT_WITH_LOG(
+            !cevents_.push(object_create<channel_event>(c, event)),
+            "push channel event to queue failed"
+        );
 
         // Add pending channel event count
         cev_cnt_.fetch_add(1, std::memory_order_relaxed);
@@ -147,7 +147,7 @@ namespace poll {
         channel_event *ev = nullptr;
         int32_t cnt = cev_cnt_.exchange(0, std::memory_order_relaxed);
         for (; cnt > 0; cnt--) {
-            PUMP_DEBUG_CHECK(cevents_.pop(ev));
+            PUMP_ABORT_WITH_LOG(!cevents_.pop(ev), "pop channel event from queue failed");
             auto ch = ev->ch.lock();
             if (ch) {
                 ch->handle_channel_event(ev->event);
@@ -160,7 +160,7 @@ namespace poll {
         tracker_event *ev = nullptr;
         int32_t cnt = tev_cnt_.exchange(0, std::memory_order_relaxed);
         for (; cnt > 0; cnt--) {
-            PUMP_DEBUG_CHECK(tevents_.pop(ev));
+            PUMP_ABORT_WITH_LOG(!tevents_.pop(ev), "pop tracker event from queue failed");
             if (ev->event == TRACKER_EVENT_ADD) {
                 // Apeend to tracker list
                 trackers_[ev->tracker.get()] = std::move(ev->tracker);
