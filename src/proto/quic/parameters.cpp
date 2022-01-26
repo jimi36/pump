@@ -15,7 +15,6 @@
  */
 
 #include "pump/proto/quic/utils.h"
-#include "pump/proto/quic/varint.h"
 #include "pump/proto/quic/defaults.h"
 #include "pump/proto/quic/parameters.h"
 
@@ -23,7 +22,7 @@ namespace pump {
 namespace proto {
 namespace quic {
 
-    static bool __pack_transport_preferred_address(
+    static bool __pack_preferred_address(
         const transport_preferred_address *preferred_address,
         io_buffer *iob) {
         auto addr_v4 = (const sockaddr_in*)preferred_address->ipv4.get();;
@@ -49,7 +48,7 @@ namespace quic {
         return true;
     }
 
-    static bool __unpack_transport_preferred_address(
+    static bool __unpack_preferred_address(
         io_buffer *iob, 
         transport_preferred_address *preferred_address) {
         sockaddr_in addr_v4;
@@ -80,7 +79,7 @@ namespace quic {
         return true;
     }
 
-    bool pack_transport_parameters(
+    bool pack_parameters(
         stream_initiator_type initiator,
         const transport_parameters *params, 
         io_buffer *iob) {
@@ -177,7 +176,7 @@ namespace quic {
         if (initiator == server_initiator && params->preferred_address != nullptr) {
             if (!varint_encode(PARAM_PREFERRED_ADDRESS, iob) || 
                 !varint_encode(4 + 2 + 16 + 2 + 1 + params->preferred_address->id.length() + 16, iob) ||
-                !__pack_transport_preferred_address(params->preferred_address, iob) ||
+                !__pack_preferred_address(params->preferred_address, iob) ||
                 !write_string_to_iob(params->preferred_address->stateless_reset_token, iob)) {
                 return false;
             }
@@ -203,10 +202,17 @@ namespace quic {
             }
         }
 
+        if (params->max_datagram_frame_size > 0) {
+            if (!varint_encode(PARAM_RETRY_SOURCE_CONNECTION_ID, iob) || 
+                !varint_encode(varint_length(params->max_datagram_frame_size), iob)) {
+                return false;
+            }
+        }
+
         return true;
     }
 
-    bool unpack_transport_parameters(
+    bool unpack_parameters(
         stream_initiator_type initiator,
         io_buffer *iob, 
         transport_parameters *params) {
@@ -327,7 +333,7 @@ namespace quic {
                         return false;
                     }
                 }
-                if (!__unpack_transport_preferred_address(iob, params->preferred_address)) {
+                if (!__unpack_preferred_address(iob, params->preferred_address)) {
                     return false;
                 }
                 break;
@@ -348,6 +354,11 @@ namespace quic {
                     return false;
                 }
                 break;
+            case PARAM_MAX_DATAGRAM_FRAME_SIZE:
+                if (!varint_decode_ex(iob, &params->max_datagram_frame_size)) {
+                    return false;
+                }
+                break;
             default:
                 iob->shift(len);
                 break;
@@ -355,6 +366,13 @@ namespace quic {
         }
 
         return true;
+    }
+
+    tls::extension_type get_paramerters_extension_type(version_number version) {
+        if (version == version_tls) {
+            return 0x39;
+        }
+        return 0xffa5;
     }
 
 }

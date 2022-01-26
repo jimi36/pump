@@ -136,7 +136,7 @@ namespace transport {
          * Reset last sent io buffer
          ********************************************************************************/
         PUMP_INLINE void __reset_last_sent_iobuffer() {
-            last_send_iob_->sub_refence();
+            last_send_iob_->unrefer();
             last_send_iob_ = nullptr;
         }
 

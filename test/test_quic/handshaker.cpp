@@ -22,7 +22,7 @@ void server_read_callback(const std::string &data) {
         }
     }
     delete_handshake_message(msg);
-    iob->sub_refence();
+    iob->unrefer();
 }
 
 void server_finished_callback(const connection_session &session) {
@@ -42,7 +42,7 @@ void client_read_callback(const std::string &data) {
         }
     }
     delete_handshake_message(msg);
-    iob->sub_refence();
+    iob->unrefer();
 }
 
 void client_finished_callback(const connection_session &session) {

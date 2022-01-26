@@ -21,7 +21,6 @@
 #include "pump/ssl/ecdhe.h"
 #include "pump/codec/base64.h"
 #include "pump/toolkit/features.h"
-#include "pump/proto/quic/tls/types.h"
 #include "pump/proto/quic/tls/utils.h"
 #include "pump/proto/quic/tls/client.h"
 
@@ -204,7 +203,7 @@ namespace tls {
         }
 
         if (server_hello->supported_version != TLS_VSERVER_13) {
-            return ALERT_proto_VERSION;
+            return ALERT_PROTO_VERSION;
         }
 
         if (memcmp(server_hello->random + 24, DOWNGRRADE_CANARY_TLS11, 8) == 0 || 
@@ -272,14 +271,18 @@ namespace tls {
         __write_transcript(msg->packed);
 
         {
-            auto shared_key = ssl::gen_ecdhe_shared_key(
-                                session_.ecdhe_ctx,
-                                server_hello->selected_key_share.data);
             auto secret = cipher_suite_device_secret(
                             session_.cipher_suite_ctx, 
                             cipher_suite_extract(session_.cipher_suite_ctx, "", ""), 
                             "derived", 
                             nullptr);
+            std::string shared_key;
+            if (!ssl::gen_ecdhe_shared_key(
+                    session_.ecdhe_ctx,
+                    server_hello->selected_key_share.data,
+                    shared_key)) {
+                return ALERT_INTERNAL_ERROR;
+            }
             session_.handshake_secret = cipher_suite_extract(session_.cipher_suite_ctx, secret, shared_key);
             //auto handshake_secret_base64 = codec::base64_encode(session_.handshake_secret);
             //PUMP_DEBUG_LOG("client handshaker handshake_secret_base64: %s", handshake_secret_base64.c_str());
@@ -369,7 +372,7 @@ namespace tls {
             return ALERT_INTERNAL_ERROR;
         }
         __write_transcript(iob->string());
-        iob->sub_refence();
+        iob->unrefer();
 
         if (!pack_handshake_message(msg)) {
             return ALERT_INTERNAL_ERROR;
@@ -402,7 +405,7 @@ namespace tls {
             session_.enable_zero_rtt = true;
         }
 
-        if (encrypted_extensions->additional_extensions.empty()) {
+        if (!encrypted_extensions->additional_extensions.empty()) {
             // TODO: Callback quic parameter extensions.
         }
 
@@ -421,11 +424,13 @@ namespace tls {
         status_ = HANDSHAKE_CARTIFICATE_REQUEST_RECV;
 
         auto cert_request = (certificate_req_tls13_message*)msg->msg;
-        PUMP_ASSERT(cert_request);
-
-        cert_request_ = cert_request;
+        if (cert_request == nullptr) {
+            return ALERT_INTERNAL_ERROR;
+        }
         msg->msg = nullptr;
 
+        cert_request_ = cert_request;
+        
         if (!pack_handshake_message(msg)) {
             return ALERT_INTERNAL_ERROR;
         }
@@ -442,13 +447,15 @@ namespace tls {
         status_ = HANDSHAKE_CARTIFICATE_RECV;
 
         auto cert_tls13 = (certificate_tls13_message*)msg->msg;
-        PUMP_ASSERT(cert_tls13);
+        if (cert_tls13 == nullptr) {
+            return ALERT_INTERNAL_ERROR;
+        }
 
         if (cert_tls13->certificates.empty()) {
             return ALERT_ILLEGAL_PARAMETER;
         }
         for (auto &certificate : cert_tls13->certificates) {
-            auto cert = ssl::load_x509_certificate_by_raw(certificate, "");
+            auto cert = ssl::load_x509_certificate_by_bin(certificate, "");
             if (cert == nullptr) {
                 return ALERT_ILLEGAL_PARAMETER;
             }
@@ -482,10 +489,14 @@ namespace tls {
         status_ = HANDSHAKE_CARTIFICATE_VERIFY_RECV;
 
         auto cert_verify = (certificate_verify_message*)msg->msg;
-        PUMP_ASSERT(cert_verify);
+        if (cert_verify == nullptr) {
+            return ALERT_INTERNAL_ERROR;
+        }
 
         auto client_hello = (client_hello_message*)hello_->msg;
-        PUMP_ASSERT(client_hello);
+        if (client_hello == nullptr) {
+            return ALERT_INTERNAL_ERROR;
+        }
 
         if (!is_contains(client_hello->signature_schemes, cert_verify->signature_scheme)) {
             return ALERT_ILLEGAL_PARAMETER;
@@ -540,7 +551,9 @@ namespace tls {
         status_ = HANDSHAKE_FINISHED_RECV;
 
         auto finished = (finished_message*)msg->msg;
-        PUMP_ASSERT(finished);
+        if (finished == nullptr) {
+            return ALERT_INTERNAL_ERROR;
+        }
 
         // https://tools.ietf.org/html/rfc8446#section-4.4.4
         // https://tools.ietf.org/html/rfc8446#section-4.2.11.2
@@ -616,14 +629,19 @@ namespace tls {
         if (msg == nullptr) {
             return ALERT_INTERNAL_ERROR;
         }
+        auto cert_tls13 = (certificate_tls13_message*)msg->msg;
+
         toolkit::defer cleanup([&](){
             delete_handshake_message(msg);
         });
-        auto cert_tls13 = (certificate_tls13_message*)msg->msg;
 
         if (!session_.certs.empty()) {
             for (auto cert : session_.certs) {
-                cert_tls13->certificates.push_back(ssl::to_x509_certificate_raw(cert));
+                std::string data;
+                if (!to_x509_certificate_bin(cert, data)) {
+                    return ALERT_BAD_CERTIFICATE;
+                }
+                cert_tls13->certificates.push_back(data);
             }
 
             // TODO: Support ocsp staple? Default false.
@@ -656,13 +674,17 @@ namespace tls {
             if (msg == nullptr) {
                 return ALERT_INTERNAL_ERROR;
             }
+            auto cert_verify = (certificate_verify_message*)msg->msg;
+
             toolkit::defer cleanup([&](){
                 delete_handshake_message(msg);
             });
-            auto cert_verify = (certificate_verify_message*)msg->msg;
 
             cert_verify->has_signature_scheme = true;
             cert_verify->signature_scheme = ssl::get_x509_signature_scheme(session_.certs[0]);
+            if (cert_verify->signature_scheme == ssl::TLS_SIGN_SCHE_UNKNOWN) {
+                return ALERT_INTERNAL_ERROR;
+            }
 
             auto hash_algo = transform_to_hash_algo(cert_verify->signature_scheme);
             if (hash_algo == ssl::HASH_UNKNOWN) {
@@ -697,10 +719,11 @@ namespace tls {
         if (msg == nullptr) {
             return ALERT_INTERNAL_ERROR;
         }
+        auto finished = (finished_message*)msg->msg;
+
         toolkit::defer cleanup([&](){
             delete_handshake_message(msg);
         });
-        auto finished = (finished_message*)msg->msg;
 
         // https://tools.ietf.org/html/rfc8446#section-4.4.4
         // https://tools.ietf.org/html/rfc8446#section-4.2.11.2
@@ -750,13 +773,14 @@ namespace tls {
 
     void client_handshaker::__send_handshake_message(handshake_message *msg, bool transcript) {
         if (!pack_handshake_message(msg)) {
-            PUMP_DEBUG_LOG("pack handhake message failed");  
-        }
-        if (transcript) {
-            __write_transcript(msg->packed);
-        }
-        if (send_callback_) {
-            send_callback_(msg->packed);
+            PUMP_DEBUG_LOG("pack handhake message failed");
+        } else {
+            if (transcript) {
+                __write_transcript(msg->packed);
+            }
+            if (send_callback_) {
+                send_callback_(msg->packed);
+            }
         }
     }
 

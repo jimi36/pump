@@ -54,9 +54,10 @@ namespace ssl {
     /*********************************************************************************
      * Generate ecdhe shared key.
      ********************************************************************************/
-    std::string gen_ecdhe_shared_key(
+    bool gen_ecdhe_shared_key(
         ecdhe_context *ctx, 
-        const std::string &pubkey);
+        const std::string &pubkey,
+        std::string &shared_key);
 
 }
 }

@@ -225,7 +225,7 @@ namespace tls {
         if (ret && iob->data() > 0) {
             msg->packed.assign(iob->data(), iob->size());
         }
-        iob->sub_refence();
+        iob->unrefer();
 
         return ret;
     }
@@ -748,7 +748,7 @@ namespace tls {
 
             if (exs_iob->size() < extension_len) {
                 break;
-            } else if (!ex_iob->reset(exs_iob->data(), extension_len)) {
+            } else if (!ex_iob->reset_by_reference(exs_iob->data(), extension_len)) {
                 break;
             }
 
@@ -1037,8 +1037,8 @@ namespace tls {
             iob->shift(extensions_len);
             ret = true;
         }
-        ex_iob->sub_refence();
-        exs_iob->sub_refence();
+        ex_iob->unrefer();
+        exs_iob->unrefer();
 
         return ret;
     }
@@ -1295,7 +1295,7 @@ namespace tls {
 
             if (exs_iob->size() < extension_len) {
                 break;
-            } else if (!ex_iob->reset(exs_iob->data(), extension_len)) {
+            } else if (!ex_iob->reset_by_reference(exs_iob->data(), extension_len)) {
                 break;
             }
 
@@ -1435,8 +1435,8 @@ namespace tls {
             iob->shift(extensions_len);
             ret = true;
         }
-        ex_iob->sub_refence();
-        exs_iob->sub_refence();
+        ex_iob->unrefer();
+        exs_iob->unrefer();
 
         return ret;
     }
@@ -1786,7 +1786,7 @@ namespace tls {
 
             if (exs_iob->size() < extension_len) {
                 break;
-            } else if (!ex_iob->reset(exs_iob->data(), extension_len)) {
+            } else if (!ex_iob->reset_by_reference(exs_iob->data(), extension_len)) {
                 break;
             }
 
@@ -1837,8 +1837,8 @@ namespace tls {
             iob->shift(extensions_len);
             ret = true;
         }
-        exs_iob->sub_refence();
-        ex_iob->sub_refence();
+        exs_iob->unrefer();
+        ex_iob->unrefer();
 
         return ret; 
     }
@@ -1929,7 +1929,7 @@ namespace tls {
             iob->shift(certs_len);
             ret = true;
         }
-        cert_iob->sub_refence();
+        cert_iob->unrefer();
 
         return ret;
     }
@@ -2151,7 +2151,7 @@ namespace tls {
             iob->shift(certs_len);
             ret = true;
         }
-        cert_iob->sub_refence();
+        cert_iob->unrefer();
 
         return ret;
     }
@@ -2489,7 +2489,7 @@ namespace tls {
             
             if (exs_iob->size() < extension_len) {
                 break;
-            } else if (!ex_iob->reset(exs_iob->data(), extension_len)) {
+            } else if (!ex_iob->reset_by_reference(exs_iob->data(), extension_len)) {
                 break;
             }
 
@@ -2571,8 +2571,8 @@ namespace tls {
             iob->shift(extensions_len);
             ret = true;
         }
-        exs_iob->sub_refence();
-        ex_iob->sub_refence();
+        exs_iob->unrefer();
+        ex_iob->unrefer();
 
         return ret;
     }

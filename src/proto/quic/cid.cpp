@@ -17,7 +17,7 @@
 #include "pump/debug.h"
 #include "pump/codec/base64.h"
 #include "pump/proto/quic/cid.h"
-#include "pump/proto/quic/varint.h"
+#include "pump/proto/quic/utils.h"
 
 namespace pump {
 namespace proto {

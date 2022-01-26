@@ -132,7 +132,7 @@ namespace tls {
         if (!ssl::hkdf_expand(algo, key, info, out)) {
             PUMP_WARN_LOG("ssl hkdf expand failed");
         }
-        return std::forward<std::string>(out);
+        return out;
     }
 
     ssl::hash_algorithm transform_to_hash_algo(ssl::signature_scheme scheme) {

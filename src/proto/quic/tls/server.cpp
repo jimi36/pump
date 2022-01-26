@@ -114,7 +114,7 @@ namespace tls {
         
         version_type version13 = TLS_VSERVER_13;
         if (!is_contains(client_hello->supported_versions, version13)) {
-            return ALERT_proto_VERSION;
+            return ALERT_PROTO_VERSION;
         }
 
         if (client_hello->compression_methods.size() != 1 || 
@@ -270,7 +270,7 @@ namespace tls {
             return ALERT_INTERNAL_ERROR;
         }
         __write_transcript(iob->string());
-        iob->sub_refence();
+        iob->unrefer();
 
         PUMP_DEBUG_LOG("quic server handshaker send hello request message");
         __send_handshake_message(msg);
@@ -320,9 +320,13 @@ namespace tls {
                             cipher_suite_extract(session_.cipher_suite_ctx, "", ""), 
                             "derived", 
                             nullptr);
-            auto shared_key = ssl::gen_ecdhe_shared_key(
-                                session_.ecdhe_ctx, 
-                                client_hello_->key_shares[0].data);
+            std::string shared_key;
+            if (!ssl::gen_ecdhe_shared_key(
+                    session_.ecdhe_ctx, 
+                    client_hello_->key_shares[0].data,
+                    shared_key)) {
+                return ALERT_INTERNAL_ERROR;
+            }
             session_.handshake_secret = cipher_suite_extract(session_.cipher_suite_ctx, secret, shared_key);
             //auto handshake_secret_base64 = codec::base64_encode(session_.handshake_secret);
             //PUMP_DEBUG_LOG("server handshaker handshake_secret_base64: %s", handshake_secret_base64.c_str());
@@ -434,7 +438,11 @@ namespace tls {
 
         PUMP_ASSERT(!session_.certs.empty());
         for (auto cert : session_.certs) {
-            cert_tls13->certificates.push_back(ssl::to_x509_certificate_raw(cert));
+            std::string data;
+            if (!to_x509_certificate_bin(cert, data)) {
+                return ALERT_BAD_CERTIFICATE;
+            }
+            cert_tls13->certificates.push_back(data);
         }
 
         // TODO: Support scts? Default not.
@@ -596,7 +604,7 @@ namespace tls {
 
         if (!cert_tls13->certificates.empty()) {
             for (auto &certificate : cert_tls13->certificates) {
-                auto cert = ssl::load_x509_certificate_by_raw(certificate, "");
+                auto cert = ssl::load_x509_certificate_by_bin(certificate, "");
                 if (cert == nullptr) {
                     return ALERT_ILLEGAL_PARAMETER;
                 }

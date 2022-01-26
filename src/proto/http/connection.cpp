@@ -59,7 +59,7 @@ namespace http {
             transp_->force_stop();
         }
         if (cache_ != nullptr) {
-            cache_->sub_refence();
+            cache_->unrefer();
         }
     }
 
@@ -181,7 +181,7 @@ namespace http {
 
         } while (false);
 
-        iob->sub_refence();
+        iob->unrefer();
 
         return ret;
     }
@@ -337,7 +337,7 @@ namespace http {
         if (fm.pack_header(iob)) {
             transp_->send(iob);
         }
-        iob->sub_refence();
+        iob->unrefer();
     }
 
     void connection::__send_websocket_pong_frame() {
@@ -346,7 +346,7 @@ namespace http {
         if (fm.pack_header(iob)) {
             transp_->send(iob);
         }
-        iob->sub_refence();
+        iob->unrefer();
     }
 
     void connection::__send_wbesocket_close_frame() {
@@ -355,7 +355,7 @@ namespace http {
         if (fm.pack_header(iob)) {
             transp_->send(iob);
         }
-        iob->sub_refence();
+        iob->unrefer();
     }
 
     int32_t connection::__handle_http_packet(const block_t *b, int32_t size) {
@@ -421,7 +421,7 @@ namespace http {
                     break;
                 default:
                     PUMP_WARN_LOG("unknown websocket frame");
-                    iob->sub_refence();
+                    iob->unrefer();
                     return -1;
                 }
 
@@ -431,7 +431,7 @@ namespace http {
             }
         } while(false);
 
-        iob->sub_refence();
+        iob->unrefer();
 
         if (!__continue_read()) {
             PUMP_WARN_LOG("continue reading failed");

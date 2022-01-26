@@ -14,71 +14,95 @@
  * limitations under the License.
  */
 
-#ifndef pump_proto_quic_cid_h
-#define pump_proto_quic_cid_h
+#ifndef pump_proto_quic_rtt_h
+#define pump_proto_quic_rtt_h
 
-#include <string>
-
-#include "pump/toolkit/buffer.h"
+#include "pump/types.h"
 
 namespace pump {
 namespace proto {
 namespace quic {
 
-    using toolkit::io_buffer;
-
-    class cid {
+    class rtt {
       public:
         /*********************************************************************************
          * Constructor
          ********************************************************************************/
-        cid();
-        cid(const cid &id);
-        cid(const std::string &id);
-        cid(const block_t *id, int32_t len);
+        rtt();
 
         /*********************************************************************************
-         * Read from io buffer
+         * Set initial rtt
          ********************************************************************************/
-        bool read_from(io_buffer *iob, uint32_t len);
+        bool set_initial_rtt(int64_t r);
 
         /*********************************************************************************
-         * Write to io buffer
+         * Update with sample
          ********************************************************************************/
-        bool write_to(io_buffer *iob) const;
+        void update(
+            int64_t sample, 
+            int64_t ack_delay, 
+            int64_t now);
 
         /*********************************************************************************
-         * Format to base64 string
+         * Get packet timeout
          ********************************************************************************/
-        std::string to_string() const;
+        int64_t get_pto(bool include_max_ack_delay);
 
         /*********************************************************************************
-         * Get connection id data
+         * Reset
          ********************************************************************************/
-        PUMP_INLINE const block_t* data() const {
-            return id_.c_str();
+        void reset();
+
+        /*********************************************************************************
+         * Set max ack delay
+         ********************************************************************************/
+        PUMP_INLINE void set_max_ack_delay(int64_t ack_delay) {
+            max_ack_delay_ = ack_delay;
         }
 
         /*********************************************************************************
-         * Get connection id length
+         * Get max ack delay
          ********************************************************************************/
-        PUMP_INLINE int32_t length() const {
-            return id_.size();
+        PUMP_INLINE int64_t get_max_ack_delay() const {
+            return max_ack_delay_;
         }
 
-      public:
-         /*********************************************************************************
-         * Assignment operator
+        /*********************************************************************************
+         * Get min rtt
          ********************************************************************************/
-        cid& operator=(const cid &id);
+        PUMP_INLINE int64_t get_min_rtt() const {
+            return min_;
+        }
 
         /*********************************************************************************
-         * Equal operator
+         * Get latest rtt
          ********************************************************************************/
-        bool operator==(const cid &id) const;
+        PUMP_INLINE int64_t get_latest_rtt() const {
+            return latest_;
+        }
 
-    private:
-        std::string id_;
+        /*********************************************************************************
+         * Get smoothed rtt
+         ********************************************************************************/
+        PUMP_INLINE int64_t get_smoothed_rtt() const {
+            return smoothed_;
+        }
+
+      private:
+        // RTT inited flag
+        bool inited_;
+
+        // Min rtt 
+        int64_t min_;
+        // Latest rtt 
+        int64_t latest_;
+        // Smoothed rtt
+        int64_t smoothed_;
+        // Mean deviation
+        int64_t mean_deviation_;
+
+        // Max ack delay
+        int64_t max_ack_delay_;
     };
 
 }

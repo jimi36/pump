@@ -24,7 +24,7 @@ namespace proto {
 namespace quic {
 
     typedef uint32_t version_number;
-    const static version_number version_1       = 0x01;
+    const static version_number version_tls     = 0x01;
     const static version_number version_draft29 = 0xff00001d;
     const static version_number version_max     = 0xffffffff;
 

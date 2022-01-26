@@ -55,7 +55,9 @@ namespace quic {
     const frame_type FT_PATH_RESPONSE        = 0x1b;
     const frame_type FT_Q_CONNECTION_CLOSE   = 0x1c; // quic layer close connection
     const frame_type FT_A_CONNECTION_CLOSE   = 0x1d; // application layer close conection
-    const frame_type FT_HANDSHAKE_DONE       = 0x1e;   
+    const frame_type FT_HANDSHAKE_DONE       = 0x1e;
+    const frame_type FT_DATAGRAM             = 0x30;
+    const frame_type FT_DATAGRAM_LEN_PRESENT = 0x31;
 
     /*********************************************************************************
      * Padding frame
@@ -525,6 +527,29 @@ namespace quic {
      * Unpack handshake done frame
      ********************************************************************************/
     bool unpack_handshake_done_frame(io_buffer *iob, handshake_done_frame *frame);
+
+    /*********************************************************************************
+     * Datagram frame
+     ********************************************************************************/
+    struct datagram_frame {
+        bool len_present;
+        std::string data;
+    };
+
+    /*********************************************************************************
+     * Get datagram frame length
+     ********************************************************************************/
+    int32_t length_datagram_frame(const datagram_frame *frame);
+
+    /*********************************************************************************
+     * Pack datagram frame
+     ********************************************************************************/
+    bool pack_datagram_frame(const datagram_frame *frame, io_buffer *iob);
+
+    /*********************************************************************************
+     * Unpack datagram frame
+     ********************************************************************************/
+    bool unpack_datagram_frame(io_buffer *iob, datagram_frame *frame);
 
 }
 }

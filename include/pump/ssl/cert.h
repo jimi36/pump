@@ -65,12 +65,12 @@ namespace ssl {
     /*********************************************************************************
      * To X509 certificate pem data.
      ********************************************************************************/
-    std::string to_x509_certificate_pem(x509_certificate *xcert);
+    bool to_x509_certificate_pem(x509_certificate *xcert, std::string &pem);
 
     /*********************************************************************************
-     * To X509 certificate raw data.
+     * To X509 certificate bin data.
      ********************************************************************************/
-    std::string to_x509_certificate_raw(x509_certificate *xcert);
+    bool to_x509_certificate_bin(x509_certificate *xcert, std::string &bin);
 
     /*********************************************************************************
      * Load X509 certificate by pem.
@@ -87,10 +87,10 @@ namespace ssl {
     /*********************************************************************************
      * Load X509 certificate by raw.
      ********************************************************************************/
-    x509_certificate* load_x509_certificate_by_raw(
-        const std::string &data,
+    x509_certificate* load_x509_certificate_by_bin(
+        const std::string &cert,
         const std::string &key);
-    x509_certificate* load_x509_certificate_by_raw(
+    x509_certificate* load_x509_certificate_by_bin(
         const block_t *cert, 
         int32_t cert_size,
         const block_t *key, 
@@ -114,9 +114,7 @@ namespace ssl {
     /*********************************************************************************
      * Get X509 certificate scts.
      ********************************************************************************/
-    bool get_x509_scts(
-        x509_certificate *xcert, 
-        std::vector<std::string> &scts);
+    bool get_x509_scts(x509_certificate *xcert, std::vector<std::string> &scts);
 
     /*********************************************************************************
      * Get X509 certificate signature scheme.

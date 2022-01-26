@@ -8,13 +8,13 @@ namespace pump {
 namespace toolkit {
 
     base_buffer::base_buffer() noexcept 
-      : buf_ref_(false),
+      : owner_(false),
         raw_(nullptr), 
         raw_size_(0) {
     }
 
     base_buffer::~base_buffer() {
-        if (!buf_ref_ && raw_ != nullptr) {
+        if (owner_ && raw_ != nullptr) {
             pump_free(raw_);
         }
     }
@@ -40,6 +40,7 @@ namespace toolkit {
                         memcpy(raw_, b, size);
                     }
                     raw_size_ = size;
+                    owner_ = true;
                     return true;
                 }
             }
@@ -48,11 +49,11 @@ namespace toolkit {
         return false;
     }
 
-    bool base_buffer::__init_by_move(const block_t *b, uint32_t size, bool buf_ref) {
+    bool base_buffer::__init_by_reference(const block_t *b, uint32_t size) {
         if (raw_ == nullptr && b != nullptr && size > 0) {
             raw_ = (block_t*)b;
             raw_size_ = size;
-            buf_ref_ = buf_ref;
+            owner_ = false;
             return true;
         }
         return false;
@@ -60,7 +61,7 @@ namespace toolkit {
 
     bool io_buffer::write(const block_t *b, uint32_t size) {
         try {
-            if (buf_ref_ || size == 0) {
+            if (!owner_ || size == 0) {
                 return false;
             }
 
@@ -100,7 +101,7 @@ namespace toolkit {
 
     bool io_buffer::write(block_t b) {
         try {
-            if (buf_ref_) {
+            if (!owner_) {
                 return false;
             }
 
@@ -138,17 +139,28 @@ namespace toolkit {
         return true;
     }
 
-    bool io_buffer::reset(const block_t *b, uint32_t size) {
-        if (!buf_ref_) {
-            PUMP_ASSERT(false);
-            return false;
+    bool io_buffer::reset_by_copy(const block_t *b, uint32_t size) {
+        if (!owner_) {
+            raw_size_ = 0;
+            raw_ = nullptr;
+        }
+
+        size_ = 0;
+        rpos_ = 0;
+
+        return write(b, size);
+    }
+
+    bool io_buffer::reset_by_reference(const block_t *b, uint32_t size) {
+        if (owner_ && raw_ != nullptr) {
+            pump_free(raw_);
         }
 
         raw_ = (block_t*)b;
         raw_size_ = size;
 
-        rpos_ = 0;
         size_ = size;
+        rpos_ = 0;
 
         return true;
     }

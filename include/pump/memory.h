@@ -32,9 +32,9 @@
 #define pump_malloc je_malloc
 #define pump_realloc je_realloc
 #else
-#define pump_free free
-#define pump_malloc malloc
-#define pump_realloc realloc
+#define pump_free ::free
+#define pump_malloc ::malloc
+#define pump_realloc ::realloc
 #endif
 
 // Inline object create

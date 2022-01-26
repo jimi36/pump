@@ -37,26 +37,6 @@ namespace tls {
     const version_type TLS_VSERVER_12      = 0x0303;
     const version_type TLS_VSERVER_13      = 0x0304;
 
-    // TLS handshake message types.
-    typedef uint8_t message_type;
-    const message_type TLS_MSG_HELLO_REQUEST        = 0;
-    const message_type TLS_MSG_CLIENT_HELLO         = 1;
-    const message_type TLS_MSG_SERVER_HELLO         = 2;
-    const message_type TLS_MSG_NEW_SESSION_TICKET   = 4;
-    const message_type TLS_MSG_END_OF_EARLY_DATA    = 5;
-    const message_type TLS_MSG_ENCRYPTED_EXTENSIONS = 8;
-    const message_type TLS_MSG_CERTIFICATE          = 11;
-    const message_type TLS_MSG_SERVER_KEY_EXCHANGE  = 12;
-    const message_type TLS_MSG_CERTIFICATE_REQUEST  = 13;
-    const message_type TLS_MSG_SERVER_HELLO_DONE    = 14;
-    const message_type TLS_MSG_CERTIFICATE_VERIFY   = 15;
-    const message_type TLS_MSG_CLIENT_KEY_EXCHANGE  = 16;
-    const message_type TLS_MSG_FINISHED             = 20;
-    const message_type TLS_MSG_CERTIFICATE_STATUS   = 22;
-    const message_type TLS_MSG_KEY_UPDATE           = 24;
-    const message_type TLS_NSG_NEXT_proto        = 67;  // Not IANA assigned
-    const message_type TLS_MSG_MESSAGE_HASH         = 254; // synthetic message
-
     // TLS compression types.
     typedef uint8_t compression_method_type;
     const compression_method_type TLS_COMPRESSION_METHOD_NONE = 0;
@@ -137,7 +117,6 @@ namespace tls {
     const extension_type TLS_EXTENSION_SIGNATURE_ALGORITHMS_CERT = 50; // https://tools.ietf.org/html/rfc8446#section-4.2.3
     const extension_type TLS_EXTENSION_KEY_SHARE                 = 51; // https://tools.ietf.org/html/rfc8446#section-4.2.8
     const extension_type TLS_EXTENSION_RENEGOTIATION_INFO        = 0xff01; // https://tools.ietf.org/html/rfc5746#section-3.2
-    const extension_type TLS_EXTENSION_QUIC                      = 0xffa5;
 
     // TLS handshaker status.
     typedef int32_t handshake_status;

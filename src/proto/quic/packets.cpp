@@ -14,11 +14,8 @@
  * limitations under the License.
  */
 
-//#include "pump/debug.h"
-//#include "pump/codec/base64.h"
 #include "pump/utils.h"
 #include "pump/proto/quic/utils.h"
-#include "pump/proto/quic/varint.h"
 #include "pump/proto/quic/packets.h"
 
 namespace pump {

@@ -31,7 +31,7 @@ namespace tls {
 
     // https://tools.ietf.org/html/rfc8446#section-6
     typedef uint64_t alert_code;
-    DEFINE_TLS_ALERT(ALERT_OK,                            -1, "")
+    DEFINE_TLS_ALERT(ALERT_OK,                              -1, "")
     DEFINE_TLS_ALERT(ALERT_CLOSE_NOTIFY,                    0,  "close notify")
     DEFINE_TLS_ALERT(ALERT_UNEXPECTED_MESSGAE,              10, "unexpected message")
     DEFINE_TLS_ALERT(ALERT_BAD_RECORD_MAC,                  20, "bad record MAC")
@@ -50,7 +50,7 @@ namespace tls {
     DEFINE_TLS_ALERT(ALERT_DECODE_ERROR,                    50, "error decoding message")
     DEFINE_TLS_ALERT(ALERT_DECRYPT_ERROR,                   51, "error decrypting message")
     DEFINE_TLS_ALERT(ALERT_EXPORT_RESTRICTION,              60, "export restriction")
-    DEFINE_TLS_ALERT(ALERT_proto_VERSION,                   70, "proto version not supported")
+    DEFINE_TLS_ALERT(ALERT_PROTO_VERSION,                   70, "proto version not supported")
     DEFINE_TLS_ALERT(ALERT_INSUFFICIENT_SECURITY,           71, "insufficient security level")
     DEFINE_TLS_ALERT(ALERT_INTERNAL_ERROR,                  80, "internal error")
     DEFINE_TLS_ALERT(ALERT_INAPPROPRIATE_FALLBACK,          86, "inappropriate fallback")
@@ -64,7 +64,7 @@ namespace tls {
     DEFINE_TLS_ALERT(ALERT_BAD_CERTIFICATE_HASH_VALUE,      114, "bad certificate hash value")
     DEFINE_TLS_ALERT(ALERT_UNKNOWN_PSK_IDENTITY,            115, "unknown PSK identity")
     DEFINE_TLS_ALERT(ALERT_CERTIFICATE_REQUIRED,            116, "certificate required")
-    DEFINE_TLS_ALERT(ALERT_NO_APPLICATION_proto,         120, "no application proto")
+    DEFINE_TLS_ALERT(ALERT_NO_APPLICATION_proto,            120, "no application proto")
 
     #define TLS_ALERT_DESC(x) x##_desc
 

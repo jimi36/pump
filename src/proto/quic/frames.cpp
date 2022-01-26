@@ -16,7 +16,6 @@
 
 #include "pump/debug.h"
 #include "pump/proto/quic/utils.h"
-#include "pump/proto/quic/varint.h"
 #include "pump/proto/quic/frames.h"
 #include "pump/proto/quic/defaults.h"
 
@@ -877,25 +876,59 @@ namespace quic {
         return true;
     }
 
-    int32_t length_handshake_done_frame(const handshake_done_frame *frame) {
-        return 1;
+    int32_t length_datagram_frame(const datagram_frame *frame) {
+        if (frame->len_present) {
+            return 1 + varint_length(frame->data.size()) + frame->data.size();
+        } else {
+            return 1 + frame->data.size();
+        }
     }
 
-    bool pack_handshake_done_frame(const handshake_done_frame *frame, io_buffer *iob) {
-        return iob->write(FT_HANDSHAKE_DONE);
-    }
-
-    bool unpack_handshake_done_frame(io_buffer *iob, handshake_done_frame *frame) {
-        frame_type tp;
-        if (!iob->read((block_t*)&tp)) {
-            return false;
-        } else if (tp != FT_HANDSHAKE_DONE) {
+    bool pack_datagram_frame(const datagram_frame *frame, io_buffer *iob) {
+        frame_type tp = FT_DATAGRAM;
+        if (frame->len_present) {
+            tp = FT_DATAGRAM_LEN_PRESENT;
+        }
+        if (!iob->write(tp)) {
             return false;
         }
+
+        if (frame->len_present) {
+            if (!varint_encode(frame->data.size(), iob)) {
+            return false;
+            }
+        }
+        
+        if (!write_string_to_iob(frame->data, iob)) {
+            return false;
+        }
+
         return true;
     }
 
-    
+    bool unpack_datagram_frame(io_buffer *iob, datagram_frame *frame) {
+        frame_type tp;
+        if (!iob->read((block_t*)&tp)) {
+            return false;
+        }
+        
+        int32_t len = 0;
+        if (tp == FT_DATAGRAM) {
+            len = iob->size();
+        } else if (tp == FT_DATAGRAM_LEN_PRESENT) {
+            frame->len_present = true;
+            if (!varint_decode_ex(iob, &len)) {
+                return false;
+            }
+        }
+
+        frame->data.resize(len);
+        if (!read_string_from_iob(iob, frame->data)) {
+            return false;
+        }
+
+        return true;
+    }
 
 }
 }

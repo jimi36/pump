@@ -30,6 +30,26 @@ namespace tls {
 
     using toolkit::io_buffer;
 
+    // TLS handshake message types.
+    typedef uint8_t message_type;
+    const message_type TLS_MSG_HELLO_REQUEST        = 0;
+    const message_type TLS_MSG_CLIENT_HELLO         = 1;
+    const message_type TLS_MSG_SERVER_HELLO         = 2;
+    const message_type TLS_MSG_NEW_SESSION_TICKET   = 4;
+    const message_type TLS_MSG_END_OF_EARLY_DATA    = 5;
+    const message_type TLS_MSG_ENCRYPTED_EXTENSIONS = 8;
+    const message_type TLS_MSG_CERTIFICATE          = 11;
+    const message_type TLS_MSG_SERVER_KEY_EXCHANGE  = 12;
+    const message_type TLS_MSG_CERTIFICATE_REQUEST  = 13;
+    const message_type TLS_MSG_SERVER_HELLO_DONE    = 14;
+    const message_type TLS_MSG_CERTIFICATE_VERIFY   = 15;
+    const message_type TLS_MSG_CLIENT_KEY_EXCHANGE  = 16;
+    const message_type TLS_MSG_FINISHED             = 20;
+    const message_type TLS_MSG_CERTIFICATE_STATUS   = 22;
+    const message_type TLS_MSG_KEY_UPDATE           = 24;
+    const message_type TLS_MSG_NEXT_PROTO           = 67;  // Not IANA assigned
+    const message_type TLS_MSG_MESSAGE_HASH         = 254; // synthetic message
+
     /*********************************************************************************
      * TLS handshake message struct.
      ********************************************************************************/

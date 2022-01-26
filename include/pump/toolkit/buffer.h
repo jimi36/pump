@@ -72,14 +72,13 @@ namespace toolkit {
         bool __init_by_copy(const block_t *b, uint32_t size);
 
         /*********************************************************************************
-         * Init by move
-         * The input buffer will be moved to the buffer.
+         * Init by reference
          ********************************************************************************/
-        bool __init_by_move(const block_t *b, uint32_t size, bool buf_ref);
+        bool __init_by_reference(const block_t *b, uint32_t size);
         
       protected:
         // Buffer ref flag
-        bool buf_ref_;
+        bool owner_;
         // Raw buffer
         block_t *raw_;
         // Raw buffer size
@@ -112,32 +111,15 @@ namespace toolkit {
 
             return obj;
         }
-        static io_buffer* create_by_move(const block_t *b, uint32_t size) {
-            INLINE_OBJECT_CREATE(obj, io_buffer, ())
-            if (obj != nullptr) {
-                if (b != nullptr && size > 0) {
-                    if (!obj->__init_by_move(b, size, false)) {
-                        INLINE_OBJECT_DELETE(obj, io_buffer)
-                        return nullptr;
-                    }
-                    obj->size_ = size;
-                }
-            }
-            return obj;
-        }
         static io_buffer* create_by_refence(const block_t *b, uint32_t size) {
             INLINE_OBJECT_CREATE(obj, io_buffer, ())
-            if (obj != nullptr) {
-                if (b != nullptr && size > 0) {
-                    if (!obj->__init_by_move(b, size, true)) {
-                        INLINE_OBJECT_DELETE(obj, io_buffer)
-                        return nullptr;
-                    }
-                    obj->size_ = size;
-                } else {
-                    obj->buf_ref_ = true;
-                }
+            if (obj != nullptr && !obj->__init_by_reference(b, size)) {
+                INLINE_OBJECT_DELETE(obj, io_buffer)
+                return nullptr;
             }
+            
+            obj->size_ = size;
+  
             return obj;
         }
 
@@ -211,10 +193,14 @@ namespace toolkit {
         }
 
         /*********************************************************************************
-         * Reset with buffer
-         * Only io buffer with buffer refence mode can reset with buffer. 
+         * Reset by copy
          ********************************************************************************/
-        bool reset(const block_t *b, uint32_t size);
+        bool reset_by_copy(const block_t *b, uint32_t size);
+
+        /*********************************************************************************
+         * Reset by reference
+         ********************************************************************************/
+        bool reset_by_reference(const block_t *b, uint32_t size);
 
         /*********************************************************************************
          * Reset
@@ -224,17 +210,17 @@ namespace toolkit {
         }
 
         /*********************************************************************************
-         * Add refence
+         * Reference
          ********************************************************************************/
-        PUMP_INLINE void add_refence() {
-            ref_.fetch_add(1);
+        PUMP_INLINE void refer() {
+            count_.fetch_add(1);
         }
 
         /*********************************************************************************
-         * Sub refence
+         * Free reference
          ********************************************************************************/
-        PUMP_INLINE void sub_refence() {
-            if (ref_.fetch_sub(1) == 1) {
+        PUMP_INLINE void unrefer() {
+            if (count_.fetch_sub(1) == 1) {
                 INLINE_OBJECT_DELETE(this, io_buffer);
             }
         }
@@ -246,7 +232,7 @@ namespace toolkit {
         io_buffer() noexcept
           : size_(0), 
             rpos_(0), 
-            ref_(1) {
+            count_(1) {
         }
 
         /*********************************************************************************
@@ -270,8 +256,8 @@ namespace toolkit {
         uint32_t size_;
         // Data read pos
         uint32_t rpos_;
-        // Refence count
-        std::atomic_int ref_;
+        // Reference count
+        std::atomic_int count_;
     };
 
 }  // namespace toolkit

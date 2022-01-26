@@ -57,12 +57,11 @@ namespace ssl {
     /*********************************************************************************
      * Update ash 
      ********************************************************************************/
+    bool update_hash(hash_context *ctx, const std::string &data);
     bool update_hash(
         hash_context *ctx, 
-        const std::string &data);
-    bool update_hash(
-        hash_context *ctx, 
-        const uint8_t *data, int32_t data_len);
+        const uint8_t *data, 
+        int32_t data_len);
 
     /*********************************************************************************
      * Sum hash

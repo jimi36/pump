@@ -19,8 +19,9 @@
 
 #include "pump/proto/quic/cid.h"
 #include "pump/proto/quic/types.h"
-#include "pump/transport/address.h"
+#include "pump/proto/quic/tls/types.h"
 
+#include "pump/transport/address.h"
 
 namespace pump {
 namespace proto {
@@ -226,6 +227,15 @@ namespace quic {
     const static transport_parameter_type PARAM_RETRY_SOURCE_CONNECTION_ID = 0x10;
 
     /*********************************************************************************
+     * The max_datagram_frame_size transport parameter is aninteger value (represented 
+     * as a variable-length integer) that represents the maximum size of a DATAGRAM 
+     * frame (including the frame type, length, and payload) the endpoint is willing 
+     * to receive, in bytes.  An endpoint that includes this parameter supports the 
+     * DATAGRAM frame types and is willing to receive such frames on this connection.
+     ********************************************************************************/
+    const static transport_parameter_type PARAM_MAX_DATAGRAM_FRAME_SIZE = 0x20;
+
+    /*********************************************************************************
      * Transport preferred address
      ********************************************************************************/
     struct transport_preferred_address {
@@ -272,12 +282,14 @@ namespace quic {
         cid initial_source_connection_id;
         
         cid retry_source_connection_id;
+
+        int32_t max_datagram_frame_size;
     };
 
     /*********************************************************************************
      * Pack transport parameters
      ********************************************************************************/
-    bool pack_transport_parameters(
+    bool pack_parameters(
         stream_initiator_type initiator,
         const transport_parameters *params, 
         io_buffer *iob);
@@ -285,10 +297,15 @@ namespace quic {
     /*********************************************************************************
      * Unpack transport parameters
      ********************************************************************************/
-    bool unpack_transport_parameters(
+    bool unpack_parameters(
         stream_initiator_type initiator,
         io_buffer *iob, 
         transport_parameters *params);
+
+    /*********************************************************************************
+     * Get transport parameters extension type
+     ********************************************************************************/
+    tls::extension_type get_paramerters_extension_type(version_number version);
 
 }
 }

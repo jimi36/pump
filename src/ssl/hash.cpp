@@ -144,9 +144,7 @@ namespace ssl {
 #endif
     }
 
-    bool update_hash(
-        hash_context *ctx, 
-        const std::string &data) {
+    bool update_hash(hash_context *ctx, const std::string &data) {
         return update_hash(ctx, (const uint8_t*)data.data(), (int32_t)data.size());
     }
 
@@ -200,11 +198,11 @@ namespace ssl {
     }
 
     std::string sum_hash(hash_context *ctx) {
-        std::string output(hash_digest_length(ctx->algo), 0);
-        if (!sum_hash(ctx, (uint8_t*)output.data(), (int32_t)output.size())) {
+        std::string out(hash_digest_length(ctx->algo), 0);
+        if (!sum_hash(ctx, (uint8_t*)out.data(), (int32_t)out.size())) {
             PUMP_WARN_LOG("sum hash failed");
         }
-        return std::forward<std::string>(output);
+        return out;
     }
 
     std::string sum_hmac(
@@ -246,7 +244,7 @@ namespace ssl {
             }
         } while(false);
 #endif
-        return std::forward<std::string>(out);
+        return out;
     }
 
 }

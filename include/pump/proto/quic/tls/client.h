@@ -19,7 +19,6 @@
 
 #include "pump/fncb.h"
 #include "pump/proto/quic/tls/alert.h"
-#include "pump/proto/quic/tls/types.h"
 #include "pump/proto/quic/tls/messages.h"
 
 namespace pump {

@@ -208,7 +208,7 @@ namespace transport {
             if (PUMP_UNLIKELY(iob == nullptr || !iob->write(b, size))) {
                 PUMP_WARN_LOG("create or write data to io buffer failed");
                 if (iob != nullptr) {
-                    iob->sub_refence();
+                    iob->unrefer();
                 }
                 ec = ERROR_AGAIN;
                 break;
@@ -245,7 +245,7 @@ namespace transport {
                 break;
             }
 
-            iob->add_refence();
+            iob->refer();
             if (!__async_send(iob)) {
                 PUMP_WARN_LOG("tls transport async send failed");
                 ec = ERROR_FAULT;
@@ -460,12 +460,12 @@ namespace transport {
 
     void tls_transport::__clear_send_pockets() {
         if (last_send_iob_) {
-            last_send_iob_->sub_refence();
+            last_send_iob_->unrefer();
         }
 
         toolkit::io_buffer *iob;
         while (sendlist_.pop(iob)) {
-            iob->sub_refence();
+            iob->unrefer();
         }
     }
 

@@ -27,7 +27,7 @@ namespace flow {
 
     flow_tcp_acceptor::~flow_tcp_acceptor() {
         if (iob_) {
-            iob_->sub_refence();
+            iob_->unrefer();
         }
     }
 
