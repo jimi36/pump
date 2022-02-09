@@ -27,58 +27,54 @@
 namespace pump {
 namespace poll {
 
-    class select_poller
-      : public poller {
+class select_poller : public poller {
+  public:
+    /*********************************************************************************
+     * Constructor
+     ********************************************************************************/
+    select_poller() noexcept;
 
-      public:
-        /*********************************************************************************
-         * Constructor
-         ********************************************************************************/
-        select_poller() noexcept;
+    /*********************************************************************************
+     * Deconstructor
+     ********************************************************************************/
+    virtual ~select_poller() = default;
 
-        /*********************************************************************************
-         * Deconstructor
-         ********************************************************************************/
-        virtual ~select_poller() = default;
+  protected:
+    /*********************************************************************************
+     * Install channel tracker for derived class
+     ********************************************************************************/
+    virtual bool __install_channel_tracker(channel_tracker *tracker) override;
 
-      protected:
-        /*********************************************************************************
-         * Install channel tracker for derived class
-         ********************************************************************************/
-        virtual bool __install_channel_tracker(channel_tracker *tracker) override;
+    /*********************************************************************************
+     * Uninstall append channel for derived class
+     ********************************************************************************/
+    virtual bool __uninstall_channel_tracker(channel_tracker *tracker) override;
 
-        /*********************************************************************************
-         * Uninstall append channel for derived class
-         ********************************************************************************/
-        virtual bool __uninstall_channel_tracker(channel_tracker *tracker) override;
+    /*********************************************************************************
+     * Resume channel tracker for derived class
+     ********************************************************************************/
+    virtual bool __resume_channel_tracker(channel_tracker *tracker) override;
 
-        /*********************************************************************************
-         * Resume channel tracker for derived class
-         ********************************************************************************/
-        virtual bool __resume_channel_tracker(channel_tracker *tracker) override;
+    /*********************************************************************************
+     * Poll
+     ********************************************************************************/
+    virtual void __poll(int32_t timeout) override;
 
-        /*********************************************************************************
-         * Poll
-         ********************************************************************************/
-        virtual void __poll(int32_t timeout) override;
+  private:
+    /*********************************************************************************
+     * Dispatch pending event
+     ********************************************************************************/
+    void __dispatch_pending_event(const fd_set *rfds, const fd_set *wfds);
 
-      private:
-        /*********************************************************************************
-         * Dispatch pending event
-         ********************************************************************************/
-        void __dispatch_pending_event(
-            const fd_set *rfds, 
-            const fd_set *wfds);
-
-      private:
-        fd_set read_fds_;
-        fd_set write_fds_;
+  private:
+    fd_set read_fds_;
+    fd_set write_fds_;
 #if defined(OS_CYGWIN)
-        __ms_timeval tv_;
+    __ms_timeval tv_;
 #else
-        timeval tv_;
+    timeval tv_;
 #endif
-    };
+};
 
 }  // namespace poll
 }  // namespace pump

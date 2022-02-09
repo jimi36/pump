@@ -23,64 +23,62 @@
 namespace pump {
 namespace transport {
 
-    class tcp_acceptor;
-    DEFINE_ALL_POINTER_TYPE(tcp_acceptor);
+class tcp_acceptor;
+DEFINE_SMART_POINTER_TYPE(tcp_acceptor);
 
-    class LIB_PUMP tcp_acceptor
-      : public base_acceptor,
-        public std::enable_shared_from_this<tcp_acceptor> {
+class LIB_PUMP tcp_acceptor : public base_acceptor,
+                              public std::enable_shared_from_this<tcp_acceptor> {
+  public:
+    /*********************************************************************************
+     * Create instance
+     ********************************************************************************/
+    PUMP_INLINE static tcp_acceptor_sptr create(const address &listen_address) {
+        INLINE_OBJECT_CREATE(obj, tcp_acceptor, (listen_address));
+        return tcp_acceptor_sptr(obj, object_delete<tcp_acceptor>);
+    }
 
-      public:
-        /*********************************************************************************
-         * Create instance
-         ********************************************************************************/
-        PUMP_INLINE static tcp_acceptor_sptr create(const address &listen_address) {
-            INLINE_OBJECT_CREATE(obj, tcp_acceptor, (listen_address));
-            return tcp_acceptor_sptr(obj, object_delete<tcp_acceptor>);
-        }
+    /*********************************************************************************
+     * Deconstructor
+     ********************************************************************************/
+    virtual ~tcp_acceptor() = default;
 
-        /*********************************************************************************
-         * Deconstructor
-         ********************************************************************************/
-        virtual ~tcp_acceptor() = default;
+    /*********************************************************************************
+     * Start
+     ********************************************************************************/
+    virtual error_code start(service *sv, const acceptor_callbacks &cbs) override;
 
-        /*********************************************************************************
-         * Start
-         ********************************************************************************/
-        virtual error_code start(service *sv, const acceptor_callbacks &cbs) override;
+    /*********************************************************************************
+     * Stop
+     ********************************************************************************/
+    virtual void stop() override;
 
-        /*********************************************************************************
-         * Stop
-         ********************************************************************************/
-        virtual void stop() override;
+  protected:
+    /*********************************************************************************
+     * Read event callback
+     ********************************************************************************/
+    virtual void on_read_event() override;
 
-      protected:
-        /*********************************************************************************
-         * Read event callback
-         ********************************************************************************/
-        virtual void on_read_event() override;
+  private:
+    /*********************************************************************************
+     * Open accept flow
+     ********************************************************************************/
+    virtual bool __open_accept_flow() override;
 
-      private:
-        /*********************************************************************************
-         * Open accept flow
-         ********************************************************************************/
-        virtual bool __open_accept_flow() override;
+    /*********************************************************************************
+     * Close accept flow
+     ********************************************************************************/
+    virtual void __close_accept_flow() override;
 
-        /*********************************************************************************
-         * Close accept flow
-         ********************************************************************************/
-        virtual void __close_accept_flow() override;
+  private:
+    /*********************************************************************************
+     * Constructor
+     ********************************************************************************/
+    tcp_acceptor(const address &listen_address) noexcept;
 
-      private:
-        /*********************************************************************************
-         * Constructor
-         ********************************************************************************/
-        tcp_acceptor(const address &listen_address) noexcept;
-
-      private:
-        // Acceptor flow
-        flow::flow_tcp_acceptor_sptr flow_;
-    };
+  private:
+    // Acceptor flow
+    flow::flow_tcp_acceptor_sptr flow_;
+};
 
 }  // namespace transport
 }  // namespace pump

@@ -27,121 +27,113 @@
 namespace pump {
 namespace time {
 
-    class manager;
+class manager;
 
-    class timer;
-    DEFINE_ALL_POINTER_TYPE(timer);
+class timer;
+DEFINE_SMART_POINTER_TYPE(timer);
 
-    typedef std::list<timer_wptr> timer_list;
-    DEFINE_SMART_POINTER_TYPE(timer_list);
+typedef std::list<timer_wptr> timer_list;
+DEFINE_SMART_POINTER_TYPE(timer_list);
 
-    typedef pump_function<void()> timer_callback;
+typedef pump_function<void()> timer_callback;
 
-    constexpr static int32_t TIMER_INIT = 0;
-    constexpr static int32_t TIMER_STOPPED = 1;
-    constexpr static int32_t TIMER_STARTED = 2;
-    constexpr static int32_t TIMER_PENDING = 3;
+constexpr static int32_t TIMER_INIT = 0;
+constexpr static int32_t TIMER_STOPPED = 1;
+constexpr static int32_t TIMER_STARTED = 2;
+constexpr static int32_t TIMER_PENDING = 3;
 
-    class LIB_PUMP timer
-      : public std::enable_shared_from_this<timer> {
+class LIB_PUMP timer : public std::enable_shared_from_this<timer> {
+  protected:
+    friend class manager;
 
-      protected:
-        friend class manager;
+  public:
+    /*********************************************************************************
+     * Create instance
+     ********************************************************************************/
+    PUMP_INLINE static timer_sptr create(uint64_t timeout,
+                                         const timer_callback &cb,
+                                         bool repeated = false) {
+        INLINE_OBJECT_CREATE(obj, timer, (timeout, cb, repeated));
+        return timer_sptr(obj, object_delete<timer>);
+    }
 
-      public:
-        /*********************************************************************************
-         * Create instance
-         ********************************************************************************/
-        PUMP_INLINE static timer_sptr create(
-            uint64_t timeout,
-            const timer_callback &cb,
-            bool repeated = false) {
-            INLINE_OBJECT_CREATE(obj, timer, (timeout, cb, repeated));
-            return timer_sptr(obj, object_delete<timer>);
-        }
+    /*********************************************************************************
+     * Deconstructor
+     ********************************************************************************/
+    ~timer() = default;
 
-        /*********************************************************************************
-         * Deconstructor
-         ********************************************************************************/
-        ~timer() = default;
+    /*********************************************************************************
+     * Stop
+     ********************************************************************************/
+    PUMP_INLINE void stop() {
+        __force_set_state(TIMER_STOPPED);
+    }
 
-        /*********************************************************************************
-         * Stop
-         ********************************************************************************/
-        PUMP_INLINE void stop() {
-            __force_set_state(TIMER_STOPPED);
-        }
+    /*********************************************************************************
+     * Handle timeout
+     ********************************************************************************/
+    void handle_timeout();
 
-        /*********************************************************************************
-         * Handle timeout
-         ********************************************************************************/
-        void handle_timeout();
+    /*********************************************************************************
+     * Get overtime
+     ********************************************************************************/
+    PUMP_INLINE uint64_t time() const {
+        return overtime_;
+    }
 
-        /*********************************************************************************
-         * Get overtime
-         ********************************************************************************/
-        PUMP_INLINE uint64_t time() const {
-            return overtime_;
-        }
+    /*********************************************************************************
+     * Get starting state
+     ********************************************************************************/
+    PUMP_INLINE bool is_started() const {
+        return status_.load() > TIMER_STOPPED;
+    }
 
-        /*********************************************************************************
-         * Get starting state
-         ********************************************************************************/
-        PUMP_INLINE bool is_started() const {
-            return status_.load() > TIMER_STOPPED;
-        }
+    /*********************************************************************************
+     * Get repeated status
+     ********************************************************************************/
+    PUMP_INLINE bool is_repeated() const {
+        return repeated_;
+    }
 
-        /*********************************************************************************
-         * Get repeated status
-         ********************************************************************************/
-        PUMP_INLINE bool is_repeated() const {
-            return repeated_;
-        }
+  private:
+    /*********************************************************************************
+     * Constructor
+     ********************************************************************************/
+    timer(uint64_t timeout, const timer_callback &cb, bool repeated) noexcept;
 
-      private:
-        /*********************************************************************************
-         * Constructor
-         ********************************************************************************/
-        timer(
-            uint64_t timeout, 
-            const timer_callback &cb, 
-            bool repeated) noexcept;
+    /*********************************************************************************
+     * Start
+     ********************************************************************************/
+    bool __start(manager *queue);
 
-        /*********************************************************************************
-         * Start
-         ********************************************************************************/
-        bool __start(manager *queue);
+    /*********************************************************************************
+     * Set state
+     ********************************************************************************/
+    PUMP_INLINE bool __set_state(int32_t expected, int32_t desired) {
+        return status_.compare_exchange_strong(expected, desired);
+    }
 
-        /*********************************************************************************
-         * Set state
-         ********************************************************************************/
-        PUMP_INLINE bool __set_state(
-            int32_t expected, 
-            int32_t desired) {
-            return status_.compare_exchange_strong(expected, desired);
-        }
+    /*********************************************************************************
+     * Set state
+     ********************************************************************************/
+    PUMP_INLINE void __force_set_state(int32_t desired) {
+        status_.store(desired);
+    }
 
-        /*********************************************************************************
-         * Set state
-         ********************************************************************************/
-        PUMP_INLINE void __force_set_state(int32_t desired) {
-            status_.store(desired);
-        }
-
-      private:
-        // Timer queue
-        manager *queue_;
-        // Timer status
-        std::atomic_int32_t status_;
-        // Timer callback
-        timer_callback cb_;
-        // Repeated status
-        bool repeated_;
-        // Timeout with ms
-        uint64_t timeout_;
-        // Timeout time with ms
-        uint64_t overtime_;
-    };
+  private:
+    // Timer queue
+    manager *queue_;
+    // Timer status
+    std::atomic_int32_t status_;
+    // Timer callback
+    timer_callback cb_;
+    // Repeated status
+    bool repeated_;
+    // Timeout with ms
+    uint64_t timeout_;
+    // Timeout time with ms
+    uint64_t overtime_;
+};
 
 }  // namespace time
 }  // namespace pump

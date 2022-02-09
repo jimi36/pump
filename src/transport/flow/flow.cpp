@@ -20,28 +20,26 @@ namespace pump {
 namespace transport {
 namespace flow {
 
-    flow_base::flow_base() noexcept 
-      : fd_(-1){
-    }
+flow_base::flow_base() noexcept : fd_(-1) {}
 
-    pump_socket flow_base::unbind() {
-        pump_socket fd = fd_;
+pump_socket flow_base::unbind() {
+    pump_socket fd = fd_;
+    fd_ = -1;
+    return fd;
+}
+
+void flow_base::shutdown(int32_t how) {
+    if (fd_ > 0) {
+        net::shutdown(fd_, how);
+    }
+}
+
+void flow_base::close() {
+    if (fd_ > 0) {
+        net::close(fd_);
         fd_ = -1;
-        return fd;
     }
-
-    void flow_base::shutdown(int32_t how) {
-        if (fd_ > 0) {
-            net::shutdown(fd_, how);
-        }
-    }
-
-    void flow_base::close() {
-        if (fd_ > 0) {
-            net::close(fd_);
-            fd_ = -1;
-        }
-    }
+}
 
 }  // namespace flow
 }  // namespace transport

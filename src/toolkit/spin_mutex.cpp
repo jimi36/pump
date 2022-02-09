@@ -19,26 +19,23 @@
 namespace pump {
 namespace toolkit {
 
-    spin_mutex::spin_mutex(int32_t per_loop) noexcept
-      : per_loop_(per_loop), 
-        locked_(false) {
-    }
+spin_mutex::spin_mutex(int32_t per_loop) noexcept : per_loop_(per_loop), locked_(false) {}
 
-    void spin_mutex::lock() {
-        int32_t loop = 0;
-        bool exp = false;
+void spin_mutex::lock() {
+    int32_t loop = 0;
+    bool exp = false;
 
-        while (1) {
-            if (!locked_.compare_exchange_strong(exp, true)) {
-                break;
-            }
+    while (1) {
+        if (!locked_.compare_exchange_strong(exp, true)) {
+            break;
+        }
 
-            if (loop++ > per_loop_) {
-                loop = 0;
-                pump_sched_yield();
-            }
+        if (loop++ > per_loop_) {
+            loop = 0;
+            pump_sched_yield();
         }
     }
+}
 
 }  // namespace toolkit
 }  // namespace pump

@@ -23,27 +23,27 @@ namespace pump {
 namespace proto {
 namespace quic {
 
-    typedef uint32_t version_number;
-    const static version_number version_tls     = 0x01;
-    const static version_number version_draft29 = 0xff00001d;
-    const static version_number version_max     = 0xffffffff;
+typedef uint32_t version_number;
+const static version_number version_tls = 0x01;
+const static version_number version_draft29 = 0xff00001d;
+const static version_number version_max = 0xffffffff;
 
-    /*********************************************************************************
-     * Stream initiator types
-     ********************************************************************************/
-    typedef int8_t stream_initiator_type;
-    const static stream_initiator_type server_initiator = 0x01;
-    const static stream_initiator_type client_initiator = 0x02;   
+/*********************************************************************************
+ * Stream initiator types
+ ********************************************************************************/
+typedef int8_t stream_initiator_type;
+const static stream_initiator_type server_initiator = 0x01;
+const static stream_initiator_type client_initiator = 0x02;
 
-    /*********************************************************************************
-     * Stream types
-     ********************************************************************************/
-    typedef int8_t stream_type;
-    const static stream_type stream_bidirection  = 0x00;
-    const static stream_type stream_unidirection = 0x02;
+/*********************************************************************************
+ * Stream types
+ ********************************************************************************/
+typedef int8_t stream_type;
+const static stream_type stream_bidirection = 0x00;
+const static stream_type stream_unidirection = 0x02;
 
-}
-}
-}
+}  // namespace quic
+}  // namespace proto
+}  // namespace pump
 
 #endif

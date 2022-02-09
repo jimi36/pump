@@ -27,339 +27,349 @@ namespace pump {
 namespace proto {
 namespace quic {
 
-    using toolkit::io_buffer;
+using toolkit::io_buffer;
 
-    /*********************************************************************************
-     * Long packet types
-     ********************************************************************************/
-    typedef uint8_t long_packet_type;
-    const static long_packet_type LPT_NEGOTIATE_VER = 0xFF; // version negotiate
-    const static long_packet_type LPT_INITIAL       = 0x00;
-    const static long_packet_type LPT_0RTT          = 0x01;
-    const static long_packet_type LPT_HANDSHAKE     = 0x02;
-    const static long_packet_type LPT_RETRY         = 0x03;
+/*********************************************************************************
+ * Long packet types
+ ********************************************************************************/
+typedef uint8_t long_packet_type;
+const static long_packet_type LPT_NEGOTIATE_VER = 0xFF;  // version negotiate
+const static long_packet_type LPT_INITIAL = 0x00;
+const static long_packet_type LPT_0RTT = 0x01;
+const static long_packet_type LPT_HANDSHAKE = 0x02;
+const static long_packet_type LPT_RETRY = 0x03;
 
-    /*********************************************************************************
-     * Packet header
-     ********************************************************************************/
-    struct packet_header {
-        // Long packet flag.
-        bool is_long_pakcet;
+/*********************************************************************************
+ * Packet header
+ ********************************************************************************/
+struct packet_header {
+    // Long packet flag.
+    bool is_long_pakcet;
 
-        // Long packet type. 
-        // Just exist in long packet.
-        long_packet_type packet_type;
+    // Long packet type.
+    // Just exist in long packet.
+    long_packet_type packet_type;
 
-        // Packet number length.
-        // Version negotiation and retry packet has no the field.
-        uint8_t packet_number_len;
+    // Packet number length.
+    // Version negotiation and retry packet has no the field.
+    uint8_t packet_number_len;
 
-        // QUIC version.
-        // Just exist in long packet.
-        uint32_t version;
+    // QUIC version.
+    // Just exist in long packet.
+    uint32_t version;
 
-        // The byte following the version contains the length in bytes of the Destination Connection ID field 
-        // that follows it. This length is encoded as an 8-bit unsigned integer. In QUIC version 1, this value 
-        // MUST NOT exceed 20 bytes. Endpoints that receive a version 1 long header with a value larger than 20 
-        // MUST drop the packet. In order to properly form a Version Negotiation packet, servers SHOULD be able 
-        // to read longer connection IDs from other QUIC versions.
-        //uint8 des_id_length;
-        // The Destination Connection ID field follows the Destination Connection ID Length field, which indicates 
-        // the length of this field.
-        cid des_id;
+    // The byte following the version contains the length in bytes of the
+    // Destination Connection ID field that follows it. This length is encoded as
+    // an 8-bit unsigned integer. In QUIC version 1, this value MUST NOT exceed 20
+    // bytes. Endpoints that receive a version 1 long header with a value larger
+    // than 20 MUST drop the packet. In order to properly form a Version
+    // Negotiation packet, servers SHOULD be able to read longer connection IDs
+    // from other QUIC versions.
+    // uint8 des_id_length;
+    // The Destination Connection ID field follows the Destination Connection ID
+    // Length field, which indicates the length of this field.
+    cid des_id;
 
-        // The byte following the Destination Connection ID contains the length in bytes of the Source Connection 
-        // ID field that follows it. This length is encoded as an 8-bit unsigned integer. In QUIC version 1, this 
-        // value MUST NOT exceed 20 bytes. Endpoints that receive a version 1 long header with a value larger than 
-        // 20 MUST drop the packet. In order to properly form a Version Negotiation packet, servers SHOULD be able 
-        // to read longer connection IDs from other QUIC versions.
-        // Just exist in long packet.
-        //uint8 src_id_length;
-        // The Source Connection ID field follows the Source Connection ID Length field, which indicates the length 
-        // of this field.
-        // Just exist in long packet.
-        cid src_id;
-    };
+    // The byte following the Destination Connection ID contains the length in
+    // bytes of the Source Connection ID field that follows it. This length is
+    // encoded as an 8-bit unsigned integer. In QUIC version 1, this value MUST
+    // NOT exceed 20 bytes. Endpoints that receive a version 1 long header with a
+    // value larger than 20 MUST drop the packet. In order to properly form a
+    // Version Negotiation packet, servers SHOULD be able to read longer
+    // connection IDs from other QUIC versions. Just exist in long packet.
+    // uint8 src_id_length;
+    // The Source Connection ID field follows the Source Connection ID Length
+    // field, which indicates the length of this field. Just exist in long packet.
+    cid src_id;
+};
 
-    /*********************************************************************************
-     * A Version Negotiation packet is inherently not version specific. Upon receipt 
-     * by a client, it will be identified as a Version Negotiation packet based on the 
-     * Version field having a value of 0. 
-     * 
-     * The Version Negotiation packet is a response to a client packet that contains 
-     * a version that is not supported by the server. It is only sent by servers. 
-     * 
-     * The Version field of a Version Negotiation packet MUST be set to 0x00000000.
-     * 
-     * The server MUST include the value from the Source Connection ID field of the 
-     * packet it receives in the Destination Connection ID field. The value for 
-     * Source Connection ID MUST be copied from the Destination Connection ID of the 
-     * received packet, which is initially randomly selected by a client. Echoing both 
-     * connection IDs gives clients some assurance that the server received the packet 
-     * and that the Version Negotiation packet was not generated by an entity that 
-     * did not observe the Initial packet.
-     * 
-     * Future versions of QUIC could have different requirements for the lengths of 
-     * connection IDs. In particular, connection IDs might have a smaller minimum 
-     * length or a greater maximum length. Version-specific rules for the connection 
-     * ID therefore MUST NOT influence a decision about whether to send a Version 
-     * Negotiation packet.
-     * 
-     * The remainder of the Version Negotiation packet is a list of 32-bit versions 
-     * that the server supports.
-     * 
-     * A Version Negotiation packet is not acknowledged. It is only sent in response 
-     * to a packet that indicates an unsupported version.
-     * 
-     * The Version Negotiation packet does not include the Packet Number and Length 
-     * fields present in other packets that use the long header form. Consequently, a 
-     * Version Negotiation packet consumes an entire UDP datagram.
-     * 
-     * A server MUST NOT send more than one Version Negotiation packet in response to 
-     * a single UDP datagram.
-     ********************************************************************************/
-    struct version_negotiation_packet {
-        // First byte format:
-            // Header Form (1) = 1
-            // Fixed Bit (1) = 0
-            // Unused (6)
-        // Version = 0
-        //packet_header *header;
+/*********************************************************************************
+ * A Version Negotiation packet is inherently not version specific. Upon receipt
+ * by a client, it will be identified as a Version Negotiation packet based on the
+ * Version field having a value of 0.
+ *
+ * The Version Negotiation packet is a response to a client packet that contains
+ * a version that is not supported by the server. It is only sent by servers.
+ *
+ * The Version field of a Version Negotiation packet MUST be set to 0x00000000.
+ *
+ * The server MUST include the value from the Source Connection ID field of the
+ * packet it receives in the Destination Connection ID field. The value for
+ * Source Connection ID MUST be copied from the Destination Connection ID of the
+ * received packet, which is initially randomly selected by a client. Echoing both
+ * connection IDs gives clients some assurance that the server received the packet
+ * and that the Version Negotiation packet was not generated by an entity that
+ * did not observe the Initial packet.
+ *
+ * Future versions of QUIC could have different requirements for the lengths of
+ * connection IDs. In particular, connection IDs might have a smaller minimum
+ * length or a greater maximum length. Version-specific rules for the connection
+ * ID therefore MUST NOT influence a decision about whether to send a Version
+ * Negotiation packet.
+ *
+ * The remainder of the Version Negotiation packet is a list of 32-bit versions
+ * that the server supports.
+ *
+ * A Version Negotiation packet is not acknowledged. It is only sent in response
+ * to a packet that indicates an unsupported version.
+ *
+ * The Version Negotiation packet does not include the Packet Number and Length
+ * fields present in other packets that use the long header form. Consequently, a
+ * Version Negotiation packet consumes an entire UDP datagram.
+ *
+ * A server MUST NOT send more than one Version Negotiation packet in response to
+ * a single UDP datagram.
+ ********************************************************************************/
+struct version_negotiation_packet {
+    // First byte format:
+    // Header Form (1) = 1
+    // Fixed Bit (1) = 0
+    // Unused (6)
+    // Version = 0
+    // packet_header *header;
 
-        // The field represents supported versions list.    
-        std::vector<uint32_t> supported_versions;
-    };
+    // The field represents supported versions list.
+    std::vector<uint32_t> supported_versions;
+};
 
-    /*********************************************************************************
-     * An Initial packet uses long headers with a type value of 0x00. It carries the 
-     * first CRYPTO frames sent by the client and server to perform key exchange, and 
-     * it carries ACK frames in either direction.
-     * 
-     * The payload of an Initial packet includes a CRYPTO frame (or frames) containing 
-     * a cryptographic handshake message, ACK frames, or both. PING, PADDING, and 
-     * CONNECTION_CLOSE frames of type 0x1c are also permitted. An endpoint that 
-     * receives an Initial packet containing other frames can either discard the 
-     * packet as spurious or treat it as a connection error.
-     * 
-     * The first packet sent by a client always includes a CRYPTO frame that contains 
-     * the start or all of the first cryptographic handshake message. The first CRYPTO 
-     * frame sent always begins at an offset of 0.
-     * 
-     * Note that if the server sends a TLS HelloRetryRequest, the client will send 
-     * another series of Initial packets. These Initial packets will continue the 
-     * cryptographic handshake and will contain CRYPTO frames starting at an offset 
-     * matching the size of the CRYPTO frames sent in the first flight of Initial 
-     * packets.
-     ********************************************************************************/
-    struct initial_packet {
-        // First byte format:
-            // Header Form (1) = 1
-            // Fixed Bit (1) = 1
-            // Long Packet Type (2) = 0
-            // Reserved Bits (2)
-            // Packet Number Length (2)
-        //packet_header *header;
+/*********************************************************************************
+ * An Initial packet uses long headers with a type value of 0x00. It carries the
+ * first CRYPTO frames sent by the client and server to perform key exchange, and
+ * it carries ACK frames in either direction.
+ *
+ * The payload of an Initial packet includes a CRYPTO frame (or frames) containing
+ * a cryptographic handshake message, ACK frames, or both. PING, PADDING, and
+ * CONNECTION_CLOSE frames of type 0x1c are also permitted. An endpoint that
+ * receives an Initial packet containing other frames can either discard the
+ * packet as spurious or treat it as a connection error.
+ *
+ * The first packet sent by a client always includes a CRYPTO frame that contains
+ * the start or all of the first cryptographic handshake message. The first CRYPTO
+ * frame sent always begins at an offset of 0.
+ *
+ * Note that if the server sends a TLS HelloRetryRequest, the client will send
+ * another series of Initial packets. These Initial packets will continue the
+ * cryptographic handshake and will contain CRYPTO frames starting at an offset
+ * matching the size of the CRYPTO frames sent in the first flight of Initial
+ * packets.
+ ********************************************************************************/
+struct initial_packet {
+    // First byte format:
+    // Header Form (1) = 1
+    // Fixed Bit (1) = 1
+    // Long Packet Type (2) = 0
+    // Reserved Bits (2)
+    // Packet Number Length (2)
+    // packet_header *header;
 
-        // A variable-length integer specifying the length of the Token field, in bytes. This value is 0 if no token is 
-        // present. Initial packets sent by the server MUST set the Token Length field to 0; clients that receive an Initial 
-        // packet  with a non-zero Token Length field MUST either discard the packet or generate a connection error of type
-        // proto_VIOLATION.
-        //uint32_t token_length;
-        // The value of the token that was previously provided in a Retry packet or NEW_TOKEN frame.
-        std::string token;
+    // A variable-length integer specifying the length of the Token field, in
+    // bytes. This value is 0 if no token is present. Initial packets sent by the
+    // server MUST set the Token Length field to 0; clients that receive an
+    // Initial packet  with a non-zero Token Length field MUST either discard the
+    // packet or generate a connection error of type proto_VIOLATION.
+    // uint32_t token_length;
+    // The value of the token that was previously provided in a Retry packet or
+    // NEW_TOKEN frame.
+    std::string token;
 
-        // This is the length of the remainder of the packet (that is, the Packet Number and Payload fields) in bytes, 
-        // encoded as a variable-length integer 
-        uint32_t length;
+    // This is the length of the remainder of the packet (that is, the Packet
+    // Number and Payload fields) in bytes, encoded as a variable-length integer
+    uint32_t length;
 
-        // This field is 1 to 4 bytes long. The packet number is protected using header protection. The length of the 
-        // Packet Number field is encoded in the Packet Number Length bits of byte 0.
-        uint32_t packet_number;
+    // This field is 1 to 4 bytes long. The packet number is protected using
+    // header protection. The length of the Packet Number field is encoded in the
+    // Packet Number Length bits of byte 0.
+    uint32_t packet_number;
 
-        // This is the payload of the packet -- containing a sequence of frames -- that is protected using packet protection.
-        //std::string packet_payload;
-    };
+    // This is the payload of the packet -- containing a sequence of frames --
+    // that is protected using packet protection.
+    // std::string packet_payload;
+};
 
-    /*********************************************************************************
-     * A 0-RTT packet uses long headers with a type value of 0x01, followed by the 
-     * Length and Packet Number fields. The first byte contains the Reserved and 
-     * Packet Number Length bits. A 0-RTT packet is used to carry "early" data from 
-     * the client to the server as part of the first flight, prior to handshake 
-     * completion. As part of the TLS handshake, the server can accept or reject this 
-     * early data.
-     *
-     * Packet numbers for 0-RTT protected packets use the same space as 1-RTT 
-     * protected packets.
-     * 
-     * After a client receives a Retry packet, 0-RTT packets are likely to have been 
-     * lost or discarded by the server. A client SHOULD attempt to resend data in 
-     * 0-RTT packets after it sends a new Initial packet. New packet numbers MUST be 
-     * used for any new packets that are sent, reusing packet numbers could 
-     * compromise packet protection.
-     * 
-     * A client MUST NOT send 0-RTT packets once it starts processing 1-RTT packets 
-     * from the server. This means that 0-RTT packets cannot contain any response to 
-     * frames from 1-RTT packets. For instance, a client cannot send an ACK frame in 
-     * a 0-RTT packet, because that can only acknowledge a 1-RTT packet. An 
-     * acknowledgment for a 1-RTT packet MUST be carried in a 1-RTT packet.
-     * 
-     * A server SHOULD treat a violation of remembered limits as a connection error 
-     * of an appropriate type (for instance, a FLOW_CONTROL_ERROR for exceeding 
-     * stream data limits).
-     ********************************************************************************/
-    struct zero_rtt_packet {
-        // First byte format:
-            // Header Form (1) = 1
-            // Fixed Bit (1) = 1
-            // Long Packet Type (2) = 1
-            // Reserved Bits (2)
-            // Packet Number Length (2)
-        //packet_header *header;
+/*********************************************************************************
+ * A 0-RTT packet uses long headers with a type value of 0x01, followed by the
+ * Length and Packet Number fields. The first byte contains the Reserved and
+ * Packet Number Length bits. A 0-RTT packet is used to carry "early" data from
+ * the client to the server as part of the first flight, prior to handshake
+ * completion. As part of the TLS handshake, the server can accept or reject this
+ * early data.
+ *
+ * Packet numbers for 0-RTT protected packets use the same space as 1-RTT
+ * protected packets.
+ *
+ * After a client receives a Retry packet, 0-RTT packets are likely to have been
+ * lost or discarded by the server. A client SHOULD attempt to resend data in
+ * 0-RTT packets after it sends a new Initial packet. New packet numbers MUST be
+ * used for any new packets that are sent, reusing packet numbers could
+ * compromise packet protection.
+ *
+ * A client MUST NOT send 0-RTT packets once it starts processing 1-RTT packets
+ * from the server. This means that 0-RTT packets cannot contain any response to
+ * frames from 1-RTT packets. For instance, a client cannot send an ACK frame in
+ * a 0-RTT packet, because that can only acknowledge a 1-RTT packet. An
+ * acknowledgment for a 1-RTT packet MUST be carried in a 1-RTT packet.
+ *
+ * A server SHOULD treat a violation of remembered limits as a connection error
+ * of an appropriate type (for instance, a FLOW_CONTROL_ERROR for exceeding
+ * stream data limits).
+ ********************************************************************************/
+struct zero_rtt_packet {
+    // First byte format:
+    // Header Form (1) = 1
+    // Fixed Bit (1) = 1
+    // Long Packet Type (2) = 1
+    // Reserved Bits (2)
+    // Packet Number Length (2)
+    // packet_header *header;
 
-        // This is the length of the remainder of the packet (that is, the Packet Number and Payload fields) in bytes, 
-        // encoded as a variable-length integer 
-        uint32_t length;
+    // This is the length of the remainder of the packet (that is, the Packet
+    // Number and Payload fields) in bytes, encoded as a variable-length integer
+    uint32_t length;
 
-        // This field is 1 to 4 bytes long. The packet number is protected using header protection. The length of the 
-        // Packet Number field is encoded in the Packet Number Length bits of byte 0.
-        uint32_t packet_number;
+    // This field is 1 to 4 bytes long. The packet number is protected using
+    // header protection. The length of the Packet Number field is encoded in the
+    // Packet Number Length bits of byte 0.
+    uint32_t packet_number;
 
-        // This is the payload of the packet -- containing a sequence of frames -- that is protected using packet protection.
-        std::string packet_payload;
-    };
+    // This is the payload of the packet -- containing a sequence of frames --
+    // that is protected using packet protection.
+    std::string packet_payload;
+};
 
-    /*********************************************************************************
-     * A Handshake packet uses long headers with a type value of 0x02, followed by the 
-     * Length and Packet Number fields. The first byte contains the Reserved and 
-     * Packet Number Length bits. It is used to carry cryptographic handshake messages 
-     * and acknowledgments from the server and client.
-     * 
-     * Once a client has received a Handshake packet from a server, it uses Handshake 
-     * packets to send subsequent cryptographic handshake messages and acknowledgments 
-     * to the server.
-     * 
-     * Handshake packets have their own packet number space, and thus the first 
-     * Handshake packet sent by a server contains a packet number of 0.
-     * 
-     * The payload of this packet contains CRYPTO frames and could contain PING, 
-     * PADDING, or ACK frames. Handshake packets MAY contain CONNECTION_CLOSE frames 
-     * of type 0x1c. Endpoints MUST treat receipt of Handshake packets with other 
-     * frames as a connection error of type proto_VIOLATION.
-     * 
-     * Like Initial packets, data in CRYPTO frames for Handshake packets is discarded 
-     * -- and no longer retransmitted -- when Handshake protection keys are discarded.
-     ********************************************************************************/
-    struct handshake_packet {
-        // First byte format:
-            // Header Form (1) = 1
-            // Fixed Bit (1) = 1
-            // Long Packet Type (2) = 2
-            // Reserved Bits (2)
-            // Packet Number Length (2)
-        //packet_header *header;
+/*********************************************************************************
+ * A Handshake packet uses long headers with a type value of 0x02, followed by the
+ * Length and Packet Number fields. The first byte contains the Reserved and
+ * Packet Number Length bits. It is used to carry cryptographic handshake messages
+ * and acknowledgments from the server and client.
+ *
+ * Once a client has received a Handshake packet from a server, it uses Handshake
+ * packets to send subsequent cryptographic handshake messages and acknowledgments
+ * to the server.
+ *
+ * Handshake packets have their own packet number space, and thus the first
+ * Handshake packet sent by a server contains a packet number of 0.
+ *
+ * The payload of this packet contains CRYPTO frames and could contain PING,
+ * PADDING, or ACK frames. Handshake packets MAY contain CONNECTION_CLOSE frames
+ * of type 0x1c. Endpoints MUST treat receipt of Handshake packets with other
+ * frames as a connection error of type proto_VIOLATION.
+ *
+ * Like Initial packets, data in CRYPTO frames for Handshake packets is discarded
+ * -- and no longer retransmitted -- when Handshake protection keys are discarded.
+ ********************************************************************************/
+struct handshake_packet {
+    // First byte format:
+    // Header Form (1) = 1
+    // Fixed Bit (1) = 1
+    // Long Packet Type (2) = 2
+    // Reserved Bits (2)
+    // Packet Number Length (2)
+    // packet_header *header;
 
-        // This is the length of the remainder of the packet (that is, the Packet Number and Payload fields) in bytes, 
-        // encoded as a variable-length integer 
-        uint32_t length;
+    // This is the length of the remainder of the packet (that is, the Packet
+    // Number and Payload fields) in bytes, encoded as a variable-length integer
+    uint32_t length;
 
-        // This field is 1 to 4 bytes long. The packet number is protected using header protection. The length of the 
-        // Packet Number field is encoded in the Packet Number Length bits of byte 0.
-        uint32_t packet_number;
+    // This field is 1 to 4 bytes long. The packet number is protected using
+    // header protection. The length of the Packet Number field is encoded in the
+    // Packet Number Length bits of byte 0.
+    uint32_t packet_number;
 
-        // This is the payload of the packet -- containing a sequence of frames -- that is protected using packet protection.
-        std::string packet_payload;
-    };
+    // This is the payload of the packet -- containing a sequence of frames --
+    // that is protected using packet protection.
+    std::string packet_payload;
+};
 
-    /*********************************************************************************
-     * A Retry packet uses a long packet header with a type value of 0x03. It carries 
-     * an address validation token created by the server. It is used by a server that 
-     * wishes to perform a retry.
-     * 
-     * A server MAY send Retry packets in response to Initial and 0-RTT packets. A 
-     * server can either discard or buffer 0-RTT packets that it receives. A server 
-     * can send multiple Retry packets as it receives Initial or 0-RTT packets. A 
-     * server MUST NOT send more than one Retry packet in response to a single UDP 
-     * datagram.
-     * 
-     * A client MUST accept and process at most one Retry packet for each connection 
-     * attempt. After the client has received and processed an Initial or Retry 
-     * packet from the server, it MUST discard any subsequent Retry packets that it 
-     * receives.
-     * 
-     * Clients MUST discard Retry packets that have a Retry Integrity Tag that cannot 
-     * be validated. This diminishes an attacker's ability to inject a Retry packet 
-     * and protects against accidental corruption of Retry packets. A client MUST 
-     * discard a Retry packet with a zero-length Retry Token field.
-     * 
-     * The client responds to a Retry packet with an Initial packet that includes 
-     * the provided Retry token to continue connection establishment.
-     * 
-     * A client sets the Destination Connection ID field of this Initial packet to 
-     * the value from the Source Connection ID field in the Retry packet. Changing 
-     * the Destination Connection ID field also results in a change to the keys used 
-     * to protect the Initial packet. It also sets the Token field to the token 
-     * provided in the Retry packet. The client MUST NOT change the Source Connection 
-     * ID because the server could include the connection ID as part of its token 
-     * validation logic.
-     * 
-     * A Retry packet does not include a packet number and cannot be explicitly 
-     * acknowledged by a client.
-     ********************************************************************************/
-    struct retry_packet {
-        // First byte format:
-            // Header Form (1) = 1
-            // Fixed Bit (1) = 1
-            // Long Packet Type (2) = 3
-            // Unused (4)
-        //packet_header *header;
+/*********************************************************************************
+ * A Retry packet uses a long packet header with a type value of 0x03. It carries
+ * an address validation token created by the server. It is used by a server that
+ * wishes to perform a retry.
+ *
+ * A server MAY send Retry packets in response to Initial and 0-RTT packets. A
+ * server can either discard or buffer 0-RTT packets that it receives. A server
+ * can send multiple Retry packets as it receives Initial or 0-RTT packets. A
+ * server MUST NOT send more than one Retry packet in response to a single UDP
+ * datagram.
+ *
+ * A client MUST accept and process at most one Retry packet for each connection
+ * attempt. After the client has received and processed an Initial or Retry
+ * packet from the server, it MUST discard any subsequent Retry packets that it
+ * receives.
+ *
+ * Clients MUST discard Retry packets that have a Retry Integrity Tag that cannot
+ * be validated. This diminishes an attacker's ability to inject a Retry packet
+ * and protects against accidental corruption of Retry packets. A client MUST
+ * discard a Retry packet with a zero-length Retry Token field.
+ *
+ * The client responds to a Retry packet with an Initial packet that includes
+ * the provided Retry token to continue connection establishment.
+ *
+ * A client sets the Destination Connection ID field of this Initial packet to
+ * the value from the Source Connection ID field in the Retry packet. Changing
+ * the Destination Connection ID field also results in a change to the keys used
+ * to protect the Initial packet. It also sets the Token field to the token
+ * provided in the Retry packet. The client MUST NOT change the Source Connection
+ * ID because the server could include the connection ID as part of its token
+ * validation logic.
+ *
+ * A Retry packet does not include a packet number and cannot be explicitly
+ * acknowledged by a client.
+ ********************************************************************************/
+struct retry_packet {
+    // First byte format:
+    // Header Form (1) = 1
+    // Fixed Bit (1) = 1
+    // Long Packet Type (2) = 3
+    // Unused (4)
+    // packet_header *header;
 
-        // An opaque token that the server can use to validate the client's address.
-        std::string retry_token;
-        
-        // Defined in Section 5.8 ("Retry Packet Integrity") of [QUIC-TLS].
-        uint8_t retry_integrity_tag;
-    };
+    // An opaque token that the server can use to validate the client's address.
+    std::string retry_token;
 
-    /*********************************************************************************
-     * A 1-RTT packet uses a short packet header. It is used after the version and 
-     * 1-RTT keys are negotiated.
-     ********************************************************************************/
-    struct one_rtt_packet {
-        // First byte format:
-            // Header Form (1) = 0
-            // Fixed Bit (1) = 1
-            // Spin Bit (1)
-            // Reserved Bits (2)
-            // Key Phase (1)
-            // Packet Number Length (2)
-        //packet_header *header;
-        
-        // The field represents the pakcet number.
-        uint32_t packet_number;
+    // Defined in Section 5.8 ("Retry Packet Integrity") of [QUIC-TLS].
+    uint8_t retry_integrity_tag;
+};
 
-        // The field represents the pakcet payload.
-        std::string packet_payload;
-    };
+/*********************************************************************************
+ * A 1-RTT packet uses a short packet header. It is used after the version and
+ * 1-RTT keys are negotiated.
+ ********************************************************************************/
+struct one_rtt_packet {
+    // First byte format:
+    // Header Form (1) = 0
+    // Fixed Bit (1) = 1
+    // Spin Bit (1)
+    // Reserved Bits (2)
+    // Key Phase (1)
+    // Packet Number Length (2)
+    // packet_header *header;
 
-    struct packet {
-        packet_header header;
-        void *ptr;
-    };
+    // The field represents the pakcet number.
+    uint32_t packet_number;
 
-    packet* new_packet();
+    // The field represents the pakcet payload.
+    std::string packet_payload;
+};
 
-    packet* new_short_packet();
+struct packet {
+    packet_header header;
+    void *ptr;
+};
 
-    packet* new_long_packet(long_packet_type type);
+packet *new_packet();
 
-    void delete_packet(packet *pkt);
+packet *new_short_packet();
 
-    bool pack_packet(const packet *pkt, io_buffer *iob);
+packet *new_long_packet(long_packet_type type);
 
-    bool unpack_packet(io_buffer *iob, uint8_t id_len, packet *pkt);
+void delete_packet(packet *pkt);
 
-}
-}
-}
+bool pack_packet(const packet *pkt, io_buffer *iob);
+
+bool unpack_packet(io_buffer *iob, uint8_t id_len, packet *pkt);
+
+}  // namespace quic
+}  // namespace proto
+}  // namespace pump
 
 #endif

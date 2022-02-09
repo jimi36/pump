@@ -22,123 +22,116 @@
 namespace pump {
 namespace transport {
 
-    class LIB_PUMP base_dialer
-      : public base_channel {
+class LIB_PUMP base_dialer : public base_channel {
+  public:
+    /*********************************************************************************
+     * Constructor
+     ********************************************************************************/
+    base_dialer(int32_t type,
+                const address &local_address,
+                const address &remote_address,
+                int64_t connect_timeout) noexcept :
+        base_channel(type, nullptr, -1),
+        local_address_(local_address),
+        remote_address_(remote_address),
+        connect_timeout_(connect_timeout) {}
 
-      public:
-        /*********************************************************************************
-         * Constructor
-         ********************************************************************************/
-        base_dialer(
-            int32_t type,
-            const address &local_address,
-            const address &remote_address,
-            int64_t connect_timeout) noexcept
-          : base_channel(type, nullptr, -1),
-            local_address_(local_address),
-            remote_address_(remote_address),
-            connect_timeout_(connect_timeout) {
-        }
+    /*********************************************************************************
+     * Deconstructor
+     ********************************************************************************/
+    virtual ~base_dialer() {}
 
-        /*********************************************************************************
-         * Deconstructor
-         ********************************************************************************/
-        virtual ~base_dialer() {
-        }
+    /*********************************************************************************
+     * Start
+     ********************************************************************************/
+    virtual error_code start(service *sv, const dialer_callbacks &cbs) = 0;
 
-        /*********************************************************************************
-         * Start
-         ********************************************************************************/
-        virtual error_code start(service *sv, const dialer_callbacks &cbs) = 0;
+    /*********************************************************************************
+     * Stop
+     ********************************************************************************/
+    virtual void stop() = 0;
 
-        /*********************************************************************************
-         * Stop
-         ********************************************************************************/
-        virtual void stop() = 0;
+    /*********************************************************************************
+     * Get local address
+     ********************************************************************************/
+    PUMP_INLINE const address &get_local_address() const {
+        return local_address_;
+    }
 
-        /*********************************************************************************
-         * Get local address
-         ********************************************************************************/
-        PUMP_INLINE const address &get_local_address() const {
-            return local_address_;
-        }
+    /*********************************************************************************
+     * Get remote address
+     ********************************************************************************/
+    PUMP_INLINE const address &get_remote_address() const {
+        return remote_address_;
+    }
 
-        /*********************************************************************************
-         * Get remote address
-         ********************************************************************************/
-        PUMP_INLINE const address &get_remote_address() const {
-            return remote_address_;
-        }
+  protected:
+    /*********************************************************************************
+     * Channel event callback
+     ********************************************************************************/
+    virtual void on_channel_event(int32_t ev) override;
 
-      protected:
-        /*********************************************************************************
-         * Channel event callback
-         ********************************************************************************/
-        virtual void on_channel_event(int32_t ev) override;
+  protected:
+    /*********************************************************************************
+     * Open dial flow
+     ********************************************************************************/
+    virtual bool __open_dial_flow() {
+        return false;
+    }
 
-      protected:
-        /*********************************************************************************
-         * Open dial flow
-         ********************************************************************************/
-        virtual bool __open_dial_flow() {
-            return false;
-        }
+    /*********************************************************************************
+     * Shutdown dial flow
+     ********************************************************************************/
+    virtual void __shutdown_dial_flow() {}
 
-        /*********************************************************************************
-         * Shutdown dial flow
-         ********************************************************************************/
-        virtual void __shutdown_dial_flow() {
-        }
+    /*********************************************************************************
+     * Close dial flow
+     ********************************************************************************/
+    virtual void __close_dial_flow() {}
 
-        /*********************************************************************************
-         * Close dial flow
-         ********************************************************************************/
-        virtual void __close_dial_flow() {
-        }
+  protected:
+    /*********************************************************************************
+     * Start dial tracker
+     ********************************************************************************/
+    bool __start_dial_tracker(poll::channel_sptr &&ch);
 
-      protected:
-        /*********************************************************************************
-         * Start dial tracker
-         ********************************************************************************/
-        bool __start_dial_tracker(poll::channel_sptr &&ch);
+    /*********************************************************************************
+     * Stop dial tracker
+     ********************************************************************************/
+    void __stop_dial_tracker();
 
-        /*********************************************************************************
-         * Stop dial tracker
-         ********************************************************************************/
-        void __stop_dial_tracker();
+    /*********************************************************************************
+     * Start dial timer
+     ********************************************************************************/
+    bool __start_dial_timer(const time::timer_callback &cb);
 
-        /*********************************************************************************
-         * Start dial timer
-         ********************************************************************************/
-        bool __start_dial_timer(const time::timer_callback &cb);
+    /*********************************************************************************
+     * Stop connect timer
+     ********************************************************************************/
+    void __stop_dial_timer();
 
-        /*********************************************************************************
-         * Stop connect timer
-         ********************************************************************************/
-        void __stop_dial_timer();
+    /*********************************************************************************
+     * Trigger interrupt callbacks
+     ********************************************************************************/
+    void __trigger_interrupt_callbacks();
 
-        /*********************************************************************************
-         * Trigger interrupt callbacks
-         ********************************************************************************/
-        void __trigger_interrupt_callbacks();
+  protected:
+    // Local address
+    address local_address_;
+    // Remote address
+    address remote_address_;
 
-      protected:
-        // Local address
-        address local_address_;
-        // Remote address
-        address remote_address_;
+    // Connect timer
+    int64_t connect_timeout_;
+    std::shared_ptr<time::timer> connect_timer_;
 
-        // Connect timer
-        int64_t connect_timeout_;
-        std::shared_ptr<time::timer> connect_timer_;
+    // Channel tracker
+    poll::channel_tracker_sptr tracker_;
 
-        // Channel tracker
-        poll::channel_tracker_sptr tracker_;
-
-        // Dialer callbacks
-        dialer_callbacks cbs_;
-    };
-    DEFINE_ALL_POINTER_TYPE(base_dialer);
+    // Dialer callbacks
+    dialer_callbacks cbs_;
+};
+DEFINE_SMART_POINTER_TYPE(base_dialer);
 
 }  // namespace transport
 }  // namespace pump

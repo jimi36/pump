@@ -14,32 +14,12 @@
  * limitations under the License.
  */
 
-#ifndef pump_proto_quic_flow_managers_h
-#define pump_proto_quic_flow_managers_h
-
-#include "pump/types.h"
+#include "pump/proto/quic/flow/conn_adjuster.h"
 
 namespace pump {
 namespace proto {
 namespace quic {
-
-    class base_manager {
-      public:
-        base_manager();
-
-      private:
-        // For sending data
-        int64_t sent_bytes_;
-        int64_t send_window_pos_;
-        int64_t last_blocked_pos_;
-
-        // For receiving data
-        int64_t read_bytes_;
-        int64_t read_window_pos_;
-    };
-
-}
-}
-}
-
-#endif
+namespace flow {}
+}  // namespace quic
+}  // namespace proto
+}  // namespace pump

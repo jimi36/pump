@@ -22,59 +22,57 @@
 namespace pump {
 namespace poll {
 
-    class afd_poller
-        : public poller {
+class afd_poller : public poller {
+  public:
+    /*********************************************************************************
+     * Constructor
+     ********************************************************************************/
+    afd_poller() noexcept;
 
-      public:
-        /*********************************************************************************
-          * Constructor
-         ********************************************************************************/
-        afd_poller() noexcept;
+    /*********************************************************************************
+     * Deconstructor
+     ********************************************************************************/
+    virtual ~afd_poller();
 
-        /*********************************************************************************
-         * Deconstructor
-         ********************************************************************************/
-        virtual ~afd_poller();
+  protected:
+    /*********************************************************************************
+     * Install channel tracker for derived class
+     ********************************************************************************/
+    virtual bool __install_channel_tracker(channel_tracker *tracker) override;
 
-      protected:
-        /*********************************************************************************
-         * Install channel tracker for derived class
-         ********************************************************************************/
-        virtual bool __install_channel_tracker(channel_tracker *tracker) override;
+    /*********************************************************************************
+     * Uninstall append channel for derived class
+     ********************************************************************************/
+    virtual bool __uninstall_channel_tracker(channel_tracker *tracker) override;
 
-        /*********************************************************************************
-         * Uninstall append channel for derived class
-         ********************************************************************************/
-        virtual bool __uninstall_channel_tracker(channel_tracker *tracker) override;
+    /*********************************************************************************
+     * Resume channel tracker for derived class
+     ********************************************************************************/
+    virtual bool __resume_channel_tracker(channel_tracker *tracker) override;
 
-        /*********************************************************************************
-         * Resume channel tracker for derived class
-         ********************************************************************************/
-        virtual bool __resume_channel_tracker(channel_tracker *tracker) override;
+    /*********************************************************************************
+     * Poll
+     ********************************************************************************/
+    virtual void __poll(int32_t timeout) override;
 
-        /*********************************************************************************
-         * Poll
-         ********************************************************************************/
-        virtual void __poll(int32_t timeout) override;
+  private:
+    /*********************************************************************************
+     * Dispatch pending event
+     ********************************************************************************/
+    void __dispatch_pending_event(int32_t count);
 
-      private:
-        /*********************************************************************************
-         * Dispatch pending event
-         ********************************************************************************/
-        void __dispatch_pending_event(int32_t count);
+  private:
+    // IOCP handler
+    void *iocp_handler_;
+    // AFD device handler
+    void *afd_device_handler_;
 
-      private:
-        // IOCP handler
-        void *iocp_handler_;
-        // AFD device handler
-        void *afd_device_handler_;
+    void *events_;
+    int32_t max_event_count_;
+    std::atomic_int32_t cur_event_count_;
+};
 
-        void *events_;
-        int32_t max_event_count_;
-        std::atomic_int32_t cur_event_count_;
-    };
-
-}
-}
+}  // namespace poll
+}  // namespace pump
 
 #endif

@@ -25,71 +25,71 @@ namespace pump {
 namespace proto {
 namespace http {
 
-    class LIB_PUMP header {
+class LIB_PUMP header {
+  public:
+    /*********************************************************************************
+     * Constructor
+     ********************************************************************************/
+    header() noexcept;
 
-      public:
-        /*********************************************************************************
-         * Constructor
-         ********************************************************************************/
-        header() noexcept;
+    /*********************************************************************************
+     * Deconstructor
+     ********************************************************************************/
+    virtual ~header() = default;
 
-        /*********************************************************************************
-         * Deconstructor
-         ********************************************************************************/
-        virtual ~header() = default;
+    /*********************************************************************************
+     * Set http head by append
+     ********************************************************************************/
+    void set_head(const std::string &name, int32_t value);
+    void set_head(const std::string &name, const std::string &value);
 
-        /*********************************************************************************
-         * Set http head by append
-         ********************************************************************************/
-        void set_head(const std::string &name, int32_t value);
-        void set_head(const std::string &name, const std::string &value);
+    /*********************************************************************************
+     * Set http header by replace
+     ********************************************************************************/
+    void set_unique_head(const std::string &name, int32_t value);
+    void set_unique_head(const std::string &name, const std::string &value);
 
-        /*********************************************************************************
-         * Set http header by replace
-         ********************************************************************************/
-        void set_unique_head(const std::string &name, int32_t value);
-        void set_unique_head(const std::string &name, const std::string &value);
+    /*********************************************************************************
+     * Get http header
+     ********************************************************************************/
+    bool get_head(const std::string &name, int32_t &value) const;
+    bool get_head(const std::string &name, std::string &value) const;
+    bool get_head(const std::string &name, std::vector<std::string> &values) const;
 
-        /*********************************************************************************
-         * Get http header
-         ********************************************************************************/
-        bool get_head(const std::string &name, int32_t &value) const;
-        bool get_head(const std::string &name, std::string &value) const;
-        bool get_head(const std::string &name, std::vector<std::string> &values) const;
+    /*********************************************************************************
+     * Check header field existed or not
+     ********************************************************************************/
+    bool has_head(const std::string &name) const;
 
-        /*********************************************************************************
-         * Check header field existed or not
-         ********************************************************************************/
-        bool has_head(const std::string &name) const;
+  protected:
+    /*********************************************************************************
+     * Parse heads
+     * This parse http header and return parsed size.
+     * If parsed error, return -1.
+     ********************************************************************************/
+    int32_t __parse_header(const block_t *b, int32_t size);
 
-      protected:
-        /*********************************************************************************
-         * Parse heads
-         * This parse http header and return parsed size. 
-         * If parsed error, return -1.
-         ********************************************************************************/
-        int32_t __parse_header(const block_t *b, int32_t size);
+    /*********************************************************************************
+     * Check parse is finished or not
+     ********************************************************************************/
+    PUMP_INLINE bool __is_header_parsed() const {
+        return header_parsed_;
+    }
 
-        /*********************************************************************************
-         * Check parse is finished or not
-         ********************************************************************************/
-        PUMP_INLINE bool __is_header_parsed() const {
-            return header_parsed_;
-        }
+    /*********************************************************************************
+     * Serialize heads
+     * This will serialize http header and end CR(\r\n), then return serialized
+     *size.
+     ********************************************************************************/
+    int32_t __serialize_header(std::string &buf) const;
 
-        /*********************************************************************************
-         * Serialize heads
-         * This will serialize http header and end CR(\r\n), then return serialized size.
-         ********************************************************************************/
-        int32_t __serialize_header(std::string &buf) const;
-
-        private:
-        // Http head parse finished flag
-        bool header_parsed_;
-        // Http header map
-        std::map<std::string, std::vector<std::string> > headers_;
-    };
-    DEFINE_ALL_POINTER_TYPE(header);
+  private:
+    // Http head parse finished flag
+    bool header_parsed_;
+    // Http header map
+    std::map<std::string, std::vector<std::string>> headers_;
+};
+DEFINE_SMART_POINTER_TYPE(header);
 
 }  // namespace http
 }  // namespace proto

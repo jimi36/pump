@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- 
+
 #ifndef pump_proto_quic_tls_server_h
 #define pump_proto_quic_tls_server_h
 
@@ -27,146 +27,144 @@ namespace proto {
 namespace quic {
 namespace tls {
 
-    class LIB_PUMP server_handshaker {
+class LIB_PUMP server_handshaker {
+  public:
+    /*********************************************************************************
+     * Constructor
+     ********************************************************************************/
+    server_handshaker();
 
-      public:
-        /*********************************************************************************
-         * Constructor
-         ********************************************************************************/
-        server_handshaker();
+    /*********************************************************************************
+     * Deconstructor
+     ********************************************************************************/
+    ~server_handshaker();
 
-        /*********************************************************************************
-         * Deconstructor
-         ********************************************************************************/
-        ~server_handshaker();
+    /*********************************************************************************
+     * Start handshake
+     * Client hello message will be sent to server.
+     ********************************************************************************/
+    bool handshake(const config &cfg);
 
-        /*********************************************************************************
-         * Start handshake
-         * Client hello message will be sent to server.
-         ********************************************************************************/
-        bool handshake(const config &cfg);
+    /*********************************************************************************
+     * Handshake
+     ********************************************************************************/
+    alert_code handshake(handshake_message *msg);
 
-        /*********************************************************************************
-         * Handshake
-         ********************************************************************************/
-        alert_code handshake(handshake_message *msg);
+    /*********************************************************************************
+     * Check handshake finished status
+     ********************************************************************************/
+    PUMP_INLINE bool is_handshaked() {
+        return status_ == HANDSHAKE_SUCCESS;
+    }
 
-        /*********************************************************************************
-         * Check handshake finished status
-         ********************************************************************************/
-        PUMP_INLINE bool is_handshaked() {
-            return status_ == HANDSHAKE_SUCCESS;
-        }
+    /*********************************************************************************
+     * Set callbacks
+     ********************************************************************************/
+    void set_callbacks(
+        const pump_function<void(const std::string &)> send_cb,
+        const pump_function<void(const connection_session &)> finished_cb) {
+        send_callback_ = send_cb;
+        finished_callback_ = finished_cb;
+    }
 
-        /*********************************************************************************
-         * Set callbacks
-         ********************************************************************************/
-        void set_callbacks(
-            const pump_function<void (const std::string&)> send_cb,
-            const pump_function<void (const connection_session&)> finished_cb) {
-            send_callback_ = send_cb;
-            finished_callback_ = finished_cb;
-        }
+  private:
+    /*********************************************************************************
+     * Handle client hello message
+     ********************************************************************************/
+    alert_code __handle_client_hello(handshake_message *msg);
 
-      private:
-        /*********************************************************************************
-         * Handle client hello message
-         ********************************************************************************/
-        alert_code __handle_client_hello(handshake_message *msg);
+    /*********************************************************************************
+     * Send hello retry request message
+     ********************************************************************************/
+    alert_code __send_hello_retry_request(cipher_suite_type cipher_suite,
+                                          ssl::curve_group_type curve_group);
 
-        /*********************************************************************************
-         * Send hello retry request message
-         ********************************************************************************/
-        alert_code __send_hello_retry_request(
-            cipher_suite_type cipher_suite,
-            ssl::curve_group_type curve_group);
+    /*********************************************************************************
+     * Send server hello message
+     ********************************************************************************/
+    alert_code __send_server_hello();
 
-        /*********************************************************************************
-         * Send server hello message
-         ********************************************************************************/
-        alert_code __send_server_hello();
+    /*********************************************************************************
+     * Send encrypted extensions message
+     ********************************************************************************/
+    alert_code __send_encrypted_extensions();
 
-        /*********************************************************************************
-         * Send encrypted extensions message
-         ********************************************************************************/
-        alert_code __send_encrypted_extensions();
+    /*********************************************************************************
+     * Send certificate request message
+     ********************************************************************************/
+    alert_code __send_certificate_request();
 
-        /*********************************************************************************
-         * Send certificate request message
-         ********************************************************************************/
-        alert_code __send_certificate_request();
+    /*********************************************************************************
+     * Send certificate tls13 message
+     ********************************************************************************/
+    alert_code __send_certificate_tls13();
 
-        /*********************************************************************************
-         * Send certificate tls13 message
-         ********************************************************************************/
-        alert_code __send_certificate_tls13();
+    /*********************************************************************************
+     * Send certificate verify message
+     ********************************************************************************/
+    alert_code __send_certificate_verify();
 
-        /*********************************************************************************
-         * Send certificate verify message
-         ********************************************************************************/
-        alert_code __send_certificate_verify();
+    /*********************************************************************************
+     * Send finished message
+     ********************************************************************************/
+    alert_code __send_finished();
 
-        /*********************************************************************************
-         * Send finished message
-         ********************************************************************************/
-        alert_code __send_finished();
+    /*********************************************************************************
+     * Handle certificate tls13 message
+     ********************************************************************************/
+    alert_code __handle_certificate_tls13(handshake_message *msg);
 
-        /*********************************************************************************
-         * Handle certificate tls13 message
-         ********************************************************************************/
-        alert_code __handle_certificate_tls13(handshake_message *msg);
+    /*********************************************************************************
+     * Handle certificate verify message
+     ********************************************************************************/
+    alert_code __handle_certificate_verify(handshake_message *msg);
 
-        /*********************************************************************************
-         * Handle certificate verify message
-         ********************************************************************************/
-        alert_code __handle_certificate_verify(handshake_message *msg);
+    /*********************************************************************************
+     * Handle finished message
+     ********************************************************************************/
+    alert_code __handle_finished(handshake_message *msg);
 
-        /*********************************************************************************
-         * Handle finished message
-         ********************************************************************************/
-        alert_code __handle_finished(handshake_message *msg);
+    /*********************************************************************************
+     * Reset transcript
+     ********************************************************************************/
+    std::string __reset_transcript();
 
-        /*********************************************************************************
-         * Reset transcript
-         ********************************************************************************/
-        std::string __reset_transcript();
+    /*********************************************************************************
+     * Write transcript
+     ********************************************************************************/
+    void __write_transcript(const std::string &data);
 
-        /*********************************************************************************
-         * Write transcript
-         ********************************************************************************/
-        void __write_transcript(const std::string &data);
+    /*********************************************************************************
+     * Send handshake message
+     ********************************************************************************/
+    void __send_handshake_message(handshake_message *msg, bool transcript = true);
 
-        /*********************************************************************************
-         * Send handshake message
-         ********************************************************************************/
-        void __send_handshake_message(handshake_message *msg, bool transcript = true);
+  private:
+    //  Handshake status
+    handshake_status status_;
 
-      private:
-        //  Handshake status
-        handshake_status status_;
+    // Server hello message
+    handshake_message *hello_;
 
-        // Server hello message
-        handshake_message *hello_;
+    // Client hello message
+    client_hello_message *client_hello_;
 
-        // Client hello message
-        client_hello_message *client_hello_;
+    // Handshake transcript hash context
+    ssl::hash_context *transcript_;
 
-        // Handshake transcript hash context
-        ssl::hash_context *transcript_;
+    // Connection session
+    connection_session session_;
 
-        // Connection session
-        connection_session session_;
+    // Send callback
+    pump_function<void(const std::string &)> send_callback_;
 
-        // Send callback
-        pump_function<void (const std::string&)> send_callback_;
+    // Finished callback
+    pump_function<void(const connection_session &)> finished_callback_;
+};
 
-        // Finished callback
-        pump_function<void (const connection_session&)> finished_callback_;
-    };
-
-} // namespace tls
-} // namespace quic
-} // namespace proto
-} // namespace pump
+}  // namespace tls
+}  // namespace quic
+}  // namespace proto
+}  // namespace pump
 
 #endif

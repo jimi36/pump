@@ -23,63 +23,61 @@ namespace pump {
 namespace proto {
 namespace http {
 
-    class LIB_PUMP response
-      : public packet {
+class LIB_PUMP response : public packet {
+  public:
+    /*********************************************************************************
+     * Constructor
+     ********************************************************************************/
+    response(void *ctx = nullptr) noexcept;
 
-      public:
-        /*********************************************************************************
-         * Constructor
-         ********************************************************************************/
-        response(void *ctx = nullptr) noexcept;
+    /*********************************************************************************
+     * Deconstructor
+     ********************************************************************************/
+    virtual ~response() = default;
 
-        /*********************************************************************************
-         * Deconstructor
-         ********************************************************************************/
-        virtual ~response() = default;
+    /*********************************************************************************
+     * Set status code
+     ********************************************************************************/
+    PUMP_INLINE void set_status_code(int32_t status_code) {
+        status_code_ = status_code;
+    }
 
-        /*********************************************************************************
-         * Set status code
-         ********************************************************************************/
-        PUMP_INLINE void set_status_code(int32_t status_code) {
-            status_code_ = status_code;
-        }
+    /*********************************************************************************
+     * Get response status code
+     ********************************************************************************/
+    PUMP_INLINE int32_t get_status_code() const {
+        return status_code_;
+    }
 
-        /*********************************************************************************
-         * Get response status code
-         ********************************************************************************/
-        PUMP_INLINE int32_t get_status_code() const {
-            return status_code_;
-        }
+    /*********************************************************************************
+     * Parse
+     * This parse http packet, and return parsed size.
+     * If parsed error, return -1.
+     ********************************************************************************/
+    virtual int32_t parse(const block_t *b, int32_t size) override;
 
-        /*********************************************************************************
-         * Parse
-         * This parse http packet, and return parsed size. 
-         * If parsed error, return -1.
-         ********************************************************************************/
-        virtual int32_t parse(const block_t *b, int32_t size) override;
+    /*********************************************************************************
+     * Serialize
+     * This will serialize http response and return serialized size.
+     ********************************************************************************/
+    virtual int32_t serialize(std::string &buffer) const override;
 
-        /*********************************************************************************
-         * Serialize
-         * This will serialize http response and return serialized size.
-         ********************************************************************************/
-        virtual int32_t serialize(std::string &buffer) const override;
+  private:
+    /*********************************************************************************
+     * Parse http start line
+     ********************************************************************************/
+    int32_t __parse_start_line(const block_t *b, int32_t size);
 
-      private:
-        /*********************************************************************************
-         * Parse http start line
-         ********************************************************************************/
-        int32_t __parse_start_line(const block_t *b, int32_t size);
+    /*********************************************************************************
+     * Serialize http response line
+     ********************************************************************************/
+    int32_t __serialize_response_line(std::string &buffer) const;
 
-        /*********************************************************************************
-         * Serialize http response line
-         ********************************************************************************/
-        int32_t __serialize_response_line(std::string &buffer) const;
-
-      private:
-        // Status code
-        int32_t status_code_;
-    };
-    DEFINE_ALL_POINTER_TYPE(response);
+  private:
+    // Status code
+    int32_t status_code_;
+};
+DEFINE_SMART_POINTER_TYPE(response);
 
 }  // namespace http
 }  // namespace proto

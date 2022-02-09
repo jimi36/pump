@@ -15,72 +15,72 @@
  */
 
 #include "pump/proto/quic/config.h"
-#include "pump/proto/quic/defaults.h"
+#include "pump/proto/quic/defines.h"
 
 namespace pump {
 namespace proto {
 namespace quic {
 
-    void init_config(config *cfg) {
+void init_config(config *cfg) {
+    cfg->versions.push_back(version_tls);
+
+    cfg->connection_id_length = DEF_CONNECTION_ID_LEN;
+
+    cfg->handshake_idle_timeout = DEF_HANDSHAKE_IDLE_TIMEOUT;
+
+    cfg->max_idle_timeout = DEF_IDLE_TIMEOUT;
+
+    cfg->initial_stream_receive_window = DEF_STREAM_RECV_WINDOW_SIZE;
+    cfg->max_stream_receive_window = DEF_MAX_STREAM_RECV_WINDOW_SIZE;
+
+    cfg->initial_connection_receive_window = DEF_CONNECTION_RECV_WINDOW_SIZE;
+    cfg->max_connection_receive_window = DEF_MAX_CONNECTION_RECV_WINDOW_SIZE;
+
+    cfg->max_incoming_streams = DEF_MAX_INCOMING_STREAM_COUNT;
+    cfg->max_incoming_uni_streams = DEF_MAX_INCOMING_NUI_STREAM_COUNT;
+
+    cfg->keepalive = false;
+
+    cfg->disable_path_mtu_discovery = false;
+
+    cfg->disable_version_negotiation_packets = false;
+
+    cfg->enable_datagrams = false;
+}
+
+void populate_config(config *cfg) {
+    if (cfg->versions.empty()) {
         cfg->versions.push_back(version_tls);
-
+    }
+    if (cfg->connection_id_length <= 0) {
         cfg->connection_id_length = DEF_CONNECTION_ID_LEN;
- 
+    }
+    if (cfg->handshake_idle_timeout <= 0) {
         cfg->handshake_idle_timeout = DEF_HANDSHAKE_IDLE_TIMEOUT;
-
+    }
+    if (cfg->max_idle_timeout <= 0) {
         cfg->max_idle_timeout = DEF_IDLE_TIMEOUT;
- 
-        cfg->initial_stream_receive_window = DEF_STREAM_RECEIVE_WINDOW_SIZE;
-        cfg->max_stream_receive_window = DEF_MAX_STREAM_RECEIVE_WINDOW_SIZE;
-
-        cfg->initial_connection_receive_window = DEF_CONNECTION_RECEIVE_WINDOW_SIZE;
-        cfg->max_connection_receive_window = DEF_MAX_CONNECTION_RECEIVE_WINDOW_SIZE;
-
+    }
+    if (cfg->initial_stream_receive_window <= 0) {
+        cfg->initial_stream_receive_window = DEF_STREAM_RECV_WINDOW_SIZE;
+    }
+    if (cfg->max_stream_receive_window <= 0) {
+        cfg->max_stream_receive_window = DEF_MAX_STREAM_RECV_WINDOW_SIZE;
+    }
+    if (cfg->initial_connection_receive_window <= 0) {
+        cfg->initial_connection_receive_window = DEF_CONNECTION_RECV_WINDOW_SIZE;
+    }
+    if (cfg->max_connection_receive_window <= 0) {
+        cfg->max_connection_receive_window = DEF_MAX_CONNECTION_RECV_WINDOW_SIZE;
+    }
+    if (cfg->max_incoming_streams < 0) {
         cfg->max_incoming_streams = DEF_MAX_INCOMING_STREAM_COUNT;
+    }
+    if (cfg->max_incoming_uni_streams < 0) {
         cfg->max_incoming_uni_streams = DEF_MAX_INCOMING_NUI_STREAM_COUNT;
-
-        cfg->keepalive = false;
-
-        cfg->disable_path_mtu_discovery = false;
-
-        cfg->disable_version_negotiation_packets = false;
-
-        cfg->enable_datagrams = false;
     }
+}
 
-    void populate_config(config *cfg) {
-        if (cfg->versions.empty()) {
-            cfg->versions.push_back(version_tls);
-        }
-        if (cfg->connection_id_length <= 0) {
-            cfg->connection_id_length = DEF_CONNECTION_ID_LEN;
-        }
-        if (cfg->handshake_idle_timeout <= 0) {
-            cfg->handshake_idle_timeout = DEF_HANDSHAKE_IDLE_TIMEOUT;
-        }
-        if (cfg->max_idle_timeout <= 0) {
-            cfg->max_idle_timeout = DEF_IDLE_TIMEOUT;
-        }
-        if (cfg->initial_stream_receive_window <= 0) {
-            cfg->initial_stream_receive_window = DEF_STREAM_RECEIVE_WINDOW_SIZE;
-        }
-        if (cfg->max_stream_receive_window <= 0) {
-            cfg->max_stream_receive_window = DEF_MAX_STREAM_RECEIVE_WINDOW_SIZE;
-        }
-        if (cfg->initial_connection_receive_window <= 0) {
-            cfg->initial_connection_receive_window = DEF_CONNECTION_RECEIVE_WINDOW_SIZE;
-        }
-        if (cfg->max_connection_receive_window <= 0) {
-            cfg->max_connection_receive_window = DEF_MAX_CONNECTION_RECEIVE_WINDOW_SIZE;
-        }
-        if (cfg->max_incoming_streams < 0) {
-            cfg->max_incoming_streams = DEF_MAX_INCOMING_STREAM_COUNT;
-        }
-        if (cfg->max_incoming_uni_streams < 0) {
-            cfg->max_incoming_uni_streams = DEF_MAX_INCOMING_NUI_STREAM_COUNT;
-        }
-    }
-
-}
-}
-}
+}  // namespace quic
+}  // namespace proto
+}  // namespace pump

@@ -22,35 +22,35 @@
 namespace pump {
 namespace transport {
 
-    class base_transport;
-    DEFINE_ALL_POINTER_TYPE(base_transport);
+class base_transport;
+DEFINE_SMART_POINTER_TYPE(base_transport);
 
-    struct acceptor_callbacks {
-        // Accepted callback
-        pump_function<void(base_transport_sptr&)> accepted_cb;
-        // Acceptor Stopped calloback
-        pump_function<void()> stopped_cb;
-    };
+struct acceptor_callbacks {
+    // Accepted callback
+    pump_function<void(base_transport_sptr &)> accepted_cb;
+    // Acceptor Stopped calloback
+    pump_function<void()> stopped_cb;
+};
 
-    struct dialer_callbacks {
-        // Dialed callback
-        pump_function<void(base_transport_sptr&, bool)> dialed_cb;
-        // Dialer timouted callback
-        pump_function<void()> timeouted_cb;
-        // Dialer stopped callback
-        pump_function<void()> stopped_cb;
-    };
+struct dialer_callbacks {
+    // Dialed callback
+    pump_function<void(base_transport_sptr &, bool)> dialed_cb;
+    // Dialer timouted callback
+    pump_function<void()> timeouted_cb;
+    // Dialer stopped callback
+    pump_function<void()> stopped_cb;
+};
 
-    struct transport_callbacks {
-        // Read callback for tcp and tls
-        pump_function<void(const block_t*, int32_t)> read_cb;
-        // Read from callback for udp
-        pump_function<void(const block_t*, int32_t, const address&)> read_from_cb;
-        // Transport disconnected callback for tcp and tls
-        pump_function<void()> disconnected_cb;
-        // Transport stopped callback
-        pump_function<void()> stopped_cb;
-    };
+struct transport_callbacks {
+    // Read callback for tcp and tls
+    pump_function<void(const block_t *, int32_t)> read_cb;
+    // Read from callback for udp
+    pump_function<void(const block_t *, int32_t, const address &)> read_from_cb;
+    // Transport disconnected callback for tcp and tls
+    pump_function<void()> disconnected_cb;
+    // Transport stopped callback
+    pump_function<void()> stopped_cb;
+};
 
 }  // namespace transport
 }  // namespace pump

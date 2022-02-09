@@ -22,189 +22,159 @@
 namespace pump {
 namespace toolkit {
 
-    /*********************************************************************************
-     * Bubble sort algorithm.
-     * a      ---->   array of Comparable items.
-     * left   ---->   the left-most index of the subarray.
-     * right  ---->   the right-most index of the subarray.
-     * range is [left, right)
-     ********************************************************************************/
-    template <typename T>
-    void bubble_sort(
-        T *a, 
-        int32_t left, 
-        int32_t right) {
-        for (int32_t i = left; i < right; ++i) {
-            for (int32 j = i + 1; j < right; ++j) {
-                if (a[i] > a[j]) {
-                    std::swap(a[i], a[j]);
-                }
+/*********************************************************************************
+ * Bubble sort algorithm.
+ * a      ---->   array of Comparable items.
+ * left   ---->   the left-most index of the subarray.
+ * right  ---->   the right-most index of the subarray.
+ * range is [left, right)
+ ********************************************************************************/
+template <typename T> void bubble_sort(T *a, int32_t left, int32_t right) {
+    for (int32_t i = left; i < right; ++i) {
+        for (int32 j = i + 1; j < right; ++j) {
+            if (a[i] > a[j]) {
+                std::swap(a[i], a[j]);
             }
         }
     }
+}
 
-    /*********************************************************************************
-     * Select sort algorithm.
-     * a      ---->   array of Comparable items.
-     * left   ---->   the left-most index of the subarray.
-     * right  ---->   the right-most index of the subarray.
-     * range is [left, right)
-     ********************************************************************************/
-    template <typename T>
-    void select_sort(
-        T *a, 
-        int32_t left, 
-        int32_t right) {
-        int32 min_pos;
-        for (int32_t i = left; i < right; ++i) {
-            min_pos = i;
-            for (int32_t j = i + 1; j < right; ++j) {
-                if (a[j] < a[min_pos]) {
-                    min_pos = j;
-                }
+/*********************************************************************************
+ * Select sort algorithm.
+ * a      ---->   array of Comparable items.
+ * left   ---->   the left-most index of the subarray.
+ * right  ---->   the right-most index of the subarray.
+ * range is [left, right)
+ ********************************************************************************/
+template <typename T> void select_sort(T *a, int32_t left, int32_t right) {
+    int32 min_pos;
+    for (int32_t i = left; i < right; ++i) {
+        min_pos = i;
+        for (int32_t j = i + 1; j < right; ++j) {
+            if (a[j] < a[min_pos]) {
+                min_pos = j;
             }
-            if (i != min_pos) {
-                std::swap(a[i], a[min_pos]);
-            }
+        }
+        if (i != min_pos) {
+            std::swap(a[i], a[min_pos]);
+        }
+    }
+}
+
+/*********************************************************************************
+ * Insert sort algorithm.
+ * a      ---->   array of Comparable items.
+ * left   ---->   the left-most index of the subarray.
+ * right  ---->   the right-most index of the subarray.
+ * range is [left, right)
+ ********************************************************************************/
+template <typename T> void insert_sort(T *a, int32_t left, int32_t right) {
+    for (int32_t i = left + 1; i < right; ++i) {
+        T tem = a[i];
+        int32 j = i;
+        for (; j >= left && tem < a[j - 1]; --j) {
+            a[j] = a[j - 1];
+        }
+        a[j] = tem;
+    }
+}
+
+/*********************************************************************************
+ * Get median pos for quick sort algorithm.
+ * a      ---->   array of Comparable items.
+ * left   ---->   the left-most index of the subarray.
+ * right  ---->   the right-most index of the subarray.
+ * range is [left, right)
+ ********************************************************************************/
+template <typename T> int32_t __median_pos(T *a, int32_t left, int32_t right) {
+    int32_t i = left;
+    int32_t j = right - 1;
+    T pivot = a[left];
+    while (i < j) {
+        while (a[j] >= pivot && j > i) {
+            --j;
+        }
+        if (j > i) {
+            std::swap(a[i++], a[j]);
+        }
+
+        while (a[i] <= pivot && i < j) {
+            ++i;
+        }
+        if (i < j) {
+            std::swap(a[i], a[j--]);
         }
     }
 
-    /*********************************************************************************
-     * Insert sort algorithm.
-     * a      ---->   array of Comparable items.
-     * left   ---->   the left-most index of the subarray.
-     * right  ---->   the right-most index of the subarray.
-     * range is [left, right)
-     ********************************************************************************/
-    template <typename T>
-    void insert_sort(
-        T *a, 
-        int32_t left, 
-        int32_t right) {
-        for (int32_t i = left + 1; i < right; ++i) {
-            T tem = a[i];
-            int32 j = i;
-            for (; j >= left && tem < a[j - 1]; --j) {
-                a[j] = a[j - 1];
-            }
-            a[j] = tem;
-        }
+    return i;
+}
+
+/*********************************************************************************
+ * Quick sort algorithm.
+ * a      ---->   array of Comparable items.
+ * left   ---->   the left-most index of the subarray.
+ * right  ---->   the right-most index of the subarray.
+ * range is [left, right)
+ ********************************************************************************/
+template <typename T> void quick_sort(T *a, int32_t left, int32_t right) {
+    static int32 min_size = 10;
+
+    if (right - left > min_size) {
+        int32_t pos = __median_pos(a, left, right);
+        quick_sort(a, left, pos);
+        quick_sort(a, pos + 1, right);
+    } else {
+        insert_sort(a, left, right);
+    }
+}
+
+/*********************************************************************************
+ * Become max heapify for heapsort algorithm.
+ * a      ---->   array of Comparable items.
+ * s      ---->   size of the array.
+ * i      ---->   rott index of the subtree.
+ ********************************************************************************/
+template <typename T> void __max_heapify(T *a, int32_t s, int32_t i) {
+    int32 l = i * 2;
+    int32 r = i * 2 + 1;
+
+    int32 largest = i;
+    if (l < s && a[l] > a[i]) {
+        largest = l;
+    }
+    if (r < s && a[r] > a[largest]) {
+        largest = r;
     }
 
-    /*********************************************************************************
-     * Get median pos for quick sort algorithm.
-     * a      ---->   array of Comparable items.
-     * left   ---->   the left-most index of the subarray.
-     * right  ---->   the right-most index of the subarray.
-     * range is [left, right)
-     ********************************************************************************/
-    template <typename T>
-    int32_t __median_pos(
-        T *a, 
-        int32_t left, 
-        int32_t right) {
-        int32_t i = left;
-        int32_t j = right - 1;
-        T pivot = a[left];
-        while (i < j) {
-            while (a[j] >= pivot && j > i) {
-                --j;
-            }
-            if (j > i) {
-                std::swap(a[i++], a[j]);
-            }
-
-            while (a[i] <= pivot && i < j) {
-                ++i;
-            }
-            if (i < j) {
-                std::swap(a[i], a[j--]);
-            }
-        }
-
-        return i;
+    if (largest != i) {
+        std::swap(a[i], a[largest]);
+        __max_heapify(a, s, largest);
     }
+}
 
-    /*********************************************************************************
-     * Quick sort algorithm.
-     * a      ---->   array of Comparable items.
-     * left   ---->   the left-most index of the subarray.
-     * right  ---->   the right-most index of the subarray.
-     * range is [left, right)
-     ********************************************************************************/
-    template <typename T>
-    void quick_sort(
-        T *a, 
-        int32_t left, 
-        int32_t right) {
-        static int32 min_size = 10;
-
-        if (right - left > min_size) {
-            int32_t pos = __median_pos(a, left, right);
-            quick_sort(a, left, pos);
-            quick_sort(a, pos + 1, right);
-        } else {
-            insert_sort(a, left, right);
-        }
+/*********************************************************************************
+ * Build max heap for heapsort algorithm.
+ * a      ---->   array of Comparable items.
+ * s      ---->   size of the array.
+ ********************************************************************************/
+template <typename T> void __bulid_max_heap(T *a, int32_t s) {
+    for (int32_t i = s / 2; i >= 0; --i) {
+        __max_heapify(a, s, i);
     }
+}
 
-    /*********************************************************************************
-     * Become max heapify for heapsort algorithm.
-     * a      ---->   array of Comparable items.
-     * s      ---->   size of the array.
-     * i      ---->   rott index of the subtree.
-     ********************************************************************************/
-    template <typename T>
-    void __max_heapify(
-        T *a, 
-        int32_t s, 
-        int32_t i) {
-        int32 l = i * 2;
-        int32 r = i * 2 + 1;
-
-        int32 largest = i;
-        if (l < s && a[l] > a[i]) {
-            largest = l;
-        }
-        if (r < s && a[r] > a[largest]) {
-            largest = r;
-        }
-
-        if (largest != i) {
-            std::swap(a[i], a[largest]);
-            __max_heapify(a, s, largest);
-        }
+/*********************************************************************************
+ * Heap sort algorithm.
+ * a      ---->   array of Comparable items.
+ * s      ---->   size of the array.
+ ********************************************************************************/
+template <typename T> void heap_sort(T *a, int32_t s) {
+    __bulid_max_heap(a, s);
+    for (int32_t i = s - 1; i >= 1; --i) {
+        std::swap(a[0], a[i]);
+        __max_heapify(a, --s, 0);
     }
-
-    /*********************************************************************************
-     * Build max heap for heapsort algorithm.
-     * a      ---->   array of Comparable items.
-     * s      ---->   size of the array.
-     ********************************************************************************/
-    template <typename T>
-    void __bulid_max_heap(
-        T *a, 
-        int32_t s) {
-        for (int32_t i = s / 2; i >= 0; --i) {
-            __max_heapify(a, s, i);
-        }
-    }
-
-    /*********************************************************************************
-     * Heap sort algorithm.
-     * a      ---->   array of Comparable items.
-     * s      ---->   size of the array.
-     ********************************************************************************/
-    template <typename T>
-    void heap_sort(
-        T *a, 
-        int32_t s) {
-        __bulid_max_heap(a, s);
-        for (int32_t i = s - 1; i >= 1; --i) {
-            std::swap(a[0], a[i]);
-            __max_heapify(a, --s, 0);
-        }
-    }
+}
 
 }  // namespace toolkit
 }  // namespace pump

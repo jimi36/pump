@@ -23,66 +23,64 @@ namespace pump {
 namespace transport {
 namespace flow {
 
-    class flow_tcp
-      : public flow_base {
+class flow_tcp : public flow_base {
+  public:
+    /*********************************************************************************
+     * Constructor
+     ********************************************************************************/
+    flow_tcp() noexcept;
 
-      public:
-        /*********************************************************************************
-         * Constructor
-         ********************************************************************************/
-        flow_tcp() noexcept;
+    /*********************************************************************************
+     * Deconstructor
+     ********************************************************************************/
+    virtual ~flow_tcp();
 
-        /*********************************************************************************
-         * Deconstructor
-         ********************************************************************************/
-        virtual ~flow_tcp();
+    /*********************************************************************************
+     * Init
+     * Return results:
+     *     ERROR_OK    => success
+     *     ERROR_FAULT => error
+     ********************************************************************************/
+    error_code init(poll::channel_sptr &&ch, pump_socket fd);
 
-        /*********************************************************************************
-         * Init
-         * Return results:
-         *     ERROR_OK    => success
-         *     ERROR_FAULT => error
-         ********************************************************************************/
-        error_code init(poll::channel_sptr &&ch, pump_socket fd);
+    /*********************************************************************************
+     * Read
+     ********************************************************************************/
+    PUMP_INLINE int32_t read(block_t *b, int32_t size) {
+        return net::read(fd_, b, size);
+    }
 
-        /*********************************************************************************
-         * Read
-         ********************************************************************************/
-        PUMP_INLINE int32_t read(block_t *b, int32_t size) {
-            return net::read(fd_, b, size);
-        }
+    /*********************************************************************************
+     * Want to send
+     * Try sending data as much as possible.
+     * Return results:
+     *      ERROR_OK    => send completely
+     *      ERROR_AGAIN => try again
+     *      ERROR_FAULT => error
+     ********************************************************************************/
+    error_code want_to_send(toolkit::io_buffer *iob);
 
-        /*********************************************************************************
-         * Want to send
-         * Try sending data as much as possible.
-         * Return results:
-         *      ERROR_OK    => send completely
-         *      ERROR_AGAIN => try again
-         *      ERROR_FAULT => error
-         ********************************************************************************/
-        error_code want_to_send(toolkit::io_buffer *iob);
+    /*********************************************************************************
+     * Send
+     * Return results:
+     *     ERROR_OK      => send completely
+     *     ERROR_AGAIN   => try again
+     *     ERROR_FAULT   => error
+     ********************************************************************************/
+    error_code send();
 
-        /*********************************************************************************
-         * Send
-         * Return results:
-         *     ERROR_OK      => send completely
-         *     ERROR_AGAIN   => try again
-         *     ERROR_FAULT   => error
-         ********************************************************************************/
-        error_code send();
+    /*********************************************************************************
+     * Check there are data to send or not
+     ********************************************************************************/
+    PUMP_INLINE bool has_data_to_send() const {
+        return (send_iob_ && send_iob_->size() > 0);
+    }
 
-        /*********************************************************************************
-         * Check there are data to send or not
-         ********************************************************************************/
-        PUMP_INLINE bool has_data_to_send() const {
-            return (send_iob_ && send_iob_->size() > 0);
-        }
-
-      private:
-        // Send buffer
-        toolkit::io_buffer *send_iob_;
-    };
-    DEFINE_ALL_POINTER_TYPE(flow_tcp);
+  private:
+    // Send buffer
+    toolkit::io_buffer *send_iob_;
+};
+DEFINE_SMART_POINTER_TYPE(flow_tcp);
 
 }  // namespace flow
 }  // namespace transport

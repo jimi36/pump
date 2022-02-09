@@ -32,104 +32,101 @@
 namespace pump {
 namespace time {
 
-    class manager;
-    DEFINE_ALL_POINTER_TYPE(manager);
+class manager;
+DEFINE_SMART_POINTER_TYPE(manager);
 
-    class manager
-      : public toolkit::noncopyable {
+class manager : public toolkit::noncopyable {
+  protected:
+    typedef pump_function<void(timer_list_sptr &)> timer_pending_callback;
 
-      protected:
-        typedef pump_function<void(timer_list_sptr &)> timer_pending_callback;
+  public:
+    /*********************************************************************************
+     * Create instance
+     ********************************************************************************/
+    PUMP_INLINE static manager_sptr create() {
+        INLINE_OBJECT_CREATE(obj, manager, ());
+        return manager_sptr(obj, object_delete<manager>);
+    }
 
-      public:
-          /*********************************************************************************
-         * Create instance
-         ********************************************************************************/
-        PUMP_INLINE static manager_sptr create() {
-            INLINE_OBJECT_CREATE(obj, manager, ());
-            return manager_sptr(obj, object_delete<manager>);
+    /*********************************************************************************
+     * Deconstructor
+     ********************************************************************************/
+    ~manager();
+
+    /*********************************************************************************
+     * Start
+     ********************************************************************************/
+    bool start(const timer_pending_callback &cb);
+
+    /*********************************************************************************
+     * Stop
+     ********************************************************************************/
+    PUMP_INLINE void stop() {
+        started_.store(false);
+    }
+
+    /*********************************************************************************
+     * Wait stopping
+     ********************************************************************************/
+    void wait_stopped();
+
+    /*********************************************************************************
+     * Start timer
+     ********************************************************************************/
+    bool start_timer(timer_sptr &ptr);
+
+    /*********************************************************************************
+     * Restart timer
+     * Just timer can call this function, user code must dont call this.
+     ********************************************************************************/
+    bool restart_timer(timer_sptr &&ptr);
+
+  protected:
+    /*********************************************************************************
+     * Observe thread
+     ********************************************************************************/
+    void __observe_thread();
+
+    /*********************************************************************************
+     * Observe timers
+     * If there are more timers in queue, it will update next observe time.
+     ********************************************************************************/
+    void __observe(timer_list_sptr &tl, uint64_t &next_observe_time, uint64_t now);
+
+    /*********************************************************************************
+     * Observe timers
+     ********************************************************************************/
+    PUMP_INLINE void __queue_timer(timer_list_sptr &tl, timer_sptr &&ptr, uint64_t now) {
+        if (ptr->time() <= now) {
+            tl->push_back(std::move(ptr));
+        } else {
+            timers_[ptr->time()].push_back(std::move(ptr));
         }
+    }
 
-        /*********************************************************************************
-         * Deconstructor
-         ********************************************************************************/
-        ~manager();
+  private:
+    /*********************************************************************************
+     * Constructor
+     ********************************************************************************/
+    manager() noexcept;
 
-        /*********************************************************************************
-         * Start
-         ********************************************************************************/
-        bool start(const timer_pending_callback &cb);
+  private:
+    // Started status
+    std::atomic_bool started_;
 
-        /*********************************************************************************
-         * Stop
-         ********************************************************************************/
-        PUMP_INLINE void stop() {
-            started_.store(false);
-        }
+    // Observer thread
+    std::shared_ptr<std::thread> observer_;
 
-        /*********************************************************************************
-         * Wait stopping
-         ********************************************************************************/
-        void wait_stopped();
+    // New timers
+    typedef toolkit::fl_mc_queue<timer_sptr> timer_impl_queue;
+    toolkit::fl_queue<timer_impl_queue> new_timers_;
 
-        /*********************************************************************************
-         * Start timer
-         ********************************************************************************/
-        bool start_timer(timer_sptr &ptr);
+    // Observed Timers
+    std::map<uint64_t, timer_list> timers_;
 
-        /*********************************************************************************
-         * Restart timer
-         * Just timer can call this function, user code must dont call this.
-         ********************************************************************************/
-        bool restart_timer(timer_sptr &&ptr);
-
-      protected:
-        /*********************************************************************************
-         * Observe thread
-         ********************************************************************************/
-        void __observe_thread();
-
-        /*********************************************************************************
-         * Observe timers
-         * If there are more timers in queue, it will update next observe time.
-         ********************************************************************************/
-        void __observe(timer_list_sptr &tl, uint64_t &next_observe_time, uint64_t now);
-
-        /*********************************************************************************
-         * Observe timers
-         ********************************************************************************/
-        PUMP_INLINE void __queue_timer(timer_list_sptr &tl, timer_sptr &&ptr, uint64_t now) {
-            if (ptr->time() <= now) {
-                tl->push_back(std::move(ptr));
-            } else {
-                timers_[ptr->time()].push_back(std::move(ptr));
-            }
-        }
-
-      private:
-        /*********************************************************************************
-         * Constructor
-         ********************************************************************************/
-        manager() noexcept;
-
-      private:
-        // Started status
-        std::atomic_bool started_;
-
-        // Observer thread
-        std::shared_ptr<std::thread> observer_;
-
-        // New timers
-        typedef toolkit::fl_mc_queue<timer_sptr> timer_impl_queue;
-        toolkit::fl_queue<timer_impl_queue> new_timers_;
-
-        // Observed Timers
-        std::map<uint64_t, timer_list> timers_;
-
-        // Timeout callback
-        timer_pending_callback pending_cb_;
-
-    };
+    // Timeout callback
+    timer_pending_callback pending_cb_;
+};
 
 }  // namespace time
 }  // namespace pump

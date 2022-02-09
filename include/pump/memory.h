@@ -39,7 +39,7 @@
 
 // Inline object create
 #define INLINE_OBJECT_CREATE(obj, TYPE, args)      \
-    TYPE *obj = (TYPE*)pump_malloc(sizeof(TYPE));  \
+    TYPE *obj = (TYPE *)pump_malloc(sizeof(TYPE)); \
     if (PUMP_UNLIKELY(obj != nullptr)) {           \
         new (obj) TYPE args;                       \
     }
@@ -53,15 +53,14 @@
 
 template <typename T, typename... ArgTypes>
 PUMP_INLINE T *object_create(ArgTypes... args) {
-    T *p = (T*)pump_malloc(sizeof(T));
+    T *p = (T *)pump_malloc(sizeof(T));
     if (PUMP_UNLIKELY(p == nullptr)) {
         return nullptr;
     }
     return new (p) T(args...);
 }
 
-template <typename T>
-PUMP_INLINE void object_delete(T *obj) {
+template <typename T> PUMP_INLINE void object_delete(T *obj) {
     if (PUMP_LIKELY(obj != nullptr)) {
         obj->~T();
         pump_free(obj);
@@ -69,13 +68,13 @@ PUMP_INLINE void object_delete(T *obj) {
 }
 
 // Try to lock shared pointer and store to raw pointor
-//#define PUMP_LOCK_SPOINTER(p, sp) 
-//    auto p##_locker = sp;         
+//#define PUMP_LOCK_SPOINTER(p, sp)
+//    auto p##_locker = sp;
 //    auto p = p##_locker.get()
 
 // Try to lock weak pointer and store to raw pointor
-//#define PUMP_LOCK_WPOINTER(p, wp) 
-//    auto p##_locker = wp.lock();  
+//#define PUMP_LOCK_WPOINTER(p, wp)
+//    auto p##_locker = wp.lock();
 //    auto p = p##_locker.get()
 
 #endif

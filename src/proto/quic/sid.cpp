@@ -21,18 +21,12 @@ namespace pump {
 namespace proto {
 namespace quic {
 
-    sid::sid() 
-      : id_(-1) {
-    }
+sid::sid() : id_(-1) {}
 
-    sid::sid(uint64_t id)
-      : id_(id) {
-    }
+sid::sid(uint64_t id) : id_(id) {}
 
-    sid::sid(const sid &id)
-      : id_(id.id_) {
-    }
+sid::sid(const sid &id) : id_(id.id_) {}
 
-}
-}
-}
+}  // namespace quic
+}  // namespace proto
+}  // namespace pump

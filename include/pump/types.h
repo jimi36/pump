@@ -28,9 +28,6 @@ typedef SSIZE_T ssize_t;
     typedef std::weak_ptr<class_name> class_name##_wptr; \
     typedef std::shared_ptr<class_name> class_name##_sptr;
 
-#define DEFINE_ALL_POINTER_TYPE(class_name) \
-    DEFINE_SMART_POINTER_TYPE(class_name)
-
 typedef char block_t;
 typedef float float32_t;
 typedef double float64_t;

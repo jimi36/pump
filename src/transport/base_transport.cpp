@@ -19,44 +19,43 @@
 namespace pump {
 namespace transport {
 
-    void base_transport::on_channel_event(int32_t ev) {
-        if (__trigger_disconnected_callback() ||
-            __trigger_stopped_callback()) {
-            // Transport disabled.
-        }
+void base_transport::on_channel_event(int32_t ev) {
+    if (__trigger_disconnected_callback() || __trigger_stopped_callback()) {
+        // Transport disabled.
     }
+}
 
-    bool base_transport::__change_read_state(read_state from, read_state to) {
-        if (rstate_.compare_exchange_strong(from, to)) {
-            return true;
-        }
-        return false;
+bool base_transport::__change_read_state(read_state from, read_state to) {
+    if (rstate_.compare_exchange_strong(from, to)) {
+        return true;
     }
+    return false;
+}
 
-    bool base_transport::__try_triggering_disconnected_callback() {
-        if (__set_state(TRANSPORT_STARTED, TRANSPORT_DISCONNECTING)) {
-            return __trigger_disconnected_callback();
-        }
-        return false;
+bool base_transport::__try_triggering_disconnected_callback() {
+    if (__set_state(TRANSPORT_STARTED, TRANSPORT_DISCONNECTING)) {
+        return __trigger_disconnected_callback();
     }
+    return false;
+}
 
-    bool base_transport::__trigger_disconnected_callback() {
-        if (__set_state(TRANSPORT_DISCONNECTING, TRANSPORT_DISCONNECTED)) {
-            __shutdown_transport_flow(SHUT_RDWR);
-            cbs_.disconnected_cb();
-            return true;
-        }
-        return false;
+bool base_transport::__trigger_disconnected_callback() {
+    if (__set_state(TRANSPORT_DISCONNECTING, TRANSPORT_DISCONNECTED)) {
+        __shutdown_transport_flow(SHUT_RDWR);
+        cbs_.disconnected_cb();
+        return true;
     }
+    return false;
+}
 
-    bool base_transport::__trigger_stopped_callback() {
-        if (__set_state(TRANSPORT_STOPPING, TRANSPORT_STOPPED)) {
-            __shutdown_transport_flow(SHUT_RDWR);
-            cbs_.stopped_cb();
-            return true;
-        }
-        return false;
+bool base_transport::__trigger_stopped_callback() {
+    if (__set_state(TRANSPORT_STOPPING, TRANSPORT_STOPPED)) {
+        __shutdown_transport_flow(SHUT_RDWR);
+        cbs_.stopped_cb();
+        return true;
     }
+    return false;
+}
 
 }  // namespace transport
 }  // namespace pump

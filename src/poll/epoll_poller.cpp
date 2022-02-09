@@ -24,134 +24,128 @@ namespace pump {
 namespace poll {
 
 #if defined(PUMP_HAVE_EPOLL)
-    const static uint32_t EL_TRI_TYPE = 0;  // (EPOLLET)
-    const static uint32_t EL_READ_EVENT = (EPOLLONESHOT | EPOLLIN | EPOLLPRI | EPOLLRDHUP);
-    const static uint32_t EL_SEND_EVENT = (EPOLLONESHOT | EPOLLOUT);
-    const static uint32_t EL_ERR_EVENT = (EPOLLERR | EPOLLHUP);
+const static uint32_t EL_TRI_TYPE = 0;  // (EPOLLET)
+const static uint32_t EL_READ_EVENT = (EPOLLONESHOT | EPOLLIN | EPOLLPRI | EPOLLRDHUP);
+const static uint32_t EL_SEND_EVENT = (EPOLLONESHOT | EPOLLOUT);
+const static uint32_t EL_ERR_EVENT = (EPOLLERR | EPOLLHUP);
 #endif
 
-    epoll_poller::epoll_poller() noexcept
-      : fd_(-1), 
-        events_(nullptr),
-        max_event_count_(1024),
-        cur_event_count_(0) {
+epoll_poller::epoll_poller() noexcept :
+    fd_(-1), events_(nullptr), max_event_count_(1024), cur_event_count_(0) {
 #if defined(PUMP_HAVE_EPOLL)
-        if ((fd_ = ::epoll_create1(0)) < 0) {
-            PUMP_ERR_LOG("create epoll fd failed %d", net::last_errno());
-            PUMP_ABORT();
-        }
-        
-        events_ = pump_malloc(sizeof(struct epoll_event) * max_event_count_);
-        if (events_ == nullptr) {
-            PUMP_ERR_LOG("allocate epoll events memory failed");
-            PUMP_ABORT();
-        }
-#else
+    if ((fd_ = ::epoll_create1(0)) < 0) {
+        PUMP_ERR_LOG("create epoll fd failed %d", net::last_errno());
         PUMP_ABORT();
-#endif
     }
 
-    epoll_poller::~epoll_poller() {
-#if defined(PUMP_HAVE_EPOLL)
-        if (fd_ != -1) {
-            close(fd_);
-        }
-        if (events_ != nullptr) {
-            pump_free(events_);
-        }
+    events_ = pump_malloc(sizeof(struct epoll_event) * max_event_count_);
+    if (events_ == nullptr) {
+        PUMP_ERR_LOG("allocate epoll events memory failed");
+        PUMP_ABORT();
+    }
+#else
+    PUMP_ABORT();
 #endif
+}
+
+epoll_poller::~epoll_poller() {
+#if defined(PUMP_HAVE_EPOLL)
+    if (fd_ != -1) {
+        close(fd_);
+    }
+    if (events_ != nullptr) {
+        pump_free(events_);
+    }
+#endif
+}
+
+bool epoll_poller::__install_channel_tracker(channel_tracker *tracker) {
+#if defined(PUMP_HAVE_EPOLL)
+    auto expected_event = tracker->get_expected_event();
+    auto event = tracker->get_event();
+    event->data.ptr = tracker;
+    if (expected_event & IO_EVENT_READ) {
+        event->events = EL_READ_EVENT;
+    } else if (expected_event & IO_EVENT_SEND) {
+        event->events = EL_SEND_EVENT;
+    }
+    if (epoll_ctl(fd_, EPOLL_CTL_ADD, tracker->get_fd(), event) == 0) {
+        cur_event_count_.fetch_add(1, std::memory_order_relaxed);
+        return true;
+    }
+#endif
+    PUMP_WARN_LOG("install channel tracker failed %d", net::last_errno());
+    return false;
+}
+
+bool epoll_poller::__uninstall_channel_tracker(channel_tracker *tracker) {
+#if defined(PUMP_HAVE_EPOLL)
+    auto event = tracker->get_event();
+    if (epoll_ctl(fd_, EPOLL_CTL_DEL, tracker->get_fd(), event) == 0) {
+        cur_event_count_.fetch_sub(1, std::memory_order_relaxed);
+        return true;
+    } else if (errno == ENOENT) {
+        return true;
+    }
+#endif
+    PUMP_WARN_LOG("uninstall channel tracker failed %d", net::last_errno());
+    return false;
+}
+
+bool epoll_poller::__resume_channel_tracker(channel_tracker *tracker) {
+#if defined(PUMP_HAVE_EPOLL)
+    auto expected_event = tracker->get_expected_event();
+    auto event = tracker->get_event();
+    event->data.ptr = tracker;
+    if (expected_event & IO_EVENT_READ) {
+        event->events = EL_READ_EVENT;
+    } else if (expected_event & IO_EVENT_SEND) {
+        event->events = EL_SEND_EVENT;
+    }
+    if (epoll_ctl(fd_, EPOLL_CTL_MOD, tracker->get_fd(), event) == 0) {
+        return true;
+    }
+#endif
+    PUMP_WARN_LOG("resume channel tracker failed %d", net::last_errno());
+    return false;
+}
+
+void epoll_poller::__poll(int32_t timeout) {
+#if defined(PUMP_HAVE_EPOLL)
+    auto cur_event_count = cur_event_count_.load(std::memory_order_relaxed);
+    if (PUMP_UNLIKELY(cur_event_count > max_event_count_)) {
+        max_event_count_ = cur_event_count;
+        events_ = pump_realloc(events_, sizeof(struct epoll_event) * max_event_count_);
+        if (events_ == nullptr) {
+            PUMP_ERR_LOG("reallocate epoll events memory failed");
+            PUMP_ABORT();
+        }
     }
 
-    bool epoll_poller::__install_channel_tracker(channel_tracker *tracker) {
-#if defined(PUMP_HAVE_EPOLL)
-        auto expected_event = tracker->get_expected_event();
-        auto event = tracker->get_event();
-        event->data.ptr = tracker;
-        if (expected_event & IO_EVENT_READ) {
-            event->events = EL_READ_EVENT;
-        } else if (expected_event & IO_EVENT_SEND) {
-            event->events = EL_SEND_EVENT;
-        }
-        if (epoll_ctl(fd_, EPOLL_CTL_ADD, tracker->get_fd(), event) == 0) {
-            cur_event_count_.fetch_add(1, std::memory_order_relaxed);
-            return true;
-        }
-#endif
-        PUMP_WARN_LOG("install channel tracker failed %d", net::last_errno());
-        return false;
+    auto count =
+        ::epoll_wait(fd_, (struct epoll_event *)events_, max_event_count_, timeout);
+    if (count > 0) {
+        __dispatch_pending_event(count);
     }
-
-    bool epoll_poller::__uninstall_channel_tracker(channel_tracker *tracker) {
-#if defined(PUMP_HAVE_EPOLL)
-        auto event = tracker->get_event();
-        if (epoll_ctl(fd_, EPOLL_CTL_DEL, tracker->get_fd(), event) == 0) {
-            cur_event_count_.fetch_sub(1, std::memory_order_relaxed);
-            return true;           
-        } else if (errno == ENOENT) {
-            return true;
-        }
 #endif
-        PUMP_WARN_LOG("uninstall channel tracker failed %d", net::last_errno());
-        return false;
-    }
+}
 
-    bool epoll_poller::__resume_channel_tracker(channel_tracker *tracker) {
+void epoll_poller::__dispatch_pending_event(int32_t count) {
 #if defined(PUMP_HAVE_EPOLL)
-        auto expected_event = tracker->get_expected_event();
-        auto event = tracker->get_event();
-        event->data.ptr = tracker;
-        if (expected_event & IO_EVENT_READ) {
-            event->events = EL_READ_EVENT;
-        } else if (expected_event & IO_EVENT_SEND) {
-            event->events = EL_SEND_EVENT;
-        }
-        if (epoll_ctl(fd_, EPOLL_CTL_MOD, tracker->get_fd(), event) == 0) {
-            return true;
-        }
-#endif
-        PUMP_WARN_LOG("resume channel tracker failed %d", net::last_errno());
-        return false;
-    }
-
-    void epoll_poller::__poll(int32_t timeout) {
-#if defined(PUMP_HAVE_EPOLL)
-        auto cur_event_count = cur_event_count_.load(std::memory_order_relaxed);
-        if (PUMP_UNLIKELY(cur_event_count > max_event_count_)) {
-            max_event_count_ = cur_event_count;
-            events_ = pump_realloc(events_, sizeof(struct epoll_event) * max_event_count_);
-            if (events_ == nullptr) {
-                PUMP_ERR_LOG("reallocate epoll events memory failed");
-                PUMP_ABORT();
+    auto ev_beg = (epoll_event *)events_;
+    auto ev_end = (epoll_event *)events_ + count;
+    for (auto ev = ev_beg; ev != ev_end; ++ev) {
+        // If channel is invalid, tracker should be removed.
+        auto tracker = (channel_tracker *)ev->data.ptr;
+        if (tracker->untrack()) {
+            auto ch = tracker->get_channel();
+            if (ch) {
+                ch->handle_io_event(tracker->get_expected_event());
             }
         }
-
-        auto count = ::epoll_wait(
-                        fd_, 
-                        (struct epoll_event*)events_, 
-                        max_event_count_, 
-                        timeout);
-        if (count > 0) {
-            __dispatch_pending_event(count);
-        }
-#endif
     }
-
-    void epoll_poller::__dispatch_pending_event(int32_t count) {
-#if defined(PUMP_HAVE_EPOLL)
-        auto ev_beg = (epoll_event*)events_;
-        auto ev_end = (epoll_event*)events_ + count;
-        for (auto ev = ev_beg; ev != ev_end; ++ev) {
-            // If channel is invalid, tracker should be removed.
-            auto tracker = (channel_tracker*)ev->data.ptr;
-            if (tracker->untrack()) {
-                auto ch = tracker->get_channel();
-                if (ch) {
-                    ch->handle_io_event(tracker->get_expected_event());
-                }
-            }
-        }
 #endif
-    }
+}
 
 }  // namespace poll
 }  // namespace pump

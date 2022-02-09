@@ -24,25 +24,23 @@
 namespace pump {
 namespace ssl {
 
-    /*********************************************************************************
-     * HKDF extract.
-     ********************************************************************************/
-    bool hkdf_extract(
-        hash_algorithm algo, 
-        const std::string &salt,
-        const std::string &key,
-        std::string &out);
+/*********************************************************************************
+ * HKDF extract.
+ ********************************************************************************/
+bool hkdf_extract(hash_algorithm algo,
+                  const std::string &salt,
+                  const std::string &key,
+                  std::string &out);
 
-    /*********************************************************************************
-     * HKDF expand.
-     ********************************************************************************/
-    bool hkdf_expand(
-        hash_algorithm algo, 
-        const std::string &key,
-        const std::string &info,
-        std::string &out);
+/*********************************************************************************
+ * HKDF expand.
+ ********************************************************************************/
+bool hkdf_expand(hash_algorithm algo,
+                 const std::string &key,
+                 const std::string &info,
+                 std::string &out);
 
-}
-}
+}  // namespace ssl
+}  // namespace pump
 
 #endif

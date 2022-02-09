@@ -22,127 +22,122 @@
 
 namespace pump {
 
-    service::service(bool enable_poller)
-      : running_(false) {
-        memset(pollers_, 0, sizeof(pollers_));
-        if (enable_poller) {
+service::service(bool enable_poller) : running_(false) {
+    memset(pollers_, 0, sizeof(pollers_));
+    if (enable_poller) {
 #if defined(PUMP_HAVE_IOCP)
-            pollers_[READ_POLLER_ID] = object_create<poll::afd_poller>();
-            pollers_[SEND_POLLER_ID] = object_create<poll::afd_poller>();
+        pollers_[READ_POLLER_ID] = object_create<poll::afd_poller>();
+        pollers_[SEND_POLLER_ID] = object_create<poll::afd_poller>();
 #elif defined(PUMP_HAVE_SELECT)
-            pollers_[READ_POLLER_ID] = object_create<poll::select_poller>();
-            pollers_[SEND_POLLER_ID] = object_create<poll::select_poller>();
+        pollers_[READ_POLLER_ID] = object_create<poll::select_poller>();
+        pollers_[SEND_POLLER_ID] = object_create<poll::select_poller>();
 #elif defined(PUMP_HAVE_EPOLL)
-            pollers_[READ_POLLER_ID] = object_create<poll::epoll_poller>();
-            pollers_[SEND_POLLER_ID] = object_create<poll::epoll_poller>();
+        pollers_[READ_POLLER_ID] = object_create<poll::epoll_poller>();
+        pollers_[SEND_POLLER_ID] = object_create<poll::epoll_poller>();
 #endif
-        }
-
-        timers_ = time::manager::create();
     }
 
-    service::~service() {
-        if (pollers_[READ_POLLER_ID]) {
-            delete pollers_[READ_POLLER_ID];
-        }
-        if (pollers_[SEND_POLLER_ID]) {
-            delete pollers_[SEND_POLLER_ID];
-        }
+    timers_ = time::manager::create();
+}
+
+service::~service() {
+    if (pollers_[READ_POLLER_ID]) {
+        delete pollers_[READ_POLLER_ID];
+    }
+    if (pollers_[SEND_POLLER_ID]) {
+        delete pollers_[SEND_POLLER_ID];
+    }
+}
+
+bool service::start() {
+    if (running_) {
+        PUMP_DEBUG_LOG("service: start failed for having started");
+        return false;
     }
 
-    bool service::start() {
-        if (running_) {
-            PUMP_DEBUG_LOG("service: start failed for having started");
-            return false;
-        }
+    running_ = true;
 
-        running_ = true;
-
-        if (timers_) {
-            timers_->start(pump_bind(&service::__post_triggered_timers, this, _1));
-        }
-        if (pollers_[READ_POLLER_ID]) {
-            pollers_[READ_POLLER_ID]->start();
-        }
-        if (pollers_[SEND_POLLER_ID]) {
-            pollers_[SEND_POLLER_ID]->start();
-        }
-
-        __start_task_worker();
-
-        __start_timer_callback_worker();
-
-        return true;
+    if (timers_) {
+        timers_->start(pump_bind(&service::__post_triggered_timers, this, _1));
+    }
+    if (pollers_[READ_POLLER_ID]) {
+        pollers_[READ_POLLER_ID]->start();
+    }
+    if (pollers_[SEND_POLLER_ID]) {
+        pollers_[SEND_POLLER_ID]->start();
     }
 
-    void service::stop() {
-        running_ = false;
+    __start_task_worker();
 
-        if (timers_) {
-            timers_->stop();
-        }
-        if (pollers_[READ_POLLER_ID]) {
-            pollers_[READ_POLLER_ID]->stop();
-        }
-        if (pollers_[SEND_POLLER_ID]) {
-            pollers_[SEND_POLLER_ID]->stop();
-        }
+    __start_timer_callback_worker();
+
+    return true;
+}
+
+void service::stop() {
+    running_ = false;
+
+    if (timers_) {
+        timers_->stop();
     }
-
-    void service::wait_stopped() {
-        if (pollers_[READ_POLLER_ID]) {
-            pollers_[READ_POLLER_ID]->wait_stopped();
-        }
-        if (pollers_[SEND_POLLER_ID]) {
-            pollers_[SEND_POLLER_ID]->wait_stopped();
-        }
-        if (timers_) {
-            timers_->wait_stopped();
-        }
-        if (task_worker_) {
-            task_worker_->join();
-        }
-        if (timer_worker_) {
-            timer_worker_->join();
-        }
+    if (pollers_[READ_POLLER_ID]) {
+        pollers_[READ_POLLER_ID]->stop();
     }
-
-    void service::__post_triggered_timers(time::timer_list_sptr &tl) {
-        triggered_timers_.enqueue(tl);
+    if (pollers_[SEND_POLLER_ID]) {
+        pollers_[SEND_POLLER_ID]->stop();
     }
+}
 
-    void service::__start_task_worker() {
-        auto func = [&]() {
-            task_callback task;
-            while (running_) {
-                if (posted_tasks_.dequeue(task, std::chrono::seconds(1))) {
-                    task();
-                }
+void service::wait_stopped() {
+    if (pollers_[READ_POLLER_ID]) {
+        pollers_[READ_POLLER_ID]->wait_stopped();
+    }
+    if (pollers_[SEND_POLLER_ID]) {
+        pollers_[SEND_POLLER_ID]->wait_stopped();
+    }
+    if (timers_) {
+        timers_->wait_stopped();
+    }
+    if (task_worker_) {
+        task_worker_->join();
+    }
+    if (timer_worker_) {
+        timer_worker_->join();
+    }
+}
+
+void service::__post_triggered_timers(time::timer_list_sptr &tl) {
+    triggered_timers_.enqueue(tl);
+}
+
+void service::__start_task_worker() {
+    auto func = [&]() {
+        task_callback task;
+        while (running_) {
+            if (posted_tasks_.dequeue(task, std::chrono::seconds(1))) {
+                task();
             }
-        };
-        task_worker_.reset(
-            object_create<std::thread>(func),
-            object_delete<std::thread>);
-    }
+        }
+    };
+    task_worker_.reset(object_create<std::thread>(func), object_delete<std::thread>);
+}
 
-    void service::__start_timer_callback_worker() {
-        auto func = [&]() {
-            time::timer_list_sptr tl;
-            while (running_) {
-                if (triggered_timers_.dequeue(tl, std::chrono::seconds(1))) {
-                    time::timer_sptr ptr;
-                    for (auto b = tl->begin(), e = tl->end(); b != e;) {
-                        ptr = (b++)->lock();
-                        if (PUMP_LIKELY(!!ptr)) {
-                            ptr->handle_timeout();
-                        }
+void service::__start_timer_callback_worker() {
+    auto func = [&]() {
+        time::timer_list_sptr tl;
+        while (running_) {
+            if (triggered_timers_.dequeue(tl, std::chrono::seconds(1))) {
+                time::timer_sptr ptr;
+                for (auto b = tl->begin(), e = tl->end(); b != e;) {
+                    ptr = (b++)->lock();
+                    if (PUMP_LIKELY(!!ptr)) {
+                        ptr->handle_timeout();
                     }
                 }
             }
-        };
-        timer_worker_.reset(
-            object_create<std::thread>(func),
-            object_delete<std::thread>);
-    }
+        }
+    };
+    timer_worker_.reset(object_create<std::thread>(func), object_delete<std::thread>);
+}
 
 }  // namespace pump

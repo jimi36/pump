@@ -23,81 +23,80 @@ namespace pump {
 namespace proto {
 namespace http {
 
-    const block_t* find_http_line_end(const block_t *src, int32_t len) {
-        len = std::min<int32_t>(len, HTTP_LINE_MAX_LEN);
-        if (len < HTTP_LINE_MIN_LEN) {
-            return nullptr;
-        }
-
-        while (len >= HTTP_CRLF_LEN) {
-            if (*src == '\r') {
-                if (*(src + 1) == '\n') {
-                    src += HTTP_CRLF_LEN;
-                    return src;
-                }
-                return nullptr;
-            }
-            len--;
-            src++;
-        }
-
+const block_t *find_http_line_end(const block_t *src, int32_t len) {
+    len = std::min<int32_t>(len, HTTP_LINE_MAX_LEN);
+    if (len < HTTP_LINE_MIN_LEN) {
         return nullptr;
     }
 
-    bool url_decode(const std::string &src, std::string &des) {
-        uint32_t len = (uint32_t)src.length();
-        for (uint32_t i = 0; i < len; i++) {
-            uint8_t ch = src[i];
-            if (ch == '+') {
-                ch = ' ';
-            } else if (ch == '%') {
-                if (i + 2 >= len) {
-                    return false;
-                }
-                ch = hex_to_dec(src[i + 1]) << 4 |
-                     hex_to_dec(src[i + 2]);
-                i += 2;
+    while (len >= HTTP_CRLF_LEN) {
+        if (*src == '\r') {
+            if (*(src + 1) == '\n') {
+                src += HTTP_CRLF_LEN;
+                return src;
             }
-            des.append(1, (block_t)ch);
+            return nullptr;
         }
-        return true;
+        len--;
+        src++;
     }
 
-    bool url_encode(const std::string &src, std::string &des) {
-        block_t val = 0;
-        const block_t *beg = src.c_str();
-        const block_t *end = beg + src.size();
-        while (beg != end) {
-            val = *beg;
-            if (isalnum(val) || strchr("_-.", val) != nullptr) {
-                des.append(1, val);
-            } else if (val == ' ') {
-                des.append(1, '+');
-            } else {
-                des.append(1, '%');
-                des.append(1, dec_to_hex(val >> 4));
-                des.append(1, dec_to_hex(val & 0x0f));
+    return nullptr;
+}
+
+bool url_decode(const std::string &src, std::string &des) {
+    uint32_t len = (uint32_t)src.length();
+    for (uint32_t i = 0; i < len; i++) {
+        uint8_t ch = src[i];
+        if (ch == '+') {
+            ch = ' ';
+        } else if (ch == '%') {
+            if (i + 2 >= len) {
+                return false;
             }
-            ++beg;
+            ch = hex_to_dec(src[i + 1]) << 4 | hex_to_dec(src[i + 2]);
+            i += 2;
         }
-        return true;
+        des.append(1, (block_t)ch);
     }
+    return true;
+}
 
-    std::string compute_sec_key() {
-        std::string s(16, 0);
-        int32_t *p = (int32_t*)s.data();
-        for (uint32_t i = 0; i < 4; i++) {
-            *(p + i) = random();
+bool url_encode(const std::string &src, std::string &des) {
+    block_t val = 0;
+    const block_t *beg = src.c_str();
+    const block_t *end = beg + src.size();
+    while (beg != end) {
+        val = *beg;
+        if (isalnum(val) || strchr("_-.", val) != nullptr) {
+            des.append(1, val);
+        } else if (val == ' ') {
+            des.append(1, '+');
+        } else {
+            des.append(1, '%');
+            des.append(1, dec_to_hex(val >> 4));
+            des.append(1, dec_to_hex(val & 0x0f));
         }
-        return codec::base64_encode(s);
+        ++beg;
     }
+    return true;
+}
 
-    std::string compute_sec_accept_key(const std::string &sec_key) {
-        std::string hash(20, 0);
-        std::string tmp = sec_key + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
-        codec::sha1(tmp.c_str(), (uint32_t)tmp.size(), (uint8_t*)hash.c_str());
-        return codec::base64_encode(hash);
+std::string compute_sec_key() {
+    std::string s(16, 0);
+    int32_t *p = (int32_t *)s.data();
+    for (uint32_t i = 0; i < 4; i++) {
+        *(p + i) = random();
     }
+    return codec::base64_encode(s);
+}
+
+std::string compute_sec_accept_key(const std::string &sec_key) {
+    std::string hash(20, 0);
+    std::string tmp = sec_key + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+    codec::sha1(tmp.c_str(), (uint32_t)tmp.size(), (uint8_t *)hash.c_str());
+    return codec::base64_encode(hash);
+}
 
 }  // namespace http
 }  // namespace proto

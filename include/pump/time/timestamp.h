@@ -26,118 +26,118 @@
 namespace pump {
 namespace time {
 
+/*********************************************************************************
+ * Get clock microseconds, just for calculating time difference
+ ********************************************************************************/
+LIB_PUMP uint64_t get_clock_microseconds();
+
+/*********************************************************************************
+ * Get clock milliseconds, just for calculating time difference
+ ********************************************************************************/
+LIB_PUMP uint64_t get_clock_milliseconds();
+
+class LIB_PUMP timestamp {
+  public:
     /*********************************************************************************
-     * Get clock microseconds, just for calculating time difference
+     * Constructor
      ********************************************************************************/
-    LIB_PUMP uint64_t get_clock_microseconds();
+    timestamp() noexcept {
+        ms_ = std::chrono::milliseconds(now_time());
+    }
+    timestamp(uint64_t ms) noexcept {
+        ms_ = std::chrono::milliseconds(ms);
+    }
 
     /*********************************************************************************
-     * Get clock milliseconds, just for calculating time difference
+     * Increase time value
      ********************************************************************************/
-    LIB_PUMP uint64_t get_clock_milliseconds();
+    PUMP_INLINE void increase(uint64_t ms) {
+        ms_ += std::chrono::milliseconds(ms);
+    }
 
-    class LIB_PUMP timestamp {
-      public:
-        /*********************************************************************************
-         * Constructor
-         ********************************************************************************/
-        timestamp() noexcept {
-            ms_ = std::chrono::milliseconds(now_time());
-        }
-        timestamp(uint64_t ms) noexcept {
-            ms_ = std::chrono::milliseconds(ms);
-        }
+    /*********************************************************************************
+     * Reduce time value
+     ********************************************************************************/
+    PUMP_INLINE void reduce(uint64_t ms) {
+        ms_ -= std::chrono::milliseconds(ms);
+    }
 
-        /*********************************************************************************
-         * Increase time value
-         ********************************************************************************/
-        PUMP_INLINE void increase(uint64_t ms) {
-            ms_ += std::chrono::milliseconds(ms);
-        }
+    /*********************************************************************************
+     * Set the time value
+     ********************************************************************************/
+    PUMP_INLINE void set(uint64_t ms) {
+        ms_ = std::chrono::milliseconds(ms);
+    }
 
-        /*********************************************************************************
-         * Reduce time value
-         ********************************************************************************/
-        PUMP_INLINE void reduce(uint64_t ms) {
-            ms_ -= std::chrono::milliseconds(ms);
-        }
+    /*********************************************************************************
+     * Get the time value
+     ********************************************************************************/
+    PUMP_INLINE uint64_t time() const {
+        return ms_.count();
+    }
 
-        /*********************************************************************************
-         * Set the time value
-         ********************************************************************************/
-        PUMP_INLINE void set(uint64_t ms) {
-            ms_ = std::chrono::milliseconds(ms);
-        }
+    /*********************************************************************************
+     * Get time string as YY-MM-DD hh:mm:ss:ms
+     ********************************************************************************/
+    std::string to_string() const;
 
-        /*********************************************************************************
-         * Get the time value
-         ********************************************************************************/
-        PUMP_INLINE uint64_t time() const {
-            return ms_.count();
-        }
+    /*********************************************************************************
+     * Get time string
+     * YY as year
+     * MM as mouth
+     * DD as day
+     * hh as hour
+     * mm as minute
+     * ss as second
+     * ms as millsecond
+     ********************************************************************************/
+    std::string format(const std::string &format) const;
 
-        /*********************************************************************************
-         * Get time string as YY-MM-DD hh:mm:ss:ms
-         ********************************************************************************/
-        std::string to_string() const;
+    /*********************************************************************************
+     * Get now milliseconds
+     ********************************************************************************/
+    static uint64_t now_time();
 
-        /*********************************************************************************
-         * Get time string
-         * YY as year
-         * MM as mouth
-         * DD as day
-         * hh as hour
-         * mm as minute
-         * ss as second
-         * ms as millsecond
-         ********************************************************************************/
-        std::string format(const std::string &format) const;
+    /*********************************************************************************
+     * Create now timestamp
+     ********************************************************************************/
+    PUMP_INLINE static timestamp now() {
+        return timestamp(now_time());
+    }
 
-        /*********************************************************************************
-         * Get now milliseconds
-         ********************************************************************************/
-        static uint64_t now_time();
+  public:
+    /*********************************************************************************
+     * Overwrite operator =
+     ********************************************************************************/
+    PUMP_INLINE timestamp &operator=(const timestamp &ts) noexcept {
+        ms_ = ts.ms_;
+        return *this;
+    }
 
-        /*********************************************************************************
-         * Create now timestamp
-         ********************************************************************************/
-        PUMP_INLINE static timestamp now() {
-            return timestamp(now_time());
-        }
+    /*********************************************************************************
+     * Overwrite operator <
+     ********************************************************************************/
+    PUMP_INLINE bool operator<(const timestamp &ts) const noexcept {
+        return ms_ < ts.ms_;
+    }
 
-      public:
-        /*********************************************************************************
-         * Overwrite operator =
-         ********************************************************************************/
-        PUMP_INLINE timestamp &operator=(const timestamp &ts) noexcept {
-            ms_ = ts.ms_;
-            return *this;
-        }
+    /*********************************************************************************
+     * Overwrite operator <=
+     ********************************************************************************/
+    PUMP_INLINE bool operator<=(const timestamp &ts) const noexcept {
+        return ms_ <= ts.ms_;
+    }
 
-        /*********************************************************************************
-         * Overwrite operator <
-         ********************************************************************************/
-        PUMP_INLINE bool operator<(const timestamp &ts) const noexcept {
-            return ms_ < ts.ms_;
-        }
+    /*********************************************************************************
+     * Overwrite operator ==
+     ********************************************************************************/
+    PUMP_INLINE bool operator==(const timestamp &ts) const noexcept {
+        return ms_ == ts.ms_;
+    }
 
-        /*********************************************************************************
-         * Overwrite operator <=
-         ********************************************************************************/
-        PUMP_INLINE bool operator<=(const timestamp &ts) const noexcept {
-            return ms_ <= ts.ms_;
-        }
-
-        /*********************************************************************************
-         * Overwrite operator ==
-         ********************************************************************************/
-        PUMP_INLINE bool operator==(const timestamp &ts) const noexcept {
-            return ms_ == ts.ms_;
-        }
-
-      private:
-        std::chrono::milliseconds ms_;
-    };
+  private:
+    std::chrono::milliseconds ms_;
+};
 
 }  // namespace time
 }  // namespace pump

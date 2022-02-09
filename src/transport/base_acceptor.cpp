@@ -19,61 +19,60 @@
 namespace pump {
 namespace transport {
 
-    base_acceptor::~base_acceptor() {
-        __stop_accept_tracker();
-        __close_accept_flow();
+base_acceptor::~base_acceptor() {
+    __stop_accept_tracker();
+    __close_accept_flow();
+}
+
+void base_acceptor::on_channel_event(int32_t ev) {
+    __trigger_interrupt_callbacks();
+}
+
+bool base_acceptor::__start_accept_tracker(poll::channel_sptr &&ch) {
+    if (tracker_) {
+        return false;
     }
 
-    void base_acceptor::on_channel_event(int32_t ev) {
-        __trigger_interrupt_callbacks();
+    tracker_.reset(object_create<poll::channel_tracker>(ch, poll::TRACK_READ),
+                   object_delete<poll::channel_tracker>);
+    if (!tracker_) {
+        PUMP_WARN_LOG("new acceptor's tracker object failed");
+        return false;
     }
 
-    bool base_acceptor::__start_accept_tracker(poll::channel_sptr &&ch) {
-        if (tracker_) {
-            return false;
-        }
-
-        tracker_.reset(
-            object_create<poll::channel_tracker>(ch, poll::TRACK_READ),
-            object_delete<poll::channel_tracker>);
-        if (!tracker_) {
-            PUMP_WARN_LOG("new acceptor's tracker object failed");
-            return false;
-        }
-        
-        if (!get_service()->add_channel_tracker(tracker_, READ_POLLER_ID)) {
-            PUMP_WARN_LOG("add acceptor's tracker to service failed");
-            return false;
-        }
-
-        return true;
+    if (!get_service()->add_channel_tracker(tracker_, READ_POLLER_ID)) {
+        PUMP_WARN_LOG("add acceptor's tracker to service failed");
+        return false;
     }
 
-    bool base_acceptor::__resume_accept_tracker() {
-        auto tracker = tracker_.get();
-        if (tracker == nullptr) {
-            PUMP_WARN_LOG("can't resume invalid acceptor's tracker");
-            return false;
-        }
-        auto poller = tracker_->get_poller();
-        if (poller == nullptr) {
-            PUMP_WARN_LOG("acceptor's tracker is not started before");
-            return false;
-        }
-        return poller->resume_channel_tracker(tracker);
-    }
+    return true;
+}
 
-    void base_acceptor::__stop_accept_tracker() {
-        if (tracker_ && tracker_->get_poller() != nullptr) {
-            tracker_->get_poller()->remove_channel_tracker(tracker_);
-        }
+bool base_acceptor::__resume_accept_tracker() {
+    auto tracker = tracker_.get();
+    if (tracker == nullptr) {
+        PUMP_WARN_LOG("can't resume invalid acceptor's tracker");
+        return false;
     }
+    auto poller = tracker_->get_poller();
+    if (poller == nullptr) {
+        PUMP_WARN_LOG("acceptor's tracker is not started before");
+        return false;
+    }
+    return poller->resume_channel_tracker(tracker);
+}
 
-    void base_acceptor::__trigger_interrupt_callbacks() {
-        if (__set_state(TRANSPORT_STOPPING, TRANSPORT_STOPPED)) {
-            cbs_.stopped_cb();
-        }
+void base_acceptor::__stop_accept_tracker() {
+    if (tracker_ && tracker_->get_poller() != nullptr) {
+        tracker_->get_poller()->remove_channel_tracker(tracker_);
     }
+}
+
+void base_acceptor::__trigger_interrupt_callbacks() {
+    if (__set_state(TRANSPORT_STOPPING, TRANSPORT_STOPPED)) {
+        cbs_.stopped_cb();
+    }
+}
 
 }  // namespace transport
 }  // namespace pump

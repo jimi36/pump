@@ -27,112 +27,102 @@ namespace pump {
 namespace proto {
 namespace http {
 
-    using transport::address;
-    using transport::tls_credentials;
-    using transport::base_acceptor_sptr;
+using transport::address;
+using transport::base_acceptor_sptr;
+using transport::tls_credentials;
 
-    class server;
-    DEFINE_ALL_POINTER_TYPE(server);
+class server;
+DEFINE_SMART_POINTER_TYPE(server);
 
-    struct server_callbacks {
-        // Http request callback
-        pump_function<void(connection_wptr&, request_sptr&&)> request_cb;
-        // Http server stopped callback
-        pump_function<void()> stopped_cb;
-    };
+struct server_callbacks {
+    // Http request callback
+    pump_function<void(connection_wptr &, request_sptr &&)> request_cb;
+    // Http server stopped callback
+    pump_function<void()> stopped_cb;
+};
 
-    class LIB_PUMP server 
-      : public std::enable_shared_from_this<server> {
-
-      public:
-        /*********************************************************************************
-         * Create instance
-         ********************************************************************************/
-        PUMP_INLINE static server_sptr create() {
-            INLINE_OBJECT_CREATE(obj, server, ());
-            return server_sptr(obj, object_delete<server>);
-        }
-
-        /*********************************************************************************
-         * Deconstructor
-         ********************************************************************************/
-        virtual ~server();
-
-        /*********************************************************************************
-         * Start server
-         ********************************************************************************/
-        bool start(
-            service *sv,
-            const address &listen_address,
-            const server_callbacks &cbs);
-
-        /*********************************************************************************
-         * Start server with tls
-         ********************************************************************************/
-        bool start(
-            service *sv,
-            tls_credentials xcred,
-            const address &listen_address,
-            const server_callbacks &cbs);
-
-        /*********************************************************************************
-         * Stop server
-         ********************************************************************************/
-        void stop();
-
-      protected:
-        /*********************************************************************************
-         * Acceptor accepted callback
-         ********************************************************************************/
-        static void on_accepted(server_wptr wptr, base_transport_sptr &transp);
-
-        /*********************************************************************************
-         * Acceptor stopped callback
-         ********************************************************************************/
-        static void on_stopped(server_wptr wptr);
-
-      protected:
-        /*********************************************************************************
-         * Http request callback
-         ********************************************************************************/
-        static void on_http_request(
-            server_wptr wptr,
-            connection_wptr conn,
-            packet_sptr &pk);
-
-        /*********************************************************************************
-         * Http error callback
-         ********************************************************************************/
-        static void on_http_error(
-            server_wptr wptr,
-            connection_wptr conn,
-            const std::string &msg);
-
-      private:
-        /*********************************************************************************
-         * Constructor
-         ********************************************************************************/
-        server() noexcept;
-
-      private:
-        // Service
-        service *sv_;
-
-        // Acceptor
-        base_acceptor_sptr acceptor_;
-
-        // Connections
-        std::mutex conn_mx_;
-        std::map<connection*, connection_sptr> conns_;
-
-        // Server callbacks
-        server_callbacks cbs_;
-    };
+class LIB_PUMP server : public std::enable_shared_from_this<server> {
+  public:
+    /*********************************************************************************
+     * Create instance
+     ********************************************************************************/
+    PUMP_INLINE static server_sptr create() {
+        INLINE_OBJECT_CREATE(obj, server, ());
+        return server_sptr(obj, object_delete<server>);
+    }
 
     /*********************************************************************************
-     * Update to websocket for server
+     * Deconstructor
      ********************************************************************************/
-    LIB_PUMP bool upgrade_to_websocket(connection *conn, request_sptr &req);
+    virtual ~server();
+
+    /*********************************************************************************
+     * Start server
+     ********************************************************************************/
+    bool start(service *sv, const address &listen_address, const server_callbacks &cbs);
+
+    /*********************************************************************************
+     * Start server with tls
+     ********************************************************************************/
+    bool start(service *sv,
+               tls_credentials xcred,
+               const address &listen_address,
+               const server_callbacks &cbs);
+
+    /*********************************************************************************
+     * Stop server
+     ********************************************************************************/
+    void stop();
+
+  protected:
+    /*********************************************************************************
+     * Acceptor accepted callback
+     ********************************************************************************/
+    static void on_accepted(server_wptr wptr, base_transport_sptr &transp);
+
+    /*********************************************************************************
+     * Acceptor stopped callback
+     ********************************************************************************/
+    static void on_stopped(server_wptr wptr);
+
+  protected:
+    /*********************************************************************************
+     * Http request callback
+     ********************************************************************************/
+    static void on_http_request(server_wptr wptr, connection_wptr conn, packet_sptr &pk);
+
+    /*********************************************************************************
+     * Http error callback
+     ********************************************************************************/
+    static void on_http_error(server_wptr wptr,
+                              connection_wptr conn,
+                              const std::string &msg);
+
+  private:
+    /*********************************************************************************
+     * Constructor
+     ********************************************************************************/
+    server() noexcept;
+
+  private:
+    // Service
+    service *sv_;
+
+    // Acceptor
+    base_acceptor_sptr acceptor_;
+
+    // Connections
+    std::mutex conn_mx_;
+    std::map<connection *, connection_sptr> conns_;
+
+    // Server callbacks
+    server_callbacks cbs_;
+};
+
+/*********************************************************************************
+ * Update to websocket for server
+ ********************************************************************************/
+LIB_PUMP bool upgrade_to_websocket(connection *conn, request_sptr &req);
 
 }  // namespace http
 }  // namespace proto

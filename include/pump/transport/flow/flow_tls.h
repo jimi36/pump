@@ -24,105 +24,102 @@ namespace pump {
 namespace transport {
 namespace flow {
 
-    struct tls_session;
-    DEFINE_ALL_POINTER_TYPE(tls_session);
+struct tls_session;
+DEFINE_SMART_POINTER_TYPE(tls_session);
 
-    class flow_tls 
-      : public flow_base {
+class flow_tls : public flow_base {
+  public:
+    /*********************************************************************************
+     * Constructor
+     ********************************************************************************/
+    flow_tls() noexcept;
 
-      public:
-        /*********************************************************************************
-         * Constructor
-         ********************************************************************************/
-        flow_tls() noexcept;
+    /*********************************************************************************
+     * Deconstructor
+     ********************************************************************************/
+    virtual ~flow_tls();
 
-        /*********************************************************************************
-         * Deconstructor
-         ********************************************************************************/
-        virtual ~flow_tls();
+    /*********************************************************************************
+     * Init flow
+     * Return results:
+     *     ERROR_OK    => success
+     *     ERROR_FAULT => error
+     ********************************************************************************/
+    error_code init(poll::channel_sptr &ch,
+                    bool client,
+                    pump_socket fd,
+                    transport::tls_credentials xcred);
 
-        /*********************************************************************************
-         * Init flow
-         * Return results:
-         *     ERROR_OK    => success
-         *     ERROR_FAULT => error
-         ********************************************************************************/
-        error_code init(
-            poll::channel_sptr &ch,
-            bool client,
-            pump_socket fd,
-            transport::tls_credentials xcred);
+    /*********************************************************************************
+     * Handshake
+     * Return results:
+     *     TLS_HANDSHAKE_OK
+     *     TLS_HANDSHAKE_READ
+     *     TLS_HANDSHAKE_SEND
+     *     TLS_HANDSHAKE_ERROR
+     ********************************************************************************/
+    PUMP_INLINE int32_t handshake() {
+        return transport::tls_handshake(session_);
+    }
 
-        /*********************************************************************************
-         * Handshake
-         * Return results:
-         *     TLS_HANDSHAKE_OK
-         *     TLS_HANDSHAKE_READ
-         *     TLS_HANDSHAKE_SEND
-         *     TLS_HANDSHAKE_ERROR
-         ********************************************************************************/
-        PUMP_INLINE int32_t handshake() {
-            return transport::tls_handshake(session_);
-        }
+    /*********************************************************************************
+     * Read
+     ********************************************************************************/
+    PUMP_INLINE int32_t read(block_t *b, int32_t size) {
+        return transport::tls_read(session_, b, size);
+    }
 
-        /*********************************************************************************
-         * Read
-         ********************************************************************************/
-        PUMP_INLINE int32_t read(block_t *b, int32_t size) {
-            return transport::tls_read(session_, b, size);
-        }
+    /*********************************************************************************
+     * Check there are data to read or not
+     ********************************************************************************/
+    PUMP_INLINE bool has_unread_data() const {
+        PUMP_ASSERT(session_);
+        return transport::tls_has_unread_data(session_);
+    }
 
-        /*********************************************************************************
-         * Check there are data to read or not
-         ********************************************************************************/
-        PUMP_INLINE bool has_unread_data() const {
-            PUMP_ASSERT(session_);
-            return transport::tls_has_unread_data(session_);
-        }
+    /*********************************************************************************
+     * Want to send
+     * If using iocp this post an iocp task for sending, else this try sending
+     * data. Return results:
+     *     ERROR_OK      => send completely
+     *     ERROR_AGAIN   => try again
+     *     ERROR_FAULT   => error
+     ********************************************************************************/
+    error_code want_to_send(toolkit::io_buffer *iob);
 
-        /*********************************************************************************
-         * Want to send
-         * If using iocp this post an iocp task for sending, else this try sending
-         * data. Return results:
-         *     ERROR_OK      => send completely
-         *     ERROR_AGAIN   => try again
-         *     ERROR_FAULT   => error
-         ********************************************************************************/
-        error_code want_to_send(toolkit::io_buffer *iob);
+    /*********************************************************************************
+     * Send to net
+     * Return results:
+     *     ERROR_OK      => send completely
+     *     ERROR_AGAIN   => try again
+     *     ERROR_FAULT   => error
+     ********************************************************************************/
+    error_code send();
 
-        /*********************************************************************************
-         * Send to net
-         * Return results:
-         *     ERROR_OK      => send completely
-         *     ERROR_AGAIN   => try again
-         *     ERROR_FAULT   => error
-         ********************************************************************************/
-        error_code send();
+    /*********************************************************************************
+     * Check there are data to send or not
+     ********************************************************************************/
+    PUMP_INLINE bool has_unsend_data() const {
+        PUMP_ASSERT(session_);
+        return false;
+    }
 
-        /*********************************************************************************
-         * Check there are data to send or not
-         ********************************************************************************/
-        PUMP_INLINE bool has_unsend_data() const {
-            PUMP_ASSERT(session_);
-            return false;
-        }
+    /*********************************************************************************
+     * Check handshaked status
+     ********************************************************************************/
+    PUMP_INLINE bool is_handshaked() const {
+        return is_handshaked_;
+    }
 
-        /*********************************************************************************
-         * Check handshaked status
-         ********************************************************************************/
-        PUMP_INLINE bool is_handshaked() const {
-            return is_handshaked_;
-        }
-
-        private:
-        // Handshaked status
-        bool is_handshaked_;
-        // TLS session
-        transport::tls_session *session_;
-        // Current sending io buffer
-        toolkit::io_buffer *send_iob_;
-    };
-    DEFINE_ALL_POINTER_TYPE(flow_tls);
+  private:
+    // Handshaked status
+    bool is_handshaked_;
+    // TLS session
+    transport::tls_session *session_;
+    // Current sending io buffer
+    toolkit::io_buffer *send_iob_;
+};
+DEFINE_SMART_POINTER_TYPE(flow_tls);
 
 }  // namespace flow
 }  // namespace transport

@@ -23,47 +23,45 @@ namespace pump {
 namespace transport {
 namespace flow {
 
-    class flow_tcp_dialer 
-      : public flow_base {
+class flow_tcp_dialer : public flow_base {
+  public:
+    /*********************************************************************************
+     * Constructor
+     ********************************************************************************/
+    flow_tcp_dialer() noexcept;
 
-      public:
-        /*********************************************************************************
-         * Constructor
-         ********************************************************************************/
-        flow_tcp_dialer() noexcept;
+    /*********************************************************************************
+     * Deconstructor
+     ********************************************************************************/
+    virtual ~flow_tcp_dialer();
 
-        /*********************************************************************************
-            * Deconstructor
-            ********************************************************************************/
-        virtual ~flow_tcp_dialer();
+    /*********************************************************************************
+     * Init
+     * Return results:
+     *     ERROR_OK    => success
+     *     ERROR_FAULT => error
+     ********************************************************************************/
+    error_code init(poll::channel_sptr &&ch, const address &bind_address);
 
-        /*********************************************************************************
-         * Init
-         * Return results:
-         *     ERROR_OK    => success
-         *     ERROR_FAULT => error
-         ********************************************************************************/
-        error_code init(poll::channel_sptr &&ch, const address &bind_address);
+    /*********************************************************************************
+     * Post connect
+     * Return results:
+     *     ERROR_OK    => success
+     *     ERROR_FAULT => error
+     ********************************************************************************/
+    error_code post_connect(const address &remote_address);
 
-        /*********************************************************************************
-         * Post connect
-         * Return results:
-         *     ERROR_OK    => success
-         *     ERROR_FAULT => error
-         ********************************************************************************/
-        error_code post_connect(const address &remote_address);
+    /*********************************************************************************
+     * Connect
+     * Return socket error code.
+     ********************************************************************************/
+    int32_t connect(address *local_address, address *remote_address);
 
-        /*********************************************************************************
-         * Connect
-         * Return socket error code.
-         ********************************************************************************/
-        int32_t connect(address *local_address, address *remote_address);
-
-      private:
-        // IPV6
-        bool is_ipv6_;
-    };
-    DEFINE_ALL_POINTER_TYPE(flow_tcp_dialer);
+  private:
+    // IPV6
+    bool is_ipv6_;
+};
+DEFINE_SMART_POINTER_TYPE(flow_tcp_dialer);
 
 }  // namespace flow
 }  // namespace transport

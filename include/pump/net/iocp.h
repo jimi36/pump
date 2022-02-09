@@ -24,26 +24,26 @@
 #if defined(PUMP_HAVE_IOCP)
 
 typedef LONG NTSTATUS;
-typedef NTSTATUS* PNTSTATUS;
+typedef NTSTATUS *PNTSTATUS;
 
 #ifndef NT_SUCCESS
 #define NT_SUCCESS(status) (((NTSTATUS)(status)) >= 0)
 #endif
 
 #ifndef STATUS_SUCCESS
-#define STATUS_SUCCESS ((NTSTATUS) 0x00000000L)
+#define STATUS_SUCCESS ((NTSTATUS)0x00000000L)
 #endif
 
 #ifndef STATUS_PENDING
-#define STATUS_PENDING ((NTSTATUS) 0x00000103L)
+#define STATUS_PENDING ((NTSTATUS)0x00000103L)
 #endif
 
 #ifndef STATUS_CANCELLED
-#define STATUS_CANCELLED ((NTSTATUS) 0xC0000120L)
+#define STATUS_CANCELLED ((NTSTATUS)0xC0000120L)
 #endif
 
 #ifndef STATUS_NOT_FOUND
-#define STATUS_NOT_FOUND ((NTSTATUS) 0xC0000225L)
+#define STATUS_NOT_FOUND ((NTSTATUS)0xC0000225L)
 #endif
 
 typedef struct _IO_STATUS_BLOCK {
@@ -72,22 +72,20 @@ typedef struct _AFD_POLL_EVENT {
     IO_STATUS_BLOCK iosb;
 } AFD_POLL_EVENT, *PAFD_POLL_EVENT;
 
-typedef VOID(NTAPI* PIO_APC_ROUTINE)(
-    PVOID ApcContext,
-    PIO_STATUS_BLOCK IoStatusBlock,
-    ULONG Reserved);
+typedef VOID(NTAPI *PIO_APC_ROUTINE)(PVOID ApcContext,
+                                     PIO_STATUS_BLOCK IoStatusBlock,
+                                     ULONG Reserved);
 
-typedef NTSTATUS (NTAPI* FnNtDeviceIoControlFile)(
-    HANDLE FileHandle,
-    HANDLE Event,
-    PIO_APC_ROUTINE ApcRoutine,
-    PVOID ApcContext,
-    PIO_STATUS_BLOCK IoStatusBlock,
-    ULONG IoControlCode,
-    PVOID InputBuffer,
-    ULONG InputBufferLength,
-    PVOID OutputBuffer,
-    ULONG OutputBufferLength);
+typedef NTSTATUS(NTAPI *FnNtDeviceIoControlFile)(HANDLE FileHandle,
+                                                 HANDLE Event,
+                                                 PIO_APC_ROUTINE ApcRoutine,
+                                                 PVOID ApcContext,
+                                                 PIO_STATUS_BLOCK IoStatusBlock,
+                                                 ULONG IoControlCode,
+                                                 PVOID InputBuffer,
+                                                 ULONG InputBufferLength,
+                                                 PVOID OutputBuffer,
+                                                 ULONG OutputBufferLength);
 extern FnNtDeviceIoControlFile NtDeviceIoControlFile;
 
 typedef struct _UNICODE_STRING {
@@ -105,24 +103,22 @@ typedef struct _OBJECT_ATTRIBUTES {
     PVOID SecurityQualityOfService;
 } OBJECT_ATTRIBUTES, *POBJECT_ATTRIBUTES;
 
-typedef NTSTATUS (NTAPI* FnNtCreateFile)(
-    PHANDLE FileHandle,
-    ACCESS_MASK DesiredAccess,
-    POBJECT_ATTRIBUTES ObjectAttributes,
-    PIO_STATUS_BLOCK IoStatusBlock,
-    PLARGE_INTEGER AllocationSize,
-    ULONG FileAttributes,
-    ULONG ShareAccess,
-    ULONG CreateDisposition,
-    ULONG CreateOptions,
-    PVOID EaBuffer,
-    ULONG EaLength);
+typedef NTSTATUS(NTAPI *FnNtCreateFile)(PHANDLE FileHandle,
+                                        ACCESS_MASK DesiredAccess,
+                                        POBJECT_ATTRIBUTES ObjectAttributes,
+                                        PIO_STATUS_BLOCK IoStatusBlock,
+                                        PLARGE_INTEGER AllocationSize,
+                                        ULONG FileAttributes,
+                                        ULONG ShareAccess,
+                                        ULONG CreateDisposition,
+                                        ULONG CreateOptions,
+                                        PVOID EaBuffer,
+                                        ULONG EaLength);
 extern FnNtCreateFile NtCreateFile;
 
-typedef NTSTATUS (NTAPI* FnNtCancelIoFileEx)(
-    HANDLE FileHandle,
-    PIO_STATUS_BLOCK IoRequestToCancel,
-    PIO_STATUS_BLOCK IoStatusBlock);
+typedef NTSTATUS(NTAPI *FnNtCancelIoFileEx)(HANDLE FileHandle,
+                                            PIO_STATUS_BLOCK IoRequestToCancel,
+                                            PIO_STATUS_BLOCK IoStatusBlock);
 extern FnNtCancelIoFileEx NtCancelIoFileEx;
 
 #endif
@@ -130,9 +126,9 @@ extern FnNtCancelIoFileEx NtCancelIoFileEx;
 namespace pump {
 namespace net {
 
-    pump_socket get_base_socket(pump_socket fd);
+pump_socket get_base_socket(pump_socket fd);
 
 }
-}
+}  // namespace pump
 
 #endif

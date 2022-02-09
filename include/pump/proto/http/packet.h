@@ -25,152 +25,149 @@ namespace pump {
 namespace proto {
 namespace http {
 
+/*********************************************************************************
+ * Http packet type
+ ********************************************************************************/
+typedef int32_t packet_type;
+const packet_type PK_UNKNOWN = 0;
+const packet_type PK_REQUEST = 1;
+const packet_type PK_RESPONSE = 2;
+
+/*********************************************************************************
+ * Http version
+ ********************************************************************************/
+typedef int32_t http_version;
+const http_version VERSION_UNKNOWN = 0;
+const http_version VERSION_10 = 1;
+const http_version VERSION_11 = 2;
+const http_version VERSION_20 = 3;
+
+/*********************************************************************************
+ * Http packet parse status
+ ********************************************************************************/
+const int32_t PARSE_NONE = 0;
+const int32_t PARSE_LINE = 1;
+const int32_t PARSE_HEADER = 2;
+const int32_t PARSE_BODY = 3;
+const int32_t PARSE_FINISHED = 4;
+const int32_t PARSE_FAILED = 5;
+
+class LIB_PUMP packet : public header {
+  public:
     /*********************************************************************************
-     * Http packet type
+     * Constructor
      ********************************************************************************/
-    typedef int32_t packet_type;
-    const packet_type PK_UNKNOWN  = 0;
-    const packet_type PK_REQUEST  = 1;
-    const packet_type PK_RESPONSE = 2;
+    packet(void *ctx, int32_t pkt) noexcept :
+        ctx_(ctx),
+        pkt_(pkt),
+        version_(VERSION_UNKNOWN),
+        body_(nullptr),
+        parse_status_(PARSE_NONE) {}
 
     /*********************************************************************************
-     * Http version
+     * Deconstructor
      ********************************************************************************/
-    typedef int32_t http_version;
-    const http_version VERSION_UNKNOWN = 0;
-    const http_version VERSION_10      = 1;
-    const http_version VERSION_11      = 2;
-    const http_version VERSION_20      = 3;
+    virtual ~packet() = default;
 
     /*********************************************************************************
-     * Http packet parse status
+     * Get context
      ********************************************************************************/
-    const int32_t PARSE_NONE     = 0;
-    const int32_t PARSE_LINE     = 1;
-    const int32_t PARSE_HEADER   = 2;
-    const int32_t PARSE_BODY     = 3;
-    const int32_t PARSE_FINISHED = 4;
-    const int32_t PARSE_FAILED   = 5;
+    PUMP_INLINE void *get_context() const {
+        return ctx_;
+    }
 
-    class LIB_PUMP packet
-      : public header {
+    /*********************************************************************************
+     * Set context
+     ********************************************************************************/
+    PUMP_INLINE void set_context(void *ctx) {
+        ctx_ = ctx;
+    }
 
-      public:
-        /*********************************************************************************
-         * Constructor
-         ********************************************************************************/
-        packet(void *ctx, int32_t pkt) noexcept
-          : ctx_(ctx),
-            pkt_(pkt),
-            version_(VERSION_UNKNOWN),
-            body_(nullptr),
-            parse_status_(PARSE_NONE) {
+    /*********************************************************************************
+     * Get packet type
+     ********************************************************************************/
+    PUMP_INLINE int32_t get_type() const {
+        return pkt_;
+    }
+
+    /*********************************************************************************
+     * Parse
+     * This parse http packet, and return parsed size. If error return -1.
+     ********************************************************************************/
+    virtual int32_t parse(const block_t *b, int32_t size) = 0;
+
+    /*********************************************************************************
+     * Serialize
+     * This serialize http packet and return serialized size.
+     ********************************************************************************/
+    virtual int32_t serialize(std::string &buffer) const = 0;
+
+    /*********************************************************************************
+     * Set http body
+     ********************************************************************************/
+    PUMP_INLINE void set_body(body_sptr &b) {
+        body_ = b;
+    }
+
+    /*********************************************************************************
+     * Get http body
+     ********************************************************************************/
+    PUMP_INLINE const body_sptr get_body() const {
+        return body_;
+    }
+
+    /*********************************************************************************
+     * Set http version
+     ********************************************************************************/
+    PUMP_INLINE void set_http_version(http_version version) {
+        version_ = version;
+    }
+
+    /*********************************************************************************
+     * Get http version
+     ********************************************************************************/
+    PUMP_INLINE http_version get_http_version() const {
+        return version_;
+    }
+
+    /*********************************************************************************
+     * Get http version string
+     ********************************************************************************/
+    PUMP_INLINE std::string get_http_version_string() const {
+        if (version_ == VERSION_10) {
+            return "HTTP/1.0";
+        } else if (version_ == VERSION_11) {
+            return "HTTP/1.1";
+        } else if (version_ == VERSION_20) {
+            return "HTTP/2.0";
         }
+        return "";
+    }
 
-        /*********************************************************************************
-         * Deconstructor
-         ********************************************************************************/
-        virtual ~packet() = default;
+    /*********************************************************************************
+     * Check parse finished or not
+     ********************************************************************************/
+    PUMP_INLINE bool is_parse_finished() const {
+        return parse_status_ == PARSE_FINISHED;
+    }
 
-        /*********************************************************************************
-         * Get context
-         ********************************************************************************/
-        PUMP_INLINE void *get_context() const {
-            return ctx_;
-        }
+  protected:
+    // Http packet context
+    void *ctx_;
 
-        /*********************************************************************************
-         * Set context
-         ********************************************************************************/
-        PUMP_INLINE void set_context(void *ctx) {
-            ctx_ = ctx;
-        }
+    // Http packet type
+    packet_type pkt_;
 
-        /*********************************************************************************
-         * Get packet type
-         ********************************************************************************/
-        PUMP_INLINE int32_t get_type() const {
-            return pkt_;
-        }
+    // Http version
+    http_version version_;
 
-        /*********************************************************************************
-         * Parse
-         * This parse http packet, and return parsed size. If error return -1.
-         ********************************************************************************/
-        virtual int32_t parse(const block_t *b, int32_t size) = 0;
+    // Http body
+    body_sptr body_;
 
-        /*********************************************************************************
-         * Serialize
-         * This serialize http packet and return serialized size.
-         ********************************************************************************/
-        virtual int32_t serialize(std::string &buffer) const = 0;
-
-        /*********************************************************************************
-         * Set http body
-         ********************************************************************************/
-        PUMP_INLINE void set_body(body_sptr &b) {
-            body_ = b;
-        }
-
-        /*********************************************************************************
-         * Get http body
-         ********************************************************************************/
-        PUMP_INLINE const body_sptr get_body() const {
-            return body_;
-        }
-
-        /*********************************************************************************
-         * Set http version
-         ********************************************************************************/
-        PUMP_INLINE void set_http_version(http_version version) {
-            version_ = version;
-        }
-
-        /*********************************************************************************
-         * Get http version
-         ********************************************************************************/
-        PUMP_INLINE http_version get_http_version() const {
-            return version_;
-        }
-
-        /*********************************************************************************
-         * Get http version string
-         ********************************************************************************/
-        PUMP_INLINE std::string get_http_version_string() const {
-            if (version_ == VERSION_10) {
-                return "HTTP/1.0";
-            } else if (version_ == VERSION_11) {
-                return "HTTP/1.1";
-            } else if (version_ == VERSION_20) {
-                return "HTTP/2.0";
-            }
-            return "";
-        }
-
-        /*********************************************************************************
-         * Check parse finished or not
-         ********************************************************************************/
-        PUMP_INLINE bool is_parse_finished() const {
-            return parse_status_ == PARSE_FINISHED;
-        }
-
-      protected:
-        // Http packet context
-        void *ctx_;
-
-        // Http packet type
-        packet_type pkt_;
-
-        // Http version
-        http_version version_;
-
-        // Http body
-        body_sptr body_;
-
-        // Parse status
-        int32_t parse_status_;
-    };
-    DEFINE_ALL_POINTER_TYPE(packet);
+    // Parse status
+    int32_t parse_status_;
+};
+DEFINE_SMART_POINTER_TYPE(packet);
 
 }  // namespace http
 }  // namespace proto

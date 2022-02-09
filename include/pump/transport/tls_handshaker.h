@@ -24,145 +24,136 @@
 namespace pump {
 namespace transport {
 
-    class tls_handshaker;
-    DEFINE_ALL_POINTER_TYPE(tls_handshaker);
+class tls_handshaker;
+DEFINE_SMART_POINTER_TYPE(tls_handshaker);
 
-    class tls_handshaker
-      : public base_channel,
-        public std::enable_shared_from_this<tls_handshaker> {
-
-      public:
-        struct tls_handshaker_callbacks {
-            pump_function<void(tls_handshaker*, bool)> handshaked_cb;
-            pump_function<void(tls_handshaker*)> stopped_cb;
-        };
-
-      public:
-        /*********************************************************************************
-         * Constructor
-         ********************************************************************************/
-        tls_handshaker() noexcept;
-
-        /*********************************************************************************
-         * Deconstructor
-         ********************************************************************************/
-        virtual ~tls_handshaker();
-
-        /*********************************************************************************
-         * Init
-         ********************************************************************************/
-        bool init(
-            pump_socket fd,
-            bool client,
-            tls_credentials xcred,
-            const address &local_address,
-            const address &remote_address);
-
-        /*********************************************************************************
-         * Start tls handshaker
-         ********************************************************************************/
-        bool start(
-            service *sv, 
-            int64_t timeout, 
-            const tls_handshaker_callbacks &cbs);
-
-        /*********************************************************************************
-         * Stop transport
-         ********************************************************************************/
-        void stop();
-
-        /*********************************************************************************
-         * Unlock flow
-         ********************************************************************************/
-        PUMP_INLINE flow::flow_tls_sptr unlock_flow() {
-            return std::move(flow_);
-        }
-
-        /*********************************************************************************
-         * Get local address
-         ********************************************************************************/
-        PUMP_INLINE const address &get_local_address() const {
-            return local_address_;
-        }
-
-        /*********************************************************************************
-         * Get remote address
-         ********************************************************************************/
-        PUMP_INLINE const address &get_remote_address() const {
-            return remote_address_;
-        }
-
-      protected:
-        /*********************************************************************************
-         * Channel event callback
-         ********************************************************************************/
-        virtual void on_channel_event(int32_t ev) override;
-
-        /*********************************************************************************
-         * Read event callback
-         ********************************************************************************/
-        virtual void on_read_event() override;
-
-        /*********************************************************************************
-         * Send event callback
-         ********************************************************************************/
-        virtual void on_send_event() override;
-
-        /*********************************************************************************
-         * Timer timeout callback
-         ********************************************************************************/
-        static void on_timeout(tls_handshaker_wptr wptr);
-
-      private:
-        /*********************************************************************************
-         * Open flow
-         ********************************************************************************/
-        bool __open_flow(
-          bool client,
-          pump_socket fd, 
-          tls_credentials xcred);
-
-        /*********************************************************************************
-         * Process handshake
-         ********************************************************************************/
-        void __process_handshake();
-
-        /*********************************************************************************
-         * Start handshake timer
-         ********************************************************************************/
-        bool __start_handshake_timer(int64_t timeout);
-
-        /*********************************************************************************
-         * Stop handshake timer
-         ********************************************************************************/
-        void __stop_handshake_timer();
-
-        /*********************************************************************************
-         * Handshake finished
-         ********************************************************************************/
-        void __handshake_finished();
-
-      private:
-        // Local address
-        address local_address_;
-        // Remote address
-        address remote_address_;
-
-        // Finished flag
-        std::atomic_flag flag_;
-
-        // Handshake timeout timer
-        time::timer_sptr timer_;
-
-        // Channel tracker
-        poll::channel_tracker_sptr tracker_;
-
-        // TLS flow
-        flow::flow_tls_sptr flow_;
-
-        // TLS handshaker callbacks
-        tls_handshaker_callbacks cbs_;
+class tls_handshaker : public base_channel,
+                       public std::enable_shared_from_this<tls_handshaker> {
+  public:
+    struct tls_handshaker_callbacks {
+        pump_function<void(tls_handshaker *, bool)> handshaked_cb;
+        pump_function<void(tls_handshaker *)> stopped_cb;
     };
+
+  public:
+    /*********************************************************************************
+     * Constructor
+     ********************************************************************************/
+    tls_handshaker() noexcept;
+
+    /*********************************************************************************
+     * Deconstructor
+     ********************************************************************************/
+    virtual ~tls_handshaker();
+
+    /*********************************************************************************
+     * Init
+     ********************************************************************************/
+    bool init(pump_socket fd,
+              bool client,
+              tls_credentials xcred,
+              const address &local_address,
+              const address &remote_address);
+
+    /*********************************************************************************
+     * Start tls handshaker
+     ********************************************************************************/
+    bool start(service *sv, int64_t timeout, const tls_handshaker_callbacks &cbs);
+
+    /*********************************************************************************
+     * Stop transport
+     ********************************************************************************/
+    void stop();
+
+    /*********************************************************************************
+     * Unlock flow
+     ********************************************************************************/
+    PUMP_INLINE flow::flow_tls_sptr unlock_flow() {
+        return std::move(flow_);
+    }
+
+    /*********************************************************************************
+     * Get local address
+     ********************************************************************************/
+    PUMP_INLINE const address &get_local_address() const {
+        return local_address_;
+    }
+
+    /*********************************************************************************
+     * Get remote address
+     ********************************************************************************/
+    PUMP_INLINE const address &get_remote_address() const {
+        return remote_address_;
+    }
+
+  protected:
+    /*********************************************************************************
+     * Channel event callback
+     ********************************************************************************/
+    virtual void on_channel_event(int32_t ev) override;
+
+    /*********************************************************************************
+     * Read event callback
+     ********************************************************************************/
+    virtual void on_read_event() override;
+
+    /*********************************************************************************
+     * Send event callback
+     ********************************************************************************/
+    virtual void on_send_event() override;
+
+    /*********************************************************************************
+     * Timer timeout callback
+     ********************************************************************************/
+    static void on_timeout(tls_handshaker_wptr wptr);
+
+  private:
+    /*********************************************************************************
+     * Open flow
+     ********************************************************************************/
+    bool __open_flow(bool client, pump_socket fd, tls_credentials xcred);
+
+    /*********************************************************************************
+     * Process handshake
+     ********************************************************************************/
+    void __process_handshake();
+
+    /*********************************************************************************
+     * Start handshake timer
+     ********************************************************************************/
+    bool __start_handshake_timer(int64_t timeout);
+
+    /*********************************************************************************
+     * Stop handshake timer
+     ********************************************************************************/
+    void __stop_handshake_timer();
+
+    /*********************************************************************************
+     * Handshake finished
+     ********************************************************************************/
+    void __handshake_finished();
+
+  private:
+    // Local address
+    address local_address_;
+    // Remote address
+    address remote_address_;
+
+    // Finished flag
+    std::atomic_flag flag_;
+
+    // Handshake timeout timer
+    time::timer_sptr timer_;
+
+    // Channel tracker
+    poll::channel_tracker_sptr tracker_;
+
+    // TLS flow
+    flow::flow_tls_sptr flow_;
+
+    // TLS handshaker callbacks
+    tls_handshaker_callbacks cbs_;
+};
 
 }  // namespace transport
 }  // namespace pump

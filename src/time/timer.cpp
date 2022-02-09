@@ -20,48 +20,43 @@
 namespace pump {
 namespace time {
 
-    timer::timer(
-        uint64_t timeout, 
-        const timer_callback &cb, 
-        bool repeated) noexcept
-      : queue_(nullptr),
-        status_(TIMER_INIT),
-        cb_(cb),
-        repeated_(repeated),
-        timeout_(timeout),
-        overtime_(0) {
-    }
+timer::timer(uint64_t timeout, const timer_callback &cb, bool repeated) noexcept :
+    queue_(nullptr),
+    status_(TIMER_INIT),
+    cb_(cb),
+    repeated_(repeated),
+    timeout_(timeout),
+    overtime_(0) {}
 
-    void timer::handle_timeout() {
-        if (__set_state(TIMER_STARTED, TIMER_PENDING)) {
+void timer::handle_timeout() {
+    if (__set_state(TIMER_STARTED, TIMER_PENDING)) {
+        cb_();
 
-            cb_();
-
-            if (PUMP_LIKELY(repeated_)) {
-                if (__set_state(TIMER_PENDING, TIMER_STARTED)) {
-                    // Update overtime.
-                    overtime_ = get_clock_milliseconds() + timeout_;
-                    // Add to timer queue.
-                    queue_->restart_timer(shared_from_this());
-                }
-            } else {
-                __set_state(TIMER_PENDING, TIMER_STOPPED);
+        if (PUMP_LIKELY(repeated_)) {
+            if (__set_state(TIMER_PENDING, TIMER_STARTED)) {
+                // Update overtime.
+                overtime_ = get_clock_milliseconds() + timeout_;
+                // Add to timer queue.
+                queue_->restart_timer(shared_from_this());
             }
+        } else {
+            __set_state(TIMER_PENDING, TIMER_STOPPED);
         }
     }
+}
 
-    bool timer::__start(manager *queue) {
-        if (!__set_state(TIMER_INIT, TIMER_STARTED)) {
-            return false;
-        }
-
-        // Save timer queue.
-        queue_ = queue;
-        // Update overtime.
-        overtime_ = get_clock_milliseconds() + timeout_;
-
-        return true;
+bool timer::__start(manager *queue) {
+    if (!__set_state(TIMER_INIT, TIMER_STARTED)) {
+        return false;
     }
+
+    // Save timer queue.
+    queue_ = queue;
+    // Update overtime.
+    overtime_ = get_clock_milliseconds() + timeout_;
+
+    return true;
+}
 
 }  // namespace time
 }  // namespace pump

@@ -59,44 +59,44 @@
 #define LANE_EHOSTUNREACH WSAEHOSTUNREACH        // 10065
 #define LANE_HOST_NOT_FOUND WSAHOST_NOT_FOUND    // 10004
 #else
-#define LANE_EINTR EINTR                         // 4 Interrupted system call
-#define LANE_EBADF EBADF                         // 9 Bad file number
-#define LANE_EACCES EACCES                       // 13 Permission denied
-#define LANE_EFAULT EFAULT                       // 14 Bad address
-#define LANE_EINVAL EINVAL                       // 22 Invalid argument
-#define LANE_EMFILE EMFILE                       // 24 Too many open files
-#define LANE_EWOULDBLOCK EWOULDBLOCK             // 11 Operation would block as EAGAIN
-#define LANE_EINPROGRESS EINPROGRESS             // 115 Operation now in progress
-#define LANE_EALREADY EALREADY                   // 114 Operation already in progress
-#define LANE_ENOTSOCK ENOTSOCK                   // 88 Socket operation on non-socket
-#define LANE_EDESTADDRREQ EDESTADDRREQ           // 89 Destination address required
-#define LANE_EMSGSIZE EMSGSIZE                   // 90 Message too long
-#define LANE_EPROTOTYPE EPROTOTYPE               // 91 Protocol wrong type for socket
-#define LANE_ENOPROTOOPT ENOPROTOOPT             // 92 Protocol not available
-#define LANE_EPROTONOSUPPORT EPROTONOSUPPORT     // 93 Protocol not supported
-#define LANE_ESOCKTNOSUPPORT ESOCKTNOSUPPORT     // 94 Socket type not supported
-#define LANE_EOPNOTSUPP EOPNOTSUPP               // 95 Operation not supported on transport endpoint
-#define LANE_EPFNOSUPPORT EPFNOSUPPORT           // 96 Protocol family not supported
-#define LANE_EAFNOSUPPORT EAFNOSUPPORT           // 97 Address family not supported by protocol
-#define LANE_EADDRINUSE EADDRINUSE               // 98 Address already in use
-#define LANE_EADDRNOTAVAIL EADDRNOTAVAIL         // 99 Cannot assign requested address
-#define LANE_ENETDOWN ENETDOWN                   // 100 Network is down
-#define LANE_ENETUNREACH ENETUNREACH             // 101 Network is unreachable
-#define LANE_ENETRESET ENETRESET                 // 102 Network dropped connection because of reset
-#define LANE_ECONNABORTED ECONNABORTED           // 103 Software caused connection abort
-#define LANE_ECONNRESET ECONNRESET               // 104 Connection reset by peer
-#define LANE_ENOBUFS ENOBUFS                     // 105 No buffer space available
-#define LANE_EISCONN EISCONN                     // 106 Transport endpoint is already connected
-#define LANE_ENOTCONN ENOTCONN                   // 107 Transport endpoint is not connected
-#define LANE_ESHUTDOWN ESHUTDOWN                 // 108 Cannot send after transport endpoint shutdown
-#define LANE_ETOOMANYREFS ETOOMANYREFS           // 109 Too many references: cannot splice
-#define LANE_ETIMEDOUT ETIMEDOUT                 // 110 Connection timed out
-#define LANE_ECONNREFUSED ECONNREFUSED           // 111 Connection refused
-#define LANE_ELOOP ELOOP                         // 40 Too many symbolic links encountered
-#define LANE_ENAMETOOLONG ENAMETOOLONG           // 36 File name too long
-#define LANE_EHOSTDOWN EHOSTDOWN                 // 112 Host is down
-#define LANE_EHOSTUNREACH EHOSTUNREACH           // 113 No route to host
-#define LANE_HOST_NOT_FOUND HOST_NOT_FOUND       // 1 Host not found
+#define LANE_EINTR EINTR                      // 4 Interrupted system call
+#define LANE_EBADF EBADF                      // 9 Bad file number
+#define LANE_EACCES EACCES                    // 13 Permission denied
+#define LANE_EFAULT EFAULT                    // 14 Bad address
+#define LANE_EINVAL EINVAL                    // 22 Invalid argument
+#define LANE_EMFILE EMFILE                    // 24 Too many open files
+#define LANE_EWOULDBLOCK EWOULDBLOCK          // 11 Operation would block as EAGAIN
+#define LANE_EINPROGRESS EINPROGRESS          // 115 Operation now in progress
+#define LANE_EALREADY EALREADY                // 114 Operation already in progress
+#define LANE_ENOTSOCK ENOTSOCK                // 88 Socket operation on non-socket
+#define LANE_EDESTADDRREQ EDESTADDRREQ        // 89 Destination address required
+#define LANE_EMSGSIZE EMSGSIZE                // 90 Message too long
+#define LANE_EPROTOTYPE EPROTOTYPE            // 91 Protocol wrong type for socket
+#define LANE_ENOPROTOOPT ENOPROTOOPT          // 92 Protocol not available
+#define LANE_EPROTONOSUPPORT EPROTONOSUPPORT  // 93 Protocol not supported
+#define LANE_ESOCKTNOSUPPORT ESOCKTNOSUPPORT  // 94 Socket type not supported
+#define LANE_EOPNOTSUPP EOPNOTSUPP  // 95 Operation not supported on transport endpoint
+#define LANE_EPFNOSUPPORT EPFNOSUPPORT    // 96 Protocol family not supported
+#define LANE_EAFNOSUPPORT EAFNOSUPPORT    // 97 Address family not supported by protocol
+#define LANE_EADDRINUSE EADDRINUSE        // 98 Address already in use
+#define LANE_EADDRNOTAVAIL EADDRNOTAVAIL  // 99 Cannot assign requested address
+#define LANE_ENETDOWN ENETDOWN            // 100 Network is down
+#define LANE_ENETUNREACH ENETUNREACH      // 101 Network is unreachable
+#define LANE_ENETRESET ENETRESET        // 102 Network dropped connection because of reset
+#define LANE_ECONNABORTED ECONNABORTED  // 103 Software caused connection abort
+#define LANE_ECONNRESET ECONNRESET      // 104 Connection reset by peer
+#define LANE_ENOBUFS ENOBUFS            // 105 No buffer space available
+#define LANE_EISCONN EISCONN            // 106 Transport endpoint is already connected
+#define LANE_ENOTCONN ENOTCONN          // 107 Transport endpoint is not connected
+#define LANE_ESHUTDOWN ESHUTDOWN  // 108 Cannot send after transport endpoint shutdown
+#define LANE_ETOOMANYREFS ETOOMANYREFS      // 109 Too many references: cannot splice
+#define LANE_ETIMEDOUT ETIMEDOUT            // 110 Connection timed out
+#define LANE_ECONNREFUSED ECONNREFUSED      // 111 Connection refused
+#define LANE_ELOOP ELOOP                    // 40 Too many symbolic links encountered
+#define LANE_ENAMETOOLONG ENAMETOOLONG      // 36 File name too long
+#define LANE_EHOSTDOWN EHOSTDOWN            // 112 Host is down
+#define LANE_EHOSTUNREACH EHOSTUNREACH      // 113 No route to host
+#define LANE_HOST_NOT_FOUND HOST_NOT_FOUND  // 1 Host not found
 #endif
 
 #endif

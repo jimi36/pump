@@ -30,278 +30,264 @@
 namespace pump {
 namespace poll {
 
+/*********************************************************************************
+ * IO event
+ ********************************************************************************/
+const int32_t IO_EVENT_NONE = 0x00;   // none event
+const int32_t IO_EVENT_READ = 0x01;   // read event
+const int32_t IO_EVENT_SEND = 0x02;   // send event
+const int32_t IO_EVENT_ERROR = 0x04;  // error event
+
+class LIB_PUMP channel : public toolkit::noncopyable {
+  public:
     /*********************************************************************************
-     * IO event
+     * Constructor
      ********************************************************************************/
-    const int32_t IO_EVENT_NONE = 0x00;   // none event
-    const int32_t IO_EVENT_READ = 0x01;   // read event
-    const int32_t IO_EVENT_SEND = 0x02;   // send event
-    const int32_t IO_EVENT_ERROR = 0x04;  // error event
+    explicit channel(pump_socket fd) noexcept : ctx_(nullptr), fd_(fd) {}
 
-    class LIB_PUMP channel
-      : public toolkit::noncopyable {
+    /*********************************************************************************
+     * Deconstructor
+     ********************************************************************************/
+    virtual ~channel() = default;
 
-      public:
-        /*********************************************************************************
-         * Constructor
-         ********************************************************************************/
-        explicit channel(pump_socket fd) noexcept
-          : ctx_(nullptr), 
-            fd_(fd) {
+    /*********************************************************************************
+     * Get channel fd
+     ********************************************************************************/
+    PUMP_INLINE pump_socket get_fd() const {
+        return fd_;
+    }
+
+    /*********************************************************************************
+     * Get channel context
+     ********************************************************************************/
+    PUMP_INLINE void *get_context() const {
+        return ctx_;
+    }
+
+    /*********************************************************************************
+     * Set context
+     ********************************************************************************/
+    PUMP_INLINE void set_context(void *ctx) {
+        ctx_ = ctx;
+    }
+
+    /*********************************************************************************
+     * Handle io event
+     ********************************************************************************/
+    PUMP_INLINE void handle_io_event(int32_t ev) {
+        if (ev & IO_EVENT_READ) {
+            on_read_event();
+        } else if (ev & IO_EVENT_SEND) {
+            on_send_event();
         }
+    }
 
-        /*********************************************************************************
-         * Deconstructor
-         ********************************************************************************/
-        virtual ~channel() = default;
+    /*********************************************************************************
+     * Handle channel event
+     ********************************************************************************/
+    PUMP_INLINE void handle_channel_event(int32_t ev) {
+        on_channel_event(ev);
+    }
 
-        /*********************************************************************************
-         * Get channel fd
-         ********************************************************************************/
-        PUMP_INLINE pump_socket get_fd() const {
-            return fd_;
-        }
+  protected:
+    /*********************************************************************************
+     * Set channel fd
+     ********************************************************************************/
+    PUMP_INLINE void __set_fd(pump_socket fd) {
+        fd_ = fd;
+    }
 
-        /*********************************************************************************
-         * Get channel context
-         ********************************************************************************/
-        PUMP_INLINE void* get_context() const {
-            return ctx_;
-        }
+  protected:
+    /*********************************************************************************
+     * Read event callback
+     ********************************************************************************/
+    virtual void on_read_event() {}
 
-        /*********************************************************************************
-         * Set context
-         ********************************************************************************/
-        PUMP_INLINE void set_context(void *ctx) {
-            ctx_ = ctx;
-        }
+    /*********************************************************************************
+     * Send event callback
+     ********************************************************************************/
+    virtual void on_send_event() {}
 
-        /*********************************************************************************
-         * Handle io event
-         ********************************************************************************/
-        PUMP_INLINE void handle_io_event(int32_t ev) {
-            if (ev & IO_EVENT_READ) {
-                on_read_event();
-            } else if (ev & IO_EVENT_SEND) {
-                on_send_event();
-            }
-        }
+    /*********************************************************************************
+     * Channel event callback
+     ********************************************************************************/
+    virtual void on_channel_event(int32_t ev) {}
 
-        /*********************************************************************************
-         * Handle channel event
-         ********************************************************************************/
-        PUMP_INLINE void handle_channel_event(int32_t ev) {
-            on_channel_event(ev);
-        }
+  protected:
+    // Channel context
+    void *ctx_;
+    // Channel fd
+    pump_socket fd_;
+};
+DEFINE_SMART_POINTER_TYPE(channel);
 
-      protected:
-        /*********************************************************************************
-         * Set channel fd
-         ********************************************************************************/
-        PUMP_INLINE void __set_fd(pump_socket fd) {
-            fd_ = fd;
-        }
+const int32_t TRACK_NONE = (IO_EVENT_NONE);
+const int32_t TRACK_READ = (IO_EVENT_READ);
+const int32_t TRACK_SEND = (IO_EVENT_SEND);
+const int32_t TRACK_BOTH = (IO_EVENT_READ | IO_EVENT_SEND);
 
-      protected:
-        /*********************************************************************************
-         * Read event callback
-         ********************************************************************************/
-        virtual void on_read_event() {
-        }
+const int32_t TRACKER_EVENT_DEL = 0;
+const int32_t TRACKER_EVENT_ADD = 1;
 
-        /*********************************************************************************
-         * Send event callback
-         ********************************************************************************/
-        virtual void on_send_event() {
-        }
+const int32_t TRACKER_STATE_INIT = 0x00;
+const int32_t TRACKER_STATE_STOP = 0x01;
+const int32_t TRACKER_STATE_TRACK = 0x02;
+const int32_t TRACKER_STATE_UNTRACK = 0x03;
 
-        /*********************************************************************************
-         * Channel event callback
-         ********************************************************************************/
-        virtual void on_channel_event(int32_t ev) {
-        }
+class poller;
 
-      protected:
-        // Channel context
-        void *ctx_;
-        // Channel fd
-        pump_socket fd_;
-    };
-    DEFINE_ALL_POINTER_TYPE(channel);
-
-    const int32_t TRACK_NONE = (IO_EVENT_NONE);
-    const int32_t TRACK_READ = (IO_EVENT_READ);
-    const int32_t TRACK_SEND = (IO_EVENT_SEND);
-    const int32_t TRACK_BOTH = (IO_EVENT_READ | IO_EVENT_SEND);
-
-    const int32_t TRACKER_EVENT_DEL = 0;
-    const int32_t TRACKER_EVENT_ADD = 1;
-
-    const int32_t TRACKER_STATE_INIT    = 0x00;
-    const int32_t TRACKER_STATE_STOP    = 0x01;
-    const int32_t TRACKER_STATE_TRACK   = 0x02;
-    const int32_t TRACKER_STATE_UNTRACK = 0x03;
-
-    class poller;
-
-    class channel_tracker
-      : public toolkit::noncopyable {
-
-      public:
-        /*********************************************************************************
-         * Constructor
-         ********************************************************************************/
-        channel_tracker(
-            channel_sptr &ch, 
-            int32_t ev) noexcept
-          : state_(TRACKER_STATE_INIT),
-            expected_event_(ev),
-            fd_(ch->get_fd()), 
-            ch_(ch),
-            pr_(nullptr) {
+class channel_tracker : public toolkit::noncopyable {
+  public:
+    /*********************************************************************************
+     * Constructor
+     ********************************************************************************/
+    channel_tracker(channel_sptr &ch, int32_t ev) noexcept :
+        state_(TRACKER_STATE_INIT),
+        expected_event_(ev),
+        fd_(ch->get_fd()),
+        ch_(ch),
+        pr_(nullptr) {
 #if defined(PUMP_HAVE_EPOLL) || defined(PUMP_HAVE_IOCP)
-            memset(&ev_, 0, sizeof(ev_));
+        memset(&ev_, 0, sizeof(ev_));
 #endif
-        }
-        channel_tracker(
-            channel_sptr &&ch, 
-            int32_t ev) noexcept
-          : state_(TRACKER_STATE_INIT),
-            //installed_(false),
-            expected_event_(ev),
-            fd_(ch->get_fd()), 
-            ch_(ch), 
-            pr_(nullptr) {
+    }
+    channel_tracker(channel_sptr &&ch, int32_t ev) noexcept :
+        state_(TRACKER_STATE_INIT),
+        // installed_(false),
+        expected_event_(ev),
+        fd_(ch->get_fd()),
+        ch_(ch),
+        pr_(nullptr) {
 #if defined(PUMP_HAVE_EPOLL) || defined(PUMP_HAVE_IOCP)
-            memset(&ev_, 0, sizeof(ev_));
+        memset(&ev_, 0, sizeof(ev_));
 #endif
-        }
+    }
 
-        /*********************************************************************************
-         * Start
-         ********************************************************************************/
-        PUMP_INLINE bool start() {
-            int32_t expected = TRACKER_STATE_INIT;
-            return state_.compare_exchange_strong(expected, TRACKER_STATE_TRACK);
-        }
+    /*********************************************************************************
+     * Start
+     ********************************************************************************/
+    PUMP_INLINE bool start() {
+        int32_t expected = TRACKER_STATE_INIT;
+        return state_.compare_exchange_strong(expected, TRACKER_STATE_TRACK);
+    }
 
-        /*********************************************************************************
-         * Stop
-         ********************************************************************************/
-        PUMP_INLINE bool stop() {
-            return state_.exchange(TRACKER_STATE_STOP) != TRACKER_STATE_STOP;
-        }
+    /*********************************************************************************
+     * Stop
+     ********************************************************************************/
+    PUMP_INLINE bool stop() {
+        return state_.exchange(TRACKER_STATE_STOP) != TRACKER_STATE_STOP;
+    }
 
-        /*********************************************************************************
-         * Get tracked status
-         ********************************************************************************/
-        PUMP_INLINE bool is_started() const {
-            return state_.load() > TRACKER_STATE_STOP;
-        }
+    /*********************************************************************************
+     * Get tracked status
+     ********************************************************************************/
+    PUMP_INLINE bool is_started() const {
+        return state_.load() > TRACKER_STATE_STOP;
+    }
 
-        /*********************************************************************************
-         * Track
-         ********************************************************************************/
-        PUMP_INLINE bool track() {
-            int32_t expected = TRACKER_STATE_UNTRACK;
-            return state_.compare_exchange_strong(expected, TRACKER_STATE_TRACK);
-        }
+    /*********************************************************************************
+     * Track
+     ********************************************************************************/
+    PUMP_INLINE bool track() {
+        int32_t expected = TRACKER_STATE_UNTRACK;
+        return state_.compare_exchange_strong(expected, TRACKER_STATE_TRACK);
+    }
 
-        /*********************************************************************************
-         * untrack
-         ********************************************************************************/
-        PUMP_INLINE bool untrack() {
-            int32_t expected = TRACKER_STATE_TRACK;
-            return state_.compare_exchange_strong(expected, TRACKER_STATE_UNTRACK);
-        }
+    /*********************************************************************************
+     * untrack
+     ********************************************************************************/
+    PUMP_INLINE bool untrack() {
+        int32_t expected = TRACKER_STATE_TRACK;
+        return state_.compare_exchange_strong(expected, TRACKER_STATE_UNTRACK);
+    }
 
-        /*********************************************************************************
-         * Get tracked status
-         ********************************************************************************/
-        PUMP_INLINE bool is_tracked() const {
-            return state_.load() == TRACKER_STATE_TRACK;
-        }
+    /*********************************************************************************
+     * Get tracked status
+     ********************************************************************************/
+    PUMP_INLINE bool is_tracked() const {
+        return state_.load() == TRACKER_STATE_TRACK;
+    }
 
-        /*********************************************************************************
-         * Set expected event
-         ********************************************************************************/
-        PUMP_INLINE void set_expected_event(int32_t ev) {
-            expected_event_ = ev;
-        }
+    /*********************************************************************************
+     * Set expected event
+     ********************************************************************************/
+    PUMP_INLINE void set_expected_event(int32_t ev) {
+        expected_event_ = ev;
+    }
 
-        /*********************************************************************************
-         * Get expected event
-         ********************************************************************************/
-        PUMP_INLINE int32_t get_expected_event() const {
-            return expected_event_;
-        }
+    /*********************************************************************************
+     * Get expected event
+     ********************************************************************************/
+    PUMP_INLINE int32_t get_expected_event() const {
+        return expected_event_;
+    }
 
-        /*********************************************************************************
-         * Get event
-         ********************************************************************************/
+    /*********************************************************************************
+     * Get event
+     ********************************************************************************/
 #if defined(PUMP_HAVE_EPOLL)
-        PUMP_INLINE struct epoll_event* get_event() {
-            return &ev_;
-        }
+    PUMP_INLINE struct epoll_event *get_event() {
+        return &ev_;
+    }
 #elif defined(PUMP_HAVE_IOCP)
-        PUMP_INLINE AFD_POLL_EVENT* get_event() {
-            return &ev_;
-        }
+    PUMP_INLINE AFD_POLL_EVENT *get_event() {
+        return &ev_;
+    }
 #endif
-        /*********************************************************************************
-         * Get fd
-         ********************************************************************************/
-        PUMP_INLINE pump_socket get_fd() const {
-            return fd_;
-        }
+    /*********************************************************************************
+     * Get fd
+     ********************************************************************************/
+    PUMP_INLINE pump_socket get_fd() const {
+        return fd_;
+    }
 
-        /*********************************************************************************
-         * Set channel
-         ********************************************************************************/
-        PUMP_INLINE void set_channel(channel_sptr &ch) {
-            ch_ = ch;
-            fd_ = net::get_base_socket(ch->get_fd());
-        }
+    /*********************************************************************************
+     * Set channel
+     ********************************************************************************/
+    PUMP_INLINE void set_channel(channel_sptr &ch) {
+        ch_ = ch;
+        fd_ = net::get_base_socket(ch->get_fd());
+    }
 
-        /*********************************************************************************
-         * Get channel
-         ********************************************************************************/
-        PUMP_INLINE channel_sptr get_channel() {
-            return ch_.lock();
-        }
+    /*********************************************************************************
+     * Get channel
+     ********************************************************************************/
+    PUMP_INLINE channel_sptr get_channel() {
+        return ch_.lock();
+    }
 
-        /*********************************************************************************
-         * Set poller
-         ********************************************************************************/
-        PUMP_INLINE void set_poller(poller *pr) {
-            pr_ = pr;
-        }
+    /*********************************************************************************
+     * Set poller
+     ********************************************************************************/
+    PUMP_INLINE void set_poller(poller *pr) {
+        pr_ = pr;
+    }
 
-        /*********************************************************************************
-         * Get poller
-         ********************************************************************************/
-        PUMP_INLINE poller* get_poller() {
-            return pr_;
-        }
+    /*********************************************************************************
+     * Get poller
+     ********************************************************************************/
+    PUMP_INLINE poller *get_poller() {
+        return pr_;
+    }
 
-      private:
-        // State
-        std::atomic_int32_t state_;
-        // Track expected event
-        int32_t expected_event_;
-        // Track fd
-        pump_socket fd_;
-        // Channel
-        channel_wptr ch_;
-        // Poller
-        poller *pr_;
+  private:
+    // State
+    std::atomic_int32_t state_;
+    // Track expected event
+    int32_t expected_event_;
+    // Track fd
+    pump_socket fd_;
+    // Channel
+    channel_wptr ch_;
+    // Poller
+    poller *pr_;
 #if defined(PUMP_HAVE_EPOLL)
-        struct epoll_event ev_;
+    struct epoll_event ev_;
 #elif defined(PUMP_HAVE_IOCP)
-        AFD_POLL_EVENT ev_;
+    AFD_POLL_EVENT ev_;
 #endif
-    };
-    DEFINE_ALL_POINTER_TYPE(channel_tracker);
+};
+DEFINE_SMART_POINTER_TYPE(channel_tracker);
 
 }  // namespace poll
 }  // namespace pump

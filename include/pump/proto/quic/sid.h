@@ -23,57 +23,57 @@ namespace pump {
 namespace proto {
 namespace quic {
 
-    class sid {
-      public:
-        /*********************************************************************************
-         * Constructor
-         ********************************************************************************/
-        sid();
-        sid(uint64_t id);
-        sid(const sid &id);
+class sid {
+  public:
+    /*********************************************************************************
+     * Constructor
+     ********************************************************************************/
+    sid();
+    sid(uint64_t id);
+    sid(const sid &id);
 
-        /*********************************************************************************
-         * Set session id
-         ********************************************************************************/
-        PUMP_INLINE void set_id(uint64_t id) {
-            id_ = id;
+    /*********************************************************************************
+     * Set session id
+     ********************************************************************************/
+    PUMP_INLINE void set_id(uint64_t id) {
+        id_ = id;
+    }
+
+    /*********************************************************************************
+     * Get session id
+     ********************************************************************************/
+    PUMP_INLINE uint64_t get_id() const {
+        return id_;
+    }
+
+    /*********************************************************************************
+     * Get stream type
+     ********************************************************************************/
+    PUMP_INLINE stream_type get_stream_type() const {
+        if ((stream_type(id_) & 0x02) == 0) {
+            return stream_bidirection;
+        } else {
+            return stream_unidirection;
         }
+    }
 
-        /*********************************************************************************
-         * Get session id
-         ********************************************************************************/
-        PUMP_INLINE uint64_t get_id() const {
-            return id_;
+    /*********************************************************************************
+     * Get stream initiator type
+     ********************************************************************************/
+    PUMP_INLINE stream_initiator_type get_stream_initiator_type() const {
+        if ((stream_type(id_) & 0x01) == 0) {
+            return client_initiator;
+        } else {
+            return server_initiator;
         }
+    }
 
-        /*********************************************************************************
-         * Get stream type
-         ********************************************************************************/
-        PUMP_INLINE stream_type get_stream_type() const {
-            if ((stream_type(id_) & 0x02) == 0) {
-                return stream_bidirection;
-            } else {
-                return stream_unidirection;
-            }
-        }
+  private:
+    uint64_t id_;
+};
 
-        /*********************************************************************************
-         * Get stream initiator type
-         ********************************************************************************/
-        PUMP_INLINE stream_initiator_type get_stream_initiator_type() const {
-            if ((stream_type(id_) & 0x01) == 0) {
-                return client_initiator;
-            } else {
-                return server_initiator;
-            }
-        }
-
-      private:
-        uint64_t id_;
-    };
-
-}
-}
-}
+}  // namespace quic
+}  // namespace proto
+}  // namespace pump
 
 #endif

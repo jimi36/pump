@@ -23,92 +23,90 @@ namespace pump {
 namespace proto {
 namespace http {
 
-    typedef int32_t http_method;
-    const static http_method METHOD_UNKNOWN = 0;
-    const static http_method METHOD_GET     = 1;
-    const static http_method METHOD_POST    = 2;
-    const static http_method METHOD_HEAD    = 3;
-    const static http_method METHOD_PUT     = 4;
-    const static http_method METHOD_DELETE  = 5;
+typedef int32_t http_method;
+const static http_method METHOD_UNKNOWN = 0;
+const static http_method METHOD_GET = 1;
+const static http_method METHOD_POST = 2;
+const static http_method METHOD_HEAD = 3;
+const static http_method METHOD_PUT = 4;
+const static http_method METHOD_DELETE = 5;
 
-    class LIB_PUMP request 
-      : public packet {
+class LIB_PUMP request : public packet {
+  public:
+    /*********************************************************************************
+     * Constructor
+     * This construct a http request to serialize.
+     ********************************************************************************/
+    request(void *ctx = nullptr) noexcept;
+    request(void *ctx, const std::string &url) noexcept;
 
-      public:
-        /*********************************************************************************
-         * Constructor
-         * This construct a http request to serialize.
-         ********************************************************************************/
-        request(void *ctx = nullptr) noexcept;
-        request(void *ctx, const std::string &url) noexcept;
+    /*********************************************************************************
+     * Deconstructor
+     ********************************************************************************/
+    virtual ~request() = default;
 
-        /*********************************************************************************
-         * Deconstructor
-         ********************************************************************************/
-        virtual ~request() = default;
+    /*********************************************************************************
+     * Set request method
+     ********************************************************************************/
+    PUMP_INLINE void set_method(http_method method) {
+        method_ = method;
+    }
 
-        /*********************************************************************************
-         * Set request method
-         ********************************************************************************/
-        PUMP_INLINE void set_method(http_method method) {
-            method_ = method;
-        }
+    /*********************************************************************************
+     * Get request method
+     ********************************************************************************/
+    PUMP_INLINE http_method get_method() const {
+        return method_;
+    }
 
-        /*********************************************************************************
-         * Get request method
-         ********************************************************************************/
-        PUMP_INLINE http_method get_method() const {
-            return method_;
-        }
+    /*********************************************************************************
+     * Set request url
+     ********************************************************************************/
+    PUMP_INLINE void set_url(const std::string &url) {
+        uri_.parse(url);
+    }
 
-        /*********************************************************************************
-         * Set request url
-         ********************************************************************************/
-        PUMP_INLINE void set_url(const std::string &url) {
-            uri_.parse(url);
-        }
+    /*********************************************************************************
+     * Get http uri
+     ********************************************************************************/
+    PUMP_INLINE const uri *get_uri() const {
+        return (const uri *)&uri_;
+    }
+    PUMP_INLINE uri *get_uri() {
+        return &uri_;
+    }
 
-        /*********************************************************************************
-         * Get http uri
-         ********************************************************************************/
-        PUMP_INLINE const uri* get_uri() const {
-            return (const uri*)&uri_;
-        }
-        PUMP_INLINE uri* get_uri() {
-            return &uri_;
-        }
+    /*********************************************************************************
+     * Parse
+     * This parse http packet, and return parsed size.
+     * If parsed error, return -1.
+     ********************************************************************************/
+    virtual int32_t parse(const block_t *b, int32_t size) override;
 
-        /*********************************************************************************
-         * Parse
-         * This parse http packet, and return parsed size. 
-         * If parsed error, return -1.
-         ********************************************************************************/
-        virtual int32_t parse(const block_t *b, int32_t size) override;
+    /*********************************************************************************
+     * Serialize
+     * This will serialize http packet and return serialized size.
+     ********************************************************************************/
+    virtual int32_t serialize(std::string &buf) const override;
 
-        /*********************************************************************************
-         * Serialize
-         * This will serialize http packet and return serialized size.
-         ********************************************************************************/
-        virtual int32_t serialize(std::string &buf) const override;
+  private:
+    /*********************************************************************************
+     * Parse http start line
+     ********************************************************************************/
+    int32_t __parse_start_line(const block_t *b, int32_t size);
 
-      private:
-        /*********************************************************************************
-         * Parse http start line
-         ********************************************************************************/
-        int32_t __parse_start_line(const block_t *b, int32_t size);
+    /*********************************************************************************
+     * Serialize http request line
+     ********************************************************************************/
+    int32_t __serialize_request_line(std::string &buffer) const;
 
-        /*********************************************************************************
-         * Serialize http request line
-         ********************************************************************************/
-        int32_t __serialize_request_line(std::string &buffer) const;
-
-      private:
-        // Request uri
-        uri uri_;
-        // Request method
-        http_method method_;
-    };
-    DEFINE_ALL_POINTER_TYPE(request);
+  private:
+    // Request uri
+    uri uri_;
+    // Request method
+    http_method method_;
+};
+DEFINE_SMART_POINTER_TYPE(request);
 
 }  // namespace http
 }  // namespace proto

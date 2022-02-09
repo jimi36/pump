@@ -23,93 +23,88 @@ namespace pump {
 namespace proto {
 namespace http {
 
-    const uint8_t WS_OPT_SLICE = 0x00;
-    const uint8_t WS_OPT_TEXT  = 0x01;
-    const uint8_t WS_OPT_BIN   = 0x02;
-    const uint8_t WS_OPT_CLOSE = 0x08;
-    const uint8_t WS_OPT_PING  = 0x09;
-    const uint8_t WS_OPT_PONG  = 0x0A;
-    const uint8_t WS_OPT_END   = 0xFF;
+const uint8_t WS_OPT_SLICE = 0x00;
+const uint8_t WS_OPT_TEXT = 0x01;
+const uint8_t WS_OPT_BIN = 0x02;
+const uint8_t WS_OPT_CLOSE = 0x08;
+const uint8_t WS_OPT_PING = 0x09;
+const uint8_t WS_OPT_PONG = 0x0A;
+const uint8_t WS_OPT_END = 0xFF;
 
-    class LIB_PUMP frame {
+class LIB_PUMP frame {
+  public:
+    /*********************************************************************************
+     * Constructor
+     ********************************************************************************/
+    frame(bool fin = true, uint8_t opt = WS_OPT_END, uint64_t payload_len = 0);
+    frame(bool fin,
+          uint8_t opt,
+          uint64_t payload_len,
+          const std::string &payload_mask_key);
 
-      public:
-        /*********************************************************************************
-         * Constructor
-         ********************************************************************************/
-        frame(
-            bool fin = true, 
-            uint8_t opt = WS_OPT_END,
-            uint64_t payload_len = 0);
-        frame(
-            bool fin, 
-            uint8_t opt, 
-            uint64_t payload_len, 
-            const std::string &payload_mask_key);
+    /*********************************************************************************
+     * unpack websocket frame header
+     ********************************************************************************/
+    bool unpack_header(toolkit::io_buffer *iob);
 
-        /*********************************************************************************
-         * unpack websocket frame header
-         ********************************************************************************/
-        bool unpack_header(toolkit::io_buffer *iob);
+    /*********************************************************************************
+     * Pack websocket frame header
+     ********************************************************************************/
+    bool pack_header(toolkit::io_buffer *iob);
 
-        /*********************************************************************************
-         * Pack websocket frame header
-         ********************************************************************************/
-        bool pack_header(toolkit::io_buffer *iob);
+    /*********************************************************************************
+     * Mask websocket payload
+     ********************************************************************************/
+    void mask_payload(uint8_t *b);
 
-        /*********************************************************************************
-         * Mask websocket payload
-         ********************************************************************************/
-        void mask_payload(uint8_t *b);
+    /*********************************************************************************
+     * Reset
+     ********************************************************************************/
+    void reset();
 
-        /*********************************************************************************
-         * Reset
-         ********************************************************************************/
-        void reset();
+    /*********************************************************************************
+     * Check websocket frame header unpacked flag
+     ********************************************************************************/
+    PUMP_INLINE bool is_header_unpacked() const {
+        return is_header_unpacked_;
+    }
 
-        /*********************************************************************************
-         * Check websocket frame header unpacked flag
-         ********************************************************************************/
-        PUMP_INLINE bool is_header_unpacked() const {
-            return is_header_unpacked_;
-        }
+    /*********************************************************************************
+     * Check websocket frame fin flag
+     ********************************************************************************/
+    PUMP_INLINE bool is_fin() const {
+        return fin_;
+    }
 
-        /*********************************************************************************
-         * Check websocket frame fin flag
-         ********************************************************************************/
-        PUMP_INLINE bool is_fin() const {
-            return fin_;
-        }
+    /*********************************************************************************
+     * Get websocket frame opt
+     ********************************************************************************/
+    PUMP_INLINE uint8_t get_opt() const {
+        return opt_;
+    }
 
-        /*********************************************************************************
-         * Get websocket frame opt
-         ********************************************************************************/
-        PUMP_INLINE uint8_t get_opt() const {
-            return opt_;
-        }
+    /*********************************************************************************
+     * Get websocket frame payload length
+     ********************************************************************************/
+    PUMP_INLINE uint64_t get_payload_length() const {
+        return payload_len_;
+    }
 
-        /*********************************************************************************
-         * Get websocket frame payload length
-         ********************************************************************************/
-        PUMP_INLINE uint64_t get_payload_length() const {
-            return payload_len_;
-        }
+  private:
+    // Frame fin flag
+    bool fin_;
+    // Frame opt code
+    uint8_t opt_;
+    // Frame payload length
+    uint64_t payload_len_;
+    // Frame payload mask key
+    std::string payload_mask_key_;
+    // Frame header unpacked flag
+    bool is_header_unpacked_;
+};
 
-      private:
-        // Frame fin flag 
-        bool fin_;
-        // Frame opt code
-        uint8_t opt_;
-        // Frame payload length
-        uint64_t payload_len_;
-        // Frame payload mask key
-        std::string payload_mask_key_;
-        // Frame header unpacked flag
-        bool is_header_unpacked_;
-    };
-
-}
-}
-}
+}  // namespace http
+}  // namespace proto
+}  // namespace pump
 
 #endif

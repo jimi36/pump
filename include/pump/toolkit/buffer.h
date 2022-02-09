@@ -28,237 +28,229 @@
 namespace pump {
 namespace toolkit {
 
-    class LIB_PUMP base_buffer {
+class LIB_PUMP base_buffer {
+  public:
+    /*********************************************************************************
+     * Constructor
+     ********************************************************************************/
+    base_buffer() noexcept;
 
-      public:
-        /*********************************************************************************
-         * Constructor
-         ********************************************************************************/
-        base_buffer() noexcept;
+    /*********************************************************************************
+     * Deconstructor
+     ********************************************************************************/
+    virtual ~base_buffer();
 
-        /*********************************************************************************
-         * Deconstructor
-         ********************************************************************************/
-        virtual ~base_buffer();
+    /*********************************************************************************
+     * Get raw buffer pointer
+     ********************************************************************************/
+    PUMP_INLINE const block_t *raw() const {
+        return raw_;
+    }
+    PUMP_INLINE block_t *raw() {
+        return raw_;
+    }
 
-        /*********************************************************************************
-         * Get raw buffer pointer
-         ********************************************************************************/
-        PUMP_INLINE const block_t* raw() const {
-            return raw_;
+    /*********************************************************************************
+     * Get buffer capacity
+     ********************************************************************************/
+    PUMP_INLINE uint32_t capacity() const {
+        return raw_size_;
+    }
+
+  protected:
+    /*********************************************************************************
+     * Init by allocate
+     * Allocate a memory with the size.
+     ********************************************************************************/
+    bool __init_by_alloc(uint32_t size);
+
+    /*********************************************************************************
+     * Init by copy
+     * Allocate a memory block and copy input buffer to the buffer memory block.
+     ********************************************************************************/
+    bool __init_by_copy(const block_t *b, uint32_t size);
+
+    /*********************************************************************************
+     * Init by reference
+     ********************************************************************************/
+    bool __init_by_reference(const block_t *b, uint32_t size);
+
+  protected:
+    // Buffer ref flag
+    bool owner_;
+    // Raw buffer
+    block_t *raw_;
+    // Raw buffer size
+    uint32_t raw_size_;
+};
+
+class io_buffer : public base_buffer {
+  public:
+    /*********************************************************************************
+     * Create
+     ********************************************************************************/
+    static io_buffer *create(uint32_t size = 0) {
+        INLINE_OBJECT_CREATE(obj, io_buffer, ())
+        if (obj != nullptr && size > 0 && !obj->__init_by_alloc(size)) {
+            INLINE_OBJECT_DELETE(obj, io_buffer)
+            return nullptr;
         }
-        PUMP_INLINE block_t* raw() {
-            return raw_;
-        }
-
-        /*********************************************************************************
-         * Get buffer capacity
-         ********************************************************************************/
-        PUMP_INLINE uint32_t capacity() const {
-            return raw_size_;
-        }
-
-      protected:
-        /*********************************************************************************
-         * Init by allocate
-         * Allocate a memory with the size.
-         ********************************************************************************/
-        bool __init_by_alloc(uint32_t size);
-
-        /*********************************************************************************
-         * Init by copy
-         * Allocate a memory block and copy input buffer to the buffer memory block.
-         ********************************************************************************/
-        bool __init_by_copy(const block_t *b, uint32_t size);
-
-        /*********************************************************************************
-         * Init by reference
-         ********************************************************************************/
-        bool __init_by_reference(const block_t *b, uint32_t size);
-        
-      protected:
-        // Buffer ref flag
-        bool owner_;
-        // Raw buffer
-        block_t *raw_;
-        // Raw buffer size
-        uint32_t raw_size_;
-    };
-
-    class io_buffer
-      : public base_buffer {
-
-      public:
-        /*********************************************************************************
-         * Create
-         ********************************************************************************/
-        static io_buffer* create(uint32_t size = 0) {
-            INLINE_OBJECT_CREATE(obj, io_buffer, ())
-            if (obj != nullptr && size > 0 && !obj->__init_by_alloc(size)) {
-                INLINE_OBJECT_DELETE(obj, io_buffer)
-                return nullptr;
-            }
-            return obj;
-        }
-        static io_buffer* create_by_copy(const block_t *b, uint32_t size) {
-            INLINE_OBJECT_CREATE(obj, io_buffer, ())
-            if (obj != nullptr && !obj->__init_by_copy(b, size)) {
-                INLINE_OBJECT_DELETE(obj, io_buffer)
-                return nullptr;
-            }
-
-            obj->size_ = size;
-
-            return obj;
-        }
-        static io_buffer* create_by_refence(const block_t *b, uint32_t size) {
-            INLINE_OBJECT_CREATE(obj, io_buffer, ())
-            if (obj != nullptr && !obj->__init_by_reference(b, size)) {
-                INLINE_OBJECT_DELETE(obj, io_buffer)
-                return nullptr;
-            }
-            
-            obj->size_ = size;
-  
-            return obj;
-        }
-
-        /*********************************************************************************
-         * Write block
-         ********************************************************************************/
-        bool write(const block_t *b, uint32_t size);
-        bool write(block_t b);
-
-        /*********************************************************************************
-         * Read block
-         ********************************************************************************/
-        PUMP_INLINE bool read(block_t *b, uint32_t size) {
-            if (size_ < size) {
-                return false;
-            }
-            memcpy(b, raw_ + rpos_, size);
-            rpos_ += size;
-            size_ -= size;
-            return true;
-        }
-        PUMP_INLINE bool read(block_t *b) {
-            if (size_ < 1) {
-                return false;
-            }
-            *b = *(raw_ + rpos_);
-            rpos_++;
-            size_--;
-            return true;
-        }
-
-        /*********************************************************************************
-         * Shift
-         * If success return current size, else return zero.
-         ********************************************************************************/
-        PUMP_INLINE int32_t shift(int32_t size) {
-            PUMP_ASSERT(int32_t(size_) >= size);
-            if (size_ == 0 || int32_t(size_) < size) {
-                return -1;
-            }
-            rpos_ += size;
-            size_ -= size;
-            return size_;
-        }
-
-        /*********************************************************************************
-         * Get data
-         ********************************************************************************/
-        PUMP_INLINE const block_t *data() const {
-            if (size_ > 0) {
-                return raw_ + rpos_;
-            }
+        return obj;
+    }
+    static io_buffer *create_by_copy(const block_t *b, uint32_t size) {
+        INLINE_OBJECT_CREATE(obj, io_buffer, ())
+        if (obj != nullptr && !obj->__init_by_copy(b, size)) {
+            INLINE_OBJECT_DELETE(obj, io_buffer)
             return nullptr;
         }
 
-        /*********************************************************************************
-         * Get data size
-         ********************************************************************************/
-        PUMP_INLINE uint32_t size() const {
-            return size_;
+        obj->size_ = size;
+
+        return obj;
+    }
+    static io_buffer *create_by_refence(const block_t *b, uint32_t size) {
+        INLINE_OBJECT_CREATE(obj, io_buffer, ())
+        if (obj != nullptr && !obj->__init_by_reference(b, size)) {
+            INLINE_OBJECT_DELETE(obj, io_buffer)
+            return nullptr;
         }
 
-        /*********************************************************************************
-         * Get string
-         ********************************************************************************/
-        PUMP_INLINE std::string string() const {
-            if (raw_ == nullptr || size_ == 0) {
-                return std::string();
-            }
-            return std::string(raw_ + rpos_, size_);
+        obj->size_ = size;
+
+        return obj;
+    }
+
+    /*********************************************************************************
+     * Write block
+     ********************************************************************************/
+    bool write(const block_t *b, uint32_t size);
+    bool write(block_t b);
+
+    /*********************************************************************************
+     * Read block
+     ********************************************************************************/
+    PUMP_INLINE bool read(block_t *b, uint32_t size) {
+        if (size_ < size) {
+            return false;
         }
-
-        /*********************************************************************************
-         * Reset by copy
-         ********************************************************************************/
-        bool reset_by_copy(const block_t *b, uint32_t size);
-
-        /*********************************************************************************
-         * Reset by reference
-         ********************************************************************************/
-        bool reset_by_reference(const block_t *b, uint32_t size);
-
-        /*********************************************************************************
-         * Reset
-         ********************************************************************************/
-        PUMP_INLINE void reset() {
-            size_ = rpos_ = 0;
+        memcpy(b, raw_ + rpos_, size);
+        rpos_ += size;
+        size_ -= size;
+        return true;
+    }
+    PUMP_INLINE bool read(block_t *b) {
+        if (size_ < 1) {
+            return false;
         }
+        *b = *(raw_ + rpos_);
+        rpos_++;
+        size_--;
+        return true;
+    }
 
-        /*********************************************************************************
-         * Reference
-         ********************************************************************************/
-        PUMP_INLINE void refer() {
-            count_.fetch_add(1);
+    /*********************************************************************************
+     * Shift
+     * If success return current size, else return zero.
+     ********************************************************************************/
+    PUMP_INLINE int32_t shift(int32_t size) {
+        PUMP_ASSERT(int32_t(size_) >= size);
+        if (size_ == 0 || int32_t(size_) < size) {
+            return -1;
         }
+        rpos_ += size;
+        size_ -= size;
+        return size_;
+    }
 
-        /*********************************************************************************
-         * Free reference
-         ********************************************************************************/
-        PUMP_INLINE void unrefer() {
-            if (count_.fetch_sub(1) == 1) {
-                INLINE_OBJECT_DELETE(this, io_buffer);
-            }
+    /*********************************************************************************
+     * Get data
+     ********************************************************************************/
+    PUMP_INLINE const block_t *data() const {
+        if (size_ > 0) {
+            return raw_ + rpos_;
         }
+        return nullptr;
+    }
 
-      private:
-        /*********************************************************************************
-         * Constructor
-         ********************************************************************************/
-        io_buffer() noexcept
-          : size_(0), 
-            rpos_(0), 
-            count_(1) {
+    /*********************************************************************************
+     * Get data size
+     ********************************************************************************/
+    PUMP_INLINE uint32_t size() const {
+        return size_;
+    }
+
+    /*********************************************************************************
+     * Get string
+     ********************************************************************************/
+    PUMP_INLINE std::string string() const {
+        if (raw_ == nullptr || size_ == 0) {
+            return std::string();
         }
+        return std::string(raw_ + rpos_, size_);
+    }
 
-        /*********************************************************************************
-         * Copy constructor
-         ********************************************************************************/
-        io_buffer(const io_buffer&) = delete;
+    /*********************************************************************************
+     * Reset by copy
+     ********************************************************************************/
+    bool reset_by_copy(const block_t *b, uint32_t size);
 
-        /*********************************************************************************
-         * Deconstructor
-         ********************************************************************************/
-        virtual ~io_buffer() {
+    /*********************************************************************************
+     * Reset by reference
+     ********************************************************************************/
+    bool reset_by_reference(const block_t *b, uint32_t size);
+
+    /*********************************************************************************
+     * Reset
+     ********************************************************************************/
+    PUMP_INLINE void reset() {
+        size_ = rpos_ = 0;
+    }
+
+    /*********************************************************************************
+     * Reference
+     ********************************************************************************/
+    PUMP_INLINE void refer() {
+        count_.fetch_add(1);
+    }
+
+    /*********************************************************************************
+     * Free reference
+     ********************************************************************************/
+    PUMP_INLINE void unrefer() {
+        if (count_.fetch_sub(1) == 1) {
+            INLINE_OBJECT_DELETE(this, io_buffer);
         }
+    }
 
-        /*********************************************************************************
-         * Assign operator
-         ********************************************************************************/
-        io_buffer& operator=(const io_buffer&) = delete;
+  private:
+    /*********************************************************************************
+     * Constructor
+     ********************************************************************************/
+    io_buffer() noexcept : size_(0), rpos_(0), count_(1) {}
 
-      private:
-        // Data size
-        uint32_t size_;
-        // Data read pos
-        uint32_t rpos_;
-        // Reference count
-        std::atomic_int count_;
-    };
+    /*********************************************************************************
+     * Copy constructor
+     ********************************************************************************/
+    io_buffer(const io_buffer &) = delete;
+
+    /*********************************************************************************
+     * Deconstructor
+     ********************************************************************************/
+    virtual ~io_buffer() {}
+
+    /*********************************************************************************
+     * Assign operator
+     ********************************************************************************/
+    io_buffer &operator=(const io_buffer &) = delete;
+
+  private:
+    // Data size
+    uint32_t size_;
+    // Data read pos
+    uint32_t rpos_;
+    // Reference count
+    std::atomic_int count_;
+};
 
 }  // namespace toolkit
 }  // namespace pump

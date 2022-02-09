@@ -24,119 +24,95 @@
 namespace pump {
 namespace toolkit {
 
-    class LIB_PUMP bits_reader {
+class LIB_PUMP bits_reader {
+  public:
+    /*********************************************************************************
+     * Constructor
+     ********************************************************************************/
+    bits_reader(const uint8_t *b, uint32_t size) noexcept;
 
-      public:
-        /*********************************************************************************
-         * Constructor
-         ********************************************************************************/
-        bits_reader(
-            const uint8_t *b, 
-            uint32_t size) noexcept;
+    /*********************************************************************************
+     * Deconstructor
+     ********************************************************************************/
+    ~bits_reader() = default;
 
-        /*********************************************************************************
-         * Deconstructor
-         ********************************************************************************/
-        ~bits_reader() = default;
+    /*********************************************************************************
+     * Read into integer
+     ********************************************************************************/
+    bool read(uint32_t bc, uint8_t *val);
+    bool read(uint32_t bc, uint16_t *val);
+    bool read(uint32_t bc, uint32_t *val);
+    bool read(uint32_t bc, uint64_t *val);
 
-        /*********************************************************************************
-         * Read into integer
-         ********************************************************************************/
-        bool read(
-            uint32_t bc, 
-            uint8_t *val);
-        bool read(
-            uint32_t bc, 
-            uint16_t *val);
-        bool read(
-            uint32_t bc, 
-            uint32_t *val);
-        bool read(
-            uint32_t bc, 
-            uint64_t *val);
+    /*********************************************************************************
+     * Get read bit count
+     ********************************************************************************/
+    PUMP_INLINE uint32_t read_bc() const {
+        return read_bc_;
+    }
 
-        /*********************************************************************************
-         * Get read bit count
-         ********************************************************************************/
-        PUMP_INLINE uint32_t read_bc() const {
-            return read_bc_;
-        }
+  private:
+    /*********************************************************************************
+     * Read one byte
+     * Bit count has to be less than 8.
+     ********************************************************************************/
+    uint8_t __read_from_byte(uint32_t bc);
 
-      private:
-        /*********************************************************************************
-         * Read one byte
-         * Bit count has to be less than 8.
-         ********************************************************************************/
-        uint8_t __read_from_byte(uint32_t bc);
+  private:
+    // Unread bit count
+    uint32_t unread_bc_;
+    // Read bit count
+    uint32_t read_bc_;
+    // Byte left bit count
+    uint32_t byte_left_bc_;
+    // Current byte pos
+    const uint8_t *byte_pos_;
+};
 
-      private:
-        // Unread bit count
-        uint32_t unread_bc_;
-        // Read bit count
-        uint32_t read_bc_;
-        // Byte left bit count
-        uint32_t byte_left_bc_;
-        // Current byte pos
-        const uint8_t *byte_pos_;
-    };
+class LIB_PUMP bits_writer {
+  public:
+    /*********************************************************************************
+     * Constructor
+     ********************************************************************************/
+    bits_writer(uint8_t *b, uint32_t size) noexcept;
 
-    class LIB_PUMP bits_writer {
+    /*********************************************************************************
+     * Deconstructor
+     ********************************************************************************/
+    ~bits_writer() = default;
 
-      public:
-        /*********************************************************************************
-         * Constructor
-         ********************************************************************************/
-        bits_writer(
-            uint8_t *b, 
-            uint32_t size) noexcept;
+    /*********************************************************************************
+     * Write integer
+     ********************************************************************************/
+    bool write(uint32_t bc, uint8_t val);
+    bool write(uint32_t bc, uint16_t val);
+    bool write(uint32_t bc, uint32_t val);
+    bool write(uint32_t bc, uint64_t val);
 
-        /*********************************************************************************
-         * Deconstructor
-         ********************************************************************************/
-        ~bits_writer() = default;
+    /*********************************************************************************
+     * Get written bit count
+     ********************************************************************************/
+    PUMP_INLINE uint32_t written_bc() const {
+        return written_bc_;
+    }
 
-        /*********************************************************************************
-         * Write integer
-         ********************************************************************************/
-        bool write(
-            uint32_t bc, 
-            uint8_t val);
-        bool write(
-            uint32_t bc, 
-            uint16_t val);
-        bool write(
-            uint32_t bc, 
-            uint32_t val);
-        bool write(
-            uint32_t bc, 
-            uint64_t val);
+  private:
+    /*********************************************************************************
+     * Read one byte
+     * Bit count has to be less than 8
+     ********************************************************************************/
+    void __write_to_byte(uint32_t bc, uint8_t val);
 
-        /*********************************************************************************
-         * Get written bit count
-         ********************************************************************************/
-        PUMP_INLINE uint32_t written_bc() const {
-            return written_bc_;
-        }
-
-      private:
-        /*********************************************************************************
-         * Read one byte
-         * Bit count has to be less than 8
-         ********************************************************************************/
-        void __write_to_byte(
-            uint32_t bc, 
-            uint8_t val);
-
-      private:
-        // Unwritten bit count
-        uint32_t unwritten_bc_;
-        // Written bit count
-        uint32_t written_bc_;
-        // Left bit count
-        uint32_t byte_left_bc_;
-        // Current byte pos
-        uint8_t *byte_pos_;
-    };
+  private:
+    // Unwritten bit count
+    uint32_t unwritten_bc_;
+    // Written bit count
+    uint32_t written_bc_;
+    // Left bit count
+    uint32_t byte_left_bc_;
+    // Current byte pos
+    uint8_t *byte_pos_;
+};
 
 }  // namespace toolkit
 }  // namespace pump

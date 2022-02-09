@@ -22,56 +22,54 @@
 namespace pump {
 namespace poll {
 
-    class epoll_poller
-      : public poller {
+class epoll_poller : public poller {
+  public:
+    /*********************************************************************************
+     * Constructor
+     ********************************************************************************/
+    epoll_poller() noexcept;
 
-      public:
-        /*********************************************************************************
-         * Constructor
-         ********************************************************************************/
-        epoll_poller() noexcept;
+    /*********************************************************************************
+     * Deconstructor
+     ********************************************************************************/
+    virtual ~epoll_poller();
 
-        /*********************************************************************************
-         * Deconstructor
-         ********************************************************************************/
-        virtual ~epoll_poller();
+  protected:
+    /*********************************************************************************
+     * Install channel tracker for derived class
+     ********************************************************************************/
+    virtual bool __install_channel_tracker(channel_tracker *tracker) override;
 
-      protected:
-        /*********************************************************************************
-         * Install channel tracker for derived class
-         ********************************************************************************/
-        virtual bool __install_channel_tracker(channel_tracker *tracker) override;
+    /*********************************************************************************
+     * Uninstall append channel for derived class
+     ********************************************************************************/
+    virtual bool __uninstall_channel_tracker(channel_tracker *tracker) override;
 
-        /*********************************************************************************
-         * Uninstall append channel for derived class
-         ********************************************************************************/
-        virtual bool __uninstall_channel_tracker(channel_tracker *tracker) override;
+    /*********************************************************************************
+     * Awake channel tracker for derived class
+     ********************************************************************************/
+    virtual bool __resume_channel_tracker(channel_tracker *tracker) override;
 
-        /*********************************************************************************
-         * Awake channel tracker for derived class
-         ********************************************************************************/
-        virtual bool __resume_channel_tracker(channel_tracker *tracker) override;
+    /*********************************************************************************
+     * Poll
+     ********************************************************************************/
+    virtual void __poll(int32_t timeout) override;
 
-        /*********************************************************************************
-         * Poll
-         ********************************************************************************/
-        virtual void __poll(int32_t timeout) override;
+  private:
+    /*********************************************************************************
+     * Dispatch pending event
+     ********************************************************************************/
+    void __dispatch_pending_event(int32_t count);
 
-      private:
-        /*********************************************************************************
-         * Dispatch pending event
-         ********************************************************************************/
-        void __dispatch_pending_event(int32_t count);
+  private:
+    int32_t fd_;
 
-      private:
-        int32_t fd_;
+    void *events_;
+    int32_t max_event_count_;
+    std::atomic_int32_t cur_event_count_;
+};
 
-        void *events_;
-        int32_t max_event_count_;
-        std::atomic_int32_t cur_event_count_;
-    };
-
-    DEFINE_ALL_POINTER_TYPE(epoll_poller);
+DEFINE_SMART_POINTER_TYPE(epoll_poller);
 
 }  // namespace poll
 }  // namespace pump

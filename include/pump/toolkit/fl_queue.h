@@ -24,111 +24,103 @@
 namespace pump {
 namespace toolkit {
 
-    template <typename Q>
-    class LIB_PUMP fl_queue
-      : public noncopyable {
+template <typename Q> class LIB_PUMP fl_queue : public noncopyable {
+  public:
+    // Inner queue type
+    typedef Q inner_queue_type;
+    // Queue element type
+    typedef typename inner_queue_type::element_type element_type;
 
-      public:
-        // Inner queue type
-        typedef Q inner_queue_type;
-        // Queue element type
-        typedef typename inner_queue_type::element_type element_type;
+  public:
+    /*********************************************************************************
+     * Constructor
+     ********************************************************************************/
+    fl_queue(uint32_t size = 1024) : queue_(size) {}
 
-      public:
-        /*********************************************************************************
-         * Constructor
-         ********************************************************************************/
-        fl_queue(uint32_t size = 1024)
-          : queue_(size) {
+    /*********************************************************************************
+     * Enqueue
+     ********************************************************************************/
+    PUMP_INLINE bool enqueue(const element_type &item) {
+        if (PUMP_LIKELY(queue_.push(item))) {
+            semaphone_.signal();
+            return true;
         }
+        return false;
+    }
 
-        /*********************************************************************************
-         * Enqueue
-         ********************************************************************************/
-        PUMP_INLINE bool enqueue(const element_type& item) {
-            if (PUMP_LIKELY(queue_.push(item))) {
-                semaphone_.signal();
-                return true;
+    PUMP_INLINE bool enqueue(element_type &&item) {
+        if (PUMP_LIKELY(queue_.push(item))) {
+            semaphone_.signal();
+            return true;
+        }
+        return false;
+    }
+
+    /*********************************************************************************
+     * Dequeue
+     * This will block until dequeue success.
+     ********************************************************************************/
+    template <typename U> bool dequeue(U &item) {
+        if (semaphone_.wait()) {
+            while (!queue_.pop(item)) {
+                continue;
             }
-            return false;
+            return true;
         }
+        return false;
+    }
 
-        PUMP_INLINE bool enqueue(element_type&& item) {
-            if (PUMP_LIKELY(queue_.push(item))) {
-                semaphone_.signal();
-                return true;
+    /*********************************************************************************
+     * Dequeue
+     * This will block until dequeue success or timeout.
+     ********************************************************************************/
+    template <typename U> bool dequeue(U &item, uint64_t timeout) {
+        if (semaphone_.wait(timeout)) {
+            while (!queue_.pop(item)) {
+                continue;
             }
-            return false;
+            return true;
         }
+        return false;
+    }
 
-        /*********************************************************************************
-         * Dequeue
-         * This will block until dequeue success.
-         ********************************************************************************/
-        template <typename U>
-        bool dequeue(U& item) {
-            if (semaphone_.wait()) {
-                while (!queue_.pop(item)) {
-                    continue;
-                }
-                return true;
-            }
-            return false;
-        }
-
-        /*********************************************************************************
-         * Dequeue
-         * This will block until dequeue success or timeout.
-         ********************************************************************************/
-        template <typename U>
-        bool dequeue(U& item, uint64_t timeout) {
-            if (semaphone_.wait(timeout)) {
-                while (!queue_.pop(item)) {
-                    continue;
-                }
-                return true;
-            }
-            return false;
-        }
-
-        template <typename U, typename Rep, typename Period>
-        bool dequeue(U& item, const std::chrono::duration<Rep, Period>& timeout) {
-            if (semaphone_.wait(
+    template <typename U, typename Rep, typename Period>
+    bool dequeue(U &item, const std::chrono::duration<Rep, Period> &timeout) {
+        if (semaphone_.wait(
                 std::chrono::duration_cast<std::chrono::microseconds>(timeout).count())) {
-                while (!queue_.pop(item)) {
-                    continue;
-                }
-                return true;
+            while (!queue_.pop(item)) {
+                continue;
             }
-            return false;
+            return true;
         }
+        return false;
+    }
 
-        /*********************************************************************************
-         * Try dequeue
-         * This will return immediately.
-         ********************************************************************************/
-        template <typename U>
-        bool try_dequeue(U& item) {
-            if (semaphone_.try_wait()) {
-                while (!queue_.pop(item)) {
-                    continue;
-                }
-                return true;
+    /*********************************************************************************
+     * Try dequeue
+     * This will return immediately.
+     ********************************************************************************/
+    template <typename U> bool try_dequeue(U &item) {
+        if (semaphone_.try_wait()) {
+            while (!queue_.pop(item)) {
+                continue;
             }
-            return false;
+            return true;
         }
+        return false;
+    }
 
-        /*********************************************************************************
-         * Empty
-         ********************************************************************************/
-        PUMP_INLINE bool empty() {
-            return queue_.empty();
-        }
+    /*********************************************************************************
+     * Empty
+     ********************************************************************************/
+    PUMP_INLINE bool empty() {
+        return queue_.empty();
+    }
 
-    private:
-        inner_queue_type queue_;
-        light_semaphore semaphone_;
-    };
+  private:
+    inner_queue_type queue_;
+    light_semaphore semaphone_;
+};
 
 }  // namespace toolkit
 }  // namespace pump

@@ -23,41 +23,39 @@ namespace pump {
 namespace transport {
 namespace flow {
 
-    class flow_tcp_acceptor
-      : public flow_base {
+class flow_tcp_acceptor : public flow_base {
+  public:
+    /*********************************************************************************
+     * Constructor
+     ********************************************************************************/
+    flow_tcp_acceptor() noexcept;
 
-      public:
-        /*********************************************************************************
-         * Constructor
-         ********************************************************************************/
-        flow_tcp_acceptor() noexcept;
+    /*********************************************************************************
+     * Deconstructor
+     ********************************************************************************/
+    virtual ~flow_tcp_acceptor();
 
-        /*********************************************************************************
-         * Deconstructor
-         ********************************************************************************/
-        virtual ~flow_tcp_acceptor();
+    /*********************************************************************************
+     * Init flow
+     * Return results:
+     *     ERROR_OK    => success
+     *     ERROR_FAULT => error
+     ********************************************************************************/
+    error_code init(poll::channel_sptr &&ch, const address &listen_address);
 
-        /*********************************************************************************
-         * Init flow
-         * Return results:
-         *     ERROR_OK    => success
-         *     ERROR_FAULT => error
-         ********************************************************************************/
-        error_code init(poll::channel_sptr &&ch, const address &listen_address);
+    /*********************************************************************************
+     * Accept
+     ********************************************************************************/
+    pump_socket accept(address *local_address, address *remote_address);
 
-        /*********************************************************************************
-         * Accept
-         ********************************************************************************/
-        pump_socket accept(address *local_address, address *remote_address);
+  private:
+    // IPV6
+    bool is_ipv6_;
 
-      private:
-        // IPV6
-        bool is_ipv6_;
-
-        // Accept buffer
-        toolkit::io_buffer *iob_;
-    };
-    DEFINE_ALL_POINTER_TYPE(flow_tcp_acceptor);
+    // Accept buffer
+    toolkit::io_buffer *iob_;
+};
+DEFINE_SMART_POINTER_TYPE(flow_tcp_acceptor);
 
 }  // namespace flow
 }  // namespace transport

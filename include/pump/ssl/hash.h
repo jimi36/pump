@@ -24,63 +24,56 @@
 namespace pump {
 namespace ssl {
 
-    typedef int64_t hash_algorithm;
-    const hash_algorithm HASH_UNKNOWN = 0;
-    const hash_algorithm HASH_SHA1    = 1;
-    const hash_algorithm HASH_SHA224  = 2;
-    const hash_algorithm HASH_SHA256  = 3;
-    const hash_algorithm HASH_SHA384  = 4;
-    const hash_algorithm HASH_SHA512  = 5;
+typedef int64_t hash_algorithm;
+const hash_algorithm HASH_UNKNOWN = 0;
+const hash_algorithm HASH_SHA1 = 1;
+const hash_algorithm HASH_SHA224 = 2;
+const hash_algorithm HASH_SHA256 = 3;
+const hash_algorithm HASH_SHA384 = 4;
+const hash_algorithm HASH_SHA512 = 5;
 
-    struct hash_context;
+struct hash_context;
 
-    /*********************************************************************************
-     * Hash digest length.
-      ********************************************************************************/
-    int32_t hash_digest_length(hash_algorithm algo);
+/*********************************************************************************
+ * Hash digest length.
+ ********************************************************************************/
+int32_t hash_digest_length(hash_algorithm algo);
 
-    /*********************************************************************************
-     * Create hash context
-     ********************************************************************************/
-    hash_context* create_hash_context(hash_algorithm algo);
+/*********************************************************************************
+ * Create hash context
+ ********************************************************************************/
+hash_context *create_hash_context(hash_algorithm algo);
 
-    /*********************************************************************************
-     * Free hash context
-     ********************************************************************************/
-    void free_hash_context(hash_context *ctx);
+/*********************************************************************************
+ * Free hash context
+ ********************************************************************************/
+void free_hash_context(hash_context *ctx);
 
-    /*********************************************************************************
-     * Reset hash context
-     ********************************************************************************/
-    void reset_hash_context(hash_context *ctx);
+/*********************************************************************************
+ * Reset hash context
+ ********************************************************************************/
+void reset_hash_context(hash_context *ctx);
 
-    /*********************************************************************************
-     * Update ash 
-     ********************************************************************************/
-    bool update_hash(hash_context *ctx, const std::string &data);
-    bool update_hash(
-        hash_context *ctx, 
-        const uint8_t *data, 
-        int32_t data_len);
+/*********************************************************************************
+ * Update ash
+ ********************************************************************************/
+bool update_hash(hash_context *ctx, const std::string &data);
+bool update_hash(hash_context *ctx, const uint8_t *data, int32_t data_len);
 
-    /*********************************************************************************
-     * Sum hash
-     ********************************************************************************/
-    std::string sum_hash(hash_context *ctx);
-    bool sum_hash(
-        hash_context *ctx, 
-        uint8_t *out, 
-        int32_t out_len);
+/*********************************************************************************
+ * Sum hash
+ ********************************************************************************/
+std::string sum_hash(hash_context *ctx);
+bool sum_hash(hash_context *ctx, uint8_t *out, int32_t out_len);
 
-    /*********************************************************************************
-     * Sum hmac
-     ********************************************************************************/
-    std::string sum_hmac(
-        hash_algorithm algo,
-        const std::string &key,
-        const std::string &input);
+/*********************************************************************************
+ * Sum hmac
+ ********************************************************************************/
+std::string sum_hmac(hash_algorithm algo,
+                     const std::string &key,
+                     const std::string &input);
 
-}
-}
+}  // namespace ssl
+}  // namespace pump
 
 #endif

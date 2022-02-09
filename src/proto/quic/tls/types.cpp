@@ -22,55 +22,55 @@ namespace proto {
 namespace quic {
 namespace tls {
 
-    void init_connection_session(connection_session *session) {
-        session->version = TLS_VERSION_UNKNOWN;
+void init_connection_session(connection_session *session) {
+    session->version = TLS_VERSION_UNKNOWN;
+    session->cipher_suite_ctx = nullptr;
+    session->ecdhe_ctx = nullptr;
+    session->enable_zero_rtt = false;
+}
+
+void reset_connection_session(connection_session *session) {
+    session->version = TLS_VERSION_UNKNOWN;
+
+    if (session->cipher_suite_ctx) {
+        object_delete(session->cipher_suite_ctx);
         session->cipher_suite_ctx = nullptr;
+    }
+
+    if (session->ecdhe_ctx) {
+        ssl::delete_ecdhe_context(session->ecdhe_ctx);
         session->ecdhe_ctx = nullptr;
-        session->enable_zero_rtt = false;
     }
 
-    void reset_connection_session(connection_session *session) {
-        session->version = TLS_VERSION_UNKNOWN;
+    session->enable_zero_rtt = false;
 
-        if (session->cipher_suite_ctx) {
-            object_delete(session->cipher_suite_ctx);
-            session->cipher_suite_ctx = nullptr;
-        }
+    session->server_name.clear();
 
-        if (session->ecdhe_ctx) {
-            ssl::delete_ecdhe_context(session->ecdhe_ctx);
-            session->ecdhe_ctx = nullptr;
-        }
+    session->alpn.clear();
 
-        session->enable_zero_rtt = false;
+    session->ocsp_staple.clear();
 
-        session->server_name.clear();
+    session->scts.clear();
 
-        session->alpn.clear();
+    session->master_secret.clear();
+    session->client_secret.clear();
+    session->server_secret.clear();
+    session->traffic_secret.clear();
+    session->handshake_secret.clear();
+    session->export_master_secret.clear();
 
-        session->ocsp_staple.clear();
-
-        session->scts.clear();
-
-        session->master_secret.clear();
-        session->client_secret.clear();
-        session->server_secret.clear();
-        session->traffic_secret.clear();
-        session->handshake_secret.clear();
-        session->export_master_secret.clear();
-
-        for (auto cert : session->certs) {
-            ssl::free_x509_certificate(cert);
-        }
-        session->certs.clear();
-
-        for (auto cert : session->peer_certs) {
-            ssl::free_x509_certificate(cert);
-        }
-        session->peer_certs.clear();
+    for (auto cert : session->certs) {
+        ssl::free_x509_certificate(cert);
     }
+    session->certs.clear();
 
-} // namespace tls
-} // namespace quic
-} // namespace proto
-} // namespace pump
+    for (auto cert : session->peer_certs) {
+        ssl::free_x509_certificate(cert);
+    }
+    session->peer_certs.clear();
+}
+
+}  // namespace tls
+}  // namespace quic
+}  // namespace proto
+}  // namespace pump
