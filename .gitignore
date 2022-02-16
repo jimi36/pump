@@ -6,13 +6,11 @@
 *.dll
 
 # Cmake temporary header files
-include/pump/config.h
+include/pump/build.h
 
 # Include path
 include/*
 !include/pump
-!include/function
-!include/concurrentqueue
 
 # Library path
 lib/*
