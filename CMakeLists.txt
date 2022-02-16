@@ -10,7 +10,7 @@ PROJECT(pump_main)
 
 SET(pump_MAJOR_VERSION 1)
 SET(pump_MINOR_VERSION 3)
-SET(pump_BUILD_VERSION 2)
+SET(pump_BUILD_VERSION 3)
 
 # Specifies root dir
 SET(ROOT_DIR ${PROJECT_SOURCE_DIR})
