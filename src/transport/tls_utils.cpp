@@ -15,6 +15,7 @@
  */
 
 #include "pump/debug.h"
+#include "pump/memory.h"
 #include "pump/transport/tls_utils.h"
 
 #if defined(PUMP_HAVE_OPENSSL)
@@ -32,7 +33,7 @@ extern "C" {
 namespace pump {
 namespace transport {
 
-tls_credentials create_tls_client_credentials() {
+tls_credentials new_client_tls_credentials() {
 #if defined(PUMP_HAVE_GNUTLS)
     gnutls_certificate_credentials_t xcred;
     if (gnutls_certificate_allocate_credentials(&xcred) != 0) {
@@ -44,8 +45,8 @@ tls_credentials create_tls_client_credentials() {
 #elif defined(PUMP_HAVE_OPENSSL)
     SSL_CTX *xcred = SSL_CTX_new(TLS_client_method());
     if (xcred == nullptr) {
-        PUMP_WARN_LOG(
-            "tls_utils: create tls_client certificate failed for SSL_CTX_new failed");
+        PUMP_WARN_LOG("tls_utils: create tls_client certificate failed for "
+                      "SSL_CTX_new failed");
         return nullptr;
     }
     SSL_CTX_set_options(xcred, SSL_EXT_TLS1_3_ONLY);
@@ -55,9 +56,9 @@ tls_credentials create_tls_client_credentials() {
 #endif
 }
 
-tls_credentials create_tls_credentials_from_file(bool client,
-                                                 const std::string &cert,
-                                                 const std::string &key) {
+tls_credentials load_tls_credentials_from_file(bool client,
+                                               const std::string &cert,
+                                               const std::string &key) {
 #if defined(PUMP_HAVE_GNUTLS)
     gnutls_certificate_credentials_t xcred;
     int32_t ret = gnutls_certificate_allocate_credentials(&xcred);
@@ -86,8 +87,10 @@ tls_credentials create_tls_credentials_from_file(bool client,
         return nullptr;
     }
 
-    if (SSL_CTX_use_certificate_file(xcred, cert.c_str(), SSL_FILETYPE_PEM) != 1 ||
-        SSL_CTX_use_PrivateKey_file(xcred, key.c_str(), SSL_FILETYPE_PEM) != 1) {
+    if (SSL_CTX_use_certificate_file(xcred, cert.c_str(), SSL_FILETYPE_PEM) !=
+            1 ||
+        SSL_CTX_use_PrivateKey_file(xcred, key.c_str(), SSL_FILETYPE_PEM) !=
+            1) {
         SSL_CTX_free(xcred);
         return nullptr;
     }
@@ -97,9 +100,9 @@ tls_credentials create_tls_credentials_from_file(bool client,
 #endif
 }
 
-tls_credentials create_tls_credentials_from_memory(bool client,
-                                                   const std::string &cert,
-                                                   const std::string &key) {
+tls_credentials load_tls_credentials_from_memory(bool client,
+                                                 const std::string &cert,
+                                                 const std::string &key) {
 #if defined(PUMP_HAVE_GNUTLS)
     gnutls_certificate_credentials_t xcred == nullptr;
     if (gnutls_certificate_allocate_credentials(&xcred) != 0) {
@@ -178,17 +181,20 @@ tls_credentials create_tls_credentials_from_memory(bool client,
 #endif
 }
 
-void destory_tls_credentials(tls_credentials xcred) {
+void delete_tls_credentials(tls_credentials xcred) {
     if (xcred != nullptr) {
 #if defined(PUMP_HAVE_GNUTLS)
-        gnutls_certificate_free_credentials((gnutls_certificate_credentials_t)xcred);
+        gnutls_certificate_free_credentials(
+            (gnutls_certificate_credentials_t)xcred);
 #elif defined(PUMP_HAVE_OPENSSL)
         SSL_CTX_free((SSL_CTX *)xcred);
 #endif
     }
 }
 
-tls_session *create_tls_session(bool client, pump_socket fd, tls_credentials xcred) {
+tls_session *new_tls_session(bool client,
+                             pump_socket fd,
+                             tls_credentials xcred) {
 #if defined(PUMP_HAVE_GNUTLS)
     tls_session *session = object_create<tls_session>();
     if (session == nullptr) {
@@ -236,7 +242,7 @@ tls_session *create_tls_session(bool client, pump_socket fd, tls_credentials xcr
 #endif
 }
 
-void destory_tls_session(tls_session *session) {
+void delete_tls_session(tls_session *session) {
     if (session == nullptr) {
         return;
     }
@@ -257,7 +263,8 @@ int32_t tls_handshake(tls_session *session) {
     if (ret == 0) {
         return TLS_HANDSHAKE_OK;
     } else if (gnutls_error_is_fatal(ret) == 0) {
-        if (gnutls_record_get_direction((gnutls_session_t)session->ssl_ctx) == 0) {
+        if (gnutls_record_get_direction((gnutls_session_t)session->ssl_ctx) ==
+            0) {
             return TLS_HANDSHAKE_READ;
         } else {
             return TLS_HANDSHAKE_SEND;
@@ -294,9 +301,10 @@ bool tls_has_unread_data(tls_session *session) {
     return false;
 }
 
-int32_t tls_read(tls_session *session, block_t *b, int32_t size) {
+int32_t tls_read(tls_session *session, char *b, int32_t size) {
 #if defined(PUMP_HAVE_GNUTLS)
-    int32_t ret = (int32_t)gnutls_read((gnutls_session_t)session->ssl_ctx, b, size);
+    int32_t ret =
+        (int32_t)gnutls_read((gnutls_session_t)session->ssl_ctx, b, size);
     if (PUMP_LIKELY(ret > 0)) {
         return ret;
     } else if (ret == GNUTLS_E_AGAIN) {
@@ -304,23 +312,25 @@ int32_t tls_read(tls_session *session, block_t *b, int32_t size) {
     }
 #elif defined(PUMP_HAVE_OPENSSL)
     int32_t ret = SSL_read((SSL *)session->ssl_ctx, b, size);
-    if (PUMP_LIKELY(ret > 0)) {
+    if (pump_likely(ret > 0)) {
         return ret;
-    } else if (SSL_get_error((SSL *)session->ssl_ctx, ret) == SSL_ERROR_WANT_READ) {
+    } else if (SSL_get_error((SSL *)session->ssl_ctx, ret) ==
+               SSL_ERROR_WANT_READ) {
         return -1;
     }
 #endif
     return 0;
 }
 
-int32_t tls_send(tls_session *session, const block_t *b, int32_t size) {
+int32_t tls_send(tls_session *session, const char *b, int32_t size) {
 #if defined(PUMP_HAVE_GNUTLS)
     return (int32_t)gnutls_write((gnutls_session_t)session->ssl_ctx, b, size);
 #elif defined(PUMP_HAVE_OPENSSL)
     int32_t ret = SSL_write((SSL *)session->ssl_ctx, b, size);
-    if (PUMP_LIKELY(ret > 0)) {
+    if (pump_likely(ret > 0)) {
         return ret;
-    } else if (SSL_get_error((SSL *)session->ssl_ctx, ret) == SSL_ERROR_WANT_WRITE) {
+    } else if (SSL_get_error((SSL *)session->ssl_ctx, ret) ==
+               SSL_ERROR_WANT_WRITE) {
         return -1;
     }
 #endif

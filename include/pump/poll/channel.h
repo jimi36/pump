@@ -38,7 +38,7 @@ const int32_t IO_EVENT_READ = 0x01;   // read event
 const int32_t IO_EVENT_SEND = 0x02;   // send event
 const int32_t IO_EVENT_ERROR = 0x04;  // error event
 
-class LIB_PUMP channel : public toolkit::noncopyable {
+class pump_lib channel : public toolkit::noncopyable {
   public:
     /*********************************************************************************
      * Constructor
@@ -53,28 +53,28 @@ class LIB_PUMP channel : public toolkit::noncopyable {
     /*********************************************************************************
      * Get channel fd
      ********************************************************************************/
-    PUMP_INLINE pump_socket get_fd() const {
+    pump_inline pump_socket get_fd() const {
         return fd_;
     }
 
     /*********************************************************************************
      * Get channel context
      ********************************************************************************/
-    PUMP_INLINE void *get_context() const {
+    pump_inline void *get_context() const {
         return ctx_;
     }
 
     /*********************************************************************************
      * Set context
      ********************************************************************************/
-    PUMP_INLINE void set_context(void *ctx) {
+    pump_inline void set_context(void *ctx) {
         ctx_ = ctx;
     }
 
     /*********************************************************************************
      * Handle io event
      ********************************************************************************/
-    PUMP_INLINE void handle_io_event(int32_t ev) {
+    pump_inline void handle_io_event(int32_t ev) {
         if (ev & IO_EVENT_READ) {
             on_read_event();
         } else if (ev & IO_EVENT_SEND) {
@@ -85,7 +85,7 @@ class LIB_PUMP channel : public toolkit::noncopyable {
     /*********************************************************************************
      * Handle channel event
      ********************************************************************************/
-    PUMP_INLINE void handle_channel_event(int32_t ev) {
+    pump_inline void handle_channel_event(int32_t ev) {
         on_channel_event(ev);
     }
 
@@ -93,7 +93,7 @@ class LIB_PUMP channel : public toolkit::noncopyable {
     /*********************************************************************************
      * Set channel fd
      ********************************************************************************/
-    PUMP_INLINE void __set_fd(pump_socket fd) {
+    pump_inline void __set_fd(pump_socket fd) {
         fd_ = fd;
     }
 
@@ -136,7 +136,7 @@ const int32_t TRACKER_STATE_UNTRACK = 0x03;
 
 class poller;
 
-class channel_tracker : public toolkit::noncopyable {
+class pump_lib channel_tracker : public toolkit::noncopyable {
   public:
     /*********************************************************************************
      * Constructor
@@ -166,7 +166,7 @@ class channel_tracker : public toolkit::noncopyable {
     /*********************************************************************************
      * Start
      ********************************************************************************/
-    PUMP_INLINE bool start() {
+    pump_inline bool start() {
         int32_t expected = TRACKER_STATE_INIT;
         return state_.compare_exchange_strong(expected, TRACKER_STATE_TRACK);
     }
@@ -174,21 +174,21 @@ class channel_tracker : public toolkit::noncopyable {
     /*********************************************************************************
      * Stop
      ********************************************************************************/
-    PUMP_INLINE bool stop() {
+    pump_inline bool stop() {
         return state_.exchange(TRACKER_STATE_STOP) != TRACKER_STATE_STOP;
     }
 
     /*********************************************************************************
      * Get tracked status
      ********************************************************************************/
-    PUMP_INLINE bool is_started() const {
+    pump_inline bool is_started() const {
         return state_.load() > TRACKER_STATE_STOP;
     }
 
     /*********************************************************************************
      * Track
      ********************************************************************************/
-    PUMP_INLINE bool track() {
+    pump_inline bool track() {
         int32_t expected = TRACKER_STATE_UNTRACK;
         return state_.compare_exchange_strong(expected, TRACKER_STATE_TRACK);
     }
@@ -196,7 +196,7 @@ class channel_tracker : public toolkit::noncopyable {
     /*********************************************************************************
      * untrack
      ********************************************************************************/
-    PUMP_INLINE bool untrack() {
+    pump_inline bool untrack() {
         int32_t expected = TRACKER_STATE_TRACK;
         return state_.compare_exchange_strong(expected, TRACKER_STATE_UNTRACK);
     }
@@ -204,21 +204,21 @@ class channel_tracker : public toolkit::noncopyable {
     /*********************************************************************************
      * Get tracked status
      ********************************************************************************/
-    PUMP_INLINE bool is_tracked() const {
+    pump_inline bool is_tracked() const {
         return state_.load() == TRACKER_STATE_TRACK;
     }
 
     /*********************************************************************************
      * Set expected event
      ********************************************************************************/
-    PUMP_INLINE void set_expected_event(int32_t ev) {
+    pump_inline void set_expected_event(int32_t ev) {
         expected_event_ = ev;
     }
 
     /*********************************************************************************
      * Get expected event
      ********************************************************************************/
-    PUMP_INLINE int32_t get_expected_event() const {
+    pump_inline int32_t get_expected_event() const {
         return expected_event_;
     }
 
@@ -226,7 +226,7 @@ class channel_tracker : public toolkit::noncopyable {
      * Get event
      ********************************************************************************/
 #if defined(PUMP_HAVE_EPOLL)
-    PUMP_INLINE struct epoll_event *get_event() {
+    pump_inline struct epoll_event *get_event() {
         return &ev_;
     }
 #elif defined(PUMP_HAVE_IOCP)
@@ -237,14 +237,14 @@ class channel_tracker : public toolkit::noncopyable {
     /*********************************************************************************
      * Get fd
      ********************************************************************************/
-    PUMP_INLINE pump_socket get_fd() const {
+    pump_inline pump_socket get_fd() const {
         return fd_;
     }
 
     /*********************************************************************************
      * Set channel
      ********************************************************************************/
-    PUMP_INLINE void set_channel(channel_sptr &ch) {
+    pump_inline void set_channel(channel_sptr &ch) {
         ch_ = ch;
         fd_ = net::get_base_socket(ch->get_fd());
     }
@@ -252,21 +252,21 @@ class channel_tracker : public toolkit::noncopyable {
     /*********************************************************************************
      * Get channel
      ********************************************************************************/
-    PUMP_INLINE channel_sptr get_channel() {
+    pump_inline channel_sptr get_channel() {
         return ch_.lock();
     }
 
     /*********************************************************************************
      * Set poller
      ********************************************************************************/
-    PUMP_INLINE void set_poller(poller *pr) {
+    pump_inline void set_poller(poller *pr) {
         pr_ = pr;
     }
 
     /*********************************************************************************
      * Get poller
      ********************************************************************************/
-    PUMP_INLINE poller *get_poller() {
+    pump_inline poller *get_poller() {
         return pr_;
     }
 

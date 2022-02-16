@@ -145,7 +145,7 @@ bool connection::start_websocket(const websocket_callbacks &cbs) {
     return true;
 }
 
-bool connection::send(const block_t *b, int32_t size, bool text) {
+bool connection::send(const char *b, int32_t size, bool text) {
     if (!transp_ || !transp_->is_started()) {
         PUMP_WARN_LOG("transport invalid");
         return false;
@@ -168,7 +168,7 @@ bool connection::send(const block_t *b, int32_t size, bool text) {
             PUMP_WARN_LOG("pack websocket frame payload failed");
             break;
         }
-        fm.mask_payload((uint8_t *)(iob->data() - size));
+        fm.mask_payload((char *)(iob->data() - size));
 
         if (transp_->send(iob) != ERROR_OK) {
             PUMP_WARN_LOG("transport send data failed");
@@ -188,11 +188,11 @@ bool connection::is_upgraded() const {
     return state_.load() == CONN_ST_UPGRADED;
 }
 
-void connection::on_read(connection_wptr wptr, const block_t *b, int32_t size) {
+void connection::on_read(connection_wptr wptr, const char *b, int32_t size) {
     auto conn = wptr.lock();
     if (conn) {
         bool cached = false;
-        if (PUMP_UNLIKELY(conn->cache_->size() > 0)) {
+        if (pump_unlikely(conn->cache_->size() > 0)) {
             if (!conn->cache_->write(b, size)) {
                 PUMP_WARN_LOG("cache read data failed");
                 conn->stop();
@@ -320,7 +320,7 @@ bool connection::__read_next_http_packet() {
 
 void connection::__init_websocket_mask() {
     uint32_t mask = random();
-    ws_mask_key_.assign((block_t *)&mask, 4);
+    ws_mask_key_.assign((char *)&mask, 4);
 }
 
 void connection::__send_websocket_ping_frame() {
@@ -350,7 +350,7 @@ void connection::__send_wbesocket_close_frame() {
     iob->unrefer();
 }
 
-int32_t connection::__handle_http_packet(const block_t *b, int32_t size) {
+int32_t connection::__handle_http_packet(const char *b, int32_t size) {
     if (!pending_packet_) {
         PUMP_WARN_LOG("http pending packet invalid");
         return -1;
@@ -367,7 +367,7 @@ int32_t connection::__handle_http_packet(const block_t *b, int32_t size) {
     return parse_size;
 }
 
-int32_t connection::__handle_websocket_frame(const block_t *b, int32_t size) {
+int32_t connection::__handle_websocket_frame(const char *b, int32_t size) {
     auto iob = toolkit::io_buffer::create_by_refence(b, size);
 
     do {
@@ -384,7 +384,7 @@ int32_t connection::__handle_websocket_frame(const block_t *b, int32_t size) {
                 break;
             }
             if (ws_frame_.get_payload_length() > 0) {
-                ws_frame_.mask_payload((uint8_t *)iob->data());
+                ws_frame_.mask_payload((char *)iob->data());
             }
 
             switch (ws_frame_.get_opt()) {

@@ -22,7 +22,7 @@
 namespace pump {
 namespace poll {
 
-class afd_poller : public poller {
+class pump_lib afd_poller : public poller {
   public:
     /*********************************************************************************
      * Constructor

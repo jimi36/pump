@@ -27,14 +27,16 @@ int test1(int loop) {
                 }
             }
             auto end = time::get_clock_milliseconds();
-            printf("single_freelock_list_queue push use %dms category %d\n", int(end - beg), sq.capacity());
+            printf("single_freelock_list_queue push use %dms category %d\n",
+                   int(end - beg),
+                   sq.capacity());
         }
-        });
+    });
 
     auto beg = time::get_clock_milliseconds();
     for (int i = 0; i < loop;) {
         if (sq.pop(val)) {
-            //if (val != i) {
+            // if (val != i) {
             //    printf("single_freelock_list_queue pop %d != %d\n", val, i);
             //    return -1;
             //}
@@ -48,11 +50,11 @@ int test1(int loop) {
 
     std::mutex mx;
     std::queue<int> pq;
-    //std::priority_queue<int> ppq;
+    // std::priority_queue<int> ppq;
 
     std::thread t2([&]() {
         auto beg = time::get_clock_milliseconds();
-        for (int i = 0; i < loop;i++) {
+        for (int i = 0; i < loop; i++) {
             mx.lock();
             pq.push(i);
             mx.unlock();
@@ -61,15 +63,13 @@ int test1(int loop) {
         printf("std_queue push use %dms\n", int(end - beg));
     });
 
-
     beg = time::get_clock_milliseconds();
     for (int i = 0; i < loop;) {
         mx.lock();
         if (!pq.empty()) {
-            
             val = pq.front();
             pq.pop();
-            
+
             i++;
         }
         mx.unlock();
@@ -95,7 +95,7 @@ int test1(int loop) {
     beg = time::get_clock_milliseconds();
     for (int i = 0; i < loop;) {
         if (cq.try_dequeue(val)) {
-            //if (val != i) {
+            // if (val != i) {
             //    printf("ReaderWriterQueue pop %d != %d\n", val, i);
             //    return -1;
             //}
@@ -111,7 +111,6 @@ int test1(int loop) {
 }
 
 int test2(int loop) {
-
     int val;
 
     toolkit::fl_mc_queue<int> q(512);
@@ -125,7 +124,9 @@ int test2(int loop) {
             }
         }
         auto end = time::get_clock_milliseconds();
-        printf("multi_freelock_queue push use %dms category %d\n", int(end - beg), q.capacity());
+        printf("multi_freelock_queue push use %dms category %d\n",
+               int(end - beg),
+               q.capacity());
     });
 
     std::thread t2([&]() {
@@ -136,13 +137,15 @@ int test2(int loop) {
             }
         }
         auto end = time::get_clock_milliseconds();
-        printf("multi_freelock_queue push use %dms category %d\n", int(end - beg), q.capacity());
+        printf("multi_freelock_queue push use %dms category %d\n",
+               int(end - beg),
+               q.capacity());
     });
 
     auto beg = time::get_clock_milliseconds();
     for (int i = 0; i < loop;) {
         if (q.pop(val)) {
-            //if (val != i) {
+            // if (val != i) {
             //    printf("multi_freelock_queue pop %d != %d\n", val, i);
             //    return -1;
             //}
@@ -183,7 +186,7 @@ int test2(int loop) {
     beg = time::get_clock_milliseconds();
     for (int i = 0; i < loop;) {
         if (cq.try_dequeue(val)) {
-            //if (val != i) {
+            // if (val != i) {
             //    printf("ReaderWriterQueue pop %d != %d\n", val, i);
             //    return -1;
             //}
@@ -198,12 +201,12 @@ int test2(int loop) {
 
     std::mutex mx;
     std::queue<int> pq;
-    //std::priority_queue<int> ppq;
+    // std::priority_queue<int> ppq;
 
     std::thread t5([&]() {
         int loop2 = loop / 2;
         auto beg = time::get_clock_milliseconds();
-        for (int i = 0; i < loop2;i++) {
+        for (int i = 0; i < loop2; i++) {
             mx.lock();
             pq.push(i);
             mx.unlock();
@@ -214,7 +217,7 @@ int test2(int loop) {
 
     std::thread t6([&]() {
         auto beg = time::get_clock_milliseconds();
-        for (int i = loop / 2; i < loop;i++) {
+        for (int i = loop / 2; i < loop; i++) {
             mx.lock();
             pq.push(i);
             mx.unlock();
@@ -227,10 +230,9 @@ int test2(int loop) {
     for (int i = 0; i < loop;) {
         mx.lock();
         if (!pq.empty()) {
-            
             val = pq.front();
             pq.pop();
-            
+
             i++;
         }
         mx.unlock();

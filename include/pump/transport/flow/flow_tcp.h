@@ -46,7 +46,7 @@ class flow_tcp : public flow_base {
     /*********************************************************************************
      * Read
      ********************************************************************************/
-    PUMP_INLINE int32_t read(block_t *b, int32_t size) {
+    pump_inline int32_t read(char *b, int32_t size) {
         return net::read(fd_, b, size);
     }
 
@@ -72,7 +72,7 @@ class flow_tcp : public flow_base {
     /*********************************************************************************
      * Check there are data to send or not
      ********************************************************************************/
-    PUMP_INLINE bool has_data_to_send() const {
+    pump_inline bool has_data_to_send() const {
         return (send_iob_ && send_iob_->size() > 0);
     }
 

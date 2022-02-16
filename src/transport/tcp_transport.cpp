@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#include "pump/memory.h"
 #include "pump/transport/tcp_transport.h"
 
 namespace pump {
@@ -110,8 +111,8 @@ void tcp_transport::stop() {
             // Wait pending opt count reduce to zero.
             while (pending_opt_cnt_.load(std::memory_order_relaxed) != 0)
                 ;
-            // If no data to send, shutdown transport flow and post channel event,
-            // else shutdown transport flow read and wait finishing send.
+            // If no data to send, shutdown transport flow and post channel
+            // event, else shutdown transport flow read and wait finishing send.
             if (pending_send_size_.load(std::memory_order_acquire) == 0) {
                 __shutdown_transport_flow(SHUT_RDWR);
                 __post_channel_event(shared_from_this(), 0);
@@ -162,7 +163,7 @@ error_code tcp_transport::continue_read() {
     error_code ec = ERROR_OK;
     pending_opt_cnt_.fetch_add(1, std::memory_order_relaxed);
     do {
-        if (PUMP_UNLIKELY(!__is_state(TRANSPORT_STARTED))) {
+        if (pump_unlikely(!__is_state(TRANSPORT_STARTED))) {
             PUMP_WARN_LOG("tcp transport is not started");
             ec = ERROR_UNSTART;
             break;
@@ -181,7 +182,7 @@ error_code tcp_transport::continue_read() {
     return ec;
 }
 
-error_code tcp_transport::send(const block_t *b, int32_t size) {
+error_code tcp_transport::send(const char *b, int32_t size) {
     if (b == nullptr || size <= 0) {
         PUMP_WARN_LOG("sent buffer is invalid");
         return ERROR_INVALID;
@@ -195,14 +196,14 @@ error_code tcp_transport::send(const block_t *b, int32_t size) {
     error_code ec = ERROR_OK;
     pending_opt_cnt_.fetch_add(1, std::memory_order_relaxed);
     do {
-        if (PUMP_UNLIKELY(!__is_state(TRANSPORT_STARTED))) {
+        if (pump_unlikely(!__is_state(TRANSPORT_STARTED))) {
             PUMP_WARN_LOG("tcp transport is not started");
             ec = ERROR_UNSTART;
             break;
         }
 
         auto iob = toolkit::io_buffer::create();
-        if (PUMP_UNLIKELY(iob == nullptr || !iob->write(b, size))) {
+        if (pump_unlikely(iob == nullptr || !iob->write(b, size))) {
             PUMP_WARN_LOG("create or write data to io buffer failed");
             if (iob) {
                 iob->unrefer();
@@ -235,7 +236,7 @@ error_code tcp_transport::send(toolkit::io_buffer *iob) {
     error_code ec = ERROR_OK;
     pending_opt_cnt_.fetch_add(1, std::memory_order_relaxed);
     do {
-        if (PUMP_UNLIKELY(!__is_state(TRANSPORT_STARTED))) {
+        if (pump_unlikely(!__is_state(TRANSPORT_STARTED))) {
             PUMP_WARN_LOG("tcp transport is not started");
             ec = ERROR_UNSTART;
             break;
@@ -264,14 +265,14 @@ void tcp_transport::on_read_event() {
     }
 
     bool disconnected = false;
-    block_t data[MAX_TCP_BUFFER_SIZE];
+    char data[MAX_TCP_BUFFER_SIZE];
     int32_t size = flow_->read(data, MAX_TCP_BUFFER_SIZE);
-    if (PUMP_LIKELY(size > 0)) {
+    if (pump_likely(size > 0)) {
         if (rmode_ == READ_MODE_ONCE) {
             // Change read state from READ_PENDING to READ_NONE.
             if (!__change_read_state(READ_PENDING, READ_NONE)) {
-                PUMP_WARN_LOG(
-                    "change tcp transport's read state from pending to none failed");
+                PUMP_WARN_LOG("change tcp transport's read state from pending "
+                              "to none failed");
                 disconnected = true;
             }
         } else if (!__resume_read_tracker()) {
@@ -295,7 +296,8 @@ void tcp_transport::on_send_event() {
         switch (flow_->send()) {
         case ERROR_OK:
             __reset_last_sent_iobuffer();
-            if (pending_send_size_.fetch_sub(last_send_iob_size_) > last_send_iob_size_) {
+            if (pending_send_size_.fetch_sub(last_send_iob_size_) >
+                last_send_iob_size_) {
                 goto continue_send;
             }
             goto end;
@@ -403,11 +405,12 @@ error_code tcp_transport::__send_once() {
 
     // Try to send the buffer.
     auto ret = flow_->want_to_send(last_send_iob_);
-    if (PUMP_LIKELY(ret == ERROR_OK)) {
+    if (pump_likely(ret == ERROR_OK)) {
         // Reset last sent buffer.
         __reset_last_sent_iobuffer();
         // Reduce pending send size.
-        if (pending_send_size_.fetch_sub(last_send_iob_size_) > last_send_iob_size_) {
+        if (pending_send_size_.fetch_sub(last_send_iob_size_) >
+            last_send_iob_size_) {
             return ERROR_AGAIN;
         }
         return ERROR_OK;

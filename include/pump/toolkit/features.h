@@ -17,8 +17,7 @@
 #ifndef pump_toolkit_features_h
 #define pump_toolkit_features_h
 
-#include "pump/fncb.h"
-#include "pump/platform.h"
+#include "pump/types.h"
 
 namespace pump {
 namespace toolkit {
@@ -26,7 +25,7 @@ namespace toolkit {
 /*********************************************************************************
  * Noncopyable base class
  ********************************************************************************/
-class LIB_PUMP noncopyable {
+class pump_lib noncopyable {
   protected:
     /*********************************************************************************
      * Constructor
@@ -53,7 +52,7 @@ class LIB_PUMP noncopyable {
 /*********************************************************************************
  * Defer class
  ********************************************************************************/
-class LIB_PUMP defer : public noncopyable {
+class pump_lib defer : public noncopyable {
   public:
     /*********************************************************************************
      * Constructor
@@ -77,7 +76,7 @@ class LIB_PUMP defer : public noncopyable {
     /*********************************************************************************
      * Clear
      ********************************************************************************/
-    PUMP_INLINE void clear() {
+    pump_inline void clear() {
         cb_ = pump_function<void()>();
     }
 

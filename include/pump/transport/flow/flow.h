@@ -65,14 +65,14 @@ class flow_base : public toolkit::noncopyable {
     /*********************************************************************************
      * Get fd
      ********************************************************************************/
-    PUMP_INLINE pump_socket get_fd() const {
+    pump_inline pump_socket get_fd() const {
         return fd_;
     }
 
     /*********************************************************************************
      * Check flow valid status
      ********************************************************************************/
-    PUMP_INLINE bool is_valid() const {
+    pump_inline bool is_valid() const {
         return fd_ > 0;
     }
 

@@ -17,7 +17,7 @@
 #ifndef pump_platform_h
 #define pump_platform_h
 
-#include "pump/config.h"
+#include "pump/build.h"
 
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
 #define OS_WINDOWS
@@ -56,20 +56,6 @@
 #include <unistd.h>
 #endif
 
-#if defined(OS_WINDOWS) && defined(pump_EXPORTS)
-#define LIB_PUMP __declspec(dllexport)
-#else
-#define LIB_PUMP
-#endif
-
-#if defined(OS_WINDOWS)
-#define PUMP_INLINE __forceinline
-#elif defined(OS_LINUX)
-#define PUMP_INLINE __inline__ __attribute__((always_inline))
-#else
-#define PUMP_INLINE
-#endif
-
 #if defined(PUMP_HAVE_BIG_ENDIAN) && !defined(BIG_ENDIAN)
 #define BIG_ENDIAN
 #endif
@@ -77,12 +63,26 @@
 #define LITTLE_ENDIAN
 #endif
 
-#if defined(__GNUC__)
-#define PUMP_LIKELY(x) __builtin_expect((x), true)
-#define PUMP_UNLIKELY(x) __builtin_expect((x), false)
+#if defined(OS_WINDOWS) && defined(pump_EXPORTS)
+#define pump_lib __declspec(dllexport)
 #else
-#define PUMP_LIKELY(x) (x)
-#define PUMP_UNLIKELY(x) (x)
+#define pump_lib
+#endif
+
+#if defined(OS_WINDOWS)
+#define pump_inline __forceinline
+#elif defined(OS_LINUX)
+#define pump_inline __inline__ __attribute__((always_inline))
+#else
+#define pump_inline
+#endif
+
+#if defined(__GNUC__)
+#define pump_likely(x) __builtin_expect((x), true)
+#define pump_unlikely(x) __builtin_expect((x), false)
+#else
+#define pump_likely(x) (x)
+#define pump_unlikely(x) (x)
 #endif
 
 #if defined(PUMP_HAVE_STRCPYS)

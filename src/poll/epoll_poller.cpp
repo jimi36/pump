@@ -25,7 +25,8 @@ namespace poll {
 
 #if defined(PUMP_HAVE_EPOLL)
 const static uint32_t EL_TRI_TYPE = 0;  // (EPOLLET)
-const static uint32_t EL_READ_EVENT = (EPOLLONESHOT | EPOLLIN | EPOLLPRI | EPOLLRDHUP);
+const static uint32_t EL_READ_EVENT =
+    (EPOLLONESHOT | EPOLLIN | EPOLLPRI | EPOLLRDHUP);
 const static uint32_t EL_SEND_EVENT = (EPOLLONESHOT | EPOLLOUT);
 const static uint32_t EL_ERR_EVENT = (EPOLLERR | EPOLLHUP);
 #endif
@@ -113,17 +114,20 @@ bool epoll_poller::__resume_channel_tracker(channel_tracker *tracker) {
 void epoll_poller::__poll(int32_t timeout) {
 #if defined(PUMP_HAVE_EPOLL)
     auto cur_event_count = cur_event_count_.load(std::memory_order_relaxed);
-    if (PUMP_UNLIKELY(cur_event_count > max_event_count_)) {
+    if (pump_unlikely(cur_event_count > max_event_count_)) {
         max_event_count_ = cur_event_count;
-        events_ = pump_realloc(events_, sizeof(struct epoll_event) * max_event_count_);
+        events_ = pump_realloc(events_,
+                               sizeof(struct epoll_event) * max_event_count_);
         if (events_ == nullptr) {
             PUMP_ERR_LOG("reallocate epoll events memory failed");
             PUMP_ABORT();
         }
     }
 
-    auto count =
-        ::epoll_wait(fd_, (struct epoll_event *)events_, max_event_count_, timeout);
+    auto count = ::epoll_wait(fd_,
+                              (struct epoll_event *)events_,
+                              max_event_count_,
+                              timeout);
     if (count > 0) {
         __dispatch_pending_event(count);
     }

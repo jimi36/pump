@@ -23,7 +23,7 @@ namespace pump {
 namespace proto {
 namespace http {
 
-class LIB_PUMP response : public packet {
+class pump_lib response : public packet {
   public:
     /*********************************************************************************
      * Constructor
@@ -38,14 +38,14 @@ class LIB_PUMP response : public packet {
     /*********************************************************************************
      * Set status code
      ********************************************************************************/
-    PUMP_INLINE void set_status_code(int32_t status_code) {
+    pump_inline void set_status_code(int32_t status_code) {
         status_code_ = status_code;
     }
 
     /*********************************************************************************
      * Get response status code
      ********************************************************************************/
-    PUMP_INLINE int32_t get_status_code() const {
+    pump_inline int32_t get_status_code() const {
         return status_code_;
     }
 
@@ -54,7 +54,7 @@ class LIB_PUMP response : public packet {
      * This parse http packet, and return parsed size.
      * If parsed error, return -1.
      ********************************************************************************/
-    virtual int32_t parse(const block_t *b, int32_t size) override;
+    virtual int32_t parse(const char *b, int32_t size) override;
 
     /*********************************************************************************
      * Serialize
@@ -66,7 +66,7 @@ class LIB_PUMP response : public packet {
     /*********************************************************************************
      * Parse http start line
      ********************************************************************************/
-    int32_t __parse_start_line(const block_t *b, int32_t size);
+    int32_t __parse_start_line(const char *b, int32_t size);
 
     /*********************************************************************************
      * Serialize http response line

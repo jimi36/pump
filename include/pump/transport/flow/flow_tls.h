@@ -58,21 +58,21 @@ class flow_tls : public flow_base {
      *     TLS_HANDSHAKE_SEND
      *     TLS_HANDSHAKE_ERROR
      ********************************************************************************/
-    PUMP_INLINE int32_t handshake() {
+    pump_inline int32_t handshake() {
         return transport::tls_handshake(session_);
     }
 
     /*********************************************************************************
      * Read
      ********************************************************************************/
-    PUMP_INLINE int32_t read(block_t *b, int32_t size) {
+    pump_inline int32_t read(char *b, int32_t size) {
         return transport::tls_read(session_, b, size);
     }
 
     /*********************************************************************************
      * Check there are data to read or not
      ********************************************************************************/
-    PUMP_INLINE bool has_unread_data() const {
+    pump_inline bool has_unread_data() const {
         PUMP_ASSERT(session_);
         return transport::tls_has_unread_data(session_);
     }
@@ -99,7 +99,7 @@ class flow_tls : public flow_base {
     /*********************************************************************************
      * Check there are data to send or not
      ********************************************************************************/
-    PUMP_INLINE bool has_unsend_data() const {
+    pump_inline bool has_unsend_data() const {
         PUMP_ASSERT(session_);
         return false;
     }
@@ -107,7 +107,7 @@ class flow_tls : public flow_base {
     /*********************************************************************************
      * Check handshaked status
      ********************************************************************************/
-    PUMP_INLINE bool is_handshaked() const {
+    pump_inline bool is_handshaked() const {
         return is_handshaked_;
     }
 

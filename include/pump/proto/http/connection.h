@@ -40,12 +40,12 @@ struct http_callbacks {
 
 struct websocket_callbacks {
     // Websocket frame callback
-    pump_function<void(const block_t *, int32_t, bool)> frame_cb;
+    pump_function<void(const char *, int32_t, bool)> frame_cb;
     // Websocket connection error callback
     pump_function<void(const std::string &)> error_cb;
 };
 
-class LIB_PUMP connection : public std::enable_shared_from_this<connection> {
+class pump_lib connection : public std::enable_shared_from_this<connection> {
   public:
     friend class client;
     friend class server;
@@ -70,10 +70,10 @@ class LIB_PUMP connection : public std::enable_shared_from_this<connection> {
     /*********************************************************************************
      * Send http packet
      ********************************************************************************/
-    PUMP_INLINE bool send(packet_sptr &pk) {
+    pump_inline bool send(packet_sptr &pk) {
         return send(pk.get());
     }
-    PUMP_INLINE bool send(packet_sptr &&pk) {
+    pump_inline bool send(packet_sptr &&pk) {
         return send(pk.get());
     }
     bool send(packet *pk);
@@ -86,7 +86,7 @@ class LIB_PUMP connection : public std::enable_shared_from_this<connection> {
     /*********************************************************************************
      * Send websocket data
      ********************************************************************************/
-    bool send(const block_t *b, int32_t size, bool text = true);
+    bool send(const char *b, int32_t size, bool text = true);
 
     /*********************************************************************************
      * Stop connection
@@ -101,7 +101,7 @@ class LIB_PUMP connection : public std::enable_shared_from_this<connection> {
     /*********************************************************************************
      * Check connection valid status
      ********************************************************************************/
-    PUMP_INLINE bool is_valid() const {
+    pump_inline bool is_valid() const {
         if (!transp_ || !transp_->is_started()) {
             return false;
         }
@@ -112,7 +112,7 @@ class LIB_PUMP connection : public std::enable_shared_from_this<connection> {
     /*********************************************************************************
      * Read event callback
      ********************************************************************************/
-    static void on_read(connection_wptr wptr, const block_t *b, int32_t size);
+    static void on_read(connection_wptr wptr, const char *b, int32_t size);
 
     /*********************************************************************************
      * Disconnected event callback
@@ -153,17 +153,17 @@ class LIB_PUMP connection : public std::enable_shared_from_this<connection> {
     /*********************************************************************************
      * Handle http packet
      ********************************************************************************/
-    int32_t __handle_http_packet(const block_t *b, int32_t size);
+    int32_t __handle_http_packet(const char *b, int32_t size);
 
     /*********************************************************************************
      * Handle websocket frame
      ********************************************************************************/
-    int32_t __handle_websocket_frame(const block_t *b, int32_t size);
+    int32_t __handle_websocket_frame(const char *b, int32_t size);
 
     /*********************************************************************************
      * Continue read
      ********************************************************************************/
-    PUMP_INLINE bool __continue_read() {
+    pump_inline bool __continue_read() {
         if (!transp_ || transp_->continue_read() != transport::ERROR_OK) {
             return false;
         }

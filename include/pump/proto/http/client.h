@@ -31,13 +31,13 @@ using transport::address;
 class client;
 DEFINE_SMART_POINTER_TYPE(client);
 
-class LIB_PUMP client : public toolkit::noncopyable,
+class pump_lib client : public toolkit::noncopyable,
                         public std::enable_shared_from_this<client> {
   public:
     /*********************************************************************************
      * Create instance
      ********************************************************************************/
-    PUMP_INLINE static client_sptr create(service *sv) {
+    pump_inline static client_sptr create(service *sv) {
         INLINE_OBJECT_CREATE(obj, client, (sv));
         return client_sptr(obj, object_delete<client>);
     }
@@ -50,14 +50,14 @@ class LIB_PUMP client : public toolkit::noncopyable,
     /*********************************************************************************
      * Set connect timeout time
      ********************************************************************************/
-    PUMP_INLINE void set_connect_timeout(int64_t timeout) {
+    pump_inline void set_connect_timeout(int64_t timeout) {
         dial_timeout_ = timeout > 0 ? timeout : 0;
     }
 
     /*********************************************************************************
      * Set tls handshake timeout time
      ********************************************************************************/
-    PUMP_INLINE void set_tls_handshake_timeout(int64_t timeout) {
+    pump_inline void set_tls_handshake_timeout(int64_t timeout) {
         tls_handshake_timeout_ = timeout > 0 ? timeout : 0;
     }
 
@@ -76,7 +76,7 @@ class LIB_PUMP client : public toolkit::noncopyable,
     /*********************************************************************************
      * Close
      ********************************************************************************/
-    PUMP_INLINE void close() {
+    pump_inline void close() {
         __destroy_connection();
     }
 
@@ -99,8 +99,9 @@ class LIB_PUMP client : public toolkit::noncopyable,
     /*********************************************************************************
      * Send websocket upgrade request
      ********************************************************************************/
-    bool __send_websocket_upgrade_request(const std::string &url,
-                                          std::map<std::string, std::string> &headers);
+    bool __send_websocket_upgrade_request(
+        const std::string &url,
+        std::map<std::string, std::string> &headers);
 
     /*********************************************************************************
      * Handle websocket upgrade response
@@ -116,12 +117,16 @@ class LIB_PUMP client : public toolkit::noncopyable,
     /*********************************************************************************
      * Handel connection response
      ********************************************************************************/
-    static void on_response(client_wptr wptr, connection *conn, packet_sptr &pk);
+    static void on_response(client_wptr wptr,
+                            connection *conn,
+                            packet_sptr &pk);
 
     /*********************************************************************************
      * Handel connection disconnected
      ********************************************************************************/
-    static void on_error(client_wptr wptr, connection *conn, const std::string &msg);
+    static void on_error(client_wptr wptr,
+                         connection *conn,
+                         const std::string &msg);
 
   private:
     // Service

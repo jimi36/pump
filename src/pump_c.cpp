@@ -155,14 +155,14 @@ pump_c_acceptor pump_c_tls_acceptor_create(const char *ip,
                                            const char *cert,
                                            const char *key) {
     transport::tls_credentials xcred = nullptr;
-    xcred = transport::create_tls_credentials_from_memory(false, cert, key);
+    xcred = transport::load_tls_credentials_from_memory(false, cert, key);
     if (xcred == nullptr) {
         return nullptr;
     }
 
     pump_c_acceptor_impl *impl = object_create<pump_c_acceptor_impl>();
     if (impl == nullptr) {
-        transport::destory_tls_credentials(xcred);
+        transport::delete_tls_credentials(xcred);
         return nullptr;
     }
 
@@ -187,7 +187,8 @@ void pump_c_acceptor_destory(pump_c_acceptor acceptor) {
 static void on_acceptor_accepted_cb(pump_c_acceptor_impl *impl,
                                     transport::base_transport_sptr &transp) {
     if (impl->cbs.accepted_cb) {
-        pump_c_transport_impl *impl_transp = object_create<pump_c_transport_impl>();
+        pump_c_transport_impl *impl_transp =
+            object_create<pump_c_transport_impl>();
         impl_transp->transp = transp;
         impl_transp->cbs.read_cb = nullptr;
         impl_transp->cbs.read_from_cb = nullptr;
@@ -216,7 +217,8 @@ int pump_c_acceptor_start(pump_c_service sv,
     impl_acceptor->cbs = cbs;
 
     transport::acceptor_callbacks impl_cbs;
-    impl_cbs.accepted_cb = pump_bind(on_acceptor_accepted_cb, impl_acceptor, _1);
+    impl_cbs.accepted_cb =
+        pump_bind(on_acceptor_accepted_cb, impl_acceptor, _1);
     impl_cbs.stopped_cb = pump_bind(on_acceptor_stopped_cb, impl_acceptor);
     if (impl_acceptor->acceptor->start(impl_sv->sv, impl_cbs) != 0) {
         return -1;
@@ -259,7 +261,8 @@ pump_c_acceptor pump_c_tls_dialer_create(const char *local_ip,
 
     transport::address local_addr(local_ip, local_port);
     transport::address remote_addr(remote_ip, remote_port);
-    impl->dialer = transport::tls_dialer::create(local_addr, remote_addr, 1000, 1000);
+    impl->dialer =
+        transport::tls_dialer::create(local_addr, remote_addr, 1000, 1000);
 
     impl->cbs.dialed_cb = nullptr;
     impl->cbs.stopped_cb = nullptr;
@@ -338,7 +341,9 @@ void pump_c_transport_destory(pump_c_transport transp) {
     object_delete((pump_c_transport_impl *)transp);
 }
 
-static void on_transport_read(pump_c_transport_impl *impl, const char *b, int size) {
+static void on_transport_read(pump_c_transport_impl *impl,
+                              const char *b,
+                              int size) {
     if (impl->cbs.read_cb) {
         impl->cbs.read_cb(impl, b, size);
     }
@@ -349,7 +354,11 @@ static void on_transport_read_from(pump_c_transport_impl *impl,
                                    int size,
                                    const transport::address &addr) {
     if (impl->cbs.read_from_cb) {
-        impl->cbs.read_from_cb(impl, b, size, addr.ip().c_str(), (int)addr.port());
+        impl->cbs.read_from_cb(impl,
+                               b,
+                               size,
+                               addr.ip().c_str(),
+                               (int)addr.port());
     }
 }
 
@@ -378,11 +387,14 @@ int pump_c_transport_start(pump_c_service sv,
 
     transport::transport_callbacks impl_cbs;
     impl_cbs.read_cb = pump_bind(on_transport_read, impl_transp, _1, _2);
-    impl_cbs.read_from_cb = pump_bind(on_transport_read_from, impl_transp, _1, _2, _3);
+    impl_cbs.read_from_cb =
+        pump_bind(on_transport_read_from, impl_transp, _1, _2, _3);
     impl_cbs.stopped_cb = pump_bind(on_transport_stopped, impl_transp);
-    impl_cbs.disconnected_cb = pump_bind(on_transport_disconnected, impl_transp);
-    if (impl_transp->transp->start(impl_sv->sv, transport::READ_MODE_LOOP, impl_cbs) !=
-        0) {
+    impl_cbs.disconnected_cb =
+        pump_bind(on_transport_disconnected, impl_transp);
+    if (impl_transp->transp->start(impl_sv->sv,
+                                   transport::READ_MODE_LOOP,
+                                   impl_cbs) != 0) {
         return -1;
     }
 

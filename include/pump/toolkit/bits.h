@@ -24,7 +24,7 @@
 namespace pump {
 namespace toolkit {
 
-class LIB_PUMP bits_reader {
+class pump_lib bits_reader {
   public:
     /*********************************************************************************
      * Constructor
@@ -47,7 +47,7 @@ class LIB_PUMP bits_reader {
     /*********************************************************************************
      * Get read bit count
      ********************************************************************************/
-    PUMP_INLINE uint32_t read_bc() const {
+    pump_inline uint32_t read_bc() const {
         return read_bc_;
     }
 
@@ -69,7 +69,7 @@ class LIB_PUMP bits_reader {
     const uint8_t *byte_pos_;
 };
 
-class LIB_PUMP bits_writer {
+class pump_lib bits_writer {
   public:
     /*********************************************************************************
      * Constructor
@@ -92,7 +92,7 @@ class LIB_PUMP bits_writer {
     /*********************************************************************************
      * Get written bit count
      ********************************************************************************/
-    PUMP_INLINE uint32_t written_bc() const {
+    pump_inline uint32_t written_bc() const {
         return written_bc_;
     }
 

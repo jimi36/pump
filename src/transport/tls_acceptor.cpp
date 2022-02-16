@@ -22,7 +22,7 @@ namespace transport {
 
 tls_acceptor::tls_acceptor(tls_credentials xcred,
                            const address &listen_address,
-                           int64_t handshake_timeout) :
+                           int64_t handshake_timeout) noexcept :
     base_acceptor(TLS_ACCEPTOR, listen_address),
     xcred_(xcred),
     handshake_timeout_(handshake_timeout) {}
@@ -30,7 +30,7 @@ tls_acceptor::tls_acceptor(tls_credentials xcred,
 tls_acceptor::~tls_acceptor() {
     __stop_all_handshakers();
 
-    destory_tls_credentials(xcred_);
+    delete_tls_credentials(xcred_);
 }
 
 error_code tls_acceptor::start(service *sv, const acceptor_callbacks &cbs) {
@@ -92,19 +92,27 @@ void tls_acceptor::stop() {
 void tls_acceptor::on_read_event() {
     address local_address, remote_address;
     pump_socket fd = flow_->accept(&local_address, &remote_address);
-    if (PUMP_LIKELY(fd > 0)) {
+    if (pump_likely(fd > 0)) {
         tls_handshaker *handshaker = __create_handshaker();
-        if (PUMP_LIKELY(handshaker != nullptr)) {
+        if (pump_likely(handshaker != nullptr)) {
             tls_handshaker::tls_handshaker_callbacks handshaker_cbs;
             handshaker_cbs.handshaked_cb =
-                pump_bind(&tls_acceptor::on_handshaked, shared_from_this(), _1, _2);
+                pump_bind(&tls_acceptor::on_handshaked,
+                          shared_from_this(),
+                          _1,
+                          _2);
             handshaker_cbs.stopped_cb =
-                pump_bind(&tls_acceptor::on_handshake_stopped, shared_from_this(), _1);
-            if (!handshaker->init(fd, false, xcred_, local_address, remote_address)) {
+                pump_bind(&tls_acceptor::on_handshake_stopped,
+                          shared_from_this(),
+                          _1);
+            if (!handshaker
+                     ->init(fd, false, xcred_, local_address, remote_address)) {
                 PUMP_WARN_LOG("init tls handshaker failed");
                 __remove_handshaker(handshaker);
             }
-            if (!handshaker->start(get_service(), handshake_timeout_, handshaker_cbs)) {
+            if (!handshaker->start(get_service(),
+                                   handshake_timeout_,
+                                   handshaker_cbs)) {
                 PUMP_WARN_LOG("start tls handshaker failed");
                 __remove_handshaker(handshaker);
             }

@@ -52,7 +52,8 @@
     ((FSCTL_AFD_BASE) << 12 | (operation << 2) | method)
 
 #define IOCTL_AFD_RECEIVE _AFD_CONTROL_CODE(AFD_RECEIVE, METHOD_NEITHER)
-#define IOCTL_AFD_RECEIVE_DATAGRAM _AFD_CONTROL_CODE(AFD_RECEIVE_DATAGRAM, METHOD_NEITHER)
+#define IOCTL_AFD_RECEIVE_DATAGRAM \
+    _AFD_CONTROL_CODE(AFD_RECEIVE_DATAGRAM, METHOD_NEITHER)
 #define IOCTL_AFD_POLL _AFD_CONTROL_CODE(AFD_POLL, METHOD_BUFFERED)
 
 #ifndef FILE_OPEN
@@ -64,16 +65,17 @@ namespace poll {
 
 #if defined(PUMP_HAVE_IOCP)
 const static uint32_t AL_NONE_EVENT = 0;
-const static uint32_t AL_READ_EVENT = AFD_POLL_ACCEPT | AFD_POLL_RECEIVE |
-                                      AFD_POLL_RECEIVE_EXPEDITED | AFD_POLL_LOCAL_CLOSE |
-                                      AFD_POLL_DISCONNECT | AFD_POLL_ABORT;
+const static uint32_t AL_READ_EVENT =
+    AFD_POLL_ACCEPT | AFD_POLL_RECEIVE | AFD_POLL_RECEIVE_EXPEDITED |
+    AFD_POLL_LOCAL_CLOSE | AFD_POLL_DISCONNECT | AFD_POLL_ABORT;
 const static uint32_t AL_SEND_EVENT =
     AFD_POLL_SEND | AFD_POLL_DISCONNECT | AFD_POLL_CONNECT_FAIL;
 const static uint32_t AL_ERR_EVENT = AFD_POLL_ABORT | AFD_POLL_CONNECT_FAIL;
 
 #define RTL_CONSTANT_STRING(s) \
     { sizeof(s) - sizeof((s)[0]), sizeof(s), (PWSTR)s }
-static UNICODE_STRING afd__device_name = RTL_CONSTANT_STRING(L"\\Device\\Afd\\Poller");
+static UNICODE_STRING afd__device_name =
+    RTL_CONSTANT_STRING(L"\\Device\\Afd\\Poller");
 #undef RTL_CONSTANT_STRING
 
 #define RTL_CONSTANT_OBJECT_ATTRIBUTES(ObjectName, Attributes) \
@@ -85,8 +87,8 @@ static OBJECT_ATTRIBUTES afd__device_attributes =
 HANDLE afd_create_device_handle(HANDLE iocp_handle) {
     /*
      * By opening \Device\Afd without specifying any extended attributes, we'll
-     * get a handle that lets us talk to the AFD driver, but that doesn't have an
-     * associated endpoint (so it's not a socket).
+     * get a handle that lets us talk to the AFD driver, but that doesn't have
+     * an associated endpoint (so it's not a socket).
      */
     IO_STATUS_BLOCK iosb;
     HANDLE afd_device_handle;
@@ -105,9 +107,11 @@ HANDLE afd_create_device_handle(HANDLE iocp_handle) {
                         "afd_create_device_handle: create NT file failed");
 
     PUMP_ABORT_WITH_LOG(
-        CreateIoCompletionPort(afd_device_handle, iocp_handle, 0, 0) == nullptr ||
+        CreateIoCompletionPort(afd_device_handle, iocp_handle, 0, 0) ==
+                nullptr ||
             SetFileCompletionNotificationModes(afd_device_handle,
-                                               FILE_SKIP_SET_EVENT_ON_HANDLE) == FALSE,
+                                               FILE_SKIP_SET_EVENT_ON_HANDLE) ==
+                FALSE,
         "afd_create_device_handle: NT file bind iocp handle failed");
 
     return afd_device_handle;
@@ -222,9 +226,10 @@ bool afd_poller::__resume_channel_tracker(channel_tracker *tracker) {
 void afd_poller::__poll(int32_t timeout) {
 #if defined(PUMP_HAVE_IOCP)
     auto cur_event_count = cur_event_count_.load(std::memory_order_relaxed);
-    if (PUMP_UNLIKELY(cur_event_count > max_event_count_)) {
+    if (pump_unlikely(cur_event_count > max_event_count_)) {
         max_event_count_ = cur_event_count;
-        events_ = pump_realloc(events_, sizeof(OVERLAPPED_ENTRY) * max_event_count_);
+        events_ =
+            pump_realloc(events_, sizeof(OVERLAPPED_ENTRY) * max_event_count_);
         if (events_ == nullptr) {
             PUMP_ERR_LOG("reallocate afd events memory failed");
             PUMP_ABORT();

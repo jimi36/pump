@@ -20,7 +20,8 @@
 namespace pump {
 namespace transport {
 
-address::address() noexcept : is_v6_(false), addrlen_(sizeof(struct sockaddr_in)) {
+address::address() noexcept :
+    is_v6_(false), addrlen_(sizeof(struct sockaddr_in)) {
     memset(&addr_, 0, sizeof(addr_));
 }
 
@@ -39,7 +40,10 @@ address::address(const struct sockaddr *addr, int32_t addr_len) :
 }
 
 bool address::set(const std::string &ip, uint16_t port) {
-    if (!net::string_to_address(ip, port, (struct sockaddr *)addr_, &addrlen_)) {
+    if (!net::string_to_address(ip,
+                                port,
+                                (struct sockaddr *)addr_,
+                                &addrlen_)) {
         return false;
     }
 
@@ -68,7 +72,7 @@ bool address::set(const struct sockaddr *addr, int32_t addrlen) {
 }
 
 std::string address::ip() const {
-    block_t host[128] = {0};
+    char host[128] = {0};
     if (is_v6_) {
         auto v6 = (struct sockaddr_in6 *)addr_;
         if (!::inet_ntop(AF_INET6, &(v6->sin6_addr), host, sizeof(host) - 1)) {
@@ -99,7 +103,7 @@ uint16_t address::port() const {
 
 std::string address::to_string() const {
     uint16_t port = 0;
-    block_t host[128] = {0};
+    char host[128] = {0};
     if (is_v6_) {
         auto v6 = (struct sockaddr_in6 *)addr_;
         if (!::inet_ntop(AF_INET6, &(v6->sin6_addr), host, sizeof(host) - 1)) {
@@ -114,7 +118,7 @@ std::string address::to_string() const {
         port = ntohs(v4->sin_port);
     }
 
-    block_t tmp[256] = {0};
+    char tmp[256] = {0};
     pump_snprintf(tmp, sizeof(tmp) - 1, "%s:%d", host, port);
     return std::move(std::string(tmp));
 }

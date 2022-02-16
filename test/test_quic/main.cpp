@@ -4,7 +4,6 @@
 #include "handshaker.h"
 
 int main(int argc, const char **argv) {
-    
     pump::init();
 
     test_handshaker();

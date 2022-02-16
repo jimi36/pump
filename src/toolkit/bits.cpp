@@ -95,7 +95,8 @@ uint8_t bits_reader::__read_from_byte(uint32_t bc) {
     uint8_t val = 0;
     while (bc > 0) {
         uint8_t rc = byte_left_bc_ > bc ? bc : byte_left_bc_;
-        val = (val << rc) | (uint8_t((*byte_pos_) << (8 - byte_left_bc_)) >> (8 - rc));
+        val = (val << rc) |
+              (uint8_t((*byte_pos_) << (8 - byte_left_bc_)) >> (8 - rc));
 
         if ((byte_left_bc_ -= rc) == 0) {
             byte_left_bc_ = 8;
@@ -199,7 +200,8 @@ bool bits_writer::write(uint32_t bc, uint64_t val) {
 
 void bits_writer::__write_to_byte(uint32_t bc, uint8_t val) {
     if (byte_left_bc_ < bc) {
-        *byte_pos_ |= ((val & (0xff >> (8 - byte_left_bc_))) >> (bc - byte_left_bc_));
+        *byte_pos_ |=
+            ((val & (0xff >> (8 - byte_left_bc_))) >> (bc - byte_left_bc_));
         unwritten_bc_ -= byte_left_bc_;
         written_bc_ += byte_left_bc_;
         bc -= byte_left_bc_;

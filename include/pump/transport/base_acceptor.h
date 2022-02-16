@@ -22,7 +22,7 @@
 namespace pump {
 namespace transport {
 
-class LIB_PUMP base_acceptor : public base_channel {
+class pump_lib base_acceptor : public base_channel {
   public:
     /*********************************************************************************
      * Constructor
@@ -48,7 +48,7 @@ class LIB_PUMP base_acceptor : public base_channel {
     /*********************************************************************************
      * Get local address
      ********************************************************************************/
-    PUMP_INLINE const address &get_listen_address() const {
+    pump_inline const address &get_listen_address() const {
         return listen_address_;
     }
 

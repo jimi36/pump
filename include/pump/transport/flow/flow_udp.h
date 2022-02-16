@@ -46,12 +46,12 @@ class flow_udp : public flow_base {
     /*********************************************************************************
      * Read from
      ********************************************************************************/
-    PUMP_INLINE int32_t read_from(block_t *b, int32_t size, address *from_address) {
+    pump_inline int32_t read_from(char *b, int32_t size, address *from) {
         int32_t addrlen = ADDRESS_MAX_LEN;
-        struct sockaddr *addr = from_address->get();
+        struct sockaddr *addr = from->get();
         size = net::read_from(fd_, b, size, addr, &addrlen);
         if (size > 0) {
-            from_address->set((sockaddr *)addr, addrlen);
+            from->set((sockaddr *)addr, addrlen);
         }
         return size;
     }
@@ -60,7 +60,7 @@ class flow_udp : public flow_base {
      * Send to
      * Return sent size.
      ********************************************************************************/
-    int32_t send(const block_t *b, int32_t size, const address &to_address);
+    int32_t send(const char *b, int32_t size, const address &to);
 };
 DEFINE_SMART_POINTER_TYPE(flow_udp);
 

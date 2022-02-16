@@ -31,7 +31,7 @@ const static http_method METHOD_HEAD = 3;
 const static http_method METHOD_PUT = 4;
 const static http_method METHOD_DELETE = 5;
 
-class LIB_PUMP request : public packet {
+class pump_lib request : public packet {
   public:
     /*********************************************************************************
      * Constructor
@@ -48,31 +48,31 @@ class LIB_PUMP request : public packet {
     /*********************************************************************************
      * Set request method
      ********************************************************************************/
-    PUMP_INLINE void set_method(http_method method) {
+    pump_inline void set_method(http_method method) {
         method_ = method;
     }
 
     /*********************************************************************************
      * Get request method
      ********************************************************************************/
-    PUMP_INLINE http_method get_method() const {
+    pump_inline http_method get_method() const {
         return method_;
     }
 
     /*********************************************************************************
      * Set request url
      ********************************************************************************/
-    PUMP_INLINE void set_url(const std::string &url) {
+    pump_inline void set_url(const std::string &url) {
         uri_.parse(url);
     }
 
     /*********************************************************************************
      * Get http uri
      ********************************************************************************/
-    PUMP_INLINE const uri *get_uri() const {
+    pump_inline const uri *get_uri() const {
         return (const uri *)&uri_;
     }
-    PUMP_INLINE uri *get_uri() {
+    pump_inline uri *get_uri() {
         return &uri_;
     }
 
@@ -81,7 +81,7 @@ class LIB_PUMP request : public packet {
      * This parse http packet, and return parsed size.
      * If parsed error, return -1.
      ********************************************************************************/
-    virtual int32_t parse(const block_t *b, int32_t size) override;
+    virtual int32_t parse(const char *b, int32_t size) override;
 
     /*********************************************************************************
      * Serialize
@@ -93,7 +93,7 @@ class LIB_PUMP request : public packet {
     /*********************************************************************************
      * Parse http start line
      ********************************************************************************/
-    int32_t __parse_start_line(const block_t *b, int32_t size);
+    int32_t __parse_start_line(const char *b, int32_t size);
 
     /*********************************************************************************
      * Serialize http request line

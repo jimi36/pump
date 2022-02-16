@@ -4,6 +4,7 @@
 #include <string>
 
 #include <pump/init.h>
+#include <pump/time/timestamp.h>
 #include <pump/proto/http/uri.h>
 #include <pump/proto/http/client.h>
 #include <pump/proto/http/server.h>

@@ -30,17 +30,24 @@ class my_tls_acceptor : public std::enable_shared_from_this<my_tls_acceptor> {
      * Tcp accepted event callback
      ********************************************************************************/
     void on_accepted_callback(base_transport_sptr &transp) {
-        tls_transport_sptr transport = std::static_pointer_cast<tls_transport>(transp);
+        tls_transport_sptr transport =
+            std::static_pointer_cast<tls_transport>(transp);
         auto tctx = new transport_context(transport);
         transport->set_context(tctx);
 
         pump::transport_callbacks cbs;
-        cbs.read_cb =
-            pump_bind(&my_tls_acceptor::on_read_callback, this, transp.get(), _1, _2);
-        cbs.stopped_cb =
-            pump_bind(&my_tls_acceptor::on_stopped_callback, this, transp.get());
+        cbs.read_cb = pump_bind(&my_tls_acceptor::on_read_callback,
+                                this,
+                                transp.get(),
+                                _1,
+                                _2);
+        cbs.stopped_cb = pump_bind(&my_tls_acceptor::on_stopped_callback,
+                                   this,
+                                   transp.get());
         cbs.disconnected_cb =
-            pump_bind(&my_tls_acceptor::on_disconnected_callback, this, transp.get());
+            pump_bind(&my_tls_acceptor::on_disconnected_callback,
+                      this,
+                      transp.get());
 
         if (transport->start(sv, READ_MODE_LOOP, cbs) == 0) {
             std::lock_guard<std::mutex> lock(mx_);
@@ -53,13 +60,12 @@ class my_tls_acceptor : public std::enable_shared_from_this<my_tls_acceptor> {
     /*********************************************************************************
      * Stopped accepting event callback
      ********************************************************************************/
-    void on_stopped_accepting_callback() {
-    }
+    void on_stopped_accepting_callback() {}
 
     /*********************************************************************************
      * Tcp read event callback
      ********************************************************************************/
-    void on_read_callback(base_transport *transp, const block_t *b, int32_t size) {
+    void on_read_callback(base_transport *transp, const char *b, int32_t size) {
         transport_context *ctx = (transport_context *)transp->get_context();
 
         ctx->read_pocket_size += size;
@@ -111,11 +117,10 @@ class my_tls_acceptor : public std::enable_shared_from_this<my_tls_acceptor> {
     std::string send_data_;
 
     std::mutex mx_;
-    std::map<void*, transport_context *> transports_;
+    std::map<void *, transport_context *> transports_;
 };
 
-const char *cert =
-    "\
+const char *cert = "\
 -----BEGIN CERTIFICATE-----\n\
 MIIESjCCArKgAwIBAgIBBzANBgkqhkiG9w0BAQsFADA3MQwwCgYDVQQLEwN6aHQx\
 DDAKBgNVBAoTA3podDEMMAoGA1UECBMDemh0MQswCQYDVQQGEwJDTjAeFw0yMDAz\
@@ -143,8 +148,7 @@ bb07Ta+RRyRqMnF4cy6VyabNXfDCh/RDtdnb5IERZTMCI/Juzocn489IHaHDtH5I\
 -----END CERTIFICATE-----\
 ";
 
-const char *key =
-    "\
+const char *key = "\
 -----BEGIN RSA PRIVATE KEY-----\n\
 MIIG4wIBAAKCAYEArPK8IBbrmbnJRHUsQCipKxXFmqfvHSSj5yYoPBxlUkGoc3Mt\
 z0ftUxZnSotREkbwYw1zJwSC4pET8xZvNSn/b1J2yhZe0Jdwj9SSo7SnV12wdxQT\
@@ -196,15 +200,17 @@ void start_tls_server(const std::string &ip,
     my_tls_acceptor *my_acceptor = new my_tls_acceptor;
 
     pump::acceptor_callbacks cbs;
-    cbs.accepted_cb = pump_bind(&my_tls_acceptor::on_accepted_callback, my_acceptor, _1);
+    cbs.accepted_cb =
+        pump_bind(&my_tls_acceptor::on_accepted_callback, my_acceptor, _1);
     cbs.stopped_cb =
         pump_bind(&my_tls_acceptor::on_stopped_accepting_callback, my_acceptor);
 
     address listen_address(ip, port);
-    tls_credentials xcerd = create_tls_credentials_from_memory(false, cert, key);
+    tls_credentials xcerd = load_tls_credentials_from_memory(false, cert, key);
     tls_acceptor_sptr acceptor = tls_acceptor::create(xcerd, listen_address);
     // tls_acceptor_sptr acceptor =
-    // tls_acceptor::create_instance_with_file(cert_file, key_file, listen_address);
+    // tls_acceptor::create_instance_with_file(cert_file, key_file,
+    // listen_address);
     if (acceptor->start(sv, cbs) != 0) {
         printf("tls acceptor start error\n");
     }

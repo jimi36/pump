@@ -20,9 +20,7 @@
 #include <list>
 #include <atomic>
 
-#include "pump/memory.h"
-#include "pump/time/timestamp.h"
-#include "pump/toolkit/features.h"
+#include "pump/types.h"
 
 namespace pump {
 namespace time {
@@ -42,7 +40,7 @@ constexpr static int32_t TIMER_STOPPED = 1;
 constexpr static int32_t TIMER_STARTED = 2;
 constexpr static int32_t TIMER_PENDING = 3;
 
-class LIB_PUMP timer : public std::enable_shared_from_this<timer> {
+class pump_lib timer : public std::enable_shared_from_this<timer> {
   protected:
     friend class manager;
 
@@ -50,7 +48,7 @@ class LIB_PUMP timer : public std::enable_shared_from_this<timer> {
     /*********************************************************************************
      * Create instance
      ********************************************************************************/
-    PUMP_INLINE static timer_sptr create(uint64_t timeout,
+    pump_inline static timer_sptr create(uint64_t timeout,
                                          const timer_callback &cb,
                                          bool repeated = false) {
         INLINE_OBJECT_CREATE(obj, timer, (timeout, cb, repeated));
@@ -65,7 +63,7 @@ class LIB_PUMP timer : public std::enable_shared_from_this<timer> {
     /*********************************************************************************
      * Stop
      ********************************************************************************/
-    PUMP_INLINE void stop() {
+    pump_inline void stop() {
         __force_set_state(TIMER_STOPPED);
     }
 
@@ -77,21 +75,21 @@ class LIB_PUMP timer : public std::enable_shared_from_this<timer> {
     /*********************************************************************************
      * Get overtime
      ********************************************************************************/
-    PUMP_INLINE uint64_t time() const {
+    pump_inline uint64_t time() const {
         return overtime_;
     }
 
     /*********************************************************************************
      * Get starting state
      ********************************************************************************/
-    PUMP_INLINE bool is_started() const {
+    pump_inline bool is_started() const {
         return status_.load() > TIMER_STOPPED;
     }
 
     /*********************************************************************************
      * Get repeated status
      ********************************************************************************/
-    PUMP_INLINE bool is_repeated() const {
+    pump_inline bool is_repeated() const {
         return repeated_;
     }
 
@@ -99,7 +97,7 @@ class LIB_PUMP timer : public std::enable_shared_from_this<timer> {
     /*********************************************************************************
      * Constructor
      ********************************************************************************/
-    timer(uint64_t timeout, const timer_callback &cb, bool repeated) noexcept;
+    timer(uint64_t timeout, const timer_callback &cb, bool repeated);
 
     /*********************************************************************************
      * Start
@@ -109,14 +107,14 @@ class LIB_PUMP timer : public std::enable_shared_from_this<timer> {
     /*********************************************************************************
      * Set state
      ********************************************************************************/
-    PUMP_INLINE bool __set_state(int32_t expected, int32_t desired) {
+    pump_inline bool __set_state(int32_t expected, int32_t desired) {
         return status_.compare_exchange_strong(expected, desired);
     }
 
     /*********************************************************************************
      * Set state
      ********************************************************************************/
-    PUMP_INLINE void __force_set_state(int32_t desired) {
+    pump_inline void __force_set_state(int32_t desired) {
         status_.store(desired);
     }
 

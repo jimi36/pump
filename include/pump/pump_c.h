@@ -146,7 +146,8 @@ struct pump_c_transport_callbacks {
     // Read callback for tcp and tls
     void (*read_cb)(pump_c_transport, const char *, int);
     // Read from callback for udp
-    void (*read_from_cb)(pump_c_transport, const char *, int, const char *, int);
+    void (
+        *read_from_cb)(pump_c_transport, const char *, int, const char *, int);
     // Transport disconnected callback
     void (*disconnected_cb)(pump_c_transport);
     // Transport stopped callback
@@ -250,7 +251,9 @@ LIB_PUMP_C int pump_c_transport_stop(pump_c_transport transp);
  * When successful, this returns 0.
  * When an error occurs, this returns -1.
  ********************************************************************************/
-LIB_PUMP_C int pump_c_transport_send(pump_c_transport transp, const char *b, int size);
+LIB_PUMP_C int pump_c_transport_send(pump_c_transport transp,
+                                     const char *b,
+                                     int size);
 
 #ifdef __cplusplus
 }

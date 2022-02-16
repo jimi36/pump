@@ -41,12 +41,12 @@ struct server_callbacks {
     pump_function<void()> stopped_cb;
 };
 
-class LIB_PUMP server : public std::enable_shared_from_this<server> {
+class pump_lib server : public std::enable_shared_from_this<server> {
   public:
     /*********************************************************************************
      * Create instance
      ********************************************************************************/
-    PUMP_INLINE static server_sptr create() {
+    pump_inline static server_sptr create() {
         INLINE_OBJECT_CREATE(obj, server, ());
         return server_sptr(obj, object_delete<server>);
     }
@@ -59,7 +59,9 @@ class LIB_PUMP server : public std::enable_shared_from_this<server> {
     /*********************************************************************************
      * Start server
      ********************************************************************************/
-    bool start(service *sv, const address &listen_address, const server_callbacks &cbs);
+    bool start(service *sv,
+               const address &listen_address,
+               const server_callbacks &cbs);
 
     /*********************************************************************************
      * Start server with tls
@@ -89,7 +91,9 @@ class LIB_PUMP server : public std::enable_shared_from_this<server> {
     /*********************************************************************************
      * Http request callback
      ********************************************************************************/
-    static void on_http_request(server_wptr wptr, connection_wptr conn, packet_sptr &pk);
+    static void on_http_request(server_wptr wptr,
+                                connection_wptr conn,
+                                packet_sptr &pk);
 
     /*********************************************************************************
      * Http error callback
@@ -122,7 +126,7 @@ class LIB_PUMP server : public std::enable_shared_from_this<server> {
 /*********************************************************************************
  * Update to websocket for server
  ********************************************************************************/
-LIB_PUMP bool upgrade_to_websocket(connection *conn, request_sptr &req);
+pump_lib bool upgrade_to_websocket(connection *conn, request_sptr &req);
 
 }  // namespace http
 }  // namespace proto

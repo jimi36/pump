@@ -36,15 +36,18 @@ int32_t flow_udp::init(poll::channel_sptr &&ch, const address &bind_address) {
         return ERROR_FAULT;
     }
     if (!net::set_reuse(fd_, 1)) {
-        PUMP_DEBUG_LOG("set socket address reuse failed with ec %d", net::last_errno());
+        PUMP_DEBUG_LOG("set socket address reuse failed with ec %d",
+                       net::last_errno());
         return ERROR_FAULT;
     }
     if (!net::set_noblock(fd_, 1)) {
-        PUMP_DEBUG_LOG("set socket noblock failed with ec %d", net::last_errno());
+        PUMP_DEBUG_LOG("set socket noblock failed with ec %d",
+                       net::last_errno());
         return ERROR_FAULT;
     }
     if (!net::bind(fd_, (sockaddr *)bind_address.get(), bind_address.len())) {
-        PUMP_DEBUG_LOG("bind socket address failed with ec %d", net::last_errno());
+        PUMP_DEBUG_LOG("bind socket address failed with ec %d",
+                       net::last_errno());
         return ERROR_FAULT;
     }
     if (!net::set_udp_conn_reset(fd_, false)) {
@@ -57,12 +60,8 @@ int32_t flow_udp::init(poll::channel_sptr &&ch, const address &bind_address) {
     return ERROR_OK;
 }
 
-int32_t flow_udp::send(const block_t *b, int32_t size, const address &to_address) {
-    return net::send_to(fd_,
-                        b,
-                        size,
-                        (struct sockaddr *)to_address.get(),
-                        to_address.len());
+int32_t flow_udp::send(const char *b, int32_t size, const address &to) {
+    return net::send_to(fd_, b, size, (struct sockaddr *)to.get(), to.len());
 }
 
 }  // namespace flow

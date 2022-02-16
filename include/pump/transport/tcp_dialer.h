@@ -19,7 +19,6 @@
 
 #include <future>
 
-#include "pump/time/timer.h"
 #include "pump/transport/base_dialer.h"
 #include "pump/transport/flow/flow_tcp_dialer.h"
 
@@ -29,13 +28,13 @@ namespace transport {
 class tcp_dialer;
 DEFINE_SMART_POINTER_TYPE(tcp_dialer);
 
-class LIB_PUMP tcp_dialer : public base_dialer,
+class pump_lib tcp_dialer : public base_dialer,
                             public std::enable_shared_from_this<tcp_dialer> {
   public:
     /*********************************************************************************
      * Create instance
      ********************************************************************************/
-    PUMP_INLINE static tcp_dialer_sptr create(const address &local_address,
+    pump_inline static tcp_dialer_sptr create(const address &local_address,
                                               const address &remote_address,
                                               int64_t connect_timeout = 0) {
         INLINE_OBJECT_CREATE(obj,
@@ -102,7 +101,8 @@ class LIB_PUMP tcp_dialer : public base_dialer,
 class tcp_sync_dialer;
 DEFINE_SMART_POINTER_TYPE(tcp_sync_dialer);
 
-class LIB_PUMP tcp_sync_dialer : public std::enable_shared_from_this<tcp_sync_dialer> {
+class pump_lib tcp_sync_dialer
+    : public std::enable_shared_from_this<tcp_sync_dialer> {
   public:
     /*********************************************************************************
      * Create instance
@@ -151,7 +151,7 @@ class LIB_PUMP tcp_sync_dialer : public std::enable_shared_from_this<tcp_sync_di
     /*********************************************************************************
      * Reset sync dialer
      ********************************************************************************/
-    PUMP_INLINE void __reset() {
+    pump_inline void __reset() {
         dialer_.reset();
     }
 

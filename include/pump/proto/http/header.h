@@ -25,7 +25,7 @@ namespace pump {
 namespace proto {
 namespace http {
 
-class LIB_PUMP header {
+class pump_lib header {
   public:
     /*********************************************************************************
      * Constructor
@@ -54,7 +54,8 @@ class LIB_PUMP header {
      ********************************************************************************/
     bool get_head(const std::string &name, int32_t &value) const;
     bool get_head(const std::string &name, std::string &value) const;
-    bool get_head(const std::string &name, std::vector<std::string> &values) const;
+    bool get_head(const std::string &name,
+                  std::vector<std::string> &values) const;
 
     /*********************************************************************************
      * Check header field existed or not
@@ -67,12 +68,12 @@ class LIB_PUMP header {
      * This parse http header and return parsed size.
      * If parsed error, return -1.
      ********************************************************************************/
-    int32_t __parse_header(const block_t *b, int32_t size);
+    int32_t __parse_header(const char *b, int32_t size);
 
     /*********************************************************************************
      * Check parse is finished or not
      ********************************************************************************/
-    PUMP_INLINE bool __is_header_parsed() const {
+    pump_inline bool __is_header_parsed() const {
         return header_parsed_;
     }
 

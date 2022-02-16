@@ -17,6 +17,8 @@
 #ifndef pump_config_h
 #define pump_config_h
 
+// clang-format off
+
 #define PUMP_MAJOR_VERSION @pump_MAJOR_VERSION@
 #define PUMP_MINOR_VERSION @pump_MINOR_VERSION@
 #define PUMP_BUILD_VERSION @pump_BUILD_VERSION@
@@ -103,5 +105,7 @@
 #if defined(WITH_DEBUG_LOG)
 #define PUMP_HAVE_DEBUG_LOG
 #endif
+
+// clang-format on
 
 #endif

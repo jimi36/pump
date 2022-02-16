@@ -14,7 +14,8 @@ using namespace transport;
 
 using namespace pump;
 
-extern void start_tls_server(const std::string &ip, uint16_t port,
+extern void start_tls_server(const std::string &ip,
+                             uint16_t port,
                              const std::string &cert_file,
                              const std::string &key_file);
 

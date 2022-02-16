@@ -7,7 +7,8 @@
 int main(int argc, const char **argv) {
     pump::init();
 
-    if (argc < 5) return -1;
+    if (argc < 5)
+        return -1;
 
     std::string tag = argv[1];
     std::string tp = argv[2];
@@ -23,11 +24,13 @@ int main(int argc, const char **argv) {
         printf("start tcp test\n");
 
         std::thread server([=]() {
-            if (tp == "s") start_tcp_server(ip, port);
+            if (tp == "s")
+                start_tcp_server(ip, port);
         });
 
         std::thread client([=]() {
-            if (tp == "c") start_tcp_client(ip, port, conn_count);
+            if (tp == "c")
+                start_tcp_client(ip, port, conn_count);
         });
 
         server.join();
@@ -38,11 +41,13 @@ int main(int argc, const char **argv) {
         printf("start tls test\n");
 
         std::thread server([=]() {
-            if (tp == "s") start_tls_server(ip, port, "cert.pem", "key.pem");
+            if (tp == "s")
+                start_tls_server(ip, port, "cert.pem", "key.pem");
         });
 
         std::thread client([=]() {
-            if (tp == "c") start_tls_client(ip, port, conn_count);
+            if (tp == "c")
+                start_tls_client(ip, port, conn_count);
         });
 
         server.join();
@@ -53,11 +58,13 @@ int main(int argc, const char **argv) {
         printf("start udp test\n");
 
         std::thread server([=]() {
-            if (tp == "s") start_udp_server(ip, port);
+            if (tp == "s")
+                start_udp_server(ip, port);
         });
 
         std::thread client([=]() {
-            if (tp == "c") start_udp_client(ip, port);
+            if (tp == "c")
+                start_udp_client(ip, port);
         });
 
         server.join();

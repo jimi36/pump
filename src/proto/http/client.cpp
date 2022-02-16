@@ -28,7 +28,10 @@ namespace proto {
 namespace http {
 
 client::client(service *sv) :
-    sv_(sv), dial_timeout_(0), tls_handshake_timeout_(0), wait_for_response_(false) {}
+    sv_(sv),
+    dial_timeout_(0),
+    tls_handshake_timeout_(0),
+    wait_for_response_(false) {}
 
 client::~client() {}
 
@@ -116,7 +119,8 @@ connection_sptr client::open_websocket(const std::string &url) {
 }
 
 bool client::__steup_connection_and_listen_response(const uri *u) {
-    if (u->get_host() != last_uri_.get_host() || u->get_type() != last_uri_.get_type()) {
+    if (u->get_host() != last_uri_.get_host() ||
+        u->get_type() != last_uri_.get_type()) {
         __destroy_connection();
     }
 
@@ -201,7 +205,8 @@ bool client::__send_websocket_upgrade_request(
 }
 
 bool client::__handle_websocket_upgrade_response(response_sptr &rsp) {
-    if (rsp->get_status_code() != 101 || rsp->get_http_version() != http::VERSION_11) {
+    if (rsp->get_status_code() != 101 ||
+        rsp->get_http_version() != http::VERSION_11) {
         return false;
     }
 
@@ -212,7 +217,8 @@ bool client::__handle_websocket_upgrade_response(response_sptr &rsp) {
 
     std::vector<std::string> connection;
     if (!rsp->get_head("Connection", connection) ||
-        std::find(connection.begin(), connection.end(), "Upgrade") == connection.end()) {
+        std::find(connection.begin(), connection.end(), "Upgrade") ==
+            connection.end()) {
         return false;
     }
 
@@ -240,7 +246,9 @@ void client::on_response(client_wptr wptr, connection *conn, packet_sptr &pk) {
     }
 }
 
-void client::on_error(client_wptr wptr, connection *conn, const std::string &msg) {
+void client::on_error(client_wptr wptr,
+                      connection *conn,
+                      const std::string &msg) {
     auto cli = wptr.lock();
     if (cli) {
         PUMP_DEBUG_LOG("connection of http client %s", msg.c_str());

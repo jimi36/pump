@@ -35,7 +35,7 @@ const static uri_type URI_WS = "ws";
 const static uri_type URI_WSS = "wss";
 const static uri_type URI_END = "";
 
-class LIB_PUMP uri {
+class pump_lib uri {
   public:
     /*********************************************************************************
      * Constructor
@@ -61,49 +61,50 @@ class LIB_PUMP uri {
     /*********************************************************************************
      * Set uri type
      ********************************************************************************/
-    PUMP_INLINE void set_proto(uri_type proto) {
+    pump_inline void set_proto(uri_type proto) {
         tp_ = proto;
     }
 
     /*********************************************************************************
      * Get uri type
      ********************************************************************************/
-    PUMP_INLINE uri_type get_type() const {
+    pump_inline uri_type get_type() const {
         return tp_;
     }
 
     /*********************************************************************************
      * Set host
      ********************************************************************************/
-    PUMP_INLINE void set_host(const std::string &host) {
+    pump_inline void set_host(const std::string &host) {
         host_ = host;
     }
 
     /*********************************************************************************
      * Get host
      ********************************************************************************/
-    PUMP_INLINE const std::string &get_host() const {
+    pump_inline const std::string &get_host() const {
         return host_;
     }
 
     /*********************************************************************************
      * Set path
      ********************************************************************************/
-    PUMP_INLINE void set_path(const std::string &path) {
+    pump_inline void set_path(const std::string &path) {
         path_ = path;
     }
 
     /*********************************************************************************
      * Get path
      ********************************************************************************/
-    PUMP_INLINE const std::string &get_path() const {
+    pump_inline const std::string &get_path() const {
         return path_;
     }
 
     /*********************************************************************************
      * Set param
      ********************************************************************************/
-    PUMP_INLINE void set_param(const std::string &key, const std::string &value) {
+    pump_inline void set_param(const std::string &key,
+                               const std::string &value) {
         params_[key] = value;
     }
 

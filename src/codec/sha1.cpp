@@ -26,19 +26,20 @@ A million repetitions of "a"
 /* blk0() and blk() perform the initial expand. */
 /* I got the idea of expanding during the round function from SSLeay */
 #if defined(LITTLE_ENDIAN)
-#define blk0(i)     \
-    (cblock->l[i] = \
-         (rol(cblock->l[i], 24) & 0xFF00FF00) | (rol(cblock->l[i], 8) & 0x00FF00FF))
+#define blk0(i)                                            \
+    (cblock->l[i] = (rol(cblock->l[i], 24) & 0xFF00FF00) | \
+                    (rol(cblock->l[i], 8) & 0x00FF00FF))
 #elif defined(BIG_ENDIAN)
 #define blk0(i) cblock->l[i]
 #else
 #error "Endianness not defined!"
 #endif
 
-#define blk(i)                                                                    \
-    (cblock->l[i & 15] = rol(cblock->l[(i + 13) & 15] ^ cblock->l[(i + 8) & 15] ^ \
-                                 cblock->l[(i + 2) & 15] ^ cblock->l[i & 15],     \
-                             1))
+#define blk(i)                                                    \
+    (cblock->l[i & 15] =                                          \
+         rol(cblock->l[(i + 13) & 15] ^ cblock->l[(i + 8) & 15] ^ \
+                 cblock->l[(i + 2) & 15] ^ cblock->l[i & 15],     \
+             1))
 
 /* (R0+R1), R2, R3, R4 are the different operations used in SHA1 */
 #define R0(v, w, x, y, z, i)                                     \
@@ -196,7 +197,7 @@ void sha1_init(SHA1_CTX *ctx) {
 
 /* Run your data through this. */
 
-void sha1_update(SHA1_CTX *ctx, const block_t *data, int32_t size) {
+void sha1_update(SHA1_CTX *ctx, const char *data, int32_t size) {
     uint32_t i, j;
     uint32_t len = uint32_t(size);
 
@@ -248,27 +249,28 @@ void sha1_final(SHA1_CTX *ctx, uint8_t digest[20]) {
 #else
     for (i = 0; i < 8; i++) {
         /* Endian independent */
-        finalcount[i] =
-            (uint8_t)((ctx->count[(i >= 4 ? 0 : 1)] >> ((3 - (i & 3)) * 8)) & 255);
+        finalcount[i] = (uint8_t)(
+            (ctx->count[(i >= 4 ? 0 : 1)] >> ((3 - (i & 3)) * 8)) & 255);
     }
 #endif
     c = 0200;
-    sha1_update(ctx, (const block_t *)&c, 1);
+    sha1_update(ctx, (const char *)&c, 1);
     while ((ctx->count[0] & 504) != 448) {
         c = 0000;
-        sha1_update(ctx, (const block_t *)&c, 1);
+        sha1_update(ctx, (const char *)&c, 1);
     }
     /* Should cause a sha1_transform() */
-    sha1_update(ctx, (const block_t *)finalcount, 8);
+    sha1_update(ctx, (const char *)finalcount, 8);
     for (i = 0; i < 20; i++) {
-        digest[i] = (uint8_t)((ctx->state[i >> 2] >> ((3 - (i & 3)) * 8)) & 255);
+        digest[i] =
+            (uint8_t)((ctx->state[i >> 2] >> ((3 - (i & 3)) * 8)) & 255);
     }
     /* Wipe variables */
     memset(ctx, '\0', sizeof(*ctx));
     memset(&finalcount, '\0', sizeof(finalcount));
 }
 
-void sha1(const block_t *data, int32_t size, uint8_t digest[20]) {
+void sha1(const char *data, int32_t size, uint8_t digest[20]) {
     SHA1_CTX ctx;
     sha1_init(&ctx);
     for (uint32_t i = 0; i < uint32_t(size); i += 1) {

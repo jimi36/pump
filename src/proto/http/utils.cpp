@@ -23,7 +23,7 @@ namespace pump {
 namespace proto {
 namespace http {
 
-const block_t *find_http_line_end(const block_t *src, int32_t len) {
+const char *find_http_line_end(const char *src, int32_t len) {
     len = std::min<int32_t>(len, HTTP_LINE_MAX_LEN);
     if (len < HTTP_LINE_MIN_LEN) {
         return nullptr;
@@ -47,7 +47,7 @@ const block_t *find_http_line_end(const block_t *src, int32_t len) {
 bool url_decode(const std::string &src, std::string &des) {
     uint32_t len = (uint32_t)src.length();
     for (uint32_t i = 0; i < len; i++) {
-        uint8_t ch = src[i];
+        char ch = src[i];
         if (ch == '+') {
             ch = ' ';
         } else if (ch == '%') {
@@ -57,17 +57,16 @@ bool url_decode(const std::string &src, std::string &des) {
             ch = hex_to_dec(src[i + 1]) << 4 | hex_to_dec(src[i + 2]);
             i += 2;
         }
-        des.append(1, (block_t)ch);
+        des.append(1, ch);
     }
     return true;
 }
 
 bool url_encode(const std::string &src, std::string &des) {
-    block_t val = 0;
-    const block_t *beg = src.c_str();
-    const block_t *end = beg + src.size();
+    const char *beg = src.c_str();
+    const char *end = beg + src.size();
     while (beg != end) {
-        val = *beg;
+        char val = *beg;
         if (isalnum(val) || strchr("_-.", val) != nullptr) {
             des.append(1, val);
         } else if (val == ' ') {

@@ -29,9 +29,12 @@ body::body() noexcept :
 
 int32_t body::serialize(std::string &buf) const {
     if (is_chunk_mode_) {
-        block_t chunk_len[64] = {0};
-        int32_t size =
-            snprintf(chunk_len, sizeof(chunk_len) - 1, "%zx%s", data_.size(), HTTP_CRLF);
+        char chunk_len[64] = {0};
+        int32_t size = snprintf(chunk_len,
+                                sizeof(chunk_len) - 1,
+                                "%zx%s",
+                                data_.size(),
+                                HTTP_CRLF);
         buf.append(chunk_len).append(data_).append(HTTP_CRLF);
         return size + (int32_t)data_.size() + HTTP_CRLF_LEN;
     } else {
@@ -43,7 +46,7 @@ int32_t body::serialize(std::string &buf) const {
     }
 }
 
-int32_t body::parse(const block_t *b, int32_t size) {
+int32_t body::parse(const char *b, int32_t size) {
     if (is_chunk_mode_) {
         return __parse_by_chunk(b, size);
     } else {
@@ -51,7 +54,7 @@ int32_t body::parse(const block_t *b, int32_t size) {
     }
 }
 
-int32_t body::__parse_by_length(const block_t *b, int32_t size) {
+int32_t body::__parse_by_length(const char *b, int32_t size) {
     int32_t parse_size = expected_size_ - (int32_t)data_.size();
     if (parse_size > size) {
         parse_size = size;
@@ -66,7 +69,7 @@ int32_t body::__parse_by_length(const block_t *b, int32_t size) {
     return parse_size;
 }
 
-int32_t body::__parse_by_chunk(const block_t *b, int32_t size) {
+int32_t body::__parse_by_chunk(const char *b, int32_t size) {
     auto pos = b;
     auto end = b + size;
 
@@ -78,7 +81,8 @@ int32_t body::__parse_by_chunk(const block_t *b, int32_t size) {
             // Parse current chunk size.
             while (size_pos < end) {
                 if (cur_chunk_size >= 1048576) {  // 1MB
-                    PUMP_WARN_LOG("http chunk body size %d is too long", cur_chunk_size);
+                    PUMP_WARN_LOG("http chunk body size %d is too long",
+                                  cur_chunk_size);
                     return -1;
                 }
                 if (*size_pos == HTTP_CRLF[0]) {
@@ -91,7 +95,8 @@ int32_t body::__parse_by_chunk(const block_t *b, int32_t size) {
                     size_pos += HTTP_CRLF_LEN;
                     break;
                 }
-                cur_chunk_size = cur_chunk_size * 16 + hex_to_dec(*(size_pos++));
+                cur_chunk_size =
+                    cur_chunk_size * 16 + hex_to_dec(*(size_pos++));
             }
 
             // Update expected body size.
@@ -104,7 +109,8 @@ int32_t body::__parse_by_chunk(const block_t *b, int32_t size) {
             if (parsing_chunk_size_ == 0) {
                 if (size_pos + HTTP_CRLF_LEN > end) {
                     break;
-                } else if (*size_pos != HTTP_CRLF[0] || *(size_pos + 1) != HTTP_CRLF[1]) {
+                } else if (*size_pos != HTTP_CRLF[0] ||
+                           *(size_pos + 1) != HTTP_CRLF[1]) {
                     PUMP_WARN_LOG("http chunk body invalid");
                     return -1;
                 }

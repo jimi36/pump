@@ -12,9 +12,12 @@ class my_udp_server {
     /*********************************************************************************
      * Udp read event callback
      ********************************************************************************/
-    virtual void on_read_callback(base_transport *transp, const block_t *b,
-                                  int32_t size, const address &remote_address) {
-        if (size > 0) read_size_ += size;
+    virtual void on_read_callback(base_transport *transp,
+                                  const char *b,
+                                  int32_t size,
+                                  const address &from) {
+        if (size > 0)
+            read_size_ += size;
 
         uint64_t now = ::time(0);
         if (now > last_report_time_) {
@@ -60,9 +63,14 @@ void start_udp_server(const std::string &ip, uint16_t port) {
 
     transport_callbacks cbs;
     cbs.read_from_cb = pump_bind(&my_udp_server::on_read_callback,
-                                 udp_server.get(), transport.get(), _1, _2, _3);
+                                 udp_server.get(),
+                                 transport.get(),
+                                 _1,
+                                 _2,
+                                 _3);
     cbs.stopped_cb = pump_bind(&my_udp_server::on_stopped_callback,
-                               udp_server.get(), transport.get());
+                               udp_server.get(),
+                               transport.get());
 
     if (transport->start(sv, READ_MODE_LOOP, cbs) != 0) {
         printf("udp server start error\n");

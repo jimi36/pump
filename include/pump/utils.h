@@ -28,34 +28,34 @@ namespace pump {
 /*********************************************************************************
  * Transform dec to hex.
  ********************************************************************************/
-LIB_PUMP uint8_t dec_to_hex(uint8_t dec);
+pump_lib char dec_to_hex(uint8_t dec);
 
 /*********************************************************************************
  * Transform hex to dec.
  ********************************************************************************/
-LIB_PUMP uint8_t hex_to_dec(uint8_t hex);
+pump_lib uint8_t hex_to_dec(char hex);
 
 /*********************************************************************************
  * Transform little and big endian.
  ********************************************************************************/
-LIB_PUMP uint16_t transform_endian_i16(uint16_t val);
-LIB_PUMP uint32_t transform_endian_i32(uint32_t val);
-LIB_PUMP uint64_t transform_endian_i64(uint64_t val);
+pump_lib uint16_t transform_endian_i16(uint16_t val);
+pump_lib uint32_t transform_endian_i32(uint32_t val);
+pump_lib uint64_t transform_endian_i64(uint64_t val);
 
 /*********************************************************************************
  * Ceil to power of two.
  ********************************************************************************/
-LIB_PUMP int32_t ceil_to_power_of_two(int32_t val);
+pump_lib int32_t ceil_to_power_of_two(int32_t val);
 
 /*********************************************************************************
  * Random a value.
  ********************************************************************************/
-LIB_PUMP int32_t random();
+pump_lib int32_t random();
 
 /*********************************************************************************
  * Random a value between min and max.
  ********************************************************************************/
-template <typename T> LIB_PUMP T random(uint32_t seed, T min, T max) {
+template <typename T> pump_lib T random(uint32_t seed, T min, T max) {
     std::default_random_engine e(seed);
     std::uniform_int_distribution<T> u(min, max);
     return u(e);
@@ -65,7 +65,7 @@ template <typename T> LIB_PUMP T random(uint32_t seed, T min, T max) {
  * Random an array with value between min and max.
  ********************************************************************************/
 template <typename T>
-LIB_PUMP std::vector<T> random(uint32_t seed, T min, T max, int32_t count) {
+pump_lib std::vector<T> random(uint32_t seed, T min, T max, int32_t count) {
     std::vector<T> out(count, 0);
     std::default_random_engine e(seed);
     std::uniform_int_distribution<T> u(min, max);
@@ -78,23 +78,23 @@ LIB_PUMP std::vector<T> random(uint32_t seed, T min, T max, int32_t count) {
 /*********************************************************************************
  * Transform gbk to utf8 string
  ********************************************************************************/
-LIB_PUMP std::string gbk_to_utf8(const std::string &in);
+pump_lib std::string gbk_to_utf8(const std::string &in);
 
 /*********************************************************************************
  * Transform utf8 to gbk string
  ********************************************************************************/
-LIB_PUMP std::string utf8_to_gbk(const std::string &in);
+pump_lib std::string utf8_to_gbk(const std::string &in);
 
 /*********************************************************************************
  * Join strings
  ********************************************************************************/
-LIB_PUMP std::string join_strings(const std::vector<std::string> &src,
+pump_lib std::string join_strings(const std::vector<std::string> &src,
                                   const std::string &sep);
 
 /*********************************************************************************
  * Split string
  ********************************************************************************/
-LIB_PUMP std::vector<std::string> split_string(const std::string &src,
+pump_lib std::vector<std::string> split_string(const std::string &src,
                                                const std::string &sep);
 
 }  // namespace pump

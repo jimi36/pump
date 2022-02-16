@@ -31,7 +31,7 @@ const uint8_t WS_OPT_PING = 0x09;
 const uint8_t WS_OPT_PONG = 0x0A;
 const uint8_t WS_OPT_END = 0xFF;
 
-class LIB_PUMP frame {
+class pump_lib frame {
   public:
     /*********************************************************************************
      * Constructor
@@ -55,7 +55,7 @@ class LIB_PUMP frame {
     /*********************************************************************************
      * Mask websocket payload
      ********************************************************************************/
-    void mask_payload(uint8_t *b);
+    void mask_payload(char *b);
 
     /*********************************************************************************
      * Reset
@@ -65,28 +65,28 @@ class LIB_PUMP frame {
     /*********************************************************************************
      * Check websocket frame header unpacked flag
      ********************************************************************************/
-    PUMP_INLINE bool is_header_unpacked() const {
+    pump_inline bool is_header_unpacked() const {
         return is_header_unpacked_;
     }
 
     /*********************************************************************************
      * Check websocket frame fin flag
      ********************************************************************************/
-    PUMP_INLINE bool is_fin() const {
+    pump_inline bool is_fin() const {
         return fin_;
     }
 
     /*********************************************************************************
      * Get websocket frame opt
      ********************************************************************************/
-    PUMP_INLINE uint8_t get_opt() const {
+    pump_inline uint8_t get_opt() const {
         return opt_;
     }
 
     /*********************************************************************************
      * Get websocket frame payload length
      ********************************************************************************/
-    PUMP_INLINE uint64_t get_payload_length() const {
+    pump_inline uint64_t get_payload_length() const {
         return payload_len_;
     }
 

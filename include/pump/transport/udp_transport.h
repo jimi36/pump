@@ -26,12 +26,12 @@ namespace transport {
 class udp_transport;
 DEFINE_SMART_POINTER_TYPE(udp_transport);
 
-class LIB_PUMP udp_transport : public base_transport {
+class pump_lib udp_transport : public base_transport {
   public:
     /*********************************************************************************
      * Create instance
      ********************************************************************************/
-    PUMP_INLINE static udp_transport_sptr create(const address &bind_address) {
+    pump_inline static udp_transport_sptr create(const address &bind_address) {
         INLINE_OBJECT_CREATE(obj, udp_transport, (bind_address));
         return udp_transport_sptr(obj, object_delete<udp_transport>);
     }
@@ -69,7 +69,7 @@ class LIB_PUMP udp_transport : public base_transport {
     /*********************************************************************************
      * Send
      ********************************************************************************/
-    virtual error_code send(const block_t *b,
+    virtual error_code send(const char *b,
                             int32_t size,
                             const address &address) override;
 

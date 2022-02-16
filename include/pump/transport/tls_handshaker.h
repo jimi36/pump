@@ -58,7 +58,9 @@ class tls_handshaker : public base_channel,
     /*********************************************************************************
      * Start tls handshaker
      ********************************************************************************/
-    bool start(service *sv, int64_t timeout, const tls_handshaker_callbacks &cbs);
+    bool start(service *sv,
+               int64_t timeout,
+               const tls_handshaker_callbacks &cbs);
 
     /*********************************************************************************
      * Stop transport
@@ -68,21 +70,21 @@ class tls_handshaker : public base_channel,
     /*********************************************************************************
      * Unlock flow
      ********************************************************************************/
-    PUMP_INLINE flow::flow_tls_sptr unlock_flow() {
+    pump_inline flow::flow_tls_sptr unlock_flow() {
         return std::move(flow_);
     }
 
     /*********************************************************************************
      * Get local address
      ********************************************************************************/
-    PUMP_INLINE const address &get_local_address() const {
+    pump_inline const address &get_local_address() const {
         return local_address_;
     }
 
     /*********************************************************************************
      * Get remote address
      ********************************************************************************/
-    PUMP_INLINE const address &get_remote_address() const {
+    pump_inline const address &get_remote_address() const {
         return remote_address_;
     }
 

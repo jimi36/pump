@@ -99,7 +99,8 @@ error_code udp_transport::continue_read() {
         return ERROR_UNSTART;
     }
 
-    if (rmode_ != READ_MODE_ONCE || !__change_read_state(READ_NONE, READ_PENDING) ||
+    if (rmode_ != READ_MODE_ONCE ||
+        !__change_read_state(READ_NONE, READ_PENDING) ||
         !__resume_read_tracker()) {
         return ERROR_FAULT;
     }
@@ -107,13 +108,15 @@ error_code udp_transport::continue_read() {
     return ERROR_OK;
 }
 
-error_code udp_transport::send(const block_t *b, int32_t size, const address &address) {
+error_code udp_transport::send(const char *b,
+                               int32_t size,
+                               const address &address) {
     if (b == nullptr || size <= 0) {
         PUMP_WARN_LOG("sent buffer is invalid");
         return ERROR_INVALID;
     }
 
-    if (PUMP_UNLIKELY(!__is_state(TRANSPORT_STARTED))) {
+    if (pump_unlikely(!__is_state(TRANSPORT_STARTED))) {
         PUMP_WARN_LOG("udp transport is not started");
         return ERROR_UNSTART;
     }
@@ -137,14 +140,14 @@ void udp_transport::on_read_event() {
     }
 
     address remote_addr;
-    block_t data[MAX_UDP_BUFFER_SIZE];
+    char data[MAX_UDP_BUFFER_SIZE];
     int32_t size = flow_->read_from(data, sizeof(data), &remote_addr);
-    if (PUMP_LIKELY(size > 0)) {
+    if (pump_likely(size > 0)) {
         if (rmode_ == READ_MODE_ONCE) {
             // Change read state from READ_PENDING to READ_NONE.
             if (!__change_read_state(READ_PENDING, READ_NONE)) {
-                PUMP_WARN_LOG(
-                    "change udp transport's read state from pending to none failed");
+                PUMP_WARN_LOG("change udp transport's read state from pending "
+                              "to none failed");
             }
         } else if (!__resume_read_tracker()) {
             PUMP_WARN_LOG("resume udp transport's read tracker failed");

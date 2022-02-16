@@ -2,10 +2,7 @@
 
 http::connection_sptr ws_conn;
 
-static void on_receive(
-    const block_t *b,
-    int32_t size,
-    bool msg_end) {
+static void on_receive(const char *b, int32_t size, bool msg_end) {
     std::string data(b, size);
     std::string gbk = pump::utf8_to_gbk(data);
     printf("received: %s %s\n", data.c_str(), gbk.c_str());
@@ -45,9 +42,7 @@ void on_new_request(http::connection_wptr &wconn, http::request_sptr &&req) {
     printf("websocket connected\n");
 }
 
-void on_stopped() {
-
-}
+void on_stopped() {}
 
 void start_ws_server(pump::service *sv, const std::string &ip, int port) {
     pump::transport::address bind_address(ip, port);

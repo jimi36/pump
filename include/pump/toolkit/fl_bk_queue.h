@@ -30,7 +30,7 @@
 namespace pump {
 namespace toolkit {
 
-template <typename T> class LIB_PUMP fl_bk_queue : public noncopyable {
+template <typename T> class fl_bk_queue : public noncopyable {
   public:
     // Element type
     typedef T element_type;
@@ -39,7 +39,7 @@ template <typename T> class LIB_PUMP fl_bk_queue : public noncopyable {
 
     struct element_node {
         volatile int32_t ready;
-        block_t data[element_size];
+        char data[element_size];
     };
 
   public:
@@ -47,7 +47,11 @@ template <typename T> class LIB_PUMP fl_bk_queue : public noncopyable {
      * Constructor
      ********************************************************************************/
     fl_bk_queue(uint32_t size) :
-        size_(0), size_mask_(0), nodes_(nullptr), read_index_(0), write_index_(1) {
+        size_(0),
+        size_mask_(0),
+        nodes_(nullptr),
+        read_index_(0),
+        write_index_(1) {
         // Init array size.
         size_ = ceil_to_power_of_two(size);
         // Init array size mask.
@@ -67,7 +71,8 @@ template <typename T> class LIB_PUMP fl_bk_queue : public noncopyable {
             int32_t beg = read_index_.load();
             int32_t end = write_index_.load();
             for (int32_t i = beg; i < end; i++) {
-                ((element_type *)nodes_[__count_to_index(i)].data)->~element_type();
+                ((element_type *)nodes_[__count_to_index(i)].data)
+                    ->~element_type();
             }
             pump_free(nodes_);
         }
@@ -96,10 +101,11 @@ template <typename T> class LIB_PUMP fl_bk_queue : public noncopyable {
                 }
             }
 
-            if (write_index_.compare_exchange_strong(cur_write_index,
-                                                     cur_write_index + 1,
-                                                     std::memory_order_acquire,
-                                                     std::memory_order_relaxed)) {
+            if (write_index_.compare_exchange_strong(
+                    cur_write_index,
+                    cur_write_index + 1,
+                    std::memory_order_acquire,
+                    std::memory_order_relaxed)) {
                 break;
             }
         } while (true);
@@ -110,7 +116,8 @@ template <typename T> class LIB_PUMP fl_bk_queue : public noncopyable {
             ;
 
         // Construct element data.
-        new ((element_type *)elem_node->data) element_type(std::forward<U>(data));
+        new ((element_type *)elem_node->data)
+            element_type(std::forward<U>(data));
 
         // Mark element node ready.
         elem_node->ready = 1;
@@ -140,10 +147,11 @@ template <typename T> class LIB_PUMP fl_bk_queue : public noncopyable {
                 }
             }
 
-            if (read_index_.compare_exchange_strong(cur_read_index,
-                                                    cur_read_index + 1,
-                                                    std::memory_order_acquire,
-                                                    std::memory_order_relaxed)) {
+            if (read_index_.compare_exchange_strong(
+                    cur_read_index,
+                    cur_read_index + 1,
+                    std::memory_order_acquire,
+                    std::memory_order_relaxed)) {
                 break;
             }
         } while (true);
@@ -167,7 +175,7 @@ template <typename T> class LIB_PUMP fl_bk_queue : public noncopyable {
     /*********************************************************************************
      * Get size
      ********************************************************************************/
-    PUMP_INLINE int32_t size() const {
+    pump_inline int32_t size() const {
         int32_t cur_read_index = read_index_.load(std::memory_order_relaxed);
         int32_t cur_write_index = write_index_.load(std::memory_order_relaxed);
 
@@ -181,14 +189,14 @@ template <typename T> class LIB_PUMP fl_bk_queue : public noncopyable {
     /*********************************************************************************
      * Empty
      ********************************************************************************/
-    PUMP_INLINE bool empty() const {
+    pump_inline bool empty() const {
         return size() > 0;
     }
 
     /*********************************************************************************
      * Get capacity
      ********************************************************************************/
-    PUMP_INLINE int32_t capacity() const {
+    pump_inline int32_t capacity() const {
         return size_;
     }
 
@@ -196,7 +204,7 @@ template <typename T> class LIB_PUMP fl_bk_queue : public noncopyable {
     /*********************************************************************************
      * Count to index
      ********************************************************************************/
-    PUMP_INLINE int32_t __count_to_index(int32_t count) const {
+    pump_inline int32_t __count_to_index(int32_t count) const {
         return (count & size_mask_);
     }
 

@@ -22,7 +22,10 @@ namespace proto {
 namespace http {
 
 frame::frame(bool fin, uint8_t opt, uint64_t payload_len) :
-    fin_(fin), opt_(opt), payload_len_(payload_len), is_header_unpacked_(false) {}
+    fin_(fin),
+    opt_(opt),
+    payload_len_(payload_len),
+    is_header_unpacked_(false) {}
 
 frame::frame(bool fin,
              uint8_t opt,
@@ -39,8 +42,8 @@ bool frame::unpack_header(toolkit::io_buffer *iob) {
     int32_t read_size = 0;
 
     do {
-        uint8_t b = 0;
-        if (!iob->read((block_t *)&b)) {
+        char b = 0;
+        if (!iob->read(&b)) {
             break;
         }
         read_size += 1;
@@ -51,7 +54,7 @@ bool frame::unpack_header(toolkit::io_buffer *iob) {
         // Unpack opt code.
         opt_ = b & 0x0f;
 
-        if (!iob->read((block_t *)&b)) {
+        if (!iob->read(&b)) {
             break;
         }
         read_size += 1;
@@ -60,14 +63,14 @@ bool frame::unpack_header(toolkit::io_buffer *iob) {
         payload_len_ = b & 0x0f;
         if (payload_len_ == 126) {
             uint16_t l = 0;
-            if (!iob->read((block_t *)&l, sizeof(l))) {
+            if (!iob->read((char *)&l, sizeof(l))) {
                 break;
             }
             payload_len_ = transform_endian_i16(l);
             read_size += 2;
         } else if (payload_len_ == 127) {
             uint64_t l = 0;
-            if (!iob->read((block_t *)&l, sizeof(l))) {
+            if (!iob->read((char *)&l, sizeof(l))) {
                 break;
             }
             payload_len_ = transform_endian_i64(l);
@@ -77,7 +80,7 @@ bool frame::unpack_header(toolkit::io_buffer *iob) {
         // Unpack payload mask key.
         if ((b & 0x80) > 0) {
             payload_mask_key_.resize(4);
-            if (!iob->read((block_t *)payload_mask_key_.data(), 4)) {
+            if (!iob->read((char *)payload_mask_key_.data(), 4)) {
                 break;
             }
             read_size += 4;
@@ -101,7 +104,7 @@ bool frame::pack_header(toolkit::io_buffer *iob) {
     if (fin_) {
         b |= 0x80;
     }
-    if (!iob->write(b)) {
+    if (!iob->write(b, 1)) {
         return false;
     }
 
@@ -116,18 +119,18 @@ bool frame::pack_header(toolkit::io_buffer *iob) {
     } else {
         b |= 127;
     }
-    if (!iob->write(b)) {
+    if (!iob->write(b, 1)) {
         return false;
     }
 
     if (payload_len_ >= 126 && payload_len_ <= 65535) {
         uint16_t l = transform_endian_i16(payload_len_);
-        if (!iob->write((block_t *)&l, sizeof(l))) {
+        if (!iob->write((char *)&l, sizeof(l))) {
             return false;
         }
     } else if (payload_len_ > 65535) {
         uint64_t l = transform_endian_i64(payload_len_);
-        if (!iob->write((block_t *)&l, sizeof(l))) {
+        if (!iob->write((char *)&l, sizeof(l))) {
             return false;
         }
     }
@@ -141,7 +144,7 @@ bool frame::pack_header(toolkit::io_buffer *iob) {
     return true;
 }
 
-void frame::mask_payload(uint8_t *b) {
+void frame::mask_payload(char *b) {
     if (payload_mask_key_.size() == 4) {
         for (uint64_t i = 0; i < payload_len_; i++) {
             b[i] = b[i] ^ payload_mask_key_[i % 4];

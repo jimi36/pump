@@ -24,7 +24,9 @@ struct transport_context {
 
 class my_tcp_acceptor : public std::enable_shared_from_this<my_tcp_acceptor> {
   public:
-    my_tcp_acceptor() { send_data_.resize(send_pocket_size); }
+    my_tcp_acceptor() {
+        send_data_.resize(send_pocket_size);
+    }
 
     /*********************************************************************************
      * Tcp accepted event callback
@@ -36,12 +38,18 @@ class my_tcp_acceptor : public std::enable_shared_from_this<my_tcp_acceptor> {
         transport->set_context(tctx);
 
         pump::transport_callbacks cbs;
-        cbs.read_cb = pump_bind(&my_tcp_acceptor::on_read_callback, this,
-                                transp.get(), _1, _2);
-        cbs.stopped_cb = pump_bind(&my_tcp_acceptor::on_stopped_callback, this,
+        cbs.read_cb = pump_bind(&my_tcp_acceptor::on_read_callback,
+                                this,
+                                transp.get(),
+                                _1,
+                                _2);
+        cbs.stopped_cb = pump_bind(&my_tcp_acceptor::on_stopped_callback,
+                                   this,
                                    transp.get());
-        cbs.disconnected_cb = pump_bind(
-            &my_tcp_acceptor::on_disconnected_callback, this, transp.get());
+        cbs.disconnected_cb =
+            pump_bind(&my_tcp_acceptor::on_disconnected_callback,
+                      this,
+                      transp.get());
 
         if (transport->start(sv, READ_MODE_ONCE, cbs) == 0) {
             std::lock_guard<std::mutex> lock(mx_);
@@ -59,7 +67,7 @@ class my_tcp_acceptor : public std::enable_shared_from_this<my_tcp_acceptor> {
     /*********************************************************************************
      * Tcp read event callback
      ********************************************************************************/
-    void on_read_callback(base_transport *transp, const block_t *b, int32_t size) {
+    void on_read_callback(base_transport *transp, const char *b, int32_t size) {
         transport_context *ctx = (transport_context *)transp->get_context();
 
         ctx->read_size += size;
@@ -110,7 +118,7 @@ class my_tcp_acceptor : public std::enable_shared_from_this<my_tcp_acceptor> {
     std::string send_data_;
 
     std::mutex mx_;
-    std::map<void*, transport_context *> transports_;
+    std::map<void *, transport_context *> transports_;
 };
 
 void start_tcp_server(const std::string &ip, uint16_t port) {

@@ -17,18 +17,28 @@
 #ifndef pump_types_h
 #define pump_types_h
 
-#include "pump/memory.h"
+#include <memory>
+#include <functional>
 
+#include "pump/platform.h"
+
+// For gnutls
 #if defined(OS_WINDOWS) && defined(PUMP_HAVE_GNUTLS)
 #include <BaseTsd.h>
 typedef SSIZE_T ssize_t;
 #endif
 
+// For function callback
+#define pump_bind std::bind
+#define pump_function std::function
+using namespace std::placeholders;
+
+// For smart pointer
 #define DEFINE_SMART_POINTER_TYPE(class_name)            \
     typedef std::weak_ptr<class_name> class_name##_wptr; \
     typedef std::shared_ptr<class_name> class_name##_sptr;
 
-typedef char block_t;
+// For float types
 typedef float float32_t;
 typedef double float64_t;
 

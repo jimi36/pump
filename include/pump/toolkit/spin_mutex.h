@@ -25,7 +25,7 @@
 namespace pump {
 namespace toolkit {
 
-class LIB_PUMP spin_mutex {
+class pump_lib spin_mutex {
   public:
     /*********************************************************************************
      * Constructor
@@ -45,7 +45,7 @@ class LIB_PUMP spin_mutex {
     /*********************************************************************************
      * Try lock
      ********************************************************************************/
-    PUMP_INLINE bool try_lock() {
+    pump_inline bool try_lock() {
         bool exp = false;
         return locked_.compare_exchange_strong(exp, true);
     }
@@ -53,14 +53,14 @@ class LIB_PUMP spin_mutex {
     /*********************************************************************************
      * Unlock
      ********************************************************************************/
-    PUMP_INLINE void unlock() {
+    pump_inline void unlock() {
         locked_.store(false);
     }
 
     /*********************************************************************************
      * Get locked status
      ********************************************************************************/
-    PUMP_INLINE bool is_locked() const {
+    pump_inline bool is_locked() const {
         return locked_.load();
     }
 

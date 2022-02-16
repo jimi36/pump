@@ -16,9 +16,9 @@
 
 #include "pump/init.h"
 #include "pump/debug.h"
+#include "pump/platform.h"
 #include "pump/net/iocp.h"
 
-// Import "memset"
 #include <string.h>
 
 #if defined(OS_LINUX)
@@ -51,7 +51,25 @@ static bool setup_signal(int32_t sig, sighandler_t handler) {
 }
 #endif
 
+static std::atomic_int s_inited_count(0);
+
 bool init() {
+    while (true) {
+        int32_t inited_count = s_inited_count.load();
+        if (inited_count == -1) {
+            return false;
+        } else if (inited_count > 0) {
+            if (s_inited_count.compare_exchange_strong(inited_count,
+                                                       inited_count + 1)) {
+                return true;
+            }
+        } else {
+            if (s_inited_count.compare_exchange_strong(inited_count, -1)) {
+                break;
+            }
+        }
+    }
+
 #if defined(PUMP_HAVE_WINSOCK)
     WSADATA wsaData;
     WORD wVersionRequested;
@@ -65,17 +83,18 @@ bool init() {
     if (!ntdll) {
         return false;
     }
-    if ((NtCreateFile = (FnNtCreateFile)GetProcAddress(ntdll, "NtCreateFile")) ==
+    if ((NtCreateFile =
+             (FnNtCreateFile)GetProcAddress(ntdll, "NtCreateFile")) ==
         nullptr) {
         return false;
     }
-    if ((NtDeviceIoControlFile =
-             (FnNtDeviceIoControlFile)GetProcAddress(ntdll, "NtDeviceIoControlFile")) ==
-        nullptr) {
+    if ((NtDeviceIoControlFile = (FnNtDeviceIoControlFile)
+             GetProcAddress(ntdll, "NtDeviceIoControlFile")) == nullptr) {
         return false;
     }
     if ((NtCancelIoFileEx =
-             (FnNtCancelIoFileEx)GetProcAddress(ntdll, "NtCancelIoFileEx")) == nullptr) {
+             (FnNtCancelIoFileEx)GetProcAddress(ntdll, "NtCancelIoFileEx")) ==
+        nullptr) {
         return false;
     }
 #endif
@@ -96,10 +115,29 @@ bool init() {
     SSL_load_error_strings();
     OpenSSL_add_all_algorithms();
 #endif
+
+    s_inited_count.store(1);
+
     return true;
 }
 
 void uninit() {
+    while (true) {
+        int32_t inited_count = s_inited_count.load();
+        if (inited_count <= 0) {
+            return;
+        } else if (inited_count > 1) {
+            if (s_inited_count.compare_exchange_strong(inited_count,
+                                                       inited_count - 1)) {
+                return;
+            }
+        } else {
+            if (s_inited_count.compare_exchange_strong(inited_count, -1)) {
+                break;
+            }
+        }
+    }
+
 #if defined(PUMP_HAVE_WINSOCK)
     ::WSACleanup();
 #endif
@@ -111,6 +149,8 @@ void uninit() {
 #if defined(PUMP_HAVE_GNUTLS)
     gnutls_global_deinit();
 #endif
+
+    s_inited_count.store(0);
 }
 
 }  // namespace pump

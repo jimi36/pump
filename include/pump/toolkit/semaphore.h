@@ -30,7 +30,7 @@
 namespace pump {
 namespace toolkit {
 
-class LIB_PUMP semaphore : public noncopyable {
+class pump_lib semaphore : public noncopyable {
   public:
     /*********************************************************************************
      * Constructor
@@ -156,7 +156,7 @@ class LIB_PUMP semaphore : public noncopyable {
 #endif
 };
 
-class LIB_PUMP light_semaphore : public noncopyable {
+class pump_lib light_semaphore : public noncopyable {
   public:
     /*********************************************************************************
      * Constructor

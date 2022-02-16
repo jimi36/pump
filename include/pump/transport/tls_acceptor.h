@@ -30,13 +30,14 @@ namespace transport {
 class tls_acceptor;
 DEFINE_SMART_POINTER_TYPE(tls_acceptor);
 
-class LIB_PUMP tls_acceptor : public base_acceptor,
-                              public std::enable_shared_from_this<tls_acceptor> {
+class pump_lib tls_acceptor
+    : public base_acceptor,
+      public std::enable_shared_from_this<tls_acceptor> {
   public:
     /*********************************************************************************
      * Create instance
      ********************************************************************************/
-    PUMP_INLINE static tls_acceptor_sptr create(tls_credentials xcerd,
+    pump_inline static tls_acceptor_sptr create(tls_credentials xcerd,
                                                 const address &listen_address,
                                                 int64_t handshake_timeout = 0) {
         INLINE_OBJECT_CREATE(obj,
@@ -53,7 +54,8 @@ class LIB_PUMP tls_acceptor : public base_acceptor,
     /*********************************************************************************
      * Start
      ********************************************************************************/
-    virtual error_code start(service *sv, const acceptor_callbacks &cbs) override;
+    virtual error_code start(service *sv,
+                             const acceptor_callbacks &cbs) override;
 
     /*********************************************************************************
      * Stop
@@ -76,7 +78,8 @@ class LIB_PUMP tls_acceptor : public base_acceptor,
     /*********************************************************************************
      * Tls handskake stopped callback
      ********************************************************************************/
-    static void on_handshake_stopped(tls_acceptor_wptr wptr, tls_handshaker *handshaker);
+    static void on_handshake_stopped(tls_acceptor_wptr wptr,
+                                     tls_handshaker *handshaker);
 
   private:
     /*********************************************************************************
@@ -84,7 +87,7 @@ class LIB_PUMP tls_acceptor : public base_acceptor,
      ********************************************************************************/
     tls_acceptor(tls_credentials xcred,
                  const address &listen_address,
-                 int64_t handshake_timeout);
+                 int64_t handshake_timeout) noexcept;
 
     /*********************************************************************************
      * Open accept flow

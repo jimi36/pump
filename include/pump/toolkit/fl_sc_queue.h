@@ -28,7 +28,7 @@ namespace pump {
 namespace toolkit {
 
 template <typename T, int32_t PerBlockElementCount = 1024>
-class LIB_PUMP fl_sc_queue : public noncopyable {
+class fl_sc_queue : public noncopyable {
   public:
     // Element type
     typedef T element_type;
@@ -44,14 +44,15 @@ class LIB_PUMP fl_sc_queue : public noncopyable {
             cache_tail(0),
             tail(0),
             cache_head(0) {}
-        block_node *next;
-        block_t *data;
 
-        block_t padding1_[64];
+        block_node *next;
+        char *data;
+
+        char padding1_[64];
         std::atomic_int32_t head;
         int32_t cache_tail;
 
-        block_t padding2_[64];
+        char padding2_[64];
         std::atomic_int32_t tail;
         int32_t cache_head;
     };
@@ -91,7 +92,8 @@ class LIB_PUMP fl_sc_queue : public noncopyable {
 
             while (head != tail) {
                 // Destory element
-                auto elem = (element_type *)(head_blk->data + head * element_size);
+                auto elem =
+                    (element_type *)(head_blk->data + head * element_size);
                 elem->~element_type();
                 // Move next element position
                 head = (head + 1) & block_element_size_mask_;
@@ -120,11 +122,13 @@ class LIB_PUMP fl_sc_queue : public noncopyable {
         int32_t next_tail = (tail + 1) & block_element_size_mask_;
 
         if (next_tail != blk->cache_head ||
-            next_tail != (blk->cache_head = blk->head.load(std::memory_order_relaxed))) {
+            next_tail !=
+                (blk->cache_head = blk->head.load(std::memory_order_relaxed))) {
             std::atomic_thread_fence(std::memory_order_acquire);
 
             // Construct element
-            new (blk->data + tail * element_size) element_type(std::forward<U>(data));
+            new (blk->data + tail * element_size)
+                element_type(std::forward<U>(data));
 
             std::atomic_thread_fence(std::memory_order_release);
             // Move tail position of block
@@ -140,7 +144,8 @@ class LIB_PUMP fl_sc_queue : public noncopyable {
             std::atomic_thread_fence(std::memory_order_acquire);
 
             // Construct element
-            new (blk->data + tail * element_size) element_type(std::forward<U>(data));
+            new (blk->data + tail * element_size)
+                element_type(std::forward<U>(data));
 
             // Get next tail element position
             next_tail = (tail + 1) & block_element_size_mask_;
@@ -153,7 +158,8 @@ class LIB_PUMP fl_sc_queue : public noncopyable {
         } else {
             // Create new block node
             block_node *new_blk = object_create<block_node>();
-            new_blk->data = (block_t *)pump_malloc(block_element_size_ * element_size);
+            new_blk->data =
+                (char *)pump_malloc(block_element_size_ * element_size);
             new_blk->next = blk->next;
             blk->next = new_blk;
             blk = new_blk;
@@ -186,11 +192,13 @@ class LIB_PUMP fl_sc_queue : public noncopyable {
         int32_t head = blk->head.load(std::memory_order_relaxed);
 
         if (head != blk->cache_tail ||
-            head != (blk->cache_tail = blk->tail.load(std::memory_order_relaxed))) {
+            head !=
+                (blk->cache_tail = blk->tail.load(std::memory_order_relaxed))) {
             std::atomic_thread_fence(std::memory_order_acquire);
 
             // Load element from block node data
-            element_type *elem = (element_type *)(blk->data + head * element_size);
+            element_type *elem =
+                (element_type *)(blk->data + head * element_size);
             data = std::move(*elem);
             elem->~element_type();
 
@@ -222,7 +230,8 @@ class LIB_PUMP fl_sc_queue : public noncopyable {
             }
 
             // Pop element data
-            element_type *elem = (element_type *)(blk->data + head * element_size);
+            element_type *elem =
+                (element_type *)(blk->data + head * element_size);
             data = std::move(*elem);
             elem->~element_type();
 
@@ -242,7 +251,7 @@ class LIB_PUMP fl_sc_queue : public noncopyable {
     /*********************************************************************************
      * Empty
      ********************************************************************************/
-    PUMP_INLINE bool empty() const {
+    pump_inline bool empty() const {
         block_node *blk = blk_head_.load(std::memory_order_relaxed);
         int32_t head = blk->head.load(std::memory_order_relaxed);
         if (head != blk->tail.load(std::memory_order_relaxed)) {
@@ -256,7 +265,7 @@ class LIB_PUMP fl_sc_queue : public noncopyable {
     /*********************************************************************************
      * Get capacity
      ********************************************************************************/
-    PUMP_INLINE int32_t capacity() const {
+    pump_inline int32_t capacity() const {
         return capacity_;
     }
 
@@ -267,14 +276,15 @@ class LIB_PUMP fl_sc_queue : public noncopyable {
     void __init_list(int32_t blk_count) {
         // Create first block node.
         block_node *head = object_create<block_node>();
-        head->data = (block_t *)pump_malloc(block_element_size_ * element_size);
+        head->data = (char *)pump_malloc(block_element_size_ * element_size);
         block_node *tail = head;
 
         // Create left block nodes.
         for (int32_t i = 1; i < blk_count; i++) {
             // Create block node.
             tail->next = object_create<block_node>();
-            tail->next->data = (block_t *)pump_malloc(block_element_size_ * element_size);
+            tail->next->data =
+                (char *)pump_malloc(block_element_size_ * element_size);
             tail = tail->next;
         }
 
@@ -297,10 +307,10 @@ class LIB_PUMP fl_sc_queue : public noncopyable {
     // Block element size mask
     int32_t block_element_size_mask_;
     // Head block node
-    block_t padding1_[64];
+    char padding1_[64];
     std::atomic<block_node *> blk_head_;
     // Tail block node
-    block_t padding2_[64];
+    char padding2_[64];
     std::atomic<block_node *> blk_tail_;
 };
 

@@ -17,10 +17,9 @@
 #ifndef pump_memory_h
 #define pump_memory_h
 
-#include "pump/platform.h"
-
-#include <memory>
 #include <stdlib.h>
+
+#include "pump/platform.h"
 
 #if defined(PUMP_HAVE_JEMALLOC)
 #define JEMALLOC_NO_RENAME
@@ -40,41 +39,31 @@
 // Inline object create
 #define INLINE_OBJECT_CREATE(obj, TYPE, args)      \
     TYPE *obj = (TYPE *)pump_malloc(sizeof(TYPE)); \
-    if (PUMP_UNLIKELY(obj != nullptr)) {           \
+    if (pump_unlikely(obj != nullptr)) {           \
         new (obj) TYPE args;                       \
     }
 
 // Inline object create
 #define INLINE_OBJECT_DELETE(obj, TYPE) \
-    if (PUMP_LIKELY(obj != nullptr)) {  \
+    if (pump_likely(obj != nullptr)) {  \
         obj->~TYPE();                   \
         pump_free(obj);                 \
     }
 
 template <typename T, typename... ArgTypes>
-PUMP_INLINE T *object_create(ArgTypes... args) {
+pump_inline T *object_create(ArgTypes... args) {
     T *p = (T *)pump_malloc(sizeof(T));
-    if (PUMP_UNLIKELY(p == nullptr)) {
+    if (pump_unlikely(p == nullptr)) {
         return nullptr;
     }
     return new (p) T(args...);
 }
 
-template <typename T> PUMP_INLINE void object_delete(T *obj) {
-    if (PUMP_LIKELY(obj != nullptr)) {
+template <typename T> pump_inline void object_delete(T *obj) {
+    if (pump_likely(obj != nullptr)) {
         obj->~T();
         pump_free(obj);
     }
 }
-
-// Try to lock shared pointer and store to raw pointor
-//#define PUMP_LOCK_SPOINTER(p, sp)
-//    auto p##_locker = sp;
-//    auto p = p##_locker.get()
-
-// Try to lock weak pointer and store to raw pointor
-//#define PUMP_LOCK_WPOINTER(p, wp)
-//    auto p##_locker = wp.lock();
-//    auto p = p##_locker.get()
 
 #endif

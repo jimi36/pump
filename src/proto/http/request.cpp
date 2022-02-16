@@ -16,6 +16,7 @@
 
 #include "pump/debug.h"
 #include "pump/utils.h"
+#include "pump/memory.h"
 #include "pump/proto/http/utils.h"
 #include "pump/proto/http/request.h"
 
@@ -23,17 +24,18 @@ namespace pump {
 namespace proto {
 namespace http {
 
-static const block_t *request_method_strings[] =
+static const char *request_method_strings[] =
     {"UNKNOWN", "GET", "POST", "HEAD", "PUT", "DELETE"};
 
-request::request(void *ctx) noexcept : packet(ctx, PK_REQUEST), method_(METHOD_UNKNOWN) {}
+request::request(void *ctx) noexcept :
+    packet(ctx, PK_REQUEST), method_(METHOD_UNKNOWN) {}
 
 request::request(void *ctx, const std::string &url) noexcept :
     packet(ctx, PK_REQUEST), method_(METHOD_UNKNOWN) {
     uri_.parse(url);
 }
 
-int32_t request::parse(const block_t *b, int32_t size) {
+int32_t request::parse(const char *b, int32_t size) {
     if (parse_status_ == PARSE_FINISHED) {
         return 0;
     }
@@ -42,7 +44,7 @@ int32_t request::parse(const block_t *b, int32_t size) {
         parse_status_ = PARSE_LINE;
     }
 
-    const block_t *pos = b;
+    const char *pos = b;
     int32_t parse_size = 0;
     if (parse_status_ == PARSE_LINE) {
         parse_size = __parse_start_line(pos, size);
@@ -78,7 +80,8 @@ int32_t request::parse(const block_t *b, int32_t size) {
         }
 
         int32_t length = 0;
-        if (get_head("Content-Length", length) || get_head("content-length", length)) {
+        if (get_head("Content-Length", length) ||
+            get_head("content-length", length)) {
             if (length > 0) {
                 body_.reset(object_create<body>(), object_delete<body>);
                 if (!body_) {
@@ -156,11 +159,11 @@ int32_t request::serialize(std::string &buffer) const {
     return serialize_size;
 }
 
-int32_t request::__parse_start_line(const block_t *b, int32_t size) {
-    const block_t *pos = b;
+int32_t request::__parse_start_line(const char *b, int32_t size) {
+    const char *pos = b;
 
     // Find request line end
-    const block_t *line_end = find_http_line_end(pos, size);
+    const char *line_end = find_http_line_end(pos, size);
     if (line_end == nullptr) {
         return 0;
     }
@@ -182,7 +185,7 @@ int32_t request::__parse_start_line(const block_t *b, int32_t size) {
     }
 
     // Parse request path
-    const block_t *old_pos = pos;
+    const char *old_pos = pos;
     while (pos < line_end && *pos != ' ' && *pos != '?') {
         ++pos;
     }
@@ -238,7 +241,7 @@ int32_t request::__parse_start_line(const block_t *b, int32_t size) {
 }
 
 int32_t request::__serialize_request_line(std::string &buf) const {
-    block_t tmp[256] = {0};
+    char tmp[256] = {0};
     int32_t size = pump_snprintf(tmp,
                                  sizeof(tmp) - 1,
                                  "%s %s %s\r\n",

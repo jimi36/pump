@@ -24,16 +24,16 @@
 
 namespace pump {
 
-uint8_t dec_to_hex(uint8_t dec) {
+char dec_to_hex(uint8_t dec) {
     if (dec >= 0 && dec <= 9) {
-        return uint8_t('0') + dec;
+        return char('0') + dec;
     } else if (dec >= 10 && dec <= 15) {
-        return uint8_t('A') + dec - 10;
+        return char('A') + dec - 10;
     }
     return 0;
 }
 
-uint8_t hex_to_dec(uint8_t hex) {
+uint8_t hex_to_dec(char hex) {
     if (hex >= '0' && hex <= '9') {
         return uint8_t(hex - '0');
     } else if (hex >= 'a' && hex <= 'f') {
@@ -63,10 +63,14 @@ uint32_t transform_endian_i32(uint32_t val) {
 
 uint64_t transform_endian_i64(uint64_t val) {
 #if defined(LITTLE_ENDIAN)
-    return ((val >> 56) & 0x00000000000000ff) | ((val >> 40) & 0x000000000000ff00) |
-           ((val >> 24) & 0x0000000000ff0000) | ((val >> 8) & 0x00000000ff000000) |
-           ((val << 8) & 0x000000ff00000000) | ((val << 24) & 0x0000ff0000000000) |
-           ((val << 40) & 0x00ff000000000000) | ((val << 56) & 0xff00000000000000);
+    return ((val >> 56) & 0x00000000000000ff) |
+           ((val >> 40) & 0x000000000000ff00) |
+           ((val >> 24) & 0x0000000000ff0000) |
+           ((val >> 8) & 0x00000000ff000000) |
+           ((val << 8) & 0x000000ff00000000) |
+           ((val << 24) & 0x0000ff0000000000) |
+           ((val << 40) & 0x00ff000000000000) |
+           ((val << 56) & 0xff00000000000000);
 #else
     return val;
 #endif
@@ -93,7 +97,8 @@ int32_t random() {
 std::string gbk_to_utf8(const std::string &in) {
     std::string out;
 #if !defined(PUMP_HAVE_ICONV_HEADER)
-    std::wstring wstr(MultiByteToWideChar(CP_ACP, 0, in.c_str(), -1, NULL, 0) - 1,
+    std::wstring wstr(MultiByteToWideChar(CP_ACP, 0, in.c_str(), -1, NULL, 0) -
+                          1,
                       wchar_t(0));
     MultiByteToWideChar(CP_ACP,
                         0,
@@ -102,10 +107,16 @@ std::string gbk_to_utf8(const std::string &in) {
                         (wchar_t *)wstr.data(),
                         (int32_t)wstr.size());
 
-    std::string str(
-        WideCharToMultiByte(CP_UTF8, 0, (wchar_t *)wstr.data(), -1, NULL, 0, NULL, NULL) -
-            1,
-        char(0));
+    std::string str(WideCharToMultiByte(CP_UTF8,
+                                        0,
+                                        (wchar_t *)wstr.data(),
+                                        -1,
+                                        NULL,
+                                        0,
+                                        NULL,
+                                        NULL) -
+                        1,
+                    char(0));
     WideCharToMultiByte(CP_UTF8,
                         0,
                         (wchar_t *)wstr.data(),
@@ -120,11 +131,11 @@ std::string gbk_to_utf8(const std::string &in) {
     iconv_t cd = iconv_open("utf-8", "gb2312");
     if (cd != (iconv_t)-1) {
         size_t inlen = in.size();
-        block_t *psrc = (block_t *)in.data();
+        char *psrc = (char *)in.data();
 
         size_t outlen = inlen * 3 + 1;
         out.resize(outlen, 0);
-        block_t *pdes = (block_t *)out.data();
+        char *pdes = (char *)out.data();
 
         iconv(cd, &psrc, &inlen, &pdes, &outlen);
         out.reserve(outlen);
@@ -148,8 +159,9 @@ std::string utf8_to_gbk(const std::string &in) {
                         (wchar_t *)wstr.data(),
                         (int32_t)wstr.size() - 1);
 
-    std::string str(WideCharToMultiByte(CP_ACP, 0, wstr.data(), -1, NULL, 0, NULL, NULL),
-                    0);
+    std::string str(
+        WideCharToMultiByte(CP_ACP, 0, wstr.data(), -1, NULL, 0, NULL, NULL),
+        0);
     WideCharToMultiByte(CP_ACP,
                         0,
                         wstr.data(),
@@ -164,11 +176,11 @@ std::string utf8_to_gbk(const std::string &in) {
     iconv_t cd = iconv_open("gb2312", "utf-8");
     if (cd != (iconv_t)-1) {
         size_t inlen = in.size();
-        block_t *psrc = (block_t *)in.c_str();
+        char *psrc = (char *)in.c_str();
 
         size_t outlen = inlen * 3 + 1;
         out.resize(outlen, 0);
-        block_t *pdes = (block_t *)out.c_str();
+        char *pdes = (char *)out.c_str();
 
         iconv(cd, &psrc, &inlen, &pdes, &outlen);
         out.reserve(outlen);
@@ -179,7 +191,8 @@ std::string utf8_to_gbk(const std::string &in) {
     return std::forward<std::string>(out);
 }
 
-std::string join_strings(const std::vector<std::string> &src, const std::string &sep) {
+std::string join_strings(const std::vector<std::string> &src,
+                         const std::string &sep) {
     std::string out;
 
     if (src.empty()) {
@@ -196,7 +209,8 @@ std::string join_strings(const std::vector<std::string> &src, const std::string 
     return std::forward<std::string>(out);
 }
 
-std::vector<std::string> split_string(const std::string &src, const std::string &sep) {
+std::vector<std::string> split_string(const std::string &src,
+                                      const std::string &sep) {
     std::regex regx(sep);
     std::vector<std::string> result;
     std::sregex_token_iterator iter(src.begin(), src.end(), regx, -1);

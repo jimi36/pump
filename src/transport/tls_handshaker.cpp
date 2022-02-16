@@ -14,12 +14,14 @@
  * limitations under the License.
  */
 
+#include "pump/memory.h"
 #include "pump/transport/tls_handshaker.h"
 
 namespace pump {
 namespace transport {
 
-tls_handshaker::tls_handshaker() noexcept : base_channel(TLS_HANDSHAKER, nullptr, -1) {}
+tls_handshaker::tls_handshaker() noexcept :
+    base_channel(TLS_HANDSHAKER, nullptr, -1) {}
 
 tls_handshaker::~tls_handshaker() {
     if (tracker_ && tracker_->get_poller() != nullptr) {
@@ -87,9 +89,9 @@ bool tls_handshaker::start(service *sv,
         }
 
         // New channel tracker
-        tracker_.reset(
-            object_create<poll::channel_tracker>(shared_from_this(), poll::TRACK_NONE),
-            object_delete<poll::channel_tracker>);
+        tracker_.reset(object_create<poll::channel_tracker>(shared_from_this(),
+                                                            poll::TRACK_NONE),
+                       object_delete<poll::channel_tracker>);
         if (!tracker_) {
             PUMP_WARN_LOG("new tls handshaker's tracker object failed");
             break;
@@ -132,7 +134,8 @@ void tls_handshaker::on_channel_event(int32_t ev) {
 void tls_handshaker::on_read_event() {
     // If transport is starting, resume tracker.
     if (__is_state(TRANSPORT_STARTING, std::memory_order_relaxed)) {
-        PUMP_DEBUG_LOG("tls handshaker is starting, delay to handle read event");
+        PUMP_DEBUG_LOG(
+            "tls handshaker is starting, delay to handle read event");
         if (!tracker_->get_poller()->resume_channel_tracker(tracker_.get())) {
             PUMP_WARN_LOG("resume tls handshaker's tracker failed");
             if (__set_state(TRANSPORT_STARTING, TRANSPORT_DISCONNECTING) ||
@@ -149,7 +152,8 @@ void tls_handshaker::on_read_event() {
 void tls_handshaker::on_send_event() {
     // If transport is starting, resume tracker.
     if (__is_state(TRANSPORT_STARTING, std::memory_order_relaxed)) {
-        PUMP_DEBUG_LOG("tls handshaker is starting, delay to handle send event");
+        PUMP_DEBUG_LOG(
+            "tls handshaker is starting, delay to handle send event");
         if (!tracker_->get_poller()->resume_channel_tracker(tracker_.get())) {
             PUMP_WARN_LOG("resume tls handshaker's tracker failed");
             if (__set_state(TRANSPORT_STARTING, TRANSPORT_DISCONNECTING) ||

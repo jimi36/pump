@@ -8,8 +8,8 @@
 
 MACRO(build_pump_library)
 	CONFIGURE_FILE(
-		"${ROOT_DIR}/include/pump/config.h.in"
-		"${ROOT_DIR}/include/pump/config.h"
+		"${ROOT_DIR}/include/pump/build.h.in"
+		"${ROOT_DIR}/include/pump/build.h"
 	)
 
 	set_compile_flags(${LIB_COMPILE_FLAGS})

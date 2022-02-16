@@ -14,13 +14,15 @@
  * limitations under the License.
  */
 
+#include "pump/memory.h"
 #include "pump/time/timer.h"
 #include "pump/time/manager.h"
+#include "pump/time/timestamp.h"
 
 namespace pump {
 namespace time {
 
-timer::timer(uint64_t timeout, const timer_callback &cb, bool repeated) noexcept :
+timer::timer(uint64_t timeout, const timer_callback &cb, bool repeated) :
     queue_(nullptr),
     status_(TIMER_INIT),
     cb_(cb),
@@ -32,7 +34,7 @@ void timer::handle_timeout() {
     if (__set_state(TIMER_STARTED, TIMER_PENDING)) {
         cb_();
 
-        if (PUMP_LIKELY(repeated_)) {
+        if (pump_likely(repeated_)) {
             if (__set_state(TIMER_PENDING, TIMER_STARTED)) {
                 // Update overtime.
                 overtime_ = get_clock_milliseconds() + timeout_;

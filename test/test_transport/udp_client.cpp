@@ -7,8 +7,10 @@ class my_udp_client {
     /*********************************************************************************
      * Read event callback for udp
      ********************************************************************************/
-    virtual void on_read_callback(base_transport *transp, const block_t *b,
-                                  int32_t size, const address &remote_address) {}
+    virtual void on_read_callback(base_transport *transp,
+                                  const char *b,
+                                  int32_t size,
+                                  const address &from) {}
 
     /*********************************************************************************
      * Stopped event callback
@@ -48,9 +50,14 @@ void start_udp_client(const std::string &ip, uint16_t port) {
 
     pump::transport_callbacks cbs;
     cbs.read_from_cb = pump_bind(&my_udp_client::on_read_callback,
-                                 udp_client.get(), transport.get(), _1, _2, _3);
+                                 udp_client.get(),
+                                 transport.get(),
+                                 _1,
+                                 _2,
+                                 _3);
     cbs.stopped_cb = pump_bind(&my_udp_client::on_stopped_callback,
-                               udp_client.get(), transport.get());
+                               udp_client.get(),
+                               transport.get());
 
     if (transport->start(sv, READ_MODE_LOOP, cbs) != 0) {
         printf("udp client start error\n");

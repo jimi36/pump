@@ -55,7 +55,8 @@ error_code tcp_dialer::start(service *sv, const dialer_callbacks &cbs) {
             break;
         }
 
-        if (!__start_dial_timer(pump_bind(&tcp_dialer::on_timeout, shared_from_this()))) {
+        if (!__start_dial_timer(
+                pump_bind(&tcp_dialer::on_timeout, shared_from_this()))) {
             PUMP_WARN_LOG("start tcp dialer's timer failed");
             break;
         }
@@ -88,9 +89,10 @@ void tcp_dialer::stop() {
         __shutdown_dial_flow();
         __post_channel_event(shared_from_this(), 0);
     } else {
-        // If in timeouting status at the moment, it means that dialer is timeout
-        // but hasn't triggered tracker event callback yet. So we just set it to
-        // stopping status, then tracker event will trigger stopped callabck.
+        // If in timeouting status at the moment, it means that dialer is
+        // timeout but hasn't triggered tracker event callback yet. So we just
+        // set it to stopping status, then tracker event will trigger stopped
+        // callabck.
         __set_state(TRANSPORT_TIMEOUTING, TRANSPORT_STOPPING);
     }
 }
@@ -106,12 +108,13 @@ void tcp_dialer::on_send_event() {
     auto next_status = success ? TRANSPORT_FINISHED : TRANSPORT_ERROR;
     if (!__set_state(TRANSPORT_STARTING, next_status) &&
         !__set_state(TRANSPORT_STARTED, next_status)) {
-        PUMP_WARN_LOG("tcp dialer is finished, but it is already stopped or timeout");
+        PUMP_WARN_LOG(
+            "tcp dialer is finished, but it is already stopped or timeout");
         return;
     }
 
     tcp_transport_sptr tcp_transport;
-    if (PUMP_LIKELY(success)) {
+    if (pump_likely(success)) {
         tcp_transport = tcp_transport::create();
         if (tcp_transport) {
             tcp_transport->init(flow_->unbind(), local_address, remote_address);
@@ -177,8 +180,10 @@ base_transport_sptr tcp_sync_dialer::dial(service *sv,
     }
 
     dialer_callbacks cbs;
-    cbs.dialed_cb = pump_bind(&tcp_sync_dialer::on_dialed, shared_from_this(), _1, _2);
-    cbs.timeouted_cb = pump_bind(&tcp_sync_dialer::on_timeouted, shared_from_this());
+    cbs.dialed_cb =
+        pump_bind(&tcp_sync_dialer::on_dialed, shared_from_this(), _1, _2);
+    cbs.timeouted_cb =
+        pump_bind(&tcp_sync_dialer::on_timeouted, shared_from_this());
     cbs.stopped_cb = pump_bind(&tcp_sync_dialer::on_stopped);
 
     dialer_ = tcp_dialer::create(local_address, remote_address, timeout);

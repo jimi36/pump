@@ -52,7 +52,7 @@ const int32_t PARSE_BODY = 3;
 const int32_t PARSE_FINISHED = 4;
 const int32_t PARSE_FAILED = 5;
 
-class LIB_PUMP packet : public header {
+class pump_lib packet : public header {
   public:
     /*********************************************************************************
      * Constructor
@@ -72,21 +72,21 @@ class LIB_PUMP packet : public header {
     /*********************************************************************************
      * Get context
      ********************************************************************************/
-    PUMP_INLINE void *get_context() const {
+    pump_inline void *get_context() const {
         return ctx_;
     }
 
     /*********************************************************************************
      * Set context
      ********************************************************************************/
-    PUMP_INLINE void set_context(void *ctx) {
+    pump_inline void set_context(void *ctx) {
         ctx_ = ctx;
     }
 
     /*********************************************************************************
      * Get packet type
      ********************************************************************************/
-    PUMP_INLINE int32_t get_type() const {
+    pump_inline int32_t get_type() const {
         return pkt_;
     }
 
@@ -94,7 +94,7 @@ class LIB_PUMP packet : public header {
      * Parse
      * This parse http packet, and return parsed size. If error return -1.
      ********************************************************************************/
-    virtual int32_t parse(const block_t *b, int32_t size) = 0;
+    virtual int32_t parse(const char *b, int32_t size) = 0;
 
     /*********************************************************************************
      * Serialize
@@ -105,35 +105,35 @@ class LIB_PUMP packet : public header {
     /*********************************************************************************
      * Set http body
      ********************************************************************************/
-    PUMP_INLINE void set_body(body_sptr &b) {
+    pump_inline void set_body(body_sptr &b) {
         body_ = b;
     }
 
     /*********************************************************************************
      * Get http body
      ********************************************************************************/
-    PUMP_INLINE const body_sptr get_body() const {
+    pump_inline const body_sptr get_body() const {
         return body_;
     }
 
     /*********************************************************************************
      * Set http version
      ********************************************************************************/
-    PUMP_INLINE void set_http_version(http_version version) {
+    pump_inline void set_http_version(http_version version) {
         version_ = version;
     }
 
     /*********************************************************************************
      * Get http version
      ********************************************************************************/
-    PUMP_INLINE http_version get_http_version() const {
+    pump_inline http_version get_http_version() const {
         return version_;
     }
 
     /*********************************************************************************
      * Get http version string
      ********************************************************************************/
-    PUMP_INLINE std::string get_http_version_string() const {
+    pump_inline std::string get_http_version_string() const {
         if (version_ == VERSION_10) {
             return "HTTP/1.0";
         } else if (version_ == VERSION_11) {
@@ -147,7 +147,7 @@ class LIB_PUMP packet : public header {
     /*********************************************************************************
      * Check parse finished or not
      ********************************************************************************/
-    PUMP_INLINE bool is_parse_finished() const {
+    pump_inline bool is_parse_finished() const {
         return parse_status_ == PARSE_FINISHED;
     }
 

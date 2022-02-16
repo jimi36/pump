@@ -35,27 +35,27 @@ namespace http {
 /*********************************************************************************
  * Find http line end position
  ********************************************************************************/
-LIB_PUMP const block_t *find_http_line_end(const block_t *src, int32_t len);
+pump_lib const char *find_http_line_end(const char *src, int32_t len);
 
 /*********************************************************************************
  * Decode url string
  ********************************************************************************/
-LIB_PUMP bool url_decode(const std::string &src, std::string &des);
+pump_lib bool url_decode(const std::string &src, std::string &des);
 
 /*********************************************************************************
  * Encode to url string
  ********************************************************************************/
-LIB_PUMP bool url_encode(const std::string &src, std::string &des);
+pump_lib bool url_encode(const std::string &src, std::string &des);
 
 /*********************************************************************************
  * Compute Sec-WebSocket-Key
  ********************************************************************************/
-LIB_PUMP std::string compute_sec_key();
+pump_lib std::string compute_sec_key();
 
 /*********************************************************************************
  * Compute Sec-WebSocket-Accept
  ********************************************************************************/
-LIB_PUMP std::string compute_sec_accept_key(const std::string &sec_key);
+pump_lib std::string compute_sec_accept_key(const std::string &sec_key);
 
 }  // namespace http
 }  // namespace proto

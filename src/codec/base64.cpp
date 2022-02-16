@@ -3,19 +3,19 @@
 namespace pump {
 namespace codec {
 
-static const block_t *kBase64Alphabet =
+static const char *kBase64Alphabet =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
 /* 'Private' declarations */
-PUMP_INLINE void a3_to_a4(uint8_t *a4, uint8_t *a3);
-PUMP_INLINE void a4_to_a3(uint8_t *a3, uint8_t *a4);
-PUMP_INLINE uint8_t b64_lookup(uint8_t c);
+pump_inline void a3_to_a4(uint8_t *a4, uint8_t *a3);
+pump_inline void a4_to_a3(uint8_t *a3, uint8_t *a4);
+pump_inline uint8_t b64_lookup(uint8_t c);
 
-PUMP_INLINE static uint32_t encoded_length(uint32_t length) {
+pump_inline static uint32_t encoded_length(uint32_t length) {
     return (length + 2 - ((length + 2) % 3)) / 3 * 4;
 }
 
-PUMP_INLINE static uint32_t encoded_length(const std::string &in) {
+pump_inline static uint32_t encoded_length(const std::string &in) {
     return encoded_length((uint32_t)in.length());
 }
 
@@ -66,11 +66,12 @@ std::string base64_encode(const std::string &in) {
     return out;
 }
 
-PUMP_INLINE static uint32_t decoded_length(const std::string &in) {
+pump_inline static uint32_t decoded_length(const std::string &in) {
     uint32_t eq_cnt = 0;
     uint32_t n = (uint32_t)in.size();
 
-    for (std::string::const_reverse_iterator it = in.rbegin(); *it == '='; ++it) {
+    for (std::string::const_reverse_iterator it = in.rbegin(); *it == '=';
+         ++it) {
         ++eq_cnt;
     }
 
@@ -132,20 +133,20 @@ std::string base64_decode(const std::string &in) {
     return out;
 }
 
-PUMP_INLINE void a3_to_a4(uint8_t *a4, uint8_t *a3) {
+pump_inline void a3_to_a4(uint8_t *a4, uint8_t *a3) {
     a4[0] = (a3[0] & 0xfc) >> 2;
     a4[1] = ((a3[0] & 0x03) << 4) + ((a3[1] & 0xf0) >> 4);
     a4[2] = ((a3[1] & 0x0f) << 2) + ((a3[2] & 0xc0) >> 6);
     a4[3] = (a3[2] & 0x3f);
 }
 
-PUMP_INLINE void a4_to_a3(uint8_t *a3, uint8_t *a4) {
+pump_inline void a4_to_a3(uint8_t *a3, uint8_t *a4) {
     a3[0] = (a4[0] << 2) + ((a4[1] & 0x30) >> 4);
     a3[1] = ((a4[1] & 0xf) << 4) + ((a4[2] & 0x3c) >> 2);
     a3[2] = ((a4[2] & 0x3) << 6) + a4[3];
 }
 
-PUMP_INLINE uint8_t b64_lookup(uint8_t c) {
+pump_inline uint8_t b64_lookup(uint8_t c) {
     if (c >= 'A' && c <= 'Z')
         return c - 'A';
     if (c >= 'a' && c <= 'z')

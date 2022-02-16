@@ -26,7 +26,7 @@ namespace http {
 header::header() noexcept : header_parsed_(false) {}
 
 void header::set_head(const std::string &name, int32_t value) {
-    block_t strval[64] = {0};
+    char strval[64] = {0};
     pump_snprintf(strval, sizeof(strval) - 1, "%d", value);
     headers_[name].push_back(strval);
 }
@@ -42,12 +42,13 @@ void header::set_head(const std::string &name, const std::string &value) {
 }
 
 void header::set_unique_head(const std::string &name, int32_t value) {
-    block_t strval[64] = {0};
+    char strval[64] = {0};
     pump_snprintf(strval, sizeof(strval) - 1, "%d", value);
     headers_[name] = std::vector<std::string>(1, strval);
 }
 
-void header::set_unique_head(const std::string &name, const std::string &value) {
+void header::set_unique_head(const std::string &name,
+                             const std::string &value) {
     headers_[name] = split_string(value, "[,;] *");
 }
 
@@ -69,7 +70,8 @@ bool header::get_head(const std::string &name, std::string &value) const {
     return true;
 }
 
-bool header::get_head(const std::string &name, std::vector<std::string> &values) const {
+bool header::get_head(const std::string &name,
+                      std::vector<std::string> &values) const {
     auto it = headers_.find(name);
     if (it == headers_.end() || it->second.empty()) {
         return false;
@@ -85,16 +87,16 @@ bool header::has_head(const std::string &name) const {
     return true;
 }
 
-int32_t header::__parse_header(const block_t *b, int32_t size) {
+int32_t header::__parse_header(const char *b, int32_t size) {
     if (header_parsed_) {
         return 0;
     }
 
     std::string name;
     std::string value;
-    const block_t *beg = b;
-    const block_t *end = b;
-    const block_t *line_end = nullptr;
+    const char *beg = b;
+    const char *end = b;
+    const char *line_end = nullptr;
     while ((line_end = find_http_line_end(beg, uint32_t(size - (end - b))))) {
         // Check parsed complete
         if (beg + HTTP_CRLF_LEN == line_end) {
@@ -137,7 +139,7 @@ int32_t header::__parse_header(const block_t *b, int32_t size) {
 int32_t header::__serialize_header(std::string &buffer) const {
     int32_t size = 0;
     std::string value;
-    block_t header_line[HTTP_LINE_MAX_LEN + 1] = {0};
+    char header_line[HTTP_LINE_MAX_LEN + 1] = {0};
     for (auto beg = headers_.begin(); beg != headers_.end(); beg++) {
         auto cnt = beg->second.size();
         if (cnt == 0) {

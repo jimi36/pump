@@ -19,7 +19,6 @@
 
 #include <future>
 
-#include "pump/ssl/cert.h"
 #include "pump/transport/base_dialer.h"
 #include "pump/transport/tls_handshaker.h"
 #include "pump/transport/flow/flow_tls_dialer.h"
@@ -30,32 +29,39 @@ namespace transport {
 class tls_dialer;
 DEFINE_SMART_POINTER_TYPE(tls_dialer);
 
-class LIB_PUMP tls_dialer : public base_dialer,
+class pump_lib tls_dialer : public base_dialer,
                             public std::enable_shared_from_this<tls_dialer> {
   public:
     /*********************************************************************************
      * Create instance
      ********************************************************************************/
-    PUMP_INLINE static tls_dialer_sptr create(const address &local_address,
+    pump_inline static tls_dialer_sptr create(const address &local_address,
                                               const address &remote_address,
                                               int64_t dial_timeout = 0,
                                               int64_t handshake_timeout = 0) {
-        INLINE_OBJECT_CREATE(
-            obj,
-            tls_dialer,
-            (nullptr, local_address, remote_address, dial_timeout, handshake_timeout));
+        INLINE_OBJECT_CREATE(obj,
+                             tls_dialer,
+                             (nullptr,
+                              local_address,
+                              remote_address,
+                              dial_timeout,
+                              handshake_timeout));
         return tls_dialer_sptr(obj, object_delete<tls_dialer>);
     }
 
-    PUMP_INLINE static tls_dialer_sptr create_with_cred(tls_credentials xcred,
-                                                        const address &local_address,
-                                                        const address &remote_address,
-                                                        int64_t dial_timeout = 0,
-                                                        int64_t handshake_timeout = 0) {
-        INLINE_OBJECT_CREATE(
-            obj,
-            tls_dialer,
-            (xcred, local_address, remote_address, dial_timeout, handshake_timeout));
+    pump_inline static tls_dialer_sptr create_with_cred(
+        tls_credentials xcred,
+        const address &local_address,
+        const address &remote_address,
+        int64_t dial_timeout = 0,
+        int64_t handshake_timeout = 0) {
+        INLINE_OBJECT_CREATE(obj,
+                             tls_dialer,
+                             (xcred,
+                              local_address,
+                              remote_address,
+                              dial_timeout,
+                              handshake_timeout));
         return tls_dialer_sptr(obj, object_delete<tls_dialer>);
     }
 
@@ -95,7 +101,8 @@ class LIB_PUMP tls_dialer : public base_dialer,
     /*********************************************************************************
      * Tls handskake stopped callback
      ********************************************************************************/
-    static void on_handshake_stopped(tls_dialer_wptr wptr, tls_handshaker *handshaker);
+    static void on_handshake_stopped(tls_dialer_wptr wptr,
+                                     tls_handshaker *handshaker);
 
   protected:
     /*********************************************************************************
@@ -121,7 +128,7 @@ class LIB_PUMP tls_dialer : public base_dialer,
                const address &local_address,
                const address &remote_address,
                int64_t dial_timeout,
-               int64_t handshake_timeout) noexcept;
+               int64_t handshake_timeout);
 
   private:
     // Credentials
@@ -138,7 +145,8 @@ class LIB_PUMP tls_dialer : public base_dialer,
 class tls_sync_dialer;
 DEFINE_SMART_POINTER_TYPE(tls_sync_dialer);
 
-class LIB_PUMP tls_sync_dialer : public std::enable_shared_from_this<tls_sync_dialer> {
+class pump_lib tls_sync_dialer
+    : public std::enable_shared_from_this<tls_sync_dialer> {
   public:
     /*********************************************************************************
      * Create instance
@@ -189,7 +197,7 @@ class LIB_PUMP tls_sync_dialer : public std::enable_shared_from_this<tls_sync_di
     /*********************************************************************************
      * Reset sync dialer
      ********************************************************************************/
-    PUMP_INLINE void __reset() {
+    pump_inline void __reset() {
         dialer_.reset();
     }
 

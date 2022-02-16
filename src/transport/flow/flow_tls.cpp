@@ -24,7 +24,7 @@ flow_tls::flow_tls() noexcept :
     is_handshaked_(false), session_(nullptr), send_iob_(nullptr) {}
 
 flow_tls::~flow_tls() {
-    transport::destory_tls_session(session_);
+    transport::delete_tls_session(session_);
 }
 
 error_code flow_tls::init(poll::channel_sptr &ch,
@@ -41,7 +41,7 @@ error_code flow_tls::init(poll::channel_sptr &ch,
         return ERROR_FAULT;
     }
 
-    session_ = transport::create_tls_session(client, fd, xcred);
+    session_ = transport::new_tls_session(client, fd, xcred);
     if (session_ == nullptr) {
         PUMP_WARN_LOG("create tls session failed ");
         return ERROR_FAULT;
@@ -60,16 +60,17 @@ error_code flow_tls::want_to_send(toolkit::io_buffer *iob) {
     }
     send_iob_ = iob;
 
-    int32_t size = transport::tls_send(session_, send_iob_->data(), send_iob_->size());
-    if (PUMP_LIKELY(size > 0)) {
+    int32_t size =
+        transport::tls_send(session_, send_iob_->data(), send_iob_->size());
+    if (pump_likely(size > 0)) {
         // Shift send buffer and check data size.
         if (send_iob_->shift(size) > 0) {
             return ERROR_AGAIN;
         }
-        send_iob_->reset();
+        send_iob_->clear();
         send_iob_ = nullptr;
         return ERROR_OK;
-    } else if (PUMP_UNLIKELY(size < 0)) {
+    } else if (pump_unlikely(size < 0)) {
         // Send again
         return ERROR_AGAIN;
     }
@@ -81,16 +82,17 @@ error_code flow_tls::want_to_send(toolkit::io_buffer *iob) {
 
 error_code flow_tls::send() {
     PUMP_ASSERT(send_iob_);
-    int32_t size = transport::tls_send(session_, send_iob_->data(), send_iob_->size());
-    if (PUMP_LIKELY(size > 0)) {
+    int32_t size =
+        transport::tls_send(session_, send_iob_->data(), send_iob_->size());
+    if (pump_likely(size > 0)) {
         // Shift send buffer and check data size.
         if (send_iob_->shift(size) > 0) {
             return ERROR_AGAIN;
         }
-        send_iob_->reset();
+        send_iob_->clear();
         send_iob_ = nullptr;
         return ERROR_OK;
-    } else if (PUMP_UNLIKELY(size < 0)) {
+    } else if (pump_unlikely(size < 0)) {
         // Send again
         return ERROR_AGAIN;
     }

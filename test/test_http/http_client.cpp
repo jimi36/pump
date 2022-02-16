@@ -28,11 +28,9 @@ void start_http_client(pump::service *sv, const std::vector<std::string> &urls) 
 
             if (resp->get_status_code() == 200) {
                 std::string html = pump::utf8_to_gbk(resp->get_body()->data());
-                std::cout << html.size() <<std::endl;
+                std::cout << html.size() << std::endl;
                 succ++;
-            } 
-
-
+            }
         }
         auto end = pump::time::get_clock_milliseconds();
         printf("request used %dms succ %d\n", int32_t(end - beg), succ);

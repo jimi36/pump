@@ -145,7 +145,9 @@ void server::on_stopped(server_wptr wptr) {
     }
 }
 
-void server::on_http_request(server_wptr wptr, connection_wptr wconn, packet_sptr &pk) {
+void server::on_http_request(server_wptr wptr,
+                             connection_wptr wconn,
+                             packet_sptr &pk) {
     auto svr = wptr.lock();
     if (svr) {
         auto conn = wconn.lock();
@@ -213,13 +215,15 @@ bool upgrade_to_websocket(connection *conn, request_sptr &req) {
 
     std::vector<std::string> connection;
     if (!req->get_head("Connection", connection) ||
-        std::find(connection.begin(), connection.end(), "Upgrade") == connection.end()) {
+        std::find(connection.begin(), connection.end(), "Upgrade") ==
+            connection.end()) {
         __send_simple_response(conn, 400);
         return false;
     }
 
     std::string sec_version;
-    if (!req->get_head("Sec-WebSocket-Version", sec_version) || sec_version != "13") {
+    if (!req->get_head("Sec-WebSocket-Version", sec_version) ||
+        sec_version != "13") {
         __send_simple_response(conn, 400);
         return false;
     }

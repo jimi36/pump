@@ -28,7 +28,7 @@ namespace pump {
 namespace toolkit {
 
 template <typename T, int32_t PerBlockElementCount = 1024>
-class LIB_PUMP fl_mc_queue : public noncopyable {
+class fl_mc_queue : public noncopyable {
   public:
     // Element type
     typedef T element_type;
@@ -40,7 +40,7 @@ class LIB_PUMP fl_mc_queue : public noncopyable {
         element_node() : ready(0), next(this + 1) {}
         volatile int32_t ready;
         element_node *next;
-        block_t data[element_size];
+        char data[element_size];
     };
 
     // Block node
@@ -54,7 +54,10 @@ class LIB_PUMP fl_mc_queue : public noncopyable {
      * Constructor
      ********************************************************************************/
     fl_mc_queue(int32_t size) :
-        capacity_(0), tail_block_node_(nullptr), head_(nullptr), tail_(nullptr) {
+        capacity_(0),
+        tail_block_node_(nullptr),
+        head_(nullptr),
+        tail_(nullptr) {
         __init_list(size);
     }
 
@@ -93,15 +96,17 @@ class LIB_PUMP fl_mc_queue : public noncopyable {
         // Get current head node as write node.
         element_node *next_write_node = head_.load(std::memory_order_relaxed);
         do {
-            // If current write node is invalid, list is being extended and try again.
+            // If current write node is invalid, list is being extended and try
+            // again.
             while (next_write_node == nullptr) {
                 next_write_node = head_.load(std::memory_order_relaxed);
             }
 
-            // If next write node is ready or is the tail node, list is full and we
-            // need try to extend it.
+            // If next write node is ready or is the tail node, list is full and
+            // we need try to extend it.
             if (next_write_node->ready == 0 &&
-                next_write_node->next != tail_.load(std::memory_order_relaxed)) {
+                next_write_node->next !=
+                    tail_.load(std::memory_order_relaxed)) {
                 if (head_.compare_exchange_strong(next_write_node,
                                                   next_write_node->next,
                                                   std::memory_order_acquire,
@@ -165,7 +170,7 @@ class LIB_PUMP fl_mc_queue : public noncopyable {
     /*********************************************************************************
      * Empty
      ********************************************************************************/
-    PUMP_INLINE bool empty() const {
+    pump_inline bool empty() const {
         element_node *tail = tail_.load(std::memory_order_relaxed)->next;
         return tail == head_.load(std::memory_order_relaxed);
     }
@@ -173,7 +178,7 @@ class LIB_PUMP fl_mc_queue : public noncopyable {
     /*********************************************************************************
      * Get capacity
      ********************************************************************************/
-    PUMP_INLINE int32_t capacity() const {
+    pump_inline int32_t capacity() const {
         return capacity_.load(std::memory_order_relaxed);
     }
 
@@ -195,7 +200,8 @@ class LIB_PUMP fl_mc_queue : public noncopyable {
         // Update list capacity.
         capacity_.fetch_add(PerBlockElementCount, std::memory_order_relaxed);
 
-        for (size -= PerBlockElementCount; size > 0; size -= PerBlockElementCount) {
+        for (size -= PerBlockElementCount; size > 0;
+             size -= PerBlockElementCount) {
             // Insert new block node.
             block_node *bnode = object_create<block_node>();
             bnode->next = tail_block_node_;
@@ -206,7 +212,8 @@ class LIB_PUMP fl_mc_queue : public noncopyable {
             tail = bnode->elems + PerBlockElementCount - 1;
 
             // Update list capacity.
-            capacity_.fetch_add(PerBlockElementCount, std::memory_order_relaxed);
+            capacity_.fetch_add(PerBlockElementCount,
+                                std::memory_order_relaxed);
         }
 
         // Link tail and head node.
@@ -253,10 +260,10 @@ class LIB_PUMP fl_mc_queue : public noncopyable {
     // Tail block node
     block_node *tail_block_node_;
     // Head element node
-    block_t padding1_[64];
+    char padding1_[64];
     std::atomic<element_node *> head_;
     // Tail element node
-    block_t padding_[64];
+    char padding_[64];
     std::atomic<element_node *> tail_;
 };
 

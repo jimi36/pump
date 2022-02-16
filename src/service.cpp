@@ -119,7 +119,8 @@ void service::__start_task_worker() {
             }
         }
     };
-    task_worker_.reset(object_create<std::thread>(func), object_delete<std::thread>);
+    task_worker_.reset(object_create<std::thread>(func),
+                       object_delete<std::thread>);
 }
 
 void service::__start_timer_callback_worker() {
@@ -130,14 +131,15 @@ void service::__start_timer_callback_worker() {
                 time::timer_sptr ptr;
                 for (auto b = tl->begin(), e = tl->end(); b != e;) {
                     ptr = (b++)->lock();
-                    if (PUMP_LIKELY(!!ptr)) {
+                    if (pump_likely(!!ptr)) {
                         ptr->handle_timeout();
                     }
                 }
             }
         }
     };
-    timer_worker_.reset(object_create<std::thread>(func), object_delete<std::thread>);
+    timer_worker_.reset(object_create<std::thread>(func),
+                        object_delete<std::thread>);
 }
 
 }  // namespace pump

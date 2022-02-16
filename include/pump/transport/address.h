@@ -27,15 +27,13 @@ namespace transport {
 
 #define ADDRESS_MAX_LEN 64
 
-class LIB_PUMP address {
+class pump_lib address {
   public:
     /*********************************************************************************
      * Constructor
      ********************************************************************************/
     address() noexcept;
-
     address(const std::string &ip, uint16_t port);
-
     address(const struct sockaddr *addr, int32_t addrlen);
 
     /*********************************************************************************
@@ -52,10 +50,10 @@ class LIB_PUMP address {
     /*********************************************************************************
      * Get address struct
      ********************************************************************************/
-    PUMP_INLINE struct sockaddr *get() {
+    pump_inline struct sockaddr *get() {
         return (struct sockaddr *)addr_;
     }
-    PUMP_INLINE const struct sockaddr *get() const {
+    pump_inline const struct sockaddr *get() const {
         return (const struct sockaddr *)addr_;
     }
 
@@ -72,14 +70,14 @@ class LIB_PUMP address {
     /*********************************************************************************
      * Set and Get address struct size
      ********************************************************************************/
-    PUMP_INLINE int32_t len() const {
+    pump_inline int32_t len() const {
         return addrlen_;
     }
 
     /*********************************************************************************
      * Is ipv6 or not
      ********************************************************************************/
-    PUMP_INLINE bool is_ipv6() const {
+    pump_inline bool is_ipv6() const {
         return is_v6_;
     }
 
@@ -102,7 +100,7 @@ class LIB_PUMP address {
     bool is_v6_;
 
     int32_t addrlen_;
-    block_t addr_[ADDRESS_MAX_LEN];
+    char addr_[ADDRESS_MAX_LEN];
 };
 DEFINE_SMART_POINTER_TYPE(address);
 

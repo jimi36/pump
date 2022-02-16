@@ -3,7 +3,7 @@
 static int count = 1;
 static int send_loop = 1;
 static int send_pocket_size = 1024 * 4;
-//static int send_pocket_count = 1024 * 100;
+// static int send_pocket_count = 1024 * 100;
 static int send_pocket_count = -1;
 
 static service *sv;
@@ -28,8 +28,7 @@ class my_tcp_dialer : public std::enable_shared_from_this<my_tcp_dialer> {
         left_send_pocket_count_ = send_pocket_count;
     }
 
-    virtual ~my_tcp_dialer() {
-    }
+    virtual ~my_tcp_dialer() {}
 
     /*********************************************************************************
      * Tcp dialed event callback
@@ -41,12 +40,17 @@ class my_tcp_dialer : public std::enable_shared_from_this<my_tcp_dialer> {
         }
 
         pump::transport_callbacks cbs;
-        cbs.read_cb =
-            pump_bind(&my_tcp_dialer::on_read_callback, this, transp.get(), _1, _2);
+        cbs.read_cb = pump_bind(&my_tcp_dialer::on_read_callback,
+                                this,
+                                transp.get(),
+                                _1,
+                                _2);
         cbs.stopped_cb =
             pump_bind(&my_tcp_dialer::on_stopped_callback, this, transp.get());
         cbs.disconnected_cb =
-            pump_bind(&my_tcp_dialer::on_disconnected_callback, this, transp.get());
+            pump_bind(&my_tcp_dialer::on_disconnected_callback,
+                      this,
+                      transp.get());
 
         transport_ = std::static_pointer_cast<pump::tcp_transport>(transp);
         if (transport_->start(sv, READ_MODE_ONCE, cbs) != 0) {
@@ -77,7 +81,7 @@ class my_tcp_dialer : public std::enable_shared_from_this<my_tcp_dialer> {
     /*********************************************************************************
      * Tcp read event callback
      ********************************************************************************/
-    void on_read_callback(base_transport *transp, const block_t *b, int32_t size) {
+    void on_read_callback(base_transport *transp, const char *b, int32_t size) {
         read_size_ += size;
         all_read_size_ += size;
         read_pocket_size_ += size;
@@ -94,7 +98,8 @@ class my_tcp_dialer : public std::enable_shared_from_this<my_tcp_dialer> {
      * Tcp disconnected event callback
      ********************************************************************************/
     void on_disconnected_callback(base_transport *transp) {
-        printf("client tcp transport disconnected read raw_msg %d\n", all_read_size_ / 4096);
+        printf("client tcp transport disconnected read raw_msg %d\n",
+               all_read_size_ / 4096);
         dial_mx.lock();
         my_dialers.erase(this);
         dial_mx.unlock();
@@ -104,7 +109,8 @@ class my_tcp_dialer : public std::enable_shared_from_this<my_tcp_dialer> {
      * Tcp stopped event callback
      ********************************************************************************/
     void on_stopped_callback(base_transport *transp) {
-        printf("client tcp transport stopped read raw_msg %d\n", all_read_size_ / 4096);
+        printf("client tcp transport stopped read raw_msg %d\n",
+               all_read_size_ / 4096);
         dial_mx.lock();
         if (my_dialers.erase(this) != 1) {
             printf("erase dialer error\n");
@@ -121,7 +127,8 @@ class my_tcp_dialer : public std::enable_shared_from_this<my_tcp_dialer> {
         if (!transport_) {
             return false;
         }
-        if (transport_->send(send_data_.data(), (int32_t)send_data_.size()) != 0) {
+        if (transport_->send(send_data_.data(), (int32_t)send_data_.size()) !=
+            0) {
             printf("send error\n");
             return false;
         }
@@ -181,11 +188,11 @@ class time_report {
             b->second->read_size_ = 0;
 
             if (send_pocket_count > 0 &&
-                b->second->all_read_size_ >= send_pocket_count * send_pocket_size &&
+                b->second->all_read_size_ >=
+                    send_pocket_count * send_pocket_size &&
                 b->second->transport_->is_started()) {
                 b->second->transport_->stop();
             }
-            
         }
         dial_mx.unlock();
 
@@ -195,7 +202,9 @@ class time_report {
     }
 };
 
-void start_tcp_client(const std::string &ip, uint16_t port, int32_t conn_count) {
+void start_tcp_client(const std::string &ip,
+                      uint16_t port,
+                      int32_t conn_count) {
     server_ip = ip;
     server_port = port;
 

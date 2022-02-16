@@ -19,7 +19,7 @@
 namespace pump {
 namespace poll {
 
-PUMP_INLINE static bool __is_selectable(pump_socket fd) {
+pump_inline static bool __is_selectable(pump_socket fd) {
     return fd < 1024 && fd >= 0;
 }
 
@@ -90,7 +90,8 @@ void select_poller::__poll(int32_t timeout) {
 
     tv_.tv_sec = timeout / 1000;
     tv_.tv_usec = (timeout % 1000) * 1000;
-    int32_t count = ::select((int32_t)maxfd + 1, &read_fds_, &write_fds_, NULL, &tv_);
+    int32_t count =
+        ::select((int32_t)maxfd + 1, &read_fds_, &write_fds_, NULL, &tv_);
 #if defined(OS_WINDOWS)
     if (maxfd == -1 && timeout > 0) {
         Sleep(1);
@@ -102,14 +103,15 @@ void select_poller::__poll(int32_t timeout) {
 #endif
 }
 
-void select_poller::__dispatch_pending_event(const fd_set *rfds, const fd_set *wfds) {
+void select_poller::__dispatch_pending_event(const fd_set *rfds,
+                                             const fd_set *wfds) {
 #if defined(PUMP_HAVE_SELECT)
     auto beg = trackers_.begin();
     while (beg != trackers_.end()) {
         // If channel is invalid, channel tracker should be removed.
         auto tracker = beg->second.get();
         auto ch = tracker->get_channel();
-        if (PUMP_UNLIKELY(!ch)) {
+        if (pump_unlikely(!ch)) {
             trackers_.erase(beg++);
             continue;
         }

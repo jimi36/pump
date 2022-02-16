@@ -17,6 +17,7 @@
 #include <unordered_map>
 
 #include "pump/debug.h"
+#include "pump/memory.h"
 #include "pump/proto/http/response.h"
 
 namespace pump {
@@ -80,11 +81,12 @@ static const std::string &get_http_code_desc(int32_t code) {
     return http_code_desc_map[0];
 }
 
-response::response(void *ctx) noexcept : packet(ctx, PK_RESPONSE), status_code_(0) {
+response::response(void *ctx) noexcept :
+    packet(ctx, PK_RESPONSE), status_code_(0) {
     init_http_code_desc_map();
 }
 
-int32_t response::parse(const block_t *b, int32_t size) {
+int32_t response::parse(const char *b, int32_t size) {
     if (parse_status_ == PARSE_FINISHED) {
         return 0;
     }
@@ -93,7 +95,7 @@ int32_t response::parse(const block_t *b, int32_t size) {
         parse_status_ = PARSE_LINE;
     }
 
-    const block_t *pos = b;
+    const char *pos = b;
     int32_t parse_size = 0;
     if (parse_status_ == PARSE_LINE) {
         parse_size = __parse_start_line(pos, size);
@@ -124,7 +126,8 @@ int32_t response::parse(const block_t *b, int32_t size) {
         }
 
         int32_t length = 0;
-        if (get_head("Content-Length", length) || get_head("content-length", length)) {
+        if (get_head("Content-Length", length) ||
+            get_head("content-length", length)) {
             if (length > 0) {
                 body_.reset(object_create<body>(), object_delete<body>);
                 if (!body_) {
@@ -202,10 +205,10 @@ int32_t response::serialize(std::string &buffer) const {
     return serialize_size;
 }
 
-int32_t response::__parse_start_line(const block_t *b, int32_t size) {
-    const block_t *pos = b;
+int32_t response::__parse_start_line(const char *b, int32_t size) {
+    const char *pos = b;
 
-    const block_t *line_end = find_http_line_end(pos, size);
+    const char *line_end = find_http_line_end(pos, size);
     if (line_end == nullptr) {
         return 0;
     }
@@ -239,7 +242,7 @@ int32_t response::__parse_start_line(const block_t *b, int32_t size) {
 }
 
 int32_t response::__serialize_response_line(std::string &buffer) const {
-    block_t tmp[128] = {0};
+    char tmp[128] = {0};
     int32_t size = pump_snprintf(tmp,
                                  sizeof(tmp) - 1,
                                  "%s %d %s\r\n",

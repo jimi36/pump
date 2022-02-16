@@ -26,13 +26,14 @@ namespace transport {
 class tcp_acceptor;
 DEFINE_SMART_POINTER_TYPE(tcp_acceptor);
 
-class LIB_PUMP tcp_acceptor : public base_acceptor,
-                              public std::enable_shared_from_this<tcp_acceptor> {
+class pump_lib tcp_acceptor
+    : public base_acceptor,
+      public std::enable_shared_from_this<tcp_acceptor> {
   public:
     /*********************************************************************************
      * Create instance
      ********************************************************************************/
-    PUMP_INLINE static tcp_acceptor_sptr create(const address &listen_address) {
+    pump_inline static tcp_acceptor_sptr create(const address &listen_address) {
         INLINE_OBJECT_CREATE(obj, tcp_acceptor, (listen_address));
         return tcp_acceptor_sptr(obj, object_delete<tcp_acceptor>);
     }
@@ -45,7 +46,8 @@ class LIB_PUMP tcp_acceptor : public base_acceptor,
     /*********************************************************************************
      * Start
      ********************************************************************************/
-    virtual error_code start(service *sv, const acceptor_callbacks &cbs) override;
+    virtual error_code start(service *sv,
+                             const acceptor_callbacks &cbs) override;
 
     /*********************************************************************************
      * Stop

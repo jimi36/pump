@@ -17,7 +17,7 @@
 #ifndef pump_net_iocp_h
 #define pump_net_iocp_h
 
-#include "pump/config.h"
+#include "pump/build.h"
 #include "pump/net/socket.h"
 #include "pump/toolkit/buffer.h"
 
@@ -126,7 +126,7 @@ extern FnNtCancelIoFileEx NtCancelIoFileEx;
 namespace pump {
 namespace net {
 
-pump_socket get_base_socket(pump_socket fd);
+pump_lib pump_socket get_base_socket(pump_socket fd);
 
 }
 }  // namespace pump

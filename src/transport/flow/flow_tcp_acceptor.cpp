@@ -20,7 +20,8 @@ namespace pump {
 namespace transport {
 namespace flow {
 
-flow_tcp_acceptor::flow_tcp_acceptor() noexcept : is_ipv6_(false), iob_(nullptr) {}
+flow_tcp_acceptor::flow_tcp_acceptor() noexcept :
+    is_ipv6_(false), iob_(nullptr) {}
 
 flow_tcp_acceptor::~flow_tcp_acceptor() {
     if (iob_) {
@@ -47,19 +48,25 @@ error_code flow_tcp_acceptor::init(poll::channel_sptr &&ch,
         return ERROR_FAULT;
     }
     if (!net::set_reuse(fd_, 1)) {
-        PUMP_WARN_LOG("set socket address reuse failed with ec %d", net::last_errno());
+        PUMP_WARN_LOG("set socket address reuse failed with ec %d",
+                      net::last_errno());
         return ERROR_FAULT;
     }
     if (!net::set_noblock(fd_, 1)) {
-        PUMP_WARN_LOG("set socket noblock failed with ec %d", net::last_errno());
+        PUMP_WARN_LOG("set socket noblock failed with ec %d",
+                      net::last_errno());
         return ERROR_FAULT;
     }
     if (!net::set_nodelay(fd_, 1)) {
-        PUMP_WARN_LOG("set socket nodelay failed with ec %d", net::last_errno());
+        PUMP_WARN_LOG("set socket nodelay failed with ec %d",
+                      net::last_errno());
         return ERROR_FAULT;
     }
-    if (!net::bind(fd_, (sockaddr *)listen_address.get(), listen_address.len())) {
-        PUMP_WARN_LOG("bind socket address failed with ec %d", net::last_errno());
+    if (!net::bind(fd_,
+                   (sockaddr *)listen_address.get(),
+                   listen_address.len())) {
+        PUMP_WARN_LOG("bind socket address failed with ec %d",
+                      net::last_errno());
         return ERROR_FAULT;
     }
     if (!net::listen(fd_)) {
@@ -72,9 +79,11 @@ error_code flow_tcp_acceptor::init(poll::channel_sptr &&ch,
     return ERROR_OK;
 }
 
-pump_socket flow_tcp_acceptor::accept(address *local_address, address *remote_address) {
+pump_socket flow_tcp_acceptor::accept(address *local_address,
+                                      address *remote_address) {
     int32_t addrlen = ADDRESS_MAX_LEN;
-    pump_socket client_fd = net::accept(fd_, (struct sockaddr *)iob_->raw(), &addrlen);
+    pump_socket client_fd =
+        net::accept(fd_, (struct sockaddr *)iob_->raw(), &addrlen);
     if (client_fd == INVALID_SOCKET) {
         PUMP_WARN_LOG("accept socket failed with ec %d", net::last_errno());
         return INVALID_SOCKET;

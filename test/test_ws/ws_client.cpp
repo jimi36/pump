@@ -1,9 +1,6 @@
 #include "ws.h"
 
-static void on_receive(
-    const block_t *b,
-    int32_t size,
-    bool msg_end) {
+static void on_receive(const char *b, int32_t size, bool msg_end) {
     std::string data(b, size);
     std::string gbk = pump::utf8_to_gbk(data);
     printf("received: %s\n", gbk.c_str());

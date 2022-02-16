@@ -27,12 +27,12 @@ namespace transport {
 class tls_transport;
 DEFINE_SMART_POINTER_TYPE(tls_transport);
 
-class LIB_PUMP tls_transport : public base_transport {
+class pump_lib tls_transport : public base_transport {
   public:
     /*********************************************************************************
      * Create instance
      ********************************************************************************/
-    PUMP_INLINE static tls_transport_sptr create() {
+    pump_inline static tls_transport_sptr create() {
         INLINE_OBJECT_CREATE(obj, tls_transport, ());
         return tls_transport_sptr(obj, object_delete<tls_transport>);
     }
@@ -75,7 +75,7 @@ class LIB_PUMP tls_transport : public base_transport {
     /*********************************************************************************
      * Send
      ********************************************************************************/
-    virtual error_code send(const block_t *b, int32_t size) override;
+    virtual error_code send(const char *b, int32_t size) override;
 
     /*********************************************************************************
      * Send io buffer
@@ -133,7 +133,7 @@ class LIB_PUMP tls_transport : public base_transport {
     /*********************************************************************************
      * Reset last sent io buffer
      ********************************************************************************/
-    PUMP_INLINE void __reset_last_sent_iobuffer() {
+    pump_inline void __reset_last_sent_iobuffer() {
         last_send_iob_->unrefer();
         last_send_iob_ = nullptr;
     }

@@ -21,7 +21,6 @@
 #include <string>
 
 #include "pump/types.h"
-#include "pump/platform.h"
 
 namespace pump {
 namespace time {
@@ -29,14 +28,14 @@ namespace time {
 /*********************************************************************************
  * Get clock microseconds, just for calculating time difference
  ********************************************************************************/
-LIB_PUMP uint64_t get_clock_microseconds();
+pump_lib uint64_t get_clock_microseconds();
 
 /*********************************************************************************
  * Get clock milliseconds, just for calculating time difference
  ********************************************************************************/
-LIB_PUMP uint64_t get_clock_milliseconds();
+pump_lib uint64_t get_clock_milliseconds();
 
-class LIB_PUMP timestamp {
+class pump_lib timestamp {
   public:
     /*********************************************************************************
      * Constructor
@@ -51,28 +50,28 @@ class LIB_PUMP timestamp {
     /*********************************************************************************
      * Increase time value
      ********************************************************************************/
-    PUMP_INLINE void increase(uint64_t ms) {
+    pump_inline void increase(uint64_t ms) {
         ms_ += std::chrono::milliseconds(ms);
     }
 
     /*********************************************************************************
      * Reduce time value
      ********************************************************************************/
-    PUMP_INLINE void reduce(uint64_t ms) {
+    pump_inline void reduce(uint64_t ms) {
         ms_ -= std::chrono::milliseconds(ms);
     }
 
     /*********************************************************************************
      * Set the time value
      ********************************************************************************/
-    PUMP_INLINE void set(uint64_t ms) {
+    pump_inline void set(uint64_t ms) {
         ms_ = std::chrono::milliseconds(ms);
     }
 
     /*********************************************************************************
      * Get the time value
      ********************************************************************************/
-    PUMP_INLINE uint64_t time() const {
+    pump_inline uint64_t time() const {
         return ms_.count();
     }
 
@@ -101,7 +100,7 @@ class LIB_PUMP timestamp {
     /*********************************************************************************
      * Create now timestamp
      ********************************************************************************/
-    PUMP_INLINE static timestamp now() {
+    pump_inline static timestamp now() {
         return timestamp(now_time());
     }
 
@@ -109,7 +108,7 @@ class LIB_PUMP timestamp {
     /*********************************************************************************
      * Overwrite operator =
      ********************************************************************************/
-    PUMP_INLINE timestamp &operator=(const timestamp &ts) noexcept {
+    pump_inline timestamp &operator=(const timestamp &ts) noexcept {
         ms_ = ts.ms_;
         return *this;
     }
@@ -117,21 +116,21 @@ class LIB_PUMP timestamp {
     /*********************************************************************************
      * Overwrite operator <
      ********************************************************************************/
-    PUMP_INLINE bool operator<(const timestamp &ts) const noexcept {
+    pump_inline bool operator<(const timestamp &ts) const noexcept {
         return ms_ < ts.ms_;
     }
 
     /*********************************************************************************
      * Overwrite operator <=
      ********************************************************************************/
-    PUMP_INLINE bool operator<=(const timestamp &ts) const noexcept {
+    pump_inline bool operator<=(const timestamp &ts) const noexcept {
         return ms_ <= ts.ms_;
     }
 
     /*********************************************************************************
      * Overwrite operator ==
      ********************************************************************************/
-    PUMP_INLINE bool operator==(const timestamp &ts) const noexcept {
+    pump_inline bool operator==(const timestamp &ts) const noexcept {
         return ms_ == ts.ms_;
     }
 

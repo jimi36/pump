@@ -19,7 +19,9 @@ void on_new_request(http::connection_wptr &wconn, http::request_sptr &&req) {
     conn->send(&res);
 }
 
-void on_stopped() { printf("http server stopped\n"); }
+void on_stopped() {
+    printf("http server stopped\n");
+}
 
 void start_http_server(pump::service *sv, const std::string &ip, int port) {
     pump::transport::address bind_address(ip, port);

@@ -25,11 +25,14 @@
 
 namespace pump {
 
+/*********************************************************************************
+ * Poller id in service
+ ********************************************************************************/
 typedef int32_t poller_id;
 const poller_id READ_POLLER_ID = 0;
 const poller_id SEND_POLLER_ID = 1;
 
-class LIB_PUMP service : public toolkit::noncopyable {
+class pump_lib service : public toolkit::noncopyable {
   public:
     /*********************************************************************************
      * Constructor
@@ -59,7 +62,7 @@ class LIB_PUMP service : public toolkit::noncopyable {
     /*********************************************************************************
      * Add channel checker
      ********************************************************************************/
-    PUMP_INLINE bool add_channel_tracker(poll::channel_tracker_sptr &tracker,
+    pump_inline bool add_channel_tracker(poll::channel_tracker_sptr &tracker,
                                          poller_id pid) {
         PUMP_ASSERT(pid <= SEND_POLLER_ID);
         if (pollers_[pid]) {
@@ -71,7 +74,7 @@ class LIB_PUMP service : public toolkit::noncopyable {
     /*********************************************************************************
      * Delete channel
      ********************************************************************************/
-    PUMP_INLINE void remove_channel_tracker(poll::channel_tracker_sptr &tracker,
+    pump_inline void remove_channel_tracker(poll::channel_tracker_sptr &tracker,
                                             poller_id pid) {
         PUMP_ASSERT(pid <= SEND_POLLER_ID);
         if (pollers_[pid]) {
@@ -82,7 +85,7 @@ class LIB_PUMP service : public toolkit::noncopyable {
     /*********************************************************************************
      * Resume channel
      ********************************************************************************/
-    PUMP_INLINE bool resume_channel_tracker(poll::channel_tracker *tracker,
+    pump_inline bool resume_channel_tracker(poll::channel_tracker *tracker,
                                             poller_id pid) {
         PUMP_ASSERT(pid <= SEND_POLLER_ID);
         if (pollers_[pid]) {
@@ -94,11 +97,11 @@ class LIB_PUMP service : public toolkit::noncopyable {
     /*********************************************************************************
      * Post channel event
      ********************************************************************************/
-    PUMP_INLINE bool post_channel_event(poll::channel_sptr &ch,
+    pump_inline bool post_channel_event(poll::channel_sptr &ch,
                                         int32_t event,
                                         poller_id pid) {
         PUMP_ASSERT(pid <= SEND_POLLER_ID);
-        if (PUMP_LIKELY(!!pollers_[pid])) {
+        if (pump_likely(!!pollers_[pid])) {
             return pollers_[pid]->push_channel_event(ch, event);
         }
         return false;
@@ -107,16 +110,17 @@ class LIB_PUMP service : public toolkit::noncopyable {
     /*********************************************************************************
      * Post task callback
      ********************************************************************************/
-    template <typename TaskCallbackType> PUMP_INLINE void post(TaskCallbackType &&task) {
+    template <typename TaskCallbackType>
+    pump_inline void post(TaskCallbackType &&task) {
         posted_tasks_.enqueue(std::forward<TaskCallbackType>(task));
     }
 
     /*********************************************************************************
      * Start timer
      ********************************************************************************/
-    PUMP_INLINE bool start_timer(time::timer_sptr &timer) {
+    pump_inline bool start_timer(time::timer_sptr &timer) {
         auto queue = timers_;
-        if (PUMP_LIKELY(!!queue)) {
+        if (pump_likely(!!queue)) {
             return queue->start_timer(timer);
         }
         return false;
@@ -161,7 +165,7 @@ class LIB_PUMP service : public toolkit::noncopyable {
 };
 DEFINE_SMART_POINTER_TYPE(service);
 
-class LIB_PUMP service_getter {
+class pump_lib service_getter {
   public:
     /*********************************************************************************
      * Constructor
@@ -176,7 +180,7 @@ class LIB_PUMP service_getter {
     /*********************************************************************************
      * Get service
      ********************************************************************************/
-    PUMP_INLINE service *get_service() {
+    pump_inline service *get_service() {
         return service_;
     }
 
@@ -184,7 +188,7 @@ class LIB_PUMP service_getter {
     /*********************************************************************************
      * Set service
      ********************************************************************************/
-    PUMP_INLINE void __set_service(service *sv) {
+    pump_inline void __set_service(service *sv) {
         service_ = sv;
     }
 

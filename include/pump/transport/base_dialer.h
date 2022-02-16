@@ -22,7 +22,7 @@
 namespace pump {
 namespace transport {
 
-class LIB_PUMP base_dialer : public base_channel {
+class pump_lib base_dialer : public base_channel {
   public:
     /*********************************************************************************
      * Constructor
@@ -54,14 +54,14 @@ class LIB_PUMP base_dialer : public base_channel {
     /*********************************************************************************
      * Get local address
      ********************************************************************************/
-    PUMP_INLINE const address &get_local_address() const {
+    pump_inline const address &get_local_address() const {
         return local_address_;
     }
 
     /*********************************************************************************
      * Get remote address
      ********************************************************************************/
-    PUMP_INLINE const address &get_remote_address() const {
+    pump_inline const address &get_remote_address() const {
         return remote_address_;
     }
 

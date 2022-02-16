@@ -24,7 +24,8 @@ flow_tcp_dialer::flow_tcp_dialer() noexcept : is_ipv6_(false) {}
 
 flow_tcp_dialer::~flow_tcp_dialer() {}
 
-error_code flow_tcp_dialer::init(poll::channel_sptr &&ch, const address &bind_address) {
+error_code flow_tcp_dialer::init(poll::channel_sptr &&ch,
+                                 const address &bind_address) {
     if (!ch) {
         PUMP_WARN_LOG("channel is invalid");
         return ERROR_FAULT;
@@ -36,19 +37,23 @@ error_code flow_tcp_dialer::init(poll::channel_sptr &&ch, const address &bind_ad
         return ERROR_FAULT;
     }
     if (!net::set_reuse(fd_, 1)) {
-        PUMP_WARN_LOG("set socket address reuse failed with ec %d", net::last_errno());
+        PUMP_WARN_LOG("set socket address reuse failed with ec %d",
+                      net::last_errno());
         return ERROR_FAULT;
     }
     if (!net::set_noblock(fd_, 1)) {
-        PUMP_WARN_LOG("set socket noblock failed with ec %d", net::last_errno());
+        PUMP_WARN_LOG("set socket noblock failed with ec %d",
+                      net::last_errno());
         return ERROR_FAULT;
     }
     if (!net::set_nodelay(fd_, 1)) {
-        PUMP_WARN_LOG("set socket nodelay failed with ec %d", net::last_errno());
+        PUMP_WARN_LOG("set socket nodelay failed with ec %d",
+                      net::last_errno());
         return ERROR_FAULT;
     }
     if (!net::bind(fd_, (sockaddr *)bind_address.get(), bind_address.len())) {
-        PUMP_WARN_LOG("bind socket address failed with ec %d", net::last_errno());
+        PUMP_WARN_LOG("bind socket address failed with ec %d",
+                      net::last_errno());
         return ERROR_FAULT;
     }
 
@@ -58,14 +63,17 @@ error_code flow_tcp_dialer::init(poll::channel_sptr &&ch, const address &bind_ad
 }
 
 int32_t flow_tcp_dialer::post_connect(const address &remote_address) {
-    if (!net::connect(fd_, (sockaddr *)remote_address.get(), remote_address.len())) {
+    if (!net::connect(fd_,
+                      (sockaddr *)remote_address.get(),
+                      remote_address.len())) {
         PUMP_WARN_LOG("socket connect failed with ec %d", net::last_errno());
         return ERROR_FAULT;
     }
     return ERROR_OK;
 }
 
-int32_t flow_tcp_dialer::connect(address *local_address, address *remote_address) {
+int32_t flow_tcp_dialer::connect(address *local_address,
+                                 address *remote_address) {
     int32_t ec = net::get_socket_error(fd_);
     if (ec != 0) {
         return ec;
@@ -78,7 +86,7 @@ int32_t flow_tcp_dialer::connect(address *local_address, address *remote_address
     }
 
     int32_t addrlen = 0;
-    block_t addr[ADDRESS_MAX_LEN];
+    char addr[ADDRESS_MAX_LEN];
 
     addrlen = ADDRESS_MAX_LEN;
     net::local_address(fd_, (sockaddr *)addr, &addrlen);

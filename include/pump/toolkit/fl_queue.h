@@ -24,7 +24,7 @@
 namespace pump {
 namespace toolkit {
 
-template <typename Q> class LIB_PUMP fl_queue : public noncopyable {
+template <typename Q> class fl_queue : public noncopyable {
   public:
     // Inner queue type
     typedef Q inner_queue_type;
@@ -40,16 +40,16 @@ template <typename Q> class LIB_PUMP fl_queue : public noncopyable {
     /*********************************************************************************
      * Enqueue
      ********************************************************************************/
-    PUMP_INLINE bool enqueue(const element_type &item) {
-        if (PUMP_LIKELY(queue_.push(item))) {
+    pump_inline bool enqueue(const element_type &item) {
+        if (pump_likely(queue_.push(item))) {
             semaphone_.signal();
             return true;
         }
         return false;
     }
 
-    PUMP_INLINE bool enqueue(element_type &&item) {
-        if (PUMP_LIKELY(queue_.push(item))) {
+    pump_inline bool enqueue(element_type &&item) {
+        if (pump_likely(queue_.push(item))) {
             semaphone_.signal();
             return true;
         }
@@ -87,7 +87,8 @@ template <typename Q> class LIB_PUMP fl_queue : public noncopyable {
     template <typename U, typename Rep, typename Period>
     bool dequeue(U &item, const std::chrono::duration<Rep, Period> &timeout) {
         if (semaphone_.wait(
-                std::chrono::duration_cast<std::chrono::microseconds>(timeout).count())) {
+                std::chrono::duration_cast<std::chrono::microseconds>(timeout)
+                    .count())) {
             while (!queue_.pop(item)) {
                 continue;
             }
@@ -113,7 +114,7 @@ template <typename Q> class LIB_PUMP fl_queue : public noncopyable {
     /*********************************************************************************
      * Empty
      ********************************************************************************/
-    PUMP_INLINE bool empty() {
+    pump_inline bool empty() {
         return queue_.empty();
     }
 

@@ -54,16 +54,18 @@ void test_handshaker() {
     sv->start();
 
     sh = new server_handshaker();
-    sh->set_callbacks(pump_bind(client_read_callback, _1), pump_bind(server_finished_callback, _1));
+    sh->set_callbacks(pump_bind(client_read_callback, _1),
+                      pump_bind(server_finished_callback, _1));
 
     config scfg;
-    //scfg.cert = cert;
+    // scfg.cert = cert;
     scfg.application_proto = "test";
     scfg.server_name = "local";
     sh->handshake(scfg);
 
     ch = new client_handshaker();
-    ch->set_callbacks(pump_bind(server_read_callback, _1), pump_bind(client_finished_callback, _1));
+    ch->set_callbacks(pump_bind(server_read_callback, _1),
+                      pump_bind(client_finished_callback, _1));
 
     config ccfg;
     ccfg.application_proto = "test";

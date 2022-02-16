@@ -14,12 +14,10 @@
  * limitations under the License.
  */
 
-#ifndef pump_defines_h
-#define pump_defines_h
+#ifndef pump_debug_h
+#define pump_debug_h
 
 #include <assert.h>
-
-#include "pump/platform.h"
 
 // Pump assert
 #define PUMP_ASSERT(x) assert(x)
@@ -31,7 +29,7 @@
 
 // Pump abort with log
 #define PUMP_ABORT_WITH_LOG(x, log) \
-    if (PUMP_UNLIKELY(x)) {         \
+    if (pump_unlikely(x)) {         \
         PUMP_ERR_LOG(log);          \
         PUMP_ABORT();               \
     }

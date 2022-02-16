@@ -23,11 +23,9 @@
 #include <thread>
 #include <condition_variable>
 
-#include "pump/debug.h"
 #include "pump/time/timer.h"
 #include "pump/toolkit/fl_queue.h"
 #include "pump/toolkit/fl_mc_queue.h"
-#include "pump/toolkit/fl_sc_queue.h"
 
 namespace pump {
 namespace time {
@@ -35,7 +33,7 @@ namespace time {
 class manager;
 DEFINE_SMART_POINTER_TYPE(manager);
 
-class manager : public toolkit::noncopyable {
+class pump_lib manager : public toolkit::noncopyable {
   protected:
     typedef pump_function<void(timer_list_sptr &)> timer_pending_callback;
 
@@ -43,7 +41,7 @@ class manager : public toolkit::noncopyable {
     /*********************************************************************************
      * Create instance
      ********************************************************************************/
-    PUMP_INLINE static manager_sptr create() {
+    pump_inline static manager_sptr create() {
         INLINE_OBJECT_CREATE(obj, manager, ());
         return manager_sptr(obj, object_delete<manager>);
     }
@@ -61,7 +59,7 @@ class manager : public toolkit::noncopyable {
     /*********************************************************************************
      * Stop
      ********************************************************************************/
-    PUMP_INLINE void stop() {
+    pump_inline void stop() {
         started_.store(false);
     }
 
@@ -91,12 +89,16 @@ class manager : public toolkit::noncopyable {
      * Observe timers
      * If there are more timers in queue, it will update next observe time.
      ********************************************************************************/
-    void __observe(timer_list_sptr &tl, uint64_t &next_observe_time, uint64_t now);
+    void __observe(timer_list_sptr &tl,
+                   uint64_t &next_observe_time,
+                   uint64_t now);
 
     /*********************************************************************************
      * Observe timers
      ********************************************************************************/
-    PUMP_INLINE void __queue_timer(timer_list_sptr &tl, timer_sptr &&ptr, uint64_t now) {
+    pump_inline void __queue_timer(timer_list_sptr &tl,
+                                   timer_sptr &&ptr,
+                                   uint64_t now) {
         if (ptr->time() <= now) {
             tl->push_back(std::move(ptr));
         } else {
