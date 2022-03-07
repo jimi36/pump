@@ -18,8 +18,9 @@
 #define pump_time_manager_h
 
 #include <map>
-#include <mutex>
+#include <list>
 #include <queue>
+#include <mutex>
 #include <thread>
 #include <condition_variable>
 
@@ -31,7 +32,10 @@ namespace pump {
 namespace time {
 
 class manager;
-DEFINE_SMART_POINTER_TYPE(manager);
+DEFINE_SMART_POINTERS(manager);
+
+typedef std::list<timer_wptr> timer_list;
+DEFINE_SMART_POINTERS(timer_list);
 
 class pump_lib manager : public toolkit::noncopyable {
   protected:
@@ -89,16 +93,18 @@ class pump_lib manager : public toolkit::noncopyable {
      * Observe timers
      * If there are more timers in queue, it will update next observe time.
      ********************************************************************************/
-    void __observe(timer_list_sptr &tl,
-                   uint64_t &next_observe_time,
-                   uint64_t now);
+    void __observe(
+        timer_list_sptr &tl,
+        uint64_t &next_observe_time,
+        uint64_t now);
 
     /*********************************************************************************
      * Observe timers
      ********************************************************************************/
-    pump_inline void __queue_timer(timer_list_sptr &tl,
-                                   timer_sptr &&ptr,
-                                   uint64_t now) {
+    pump_inline void __queue_timer(
+        timer_list_sptr &tl,
+        timer_sptr &&ptr,
+        uint64_t now) {
         if (ptr->time() <= now) {
             tl->push_back(std::move(ptr));
         } else {

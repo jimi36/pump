@@ -25,7 +25,8 @@
 namespace pump {
 namespace transport {
 
-#define ADDRESS_MAX_LEN 64
+// Max address length
+const static int32_t max_address_len = 64;
 
 class pump_lib address {
   public:
@@ -100,9 +101,9 @@ class pump_lib address {
     bool is_v6_;
 
     int32_t addrlen_;
-    char addr_[ADDRESS_MAX_LEN];
+    char addr_[max_address_len];
 };
-DEFINE_SMART_POINTER_TYPE(address);
+DEFINE_SMART_POINTERS(address);
 
 }  // namespace transport
 }  // namespace pump

@@ -21,9 +21,10 @@ namespace pump {
 namespace proto {
 namespace http {
 
-#define HEAD_VALUE_SEP "; "
+#define head_value_sep "; "
 
-header::header() noexcept : header_parsed_(false) {}
+header::header() noexcept :
+    header_parsed_(false) {}
 
 void header::set_head(const std::string &name, int32_t value) {
     char strval[64] = {0};
@@ -47,8 +48,9 @@ void header::set_unique_head(const std::string &name, int32_t value) {
     headers_[name] = std::vector<std::string>(1, strval);
 }
 
-void header::set_unique_head(const std::string &name,
-                             const std::string &value) {
+void header::set_unique_head(
+    const std::string &name,
+    const std::string &value) {
     headers_[name] = split_string(value, "[,;] *");
 }
 
@@ -66,12 +68,13 @@ bool header::get_head(const std::string &name, std::string &value) const {
     if (it == headers_.end() || it->second.empty()) {
         return false;
     }
-    value = join_strings(it->second, HEAD_VALUE_SEP);
+    value = join_strings(it->second, head_value_sep);
     return true;
 }
 
-bool header::get_head(const std::string &name,
-                      std::vector<std::string> &values) const {
+bool header::get_head(
+    const std::string &name,
+    std::vector<std::string> &values) const {
     auto it = headers_.find(name);
     if (it == headers_.end() || it->second.empty()) {
         return false;
@@ -99,8 +102,8 @@ int32_t header::__parse_header(const char *b, int32_t size) {
     const char *line_end = nullptr;
     while ((line_end = find_http_line_end(beg, uint32_t(size - (end - b))))) {
         // Check parsed complete
-        if (beg + HTTP_CRLF_LEN == line_end) {
-            beg += HTTP_CRLF_LEN;
+        if (beg + http_crlf_length == line_end) {
+            beg += http_crlf_length;
             header_parsed_ = true;
             break;
         }
@@ -118,11 +121,11 @@ int32_t header::__parse_header(const char *b, int32_t size) {
         while (end < line_end && (*end == ' ' || *end == ':')) {
             ++end;
         }
-        PUMP_ASSERT(end <= line_end - HTTP_CRLF_LEN);
+        pump_assert(end <= line_end - http_crlf_length);
 
         // Parse header value
         beg = end;
-        end = line_end - HTTP_CRLF_LEN;
+        end = line_end - http_crlf_length;
         if (end > beg) {
             value.assign(beg, end);
         }
@@ -139,7 +142,7 @@ int32_t header::__parse_header(const char *b, int32_t size) {
 int32_t header::__serialize_header(std::string &buffer) const {
     int32_t size = 0;
     std::string value;
-    char header_line[HTTP_LINE_MAX_LEN + 1] = {0};
+    char header_line[http_line_max_length + 1] = {0};
     for (auto beg = headers_.begin(); beg != headers_.end(); beg++) {
         auto cnt = beg->second.size();
         if (cnt == 0) {
@@ -147,18 +150,19 @@ int32_t header::__serialize_header(std::string &buffer) const {
         } else if (cnt == 1) {
             value = beg->second[0];
         } else {
-            value = join_strings(beg->second, HEAD_VALUE_SEP);
+            value = join_strings(beg->second, head_value_sep);
         }
-        size += pump_snprintf(header_line,
-                              sizeof(header_line) - 1,
-                              "%s: %s\r\n",
-                              beg->first.c_str(),
-                              value.c_str());
+        size += pump_snprintf(
+            header_line,
+            sizeof(header_line) - 1,
+            "%s: %s\r\n",
+            beg->first.c_str(),
+            value.c_str());
         buffer.append(header_line);
     }
 
-    size += HTTP_CRLF_LEN;
-    buffer.append(HTTP_CRLF);
+    size += http_crlf_length;
+    buffer.append(http_crlf);
 
     return size;
 }

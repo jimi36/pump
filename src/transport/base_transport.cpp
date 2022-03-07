@@ -19,8 +19,9 @@
 namespace pump {
 namespace transport {
 
-void base_transport::on_channel_event(int32_t ev) {
-    if (__trigger_disconnected_callback() || __trigger_stopped_callback()) {
+void base_transport::on_channel_event(int32_t ev, void *arg) {
+    if (__trigger_disconnected_callback() ||
+        __trigger_stopped_callback()) {
         // Transport disabled.
     }
 }
@@ -33,14 +34,14 @@ bool base_transport::__change_read_state(read_state from, read_state to) {
 }
 
 bool base_transport::__try_triggering_disconnected_callback() {
-    if (__set_state(TRANSPORT_STARTED, TRANSPORT_DISCONNECTING)) {
+    if (__set_state(state_started, state_disconnecting)) {
         return __trigger_disconnected_callback();
     }
     return false;
 }
 
 bool base_transport::__trigger_disconnected_callback() {
-    if (__set_state(TRANSPORT_DISCONNECTING, TRANSPORT_DISCONNECTED)) {
+    if (__set_state(state_disconnecting, state_disconnected)) {
         __shutdown_transport_flow(SHUT_RDWR);
         cbs_.disconnected_cb();
         return true;
@@ -49,7 +50,7 @@ bool base_transport::__trigger_disconnected_callback() {
 }
 
 bool base_transport::__trigger_stopped_callback() {
-    if (__set_state(TRANSPORT_STOPPING, TRANSPORT_STOPPED)) {
+    if (__set_state(state_stopping, state_stopped)) {
         __shutdown_transport_flow(SHUT_RDWR);
         cbs_.stopped_cb();
         return true;

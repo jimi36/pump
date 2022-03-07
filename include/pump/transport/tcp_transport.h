@@ -25,7 +25,7 @@ namespace pump {
 namespace transport {
 
 class tcp_transport;
-DEFINE_SMART_POINTER_TYPE(tcp_transport);
+DEFINE_SMART_POINTERS(tcp_transport);
 
 class pump_lib tcp_transport : public base_transport {
   public:
@@ -45,16 +45,18 @@ class pump_lib tcp_transport : public base_transport {
     /*********************************************************************************
      * Init
      ********************************************************************************/
-    void init(pump_socket fd,
-              const address &local_address,
-              const address &remote_address);
+    void init(
+        pump_socket fd,
+        const address &local_address,
+        const address &remote_address);
 
     /*********************************************************************************
      * Start
      ********************************************************************************/
-    virtual error_code start(service *sv,
-                             read_mode mode,
-                             const transport_callbacks &cbs) override;
+    virtual error_code start(
+        service *sv,
+        read_mode mode,
+        const transport_callbacks &cbs) override;
 
     /*********************************************************************************
      * Stop
@@ -82,6 +84,11 @@ class pump_lib tcp_transport : public base_transport {
     virtual error_code send(toolkit::io_buffer *iob) override;
 
   protected:
+    /*********************************************************************************
+     * Channel event callback
+     ********************************************************************************/
+    virtual void on_channel_event(int32_t ev, void *arg) override;
+
     /*********************************************************************************
      * Read event callback
      ********************************************************************************/
@@ -124,17 +131,14 @@ class pump_lib tcp_transport : public base_transport {
     error_code __send_once();
 
     /*********************************************************************************
+     * Handle sent buffer
+     ********************************************************************************/
+    void __handle_sent_buffer();
+
+    /*********************************************************************************
      * Clear sendlist
      ********************************************************************************/
     void __clear_sendlist();
-
-    /*********************************************************************************
-     * Reset last sent io buffer
-     ********************************************************************************/
-    pump_inline void __reset_last_sent_iobuffer() {
-        last_send_iob_->unrefer();
-        last_send_iob_ = nullptr;
-    }
 
   private:
     // Transport flow

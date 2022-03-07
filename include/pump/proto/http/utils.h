@@ -23,14 +23,12 @@ namespace pump {
 namespace proto {
 namespace http {
 
-#define HTTP_CRLF "\r\n"
+#define http_crlf "\r\n"
 
-#define HTTP_CRLF_LEN 2
+#define http_crlf_length 2
 
-#define HTTP_LINE_MAX_LEN 2048
-#define HTTP_LINE_MIN_LEN HTTP_CRLF_LEN
-
-#define HTTP_HEAD_VALUE_MAX_LEN (HTTP_LINE_MAX_LEN - 5)
+#define http_line_max_length 2048
+#define http_line_min_length http_crlf_length
 
 /*********************************************************************************
  * Find http line end position

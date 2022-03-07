@@ -38,8 +38,8 @@ class flow_tcp_acceptor : public flow_base {
     /*********************************************************************************
      * Init flow
      * Return results:
-     *     ERROR_OK    => success
-     *     ERROR_FAULT => error
+     *     error_none    => success
+     *     error_fault => error
      ********************************************************************************/
     error_code init(poll::channel_sptr &&ch, const address &listen_address);
 
@@ -55,7 +55,7 @@ class flow_tcp_acceptor : public flow_base {
     // Accept buffer
     toolkit::io_buffer *iob_;
 };
-DEFINE_SMART_POINTER_TYPE(flow_tcp_acceptor);
+DEFINE_SMART_POINTERS(flow_tcp_acceptor);
 
 }  // namespace flow
 }  // namespace transport

@@ -20,10 +20,11 @@
 namespace pump {
 namespace transport {
 
-tls_acceptor::tls_acceptor(tls_credentials xcred,
-                           const address &listen_address,
-                           int64_t handshake_timeout) noexcept :
-    base_acceptor(TLS_ACCEPTOR, listen_address),
+tls_acceptor::tls_acceptor(
+    tls_credentials xcred,
+    const address &listen_address,
+    int64_t handshake_timeout) noexcept :
+    base_acceptor(transport_tls_acceptor, listen_address),
     xcred_(xcred),
     handshake_timeout_(handshake_timeout) {}
 
@@ -35,23 +36,23 @@ tls_acceptor::~tls_acceptor() {
 
 error_code tls_acceptor::start(service *sv, const acceptor_callbacks &cbs) {
     if (sv == nullptr) {
-        PUMP_WARN_LOG("service is invalid");
-        return ERROR_INVALID;
+        pump_warn_log("service is invalid");
+        return error_invalid;
     }
 
     if (!cbs.accepted_cb || !cbs.stopped_cb) {
-        PUMP_WARN_LOG("callbacks is invalid");
-        return ERROR_INVALID;
+        pump_warn_log("callbacks is invalid");
+        return error_invalid;
     }
 
     if (xcred_ == nullptr) {
-        PUMP_WARN_LOG("tls acceptor's cert is invalid");
-        return ERROR_INVALID;
+        pump_warn_log("tls acceptor's cert is invalid");
+        return error_invalid;
     }
 
-    if (!__set_state(TRANSPORT_INITED, TRANSPORT_STARTING)) {
-        PUMP_WARN_LOG("tls acceptor is already started before");
-        return ERROR_FAULT;
+    if (!__set_state(state_none, state_starting)) {
+        pump_warn_log("tls acceptor is already started before");
+        return error_fault;
     }
 
     do {
@@ -60,32 +61,32 @@ error_code tls_acceptor::start(service *sv, const acceptor_callbacks &cbs) {
         __set_service(sv);
 
         if (!__open_accept_flow()) {
-            PUMP_WARN_LOG("open tls acceptor's flow failed");
+            pump_warn_log("open tls acceptor's flow failed");
             break;
         }
 
         if (!__start_accept_tracker(shared_from_this())) {
-            PUMP_WARN_LOG("start tls acceptor's tracker failed");
+            pump_warn_log("start tls acceptor's tracker failed");
             break;
         }
 
-        if (__set_state(TRANSPORT_STARTING, TRANSPORT_STARTED)) {
-            return ERROR_OK;
+        if (__set_state(state_starting, state_started)) {
+            return error_none;
         }
     } while (false);
 
-    __set_state(TRANSPORT_STARTING, TRANSPORT_ERROR);
+    __set_state(state_starting, state_error);
     __close_accept_flow();
 
-    return ERROR_FAULT;
+    return error_fault;
 }
 
 void tls_acceptor::stop() {
     // When stopping done, tracker event will trigger stopped callback.
-    if (__set_state(TRANSPORT_STARTED, TRANSPORT_STOPPING)) {
+    if (__set_state(state_started, state_stopping)) {
         __close_accept_flow();
         __stop_all_handshakers();
-        __post_channel_event(shared_from_this(), 0);
+        __post_channel_event(shared_from_this(), channel_event_disconnected);
     }
 }
 
@@ -96,40 +97,46 @@ void tls_acceptor::on_read_event() {
         tls_handshaker *handshaker = __create_handshaker();
         if (pump_likely(handshaker != nullptr)) {
             tls_handshaker::tls_handshaker_callbacks handshaker_cbs;
-            handshaker_cbs.handshaked_cb =
-                pump_bind(&tls_acceptor::on_handshaked,
-                          shared_from_this(),
-                          _1,
-                          _2);
-            handshaker_cbs.stopped_cb =
-                pump_bind(&tls_acceptor::on_handshake_stopped,
-                          shared_from_this(),
-                          _1);
-            if (!handshaker
-                     ->init(fd, false, xcred_, local_address, remote_address)) {
-                PUMP_WARN_LOG("init tls handshaker failed");
+            handshaker_cbs.handshaked_cb = pump_bind(
+                &tls_acceptor::on_handshaked,
+                shared_from_this(),
+                _1,
+                _2);
+            handshaker_cbs.stopped_cb = pump_bind(
+                &tls_acceptor::on_handshake_stopped,
+                shared_from_this(),
+                _1);
+            if (!handshaker->init(
+                    fd,
+                    false,
+                    xcred_,
+                    local_address,
+                    remote_address)) {
+                pump_warn_log("init tls handshaker failed");
                 __remove_handshaker(handshaker);
             }
-            if (!handshaker->start(get_service(),
-                                   handshake_timeout_,
-                                   handshaker_cbs)) {
-                PUMP_WARN_LOG("start tls handshaker failed");
+            if (!handshaker->start(
+                    get_service(),
+                    handshake_timeout_,
+                    handshaker_cbs)) {
+                pump_warn_log("start tls handshaker failed");
                 __remove_handshaker(handshaker);
             }
         } else {
-            PUMP_WARN_LOG("create tls handshaker failed");
+            pump_warn_log("create tls handshaker failed");
             net::close(fd);
         }
     }
 
     if (!__resume_accept_tracker()) {
-        PUMP_WARN_LOG("resume tls acceptor's tracker failed");
+        pump_warn_log("resume tls acceptor's tracker failed");
     }
 }
 
-void tls_acceptor::on_handshaked(tls_acceptor_wptr wptr,
-                                 tls_handshaker *handshaker,
-                                 bool succ) {
+void tls_acceptor::on_handshaked(
+    tls_acceptor_wptr wptr,
+    tls_handshaker *handshaker,
+    bool succ) {
     auto acceptor = wptr.lock();
     if (!acceptor || !acceptor->__remove_handshaker(handshaker)) {
         return;
@@ -138,20 +145,22 @@ void tls_acceptor::on_handshaked(tls_acceptor_wptr wptr,
     if (succ && acceptor->is_started()) {
         tls_transport_sptr tls_transport = tls_transport::create();
         if (!tls_transport) {
-            PUMP_WARN_LOG("new tls transport object failed");
+            pump_warn_log("new tls transport object failed");
             return;
         }
-        tls_transport->init(handshaker->unlock_flow(),
-                            handshaker->get_local_address(),
-                            handshaker->get_remote_address());
+        tls_transport->init(
+            handshaker->unlock_flow(),
+            handshaker->get_local_address(),
+            handshaker->get_remote_address());
 
         base_transport_sptr transport = tls_transport;
         acceptor->cbs_.accepted_cb(transport);
     }
 }
 
-void tls_acceptor::on_handshake_stopped(tls_acceptor_wptr wptr,
-                                        tls_handshaker *handshaker) {
+void tls_acceptor::on_handshake_stopped(
+    tls_acceptor_wptr wptr,
+    tls_handshaker *handshaker) {
     auto acceptor = wptr.lock();
     if (acceptor) {
         acceptor->__remove_handshaker(handshaker);
@@ -160,14 +169,15 @@ void tls_acceptor::on_handshake_stopped(tls_acceptor_wptr wptr,
 
 bool tls_acceptor::__open_accept_flow() {
     // Init tls acceptor flow.
-    flow_.reset(object_create<flow::flow_tls_acceptor>(),
-                object_delete<flow::flow_tls_acceptor>);
+    flow_.reset(
+        object_create<flow::flow_tls_acceptor>(),
+        object_delete<flow::flow_tls_acceptor>);
     if (!flow_) {
-        PUMP_WARN_LOG("new tls acceptor's flow failed");
+        pump_warn_log("new tls acceptor's flow failed");
         return false;
     }
-    if (flow_->init(shared_from_this(), listen_address_) != ERROR_OK) {
-        PUMP_WARN_LOG("init tls acceptor's flow failed");
+    if (flow_->init(shared_from_this(), listen_address_) != error_none) {
+        pump_warn_log("init tls acceptor's flow failed");
         return false;
     }
 
@@ -183,10 +193,11 @@ void tls_acceptor::__close_accept_flow() {
 }
 
 tls_handshaker *tls_acceptor::__create_handshaker() {
-    tls_handshaker_sptr handshaker(object_create<tls_handshaker>(),
-                                   object_delete<tls_handshaker>);
+    tls_handshaker_sptr handshaker(
+        object_create<tls_handshaker>(),
+        object_delete<tls_handshaker>);
     if (!handshaker) {
-        PUMP_WARN_LOG("new tls handshaker object failed");
+        pump_warn_log("new tls handshaker object failed");
         return nullptr;
     }
     std::lock_guard<std::mutex> lock(handshaker_mx_);

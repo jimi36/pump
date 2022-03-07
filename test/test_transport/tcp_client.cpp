@@ -40,20 +40,24 @@ class my_tcp_dialer : public std::enable_shared_from_this<my_tcp_dialer> {
         }
 
         pump::transport_callbacks cbs;
-        cbs.read_cb = pump_bind(&my_tcp_dialer::on_read_callback,
-                                this,
-                                transp.get(),
-                                _1,
-                                _2);
-        cbs.stopped_cb =
-            pump_bind(&my_tcp_dialer::on_stopped_callback, this, transp.get());
-        cbs.disconnected_cb =
-            pump_bind(&my_tcp_dialer::on_disconnected_callback,
-                      this,
-                      transp.get());
+        cbs.read_cb = pump_bind(
+            &my_tcp_dialer::on_read_callback,
+            this,
+            transp.get(),
+            _1,
+            _2);
+        cbs.stopped_cb = pump_bind(
+            &my_tcp_dialer::on_stopped_callback,
+            this,
+            transp.get());
+        cbs.disconnected_cb = pump_bind(
+            &my_tcp_dialer::on_disconnected_callback,
+            this,
+            transp.get());
+        cbs.sent_cb = pump_bind(&my_tcp_dialer::on_sent_callback, this, _1);
 
         transport_ = std::static_pointer_cast<pump::tcp_transport>(transp);
-        if (transport_->start(sv, READ_MODE_ONCE, cbs) != 0) {
+        if (transport_->start(sv, read_mode_once, cbs) != error_none) {
             return;
         }
 
@@ -94,6 +98,16 @@ class my_tcp_dialer : public std::enable_shared_from_this<my_tcp_dialer> {
         transp->continue_read();
     }
 
+    void on_sent_callback(toolkit::io_buffer *iob) {
+        if (iob == nullptr) {
+            printf("iob is nullptr\n");
+            return;
+        }
+        std::lock_guard<std::mutex> lock(buf_mx_);
+        iobs_.push_back(iob);
+        iob->refer();
+    }
+
     /*********************************************************************************
      * Tcp disconnected event callback
      ********************************************************************************/
@@ -127,10 +141,17 @@ class my_tcp_dialer : public std::enable_shared_from_this<my_tcp_dialer> {
         if (!transport_) {
             return false;
         }
-        if (transport_->send(send_data_.data(), (int32_t)send_data_.size()) !=
-            0) {
-            printf("send error\n");
-            return false;
+
+        std::lock_guard<std::mutex> lock(buf_mx_);
+        if (iobs_.empty()) {
+            transport_->send(send_data_.data(), (int32_t)send_data_.size());
+        } else {
+            auto iob = iobs_.front();
+            iobs_.pop_front();
+
+            iob->write(char(0), send_pocket_size);
+            transport_->send(iob);
+            iob->unrefer();
         }
 
         return true;
@@ -149,6 +170,9 @@ class my_tcp_dialer : public std::enable_shared_from_this<my_tcp_dialer> {
 
     tcp_dialer_sptr dialer_;
     tcp_transport_sptr transport_;
+
+    std::mutex buf_mx_;
+    std::list<toolkit::io_buffer *> iobs_;
 };
 
 void start_once_dialer() {

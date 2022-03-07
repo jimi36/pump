@@ -37,16 +37,14 @@ tls_credentials new_client_tls_credentials() {
 #if defined(PUMP_HAVE_GNUTLS)
     gnutls_certificate_credentials_t xcred;
     if (gnutls_certificate_allocate_credentials(&xcred) != 0) {
-        PUMP_WARN_LOG("tls_utils: create tls client certificate failed for "
-                      "gnutls_certificate_allocate_credentials failed");
+        pump_warn_log("allocate client tls certificate failed");
         return nullptr;
     }
     return xcred;
 #elif defined(PUMP_HAVE_OPENSSL)
     SSL_CTX *xcred = SSL_CTX_new(TLS_client_method());
     if (xcred == nullptr) {
-        PUMP_WARN_LOG("tls_utils: create tls_client certificate failed for "
-                      "SSL_CTX_new failed");
+        pump_warn_log("create client tls certificate context failed");
         return nullptr;
     }
     SSL_CTX_set_options(xcred, SSL_EXT_TLS1_3_ONLY);
@@ -56,9 +54,10 @@ tls_credentials new_client_tls_credentials() {
 #endif
 }
 
-tls_credentials load_tls_credentials_from_file(bool client,
-                                               const std::string &cert,
-                                               const std::string &key) {
+tls_credentials load_tls_credentials_from_file(
+    bool client,
+    const std::string &cert,
+    const std::string &key) {
 #if defined(PUMP_HAVE_GNUTLS)
     gnutls_certificate_credentials_t xcred;
     int32_t ret = gnutls_certificate_allocate_credentials(&xcred);
@@ -66,10 +65,11 @@ tls_credentials load_tls_credentials_from_file(bool client,
         return nullptr;
     }
 
-    ret = gnutls_certificate_set_x509_key_file(xcred,
-                                               cert.c_str(),
-                                               key.c_str(),
-                                               GNUTLS_X509_FMT_PEM);
+    ret = gnutls_certificate_set_x509_key_file(
+        xcred,
+        cert.c_str(),
+        key.c_str(),
+        GNUTLS_X509_FMT_PEM);
     if (ret != 0) {
         gnutls_certificate_free_credentials(xcred);
         return nullptr;
@@ -87,10 +87,8 @@ tls_credentials load_tls_credentials_from_file(bool client,
         return nullptr;
     }
 
-    if (SSL_CTX_use_certificate_file(xcred, cert.c_str(), SSL_FILETYPE_PEM) !=
-            1 ||
-        SSL_CTX_use_PrivateKey_file(xcred, key.c_str(), SSL_FILETYPE_PEM) !=
-            1) {
+    if (SSL_CTX_use_certificate_file(xcred, cert.c_str(), SSL_FILETYPE_PEM) != 1 ||
+        SSL_CTX_use_PrivateKey_file(xcred, key.c_str(), SSL_FILETYPE_PEM) != 1) {
         SSL_CTX_free(xcred);
         return nullptr;
     }
@@ -100,9 +98,10 @@ tls_credentials load_tls_credentials_from_file(bool client,
 #endif
 }
 
-tls_credentials load_tls_credentials_from_memory(bool client,
-                                                 const std::string &cert,
-                                                 const std::string &key) {
+tls_credentials load_tls_credentials_from_memory(
+    bool client,
+    const std::string &cert,
+    const std::string &key) {
 #if defined(PUMP_HAVE_GNUTLS)
     gnutls_certificate_credentials_t xcred == nullptr;
     if (gnutls_certificate_allocate_credentials(&xcred) != 0) {
@@ -117,10 +116,11 @@ tls_credentials load_tls_credentials_from_memory(bool client,
     gnutls_key.data = (uint8_t *)key.data();
     gnutls_key.size = (uint32_t)key.size();
 
-    if (gnutls_certificate_set_x509_key_mem(xcred,
-                                            &gnutls_cert,
-                                            &gnutls_key,
-                                            GNUTLS_X509_FMT_PEM) != 0) {
+    if (gnutls_certificate_set_x509_key_mem(
+            xcred,
+            &gnutls_cert,
+            &gnutls_key,
+            GNUTLS_X509_FMT_PEM) != 0) {
         gnutls_certificate_free_credentials(xcred);
         return nullptr;
     }
@@ -192,9 +192,10 @@ void delete_tls_credentials(tls_credentials xcred) {
     }
 }
 
-tls_session *new_tls_session(bool client,
-                             pump_socket fd,
-                             tls_credentials xcred) {
+tls_session *new_tls_session(
+    bool client,
+    pump_socket fd,
+    tls_credentials xcred) {
 #if defined(PUMP_HAVE_GNUTLS)
     tls_session *session = object_create<tls_session>();
     if (session == nullptr) {
@@ -261,13 +262,12 @@ int32_t tls_handshake(tls_session *session) {
 #if defined(PUMP_HAVE_GNUTLS)
     int32_t ret = gnutls_handshake((gnutls_session_t)session->ssl_ctx);
     if (ret == 0) {
-        return TLS_HANDSHAKE_OK;
+        return tls_handshake_ok;
     } else if (gnutls_error_is_fatal(ret) == 0) {
-        if (gnutls_record_get_direction((gnutls_session_t)session->ssl_ctx) ==
-            0) {
-            return TLS_HANDSHAKE_READ;
+        if (gnutls_record_get_direction((gnutls_session_t)session->ssl_ctx) == 0) {
+            return tls_handshake_read;
         } else {
-            return TLS_HANDSHAKE_SEND;
+            return tls_handshake_send;
         }
     }
 #elif defined(PUMP_HAVE_OPENSSL)
@@ -275,17 +275,16 @@ int32_t tls_handshake(tls_session *session) {
     int32_t ec = SSL_get_error((SSL *)session->ssl_ctx, ret);
     if (ec != SSL_ERROR_SSL) {
         if (ec == SSL_ERROR_NONE) {
-            return TLS_HANDSHAKE_OK;
-        }
-        if (SSL_want_write((SSL *)session->ssl_ctx)) {
-            return TLS_HANDSHAKE_SEND;
+            return tls_handshake_ok;
+        } else if (SSL_want_write((SSL *)session->ssl_ctx)) {
+            return tls_handshake_send;
         } else if (SSL_want_read((SSL *)session->ssl_ctx)) {
-            return TLS_HANDSHAKE_READ;
+            return tls_handshake_read;
         }
     }
 #endif
     // Handshake error
-    return TLS_HANDSHAKE_ERROR;
+    return tls_handshake_error;
 }
 
 bool tls_has_unread_data(tls_session *session) {
@@ -294,7 +293,7 @@ bool tls_has_unread_data(tls_session *session) {
         return true;
     }
 #elif defined(PUMP_HAVE_OPENSSL)
-    if (SSL_pending((SSL *)session->ssl_ctx) == 1) {
+    if (SSL_has_pending((SSL *)session->ssl_ctx) == 1) {
         return true;
     }
 #endif
@@ -303,8 +302,10 @@ bool tls_has_unread_data(tls_session *session) {
 
 int32_t tls_read(tls_session *session, char *b, int32_t size) {
 #if defined(PUMP_HAVE_GNUTLS)
-    int32_t ret =
-        (int32_t)gnutls_read((gnutls_session_t)session->ssl_ctx, b, size);
+    int32_t ret = (int32_t)gnutls_read(
+        (gnutls_session_t)session->ssl_ctx,
+        b,
+        size);
     if (PUMP_LIKELY(ret > 0)) {
         return ret;
     } else if (ret == GNUTLS_E_AGAIN) {
@@ -314,8 +315,7 @@ int32_t tls_read(tls_session *session, char *b, int32_t size) {
     int32_t ret = SSL_read((SSL *)session->ssl_ctx, b, size);
     if (pump_likely(ret > 0)) {
         return ret;
-    } else if (SSL_get_error((SSL *)session->ssl_ctx, ret) ==
-               SSL_ERROR_WANT_READ) {
+    } else if (SSL_get_error((SSL *)session->ssl_ctx, ret) == SSL_ERROR_WANT_READ) {
         return -1;
     }
 #endif
@@ -329,8 +329,7 @@ int32_t tls_send(tls_session *session, const char *b, int32_t size) {
     int32_t ret = SSL_write((SSL *)session->ssl_ctx, b, size);
     if (pump_likely(ret > 0)) {
         return ret;
-    } else if (SSL_get_error((SSL *)session->ssl_ctx, ret) ==
-               SSL_ERROR_WANT_WRITE) {
+    } else if (SSL_get_error((SSL *)session->ssl_ctx, ret) == SSL_ERROR_WANT_WRITE) {
         return -1;
     }
 #endif

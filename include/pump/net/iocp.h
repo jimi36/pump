@@ -103,22 +103,24 @@ typedef struct _OBJECT_ATTRIBUTES {
     PVOID SecurityQualityOfService;
 } OBJECT_ATTRIBUTES, *POBJECT_ATTRIBUTES;
 
-typedef NTSTATUS(NTAPI *FnNtCreateFile)(PHANDLE FileHandle,
-                                        ACCESS_MASK DesiredAccess,
-                                        POBJECT_ATTRIBUTES ObjectAttributes,
-                                        PIO_STATUS_BLOCK IoStatusBlock,
-                                        PLARGE_INTEGER AllocationSize,
-                                        ULONG FileAttributes,
-                                        ULONG ShareAccess,
-                                        ULONG CreateDisposition,
-                                        ULONG CreateOptions,
-                                        PVOID EaBuffer,
-                                        ULONG EaLength);
+typedef NTSTATUS(NTAPI *FnNtCreateFile)(
+    PHANDLE FileHandle,
+    ACCESS_MASK DesiredAccess,
+    POBJECT_ATTRIBUTES ObjectAttributes,
+    PIO_STATUS_BLOCK IoStatusBlock,
+    PLARGE_INTEGER AllocationSize,
+    ULONG FileAttributes,
+    ULONG ShareAccess,
+    ULONG CreateDisposition,
+    ULONG CreateOptions,
+    PVOID EaBuffer,
+    ULONG EaLength);
 extern FnNtCreateFile NtCreateFile;
 
-typedef NTSTATUS(NTAPI *FnNtCancelIoFileEx)(HANDLE FileHandle,
-                                            PIO_STATUS_BLOCK IoRequestToCancel,
-                                            PIO_STATUS_BLOCK IoStatusBlock);
+typedef NTSTATUS(NTAPI *FnNtCancelIoFileEx)(
+    HANDLE FileHandle,
+    PIO_STATUS_BLOCK IoRequestToCancel,
+    PIO_STATUS_BLOCK IoStatusBlock);
 extern FnNtCancelIoFileEx NtCancelIoFileEx;
 
 #endif

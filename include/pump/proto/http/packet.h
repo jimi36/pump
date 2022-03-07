@@ -167,7 +167,7 @@ class pump_lib packet : public header {
     // Parse status
     int32_t parse_status_;
 };
-DEFINE_SMART_POINTER_TYPE(packet);
+DEFINE_SMART_POINTERS(packet);
 
 }  // namespace http
 }  // namespace proto

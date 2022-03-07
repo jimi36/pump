@@ -150,7 +150,7 @@ class pump_lib io_buffer : public base_buffer {
      * If success return current size, else return zero.
      ********************************************************************************/
     pump_inline int32_t shift(int32_t size) {
-        PUMP_ASSERT(int32_t(size_) >= size);
+        pump_assert(int32_t(size_) >= size);
         if (size_ == 0 || int32_t(size_) < size) {
             return -1;
         }

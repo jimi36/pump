@@ -24,7 +24,8 @@
 namespace pump {
 namespace toolkit {
 
-template <typename Q> class fl_queue : public noncopyable {
+template <typename Q>
+class fl_queue : public noncopyable {
   public:
     // Inner queue type
     typedef Q inner_queue_type;
@@ -35,7 +36,8 @@ template <typename Q> class fl_queue : public noncopyable {
     /*********************************************************************************
      * Constructor
      ********************************************************************************/
-    fl_queue(uint32_t size = 1024) : queue_(size) {}
+    fl_queue(uint32_t size = 1024) :
+        queue_(size) {}
 
     /*********************************************************************************
      * Enqueue
@@ -60,7 +62,8 @@ template <typename Q> class fl_queue : public noncopyable {
      * Dequeue
      * This will block until dequeue success.
      ********************************************************************************/
-    template <typename U> bool dequeue(U &item) {
+    template <typename U>
+    bool dequeue(U &item) {
         if (semaphone_.wait()) {
             while (!queue_.pop(item)) {
                 continue;
@@ -74,7 +77,8 @@ template <typename Q> class fl_queue : public noncopyable {
      * Dequeue
      * This will block until dequeue success or timeout.
      ********************************************************************************/
-    template <typename U> bool dequeue(U &item, uint64_t timeout) {
+    template <typename U>
+    bool dequeue(U &item, uint64_t timeout) {
         if (semaphone_.wait(timeout)) {
             while (!queue_.pop(item)) {
                 continue;
@@ -86,9 +90,8 @@ template <typename Q> class fl_queue : public noncopyable {
 
     template <typename U, typename Rep, typename Period>
     bool dequeue(U &item, const std::chrono::duration<Rep, Period> &timeout) {
-        if (semaphone_.wait(
-                std::chrono::duration_cast<std::chrono::microseconds>(timeout)
-                    .count())) {
+        auto ms = std::chrono::duration_cast<std::chrono::microseconds>(timeout);
+        if (semaphone_.wait(ms.count())) {
             while (!queue_.pop(item)) {
                 continue;
             }
@@ -101,7 +104,8 @@ template <typename Q> class fl_queue : public noncopyable {
      * Try dequeue
      * This will return immediately.
      ********************************************************************************/
-    template <typename U> bool try_dequeue(U &item) {
+    template <typename U>
+    bool try_dequeue(U &item) {
         if (semaphone_.try_wait()) {
             while (!queue_.pop(item)) {
                 continue;

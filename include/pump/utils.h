@@ -55,7 +55,8 @@ pump_lib int32_t random();
 /*********************************************************************************
  * Random a value between min and max.
  ********************************************************************************/
-template <typename T> pump_lib T random(uint32_t seed, T min, T max) {
+template <typename T>
+pump_lib T random(uint32_t seed, T min, T max) {
     std::default_random_engine e(seed);
     std::uniform_int_distribution<T> u(min, max);
     return u(e);
@@ -88,14 +89,16 @@ pump_lib std::string utf8_to_gbk(const std::string &in);
 /*********************************************************************************
  * Join strings
  ********************************************************************************/
-pump_lib std::string join_strings(const std::vector<std::string> &src,
-                                  const std::string &sep);
+pump_lib std::string join_strings(
+    const std::vector<std::string> &src,
+    const std::string &sep);
 
 /*********************************************************************************
  * Split string
  ********************************************************************************/
-pump_lib std::vector<std::string> split_string(const std::string &src,
-                                               const std::string &sep);
+pump_lib std::vector<std::string> split_string(
+    const std::string &src,
+    const std::string &sep);
 
 }  // namespace pump
 

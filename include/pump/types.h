@@ -34,7 +34,7 @@ typedef SSIZE_T ssize_t;
 using namespace std::placeholders;
 
 // For smart pointer
-#define DEFINE_SMART_POINTER_TYPE(class_name)            \
+#define DEFINE_SMART_POINTERS(class_name)                \
     typedef std::weak_ptr<class_name> class_name##_wptr; \
     typedef std::shared_ptr<class_name> class_name##_sptr;
 

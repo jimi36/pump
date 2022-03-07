@@ -24,7 +24,7 @@ namespace transport {
 namespace flow {
 
 typedef flow_tcp_acceptor flow_tls_acceptor;
-DEFINE_SMART_POINTER_TYPE(flow_tls_acceptor);
+DEFINE_SMART_POINTERS(flow_tls_acceptor);
 
 }  // namespace flow
 }  // namespace transport

@@ -28,7 +28,8 @@ class pump_lib base_acceptor : public base_channel {
      * Constructor
      ********************************************************************************/
     base_acceptor(int32_t type, const address &listen_address) noexcept :
-        base_channel(type, nullptr, -1), listen_address_(listen_address) {}
+        base_channel(type, nullptr, -1),
+        listen_address_(listen_address) {}
 
     /*********************************************************************************
      * Deconstructor
@@ -56,7 +57,7 @@ class pump_lib base_acceptor : public base_channel {
     /*********************************************************************************
      * Channel event callback
      ********************************************************************************/
-    virtual void on_channel_event(int32_t ev) override;
+    virtual void on_channel_event(int32_t ev, void *arg) override;
 
   protected:
     /*********************************************************************************
@@ -100,7 +101,7 @@ class pump_lib base_acceptor : public base_channel {
     // Acceptor callbacks
     acceptor_callbacks cbs_;
 };
-DEFINE_SMART_POINTER_TYPE(base_acceptor);
+DEFINE_SMART_POINTERS(base_acceptor);
 
 }  // namespace transport
 }  // namespace pump

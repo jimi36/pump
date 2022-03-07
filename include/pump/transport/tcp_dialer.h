@@ -26,7 +26,7 @@ namespace pump {
 namespace transport {
 
 class tcp_dialer;
-DEFINE_SMART_POINTER_TYPE(tcp_dialer);
+DEFINE_SMART_POINTERS(tcp_dialer);
 
 class pump_lib tcp_dialer : public base_dialer,
                             public std::enable_shared_from_this<tcp_dialer> {
@@ -34,12 +34,15 @@ class pump_lib tcp_dialer : public base_dialer,
     /*********************************************************************************
      * Create instance
      ********************************************************************************/
-    pump_inline static tcp_dialer_sptr create(const address &local_address,
-                                              const address &remote_address,
-                                              int64_t connect_timeout = 0) {
+    pump_inline static tcp_dialer_sptr create(
+        const address &local_address,
+        const address &remote_address,
+        int64_t connect_timeout = 0) {
         INLINE_OBJECT_CREATE(obj,
                              tcp_dialer,
-                             (local_address, remote_address, connect_timeout));
+                             (local_address,
+                              remote_address,
+                              connect_timeout));
         return tcp_dialer_sptr(obj, object_delete<tcp_dialer>);
     }
 
@@ -89,9 +92,10 @@ class pump_lib tcp_dialer : public base_dialer,
     /*********************************************************************************
      * Constructor
      ********************************************************************************/
-    tcp_dialer(const address &local_address,
-               const address &remote_address,
-               int64_t timeout) noexcept;
+    tcp_dialer(
+        const address &local_address,
+        const address &remote_address,
+        int64_t timeout) noexcept;
 
   private:
     // Dialer flow
@@ -99,7 +103,7 @@ class pump_lib tcp_dialer : public base_dialer,
 };
 
 class tcp_sync_dialer;
-DEFINE_SMART_POINTER_TYPE(tcp_sync_dialer);
+DEFINE_SMART_POINTERS(tcp_sync_dialer);
 
 class pump_lib tcp_sync_dialer
     : public std::enable_shared_from_this<tcp_sync_dialer> {
@@ -119,18 +123,20 @@ class pump_lib tcp_sync_dialer
     /*********************************************************************************
      * Dial by sync
      ********************************************************************************/
-    base_transport_sptr dial(service *sv,
-                             const address &local_address,
-                             const address &remote_address,
-                             int64_t timeout = 0);
+    base_transport_sptr dial(
+        service *sv,
+        const address &local_address,
+        const address &remote_address,
+        int64_t timeout = 0);
 
   protected:
     /*********************************************************************************
      * Dialed callback
      ********************************************************************************/
-    static void on_dialed(tcp_sync_dialer_wptr wptr,
-                          base_transport_sptr &transp,
-                          bool succ);
+    static void on_dialed(
+        tcp_sync_dialer_wptr wptr,
+        base_transport_sptr &transp,
+        bool succ);
 
     /*********************************************************************************
      * Dialed timeout callback

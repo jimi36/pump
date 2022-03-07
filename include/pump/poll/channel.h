@@ -33,17 +33,18 @@ namespace poll {
 /*********************************************************************************
  * IO event
  ********************************************************************************/
-const int32_t IO_EVENT_NONE = 0x00;   // none event
-const int32_t IO_EVENT_READ = 0x01;   // read event
-const int32_t IO_EVENT_SEND = 0x02;   // send event
-const int32_t IO_EVENT_ERROR = 0x04;  // error event
+const int32_t io_none = 0x00;   // none event
+const int32_t io_read = 0x01;   // read event
+const int32_t io_send = 0x02;   // send event
+const int32_t io_error = 0x04;  // error event
 
 class pump_lib channel : public toolkit::noncopyable {
   public:
     /*********************************************************************************
      * Constructor
      ********************************************************************************/
-    explicit channel(pump_socket fd) noexcept : ctx_(nullptr), fd_(fd) {}
+    explicit channel(pump_socket fd) noexcept :
+        ctx_(nullptr), fd_(fd) {}
 
     /*********************************************************************************
      * Deconstructor
@@ -75,9 +76,9 @@ class pump_lib channel : public toolkit::noncopyable {
      * Handle io event
      ********************************************************************************/
     pump_inline void handle_io_event(int32_t ev) {
-        if (ev & IO_EVENT_READ) {
+        if (ev & io_read) {
             on_read_event();
-        } else if (ev & IO_EVENT_SEND) {
+        } else if (ev & io_send) {
             on_send_event();
         }
     }
@@ -85,8 +86,8 @@ class pump_lib channel : public toolkit::noncopyable {
     /*********************************************************************************
      * Handle channel event
      ********************************************************************************/
-    pump_inline void handle_channel_event(int32_t ev) {
-        on_channel_event(ev);
+    pump_inline void handle_channel_event(int32_t ev, void *arg) {
+        on_channel_event(ev, arg);
     }
 
   protected:
@@ -111,7 +112,7 @@ class pump_lib channel : public toolkit::noncopyable {
     /*********************************************************************************
      * Channel event callback
      ********************************************************************************/
-    virtual void on_channel_event(int32_t ev) {}
+    virtual void on_channel_event(int32_t ev, void *arg) {}
 
   protected:
     // Channel context
@@ -119,20 +120,20 @@ class pump_lib channel : public toolkit::noncopyable {
     // Channel fd
     pump_socket fd_;
 };
-DEFINE_SMART_POINTER_TYPE(channel);
+DEFINE_SMART_POINTERS(channel);
 
-const int32_t TRACK_NONE = (IO_EVENT_NONE);
-const int32_t TRACK_READ = (IO_EVENT_READ);
-const int32_t TRACK_SEND = (IO_EVENT_SEND);
-const int32_t TRACK_BOTH = (IO_EVENT_READ | IO_EVENT_SEND);
+const int32_t track_none = (io_none);
+const int32_t track_read = (io_read);
+const int32_t track_send = (io_send);
+const int32_t track_both = (io_read | io_send);
 
-const int32_t TRACKER_EVENT_DEL = 0;
-const int32_t TRACKER_EVENT_ADD = 1;
+const int32_t tracker_remove = 0;
+const int32_t tracker_append = 1;
 
-const int32_t TRACKER_STATE_INIT = 0x00;
-const int32_t TRACKER_STATE_STOP = 0x01;
-const int32_t TRACKER_STATE_TRACK = 0x02;
-const int32_t TRACKER_STATE_UNTRACK = 0x03;
+const int32_t tracker_inited = 0x00;
+const int32_t tracker_stopped = 0x01;
+const int32_t tracker_tracking = 0x02;
+const int32_t tracker_idle = 0x03;
 
 class poller;
 
@@ -142,7 +143,7 @@ class pump_lib channel_tracker : public toolkit::noncopyable {
      * Constructor
      ********************************************************************************/
     channel_tracker(channel_sptr &ch, int32_t ev) noexcept :
-        state_(TRACKER_STATE_INIT),
+        state_(tracker_inited),
         expected_event_(ev),
         fd_(ch->get_fd()),
         ch_(ch),
@@ -152,7 +153,7 @@ class pump_lib channel_tracker : public toolkit::noncopyable {
 #endif
     }
     channel_tracker(channel_sptr &&ch, int32_t ev) noexcept :
-        state_(TRACKER_STATE_INIT),
+        state_(tracker_inited),
         // installed_(false),
         expected_event_(ev),
         fd_(ch->get_fd()),
@@ -167,45 +168,45 @@ class pump_lib channel_tracker : public toolkit::noncopyable {
      * Start
      ********************************************************************************/
     pump_inline bool start() {
-        int32_t expected = TRACKER_STATE_INIT;
-        return state_.compare_exchange_strong(expected, TRACKER_STATE_TRACK);
+        int32_t expected = tracker_inited;
+        return state_.compare_exchange_strong(expected, tracker_tracking);
     }
 
     /*********************************************************************************
      * Stop
      ********************************************************************************/
     pump_inline bool stop() {
-        return state_.exchange(TRACKER_STATE_STOP) != TRACKER_STATE_STOP;
+        return state_.exchange(tracker_stopped) != tracker_stopped;
     }
 
     /*********************************************************************************
      * Get tracked status
      ********************************************************************************/
     pump_inline bool is_started() const {
-        return state_.load() > TRACKER_STATE_STOP;
+        return state_.load() > tracker_stopped;
     }
 
     /*********************************************************************************
      * Track
      ********************************************************************************/
     pump_inline bool track() {
-        int32_t expected = TRACKER_STATE_UNTRACK;
-        return state_.compare_exchange_strong(expected, TRACKER_STATE_TRACK);
+        int32_t expected = tracker_idle;
+        return state_.compare_exchange_strong(expected, tracker_tracking);
     }
 
     /*********************************************************************************
      * untrack
      ********************************************************************************/
     pump_inline bool untrack() {
-        int32_t expected = TRACKER_STATE_TRACK;
-        return state_.compare_exchange_strong(expected, TRACKER_STATE_UNTRACK);
+        int32_t expected = tracker_tracking;
+        return state_.compare_exchange_strong(expected, tracker_idle);
     }
 
     /*********************************************************************************
      * Get tracked status
      ********************************************************************************/
     pump_inline bool is_tracked() const {
-        return state_.load() == TRACKER_STATE_TRACK;
+        return state_.load() == tracker_tracking;
     }
 
     /*********************************************************************************
@@ -287,7 +288,7 @@ class pump_lib channel_tracker : public toolkit::noncopyable {
     AFD_POLL_EVENT ev_;
 #endif
 };
-DEFINE_SMART_POINTER_TYPE(channel_tracker);
+DEFINE_SMART_POINTERS(channel_tracker);
 
 }  // namespace poll
 }  // namespace pump

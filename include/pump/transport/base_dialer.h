@@ -27,10 +27,11 @@ class pump_lib base_dialer : public base_channel {
     /*********************************************************************************
      * Constructor
      ********************************************************************************/
-    base_dialer(int32_t type,
-                const address &local_address,
-                const address &remote_address,
-                int64_t connect_timeout) noexcept :
+    base_dialer(
+        int32_t type,
+        const address &local_address,
+        const address &remote_address,
+        int64_t connect_timeout) noexcept :
         base_channel(type, nullptr, -1),
         local_address_(local_address),
         remote_address_(remote_address),
@@ -69,7 +70,7 @@ class pump_lib base_dialer : public base_channel {
     /*********************************************************************************
      * Channel event callback
      ********************************************************************************/
-    virtual void on_channel_event(int32_t ev) override;
+    virtual void on_channel_event(int32_t ev, void *arg) override;
 
   protected:
     /*********************************************************************************
@@ -131,7 +132,7 @@ class pump_lib base_dialer : public base_channel {
     // Dialer callbacks
     dialer_callbacks cbs_;
 };
-DEFINE_SMART_POINTER_TYPE(base_dialer);
+DEFINE_SMART_POINTERS(base_dialer);
 
 }  // namespace transport
 }  // namespace pump

@@ -30,7 +30,7 @@ select_poller::select_poller() noexcept {
     tv_.tv_sec = 0;
     tv_.tv_usec = 0;
 #else
-    PUMP_ABORT();
+    pump_abort();
 #endif
 }
 
@@ -81,9 +81,9 @@ void select_poller::__poll(int32_t timeout) {
         }
 
         auto listen_event = tracker->get_expected_event();
-        if (listen_event & IO_EVENT_READ) {
+        if (listen_event & io_read) {
             FD_SET(fd, &read_fds_);
-        } else if (listen_event & IO_EVENT_SEND) {
+        } else if (listen_event & io_send) {
             FD_SET(fd, &write_fds_);
         }
     }
@@ -103,8 +103,9 @@ void select_poller::__poll(int32_t timeout) {
 #endif
 }
 
-void select_poller::__dispatch_pending_event(const fd_set *rfds,
-                                             const fd_set *wfds) {
+void select_poller::__dispatch_pending_event(
+    const fd_set *rfds,
+    const fd_set *wfds) {
 #if defined(PUMP_HAVE_SELECT)
     auto beg = trackers_.begin();
     while (beg != trackers_.end()) {
@@ -119,11 +120,11 @@ void select_poller::__dispatch_pending_event(const fd_set *rfds,
         pump_socket fd = tracker->get_fd();
         if (FD_ISSET(fd, rfds)) {
             if (tracker->untrack()) {
-                ch->handle_io_event(IO_EVENT_READ);
+                ch->handle_io_event(io_read);
             }
         } else if (FD_ISSET(fd, wfds)) {
             if (tracker->untrack()) {
-                ch->handle_io_event(IO_EVENT_SEND);
+                ch->handle_io_event(io_send);
             }
         }
 

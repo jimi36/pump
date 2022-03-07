@@ -29,7 +29,7 @@ namespace http {
 using transport::base_transport_sptr;
 
 class connection;
-DEFINE_SMART_POINTER_TYPE(connection);
+DEFINE_SMART_POINTERS(connection);
 
 struct http_callbacks {
     // Http packet callback
@@ -164,7 +164,7 @@ class pump_lib connection : public std::enable_shared_from_this<connection> {
      * Continue read
      ********************************************************************************/
     pump_inline bool __continue_read() {
-        if (!transp_ || transp_->continue_read() != transport::ERROR_OK) {
+        if (!transp_ || transp_->continue_read() != transport::error_none) {
             return false;
         }
         return true;
@@ -197,7 +197,7 @@ class pump_lib connection : public std::enable_shared_from_this<connection> {
     // Transport
     transport::base_transport_sptr transp_;
 };
-DEFINE_SMART_POINTER_TYPE(connection);
+DEFINE_SMART_POINTERS(connection);
 
 }  // namespace http
 }  // namespace proto

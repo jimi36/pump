@@ -59,7 +59,7 @@ void start_udp_client(const std::string &ip, uint16_t port) {
                                udp_client.get(),
                                transport.get());
 
-    if (transport->start(sv, READ_MODE_LOOP, cbs) != 0) {
+    if (transport->start(sv, read_mode_loop, cbs) != 0) {
         printf("udp client start error\n");
         return;
     }

@@ -77,7 +77,7 @@ class pump_lib response : public packet {
     // Status code
     int32_t status_code_;
 };
-DEFINE_SMART_POINTER_TYPE(response);
+DEFINE_SMART_POINTERS(response);
 
 }  // namespace http
 }  // namespace proto

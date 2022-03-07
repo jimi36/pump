@@ -39,10 +39,10 @@ class pump_lib semaphore : public noncopyable {
 #if defined(OS_WINDOWS)
         const long maxLong = 0x7fffffff;
         sema_ = CreateSemaphoreW(nullptr, ini_count, maxLong, nullptr);
-        PUMP_ASSERT(sema_);
+        pump_assert(sema_);
 #elif defined(OS_LINUX)
         if (sem_init(&sema_, 0, ini_count) != 0) {
-            PUMP_ASSERT(false);
+            pump_assert(false);
         }
 #endif
     }
@@ -172,10 +172,11 @@ class pump_lib light_semaphore : public noncopyable {
     bool try_wait() {
         int64_t old_count = count_.load(std::memory_order_relaxed);
         while (old_count > 0) {
-            if (count_.compare_exchange_weak(old_count,
-                                             old_count - 1,
-                                             std::memory_order_acquire,
-                                             std::memory_order_relaxed)) {
+            if (count_.compare_exchange_weak(
+                    old_count,
+                    old_count - 1,
+                    std::memory_order_acquire,
+                    std::memory_order_relaxed)) {
                 return true;
             }
         }
@@ -200,7 +201,7 @@ class pump_lib light_semaphore : public noncopyable {
      * Signal
      ********************************************************************************/
     void signal(int64_t count = 1) {
-        PUMP_ASSERT(count >= 0);
+        pump_assert(count >= 0);
         int64_t old_count = count_.fetch_add(count, std::memory_order_release);
         int64_t to_release = -old_count < count ? -old_count : count;
         if (to_release > 0) {
@@ -229,10 +230,11 @@ class pump_lib light_semaphore : public noncopyable {
         while (--spin >= 0) {
             old_count = count_.load(std::memory_order_relaxed);
             if ((old_count > 0) &&
-                count_.compare_exchange_strong(old_count,
-                                               old_count - 1,
-                                               std::memory_order_acquire,
-                                               std::memory_order_relaxed)) {
+                count_.compare_exchange_strong(
+                    old_count,
+                    old_count - 1,
+                    std::memory_order_acquire,
+                    std::memory_order_relaxed)) {
                 return true;
             }
             // Prevent the compiler from collapsing the loop.
@@ -259,10 +261,11 @@ class pump_lib light_semaphore : public noncopyable {
                 return true;
             }
             if (old_count < 0 &&
-                count_.compare_exchange_strong(old_count,
-                                               old_count + 1,
-                                               std::memory_order_relaxed,
-                                               std::memory_order_relaxed)) {
+                count_.compare_exchange_strong(
+                    old_count,
+                    old_count + 1,
+                    std::memory_order_relaxed,
+                    std::memory_order_relaxed)) {
                 return false;
             }
         }

@@ -20,53 +20,51 @@
 #include <assert.h>
 
 // Pump assert
-#define PUMP_ASSERT(x) assert(x)
+#define pump_assert(x) assert(x)
 // Pump static assert
-#define PUMP_STATIC_ASSERT(x, msg) static_assert((x), msg)
+#define pump_static_assert(x, msg) static_assert((x), msg)
 
 // Pump abort
-#define PUMP_ABORT() abort()
+#define pump_abort() abort()
 
 // Pump abort with log
-#define PUMP_ABORT_WITH_LOG(x, log) \
-    if (pump_unlikely(x)) {         \
-        PUMP_ERR_LOG(log);          \
-        PUMP_ABORT();               \
-    }
+#define pump_abort_with_log(fmt, ...) \
+    pump_err_log(fmt, ##__VA_ARGS__); \
+    pump_abort();
 
 #if defined(PUMP_HAVE_DEBUG_LOG)
-#define PUMP_ERR_LOG(fmt, ...)                              \
+#define pump_err_log(fmt, ...)                              \
     printf("\033[1;31m[Error][%s][%s:%d] " fmt "\n\033[0m", \
            __FILE__,                                        \
            __FUNCTION__,                                    \
            __LINE__,                                        \
            ##__VA_ARGS__)
-#define PUMP_WARN_LOG(fmt, ...)                            \
+#define pump_warn_log(fmt, ...)                            \
     printf("\033[1;33m[Warn][%s][%s:%d] " fmt "\n\033[0m", \
            __FILE__,                                       \
            __FUNCTION__,                                   \
            __LINE__,                                       \
            ##__VA_ARGS__)
-#define PUMP_DEBUG_LOG(fmt, ...)                            \
+#define pump_debug_log(fmt, ...)                            \
     printf("\033[1;37m[Debug][%s][%s:%d] " fmt "\n\033[0m", \
            __FILE__,                                        \
            __FUNCTION__,                                    \
            __LINE__,                                        \
            ##__VA_ARGS__)
 #else
-#define PUMP_ERR_LOG(fmt, ...)                              \
+#define pump_err_log(fmt, ...)                              \
     printf("\033[1;31m[Error][%s][%s:%d] " fmt "\n\033[0m", \
            __FILE__,                                        \
            __FUNCTION__,                                    \
            __LINE__,                                        \
            ##__VA_ARGS__)
-#define PUMP_WARN_LOG(fmt, ...)                            \
+#define pump_warn_log(fmt, ...)                            \
     printf("\033[1;33m[Warn][%s][%s:%d] " fmt "\n\033[0m", \
            __FILE__,                                       \
            __FUNCTION__,                                   \
            __LINE__,                                       \
            ##__VA_ARGS__)
-#define PUMP_DEBUG_LOG(fmt, ...) void(0)
+#define pump_debug_log(fmt, ...) void(0)
 #endif
 
 #endif

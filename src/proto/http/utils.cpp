@@ -24,15 +24,15 @@ namespace proto {
 namespace http {
 
 const char *find_http_line_end(const char *src, int32_t len) {
-    len = std::min<int32_t>(len, HTTP_LINE_MAX_LEN);
-    if (len < HTTP_LINE_MIN_LEN) {
+    len = std::min<int32_t>(len, http_line_max_length);
+    if (len < http_line_min_length) {
         return nullptr;
     }
 
-    while (len >= HTTP_CRLF_LEN) {
+    while (len >= http_crlf_length) {
         if (*src == '\r') {
             if (*(src + 1) == '\n') {
-                src += HTTP_CRLF_LEN;
+                src += http_crlf_length;
                 return src;
             }
             return nullptr;

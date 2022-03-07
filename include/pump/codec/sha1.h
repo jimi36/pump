@@ -23,7 +23,7 @@
 namespace pump {
 namespace codec {
 
-struct SHA1_CTX {
+struct sha1_context {
     uint32_t state[5];
     uint32_t count[2];
     uint8_t buffer[64];
@@ -32,17 +32,17 @@ struct SHA1_CTX {
 /*********************************************************************************
  * Init sha1 context
  ********************************************************************************/
-pump_lib void sha1_init(SHA1_CTX *ctx);
+pump_lib void sha1_init(sha1_context *ctx);
 
 /*********************************************************************************
  * Update sha1 context
  ********************************************************************************/
-pump_lib void sha1_update(SHA1_CTX *ctx, const char *data, int32_t size);
+pump_lib void sha1_update(sha1_context *ctx, const char *data, int32_t size);
 
 /*********************************************************************************
  * Final sha1 context
  ********************************************************************************/
-pump_lib void sha1_final(SHA1_CTX *ctx, uint8_t digest[20]);
+pump_lib void sha1_final(sha1_context *ctx, uint8_t digest[20]);
 
 /*********************************************************************************
  * Sha1

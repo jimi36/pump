@@ -32,15 +32,22 @@ namespace poll {
 class pump_lib poller : public toolkit::noncopyable {
   protected:
     struct channel_event {
-        channel_event(std::shared_ptr<channel> &c, int32_t ev) noexcept :
-            ch(c), event(ev) {}
+        channel_event(
+            std::shared_ptr<channel> &c,
+            int32_t ev,
+            void *a) noexcept :
+            ch(c),
+            event(ev),
+            arg(a) {}
         channel_wptr ch;
         int32_t event;
+        void *arg;
     };
 
     struct tracker_event {
         tracker_event(channel_tracker_sptr &t, int32_t ev) noexcept :
-            tracker(t), event(ev) {}
+            tracker(t),
+            event(ev) {}
         channel_tracker_sptr tracker;
         int32_t event;
     };
@@ -89,7 +96,7 @@ class pump_lib poller : public toolkit::noncopyable {
     /*********************************************************************************
      * Push channel event
      ********************************************************************************/
-    virtual bool push_channel_event(channel_sptr &c, int32_t event);
+    virtual bool push_channel_event(channel_sptr &c, int32_t event, void *arg);
 
   protected:
     /*********************************************************************************
@@ -148,7 +155,7 @@ class pump_lib poller : public toolkit::noncopyable {
     // Channel trackers
     std::map<channel_tracker *, channel_tracker_sptr> trackers_;
 };
-DEFINE_SMART_POINTER_TYPE(poller);
+DEFINE_SMART_POINTERS(poller);
 
 }  // namespace poll
 }  // namespace pump

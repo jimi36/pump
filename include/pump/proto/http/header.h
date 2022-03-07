@@ -54,8 +54,9 @@ class pump_lib header {
      ********************************************************************************/
     bool get_head(const std::string &name, int32_t &value) const;
     bool get_head(const std::string &name, std::string &value) const;
-    bool get_head(const std::string &name,
-                  std::vector<std::string> &values) const;
+    bool get_head(
+        const std::string &name,
+        std::vector<std::string> &values) const;
 
     /*********************************************************************************
      * Check header field existed or not
@@ -90,7 +91,7 @@ class pump_lib header {
     // Http header map
     std::map<std::string, std::vector<std::string>> headers_;
 };
-DEFINE_SMART_POINTER_TYPE(header);
+DEFINE_SMART_POINTERS(header);
 
 }  // namespace http
 }  // namespace proto

@@ -24,7 +24,7 @@ namespace pump {
 namespace transport {
 
 class tcp_acceptor;
-DEFINE_SMART_POINTER_TYPE(tcp_acceptor);
+DEFINE_SMART_POINTERS(tcp_acceptor);
 
 class pump_lib tcp_acceptor
     : public base_acceptor,
@@ -46,8 +46,9 @@ class pump_lib tcp_acceptor
     /*********************************************************************************
      * Start
      ********************************************************************************/
-    virtual error_code start(service *sv,
-                             const acceptor_callbacks &cbs) override;
+    virtual error_code start(
+        service *sv,
+        const acceptor_callbacks &cbs) override;
 
     /*********************************************************************************
      * Stop

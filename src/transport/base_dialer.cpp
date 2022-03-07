@@ -19,7 +19,7 @@
 namespace pump {
 namespace transport {
 
-void base_dialer::on_channel_event(int32_t ev) {
+void base_dialer::on_channel_event(int32_t ev, void *arg) {
     __trigger_interrupt_callbacks();
 }
 
@@ -28,14 +28,15 @@ bool base_dialer::__start_dial_tracker(poll::channel_sptr &&ch) {
         return false;
     }
 
-    tracker_.reset(object_create<poll::channel_tracker>(ch, poll::TRACK_SEND),
-                   object_delete<poll::channel_tracker>);
+    tracker_.reset(
+        object_create<poll::channel_tracker>(ch, poll::track_send),
+        object_delete<poll::channel_tracker>);
     if (!tracker_) {
-        PUMP_WARN_LOG("new dialer's tracker object failed");
+        pump_warn_log("new dialer's tracker object failed");
         return false;
     }
-    if (!get_service()->add_channel_tracker(tracker_, SEND_POLLER_ID)) {
-        PUMP_WARN_LOG("add dialer's tracker to service failed");
+    if (!get_service()->add_channel_tracker(tracker_, send_pid)) {
+        pump_warn_log("add dialer's tracker to service failed");
         return false;
     }
 
@@ -55,7 +56,7 @@ bool base_dialer::__start_dial_timer(const time::timer_callback &cb) {
 
     connect_timer_ = time::timer::create(connect_timeout_, cb);
     if (!connect_timer_) {
-        PUMP_WARN_LOG("new dialer's timer object failed");
+        pump_warn_log("new dialer's timer object failed");
         return false;
     }
 
@@ -69,10 +70,10 @@ void base_dialer::__stop_dial_timer() {
 }
 
 void base_dialer::__trigger_interrupt_callbacks() {
-    if (__set_state(TRANSPORT_TIMEOUTING, TRANSPORT_TIMEOUTED)) {
+    if (__set_state(state_timeouting, state_timeouted)) {
         __shutdown_dial_flow();
         cbs_.timeouted_cb();
-    } else if (__set_state(TRANSPORT_STOPPING, TRANSPORT_STOPPED)) {
+    } else if (__set_state(state_stopping, state_stopped)) {
         __shutdown_dial_flow();
         cbs_.stopped_cb();
     }

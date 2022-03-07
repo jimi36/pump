@@ -27,10 +27,11 @@ frame::frame(bool fin, uint8_t opt, uint64_t payload_len) :
     payload_len_(payload_len),
     is_header_unpacked_(false) {}
 
-frame::frame(bool fin,
-             uint8_t opt,
-             uint64_t payload_len,
-             const std::string &payload_mask_key) :
+frame::frame(
+    bool fin,
+    uint8_t opt,
+    uint64_t payload_len,
+    const std::string &payload_mask_key) :
     fin_(fin),
     opt_(opt),
     payload_len_(payload_len),
@@ -154,7 +155,7 @@ void frame::mask_payload(char *b) {
 
 void frame::reset() {
     fin_ = true;
-    opt_ = WS_OPT_END;
+    opt_ = ws_opt_end;
     payload_len_ = 0;
     payload_mask_key_.clear();
 }

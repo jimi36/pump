@@ -8,8 +8,8 @@ static std::string server_ip;
 static int count = 1;
 static int send_loop = 1;
 static int send_pocket_size = 1024 * 4;
-static int send_pocket_count = 1024 * 100;
-// static int send_pocket_count = -1;
+//static int send_pocket_count = 1024 * 100;
+static int send_pocket_count = -1;
 
 class my_tls_dialer;
 static std::mutex dial_mx;
@@ -38,19 +38,22 @@ class my_tls_dialer : public std::enable_shared_from_this<my_tls_dialer> {
         transport_ = std::static_pointer_cast<tls_transport>(transp);
 
         pump::transport_callbacks cbs;
-        cbs.read_cb = pump_bind(&my_tls_dialer::on_read_callback,
-                                this,
-                                transp.get(),
-                                _1,
-                                _2);
-        cbs.stopped_cb =
-            pump_bind(&my_tls_dialer::on_stopped_callback, this, transp.get());
-        cbs.disconnected_cb =
-            pump_bind(&my_tls_dialer::on_disconnected_callback,
-                      this,
-                      transp.get());
+        cbs.read_cb = pump_bind(
+            &my_tls_dialer::on_read_callback,
+            this,
+            transp.get(),
+            _1,
+            _2);
+        cbs.stopped_cb = pump_bind(
+            &my_tls_dialer::on_stopped_callback,
+            this,
+            transp.get());
+        cbs.disconnected_cb = pump_bind(
+            &my_tls_dialer::on_disconnected_callback,
+            this,
+            transp.get());
 
-        if (transport_->start(sv, READ_MODE_LOOP, cbs) != 0)
+        if (transport_->start(sv, read_mode_loop, cbs) != 0)
             return;
 
         printf("tls client dialed\n");
@@ -93,6 +96,8 @@ class my_tls_dialer : public std::enable_shared_from_this<my_tls_dialer> {
             read_pocket_size_ -= send_pocket_size;
             send_data();
         }
+
+        //transp->continue_read();
     }
 
     /*********************************************************************************
@@ -119,8 +124,7 @@ class my_tls_dialer : public std::enable_shared_from_this<my_tls_dialer> {
     }
 
     void send_data() {
-        if (transport_->send(send_data_.data(), (int32_t)send_data_.size()) !=
-            0)
+        if (transport_->send(send_data_.data(), (int32_t)send_data_.size()) != 0)
             printf("send data error\n");
     }
 
@@ -160,28 +164,33 @@ class tls_time_report {
         }
         dial_mx.unlock();
 
-        printf("client read speed is %fMB/s at %d\n",
-               (double)read_size / 1024 / 1024 / 1,
-               (int32_t)::time(0));
+        printf(
+            "client read speed is %fMB/s at %d\n",
+            (double)read_size / 1024 / 1024 / 1,
+            (int32_t)::time(0));
     }
 };
 
 void start_once_tls_dialer() {
     address bind_address("0.0.0.0", 0);
     address peer_address(server_ip, server_port);
-    tls_dialer_sptr dialer =
-        tls_dialer::create(bind_address, peer_address, 1000);
+    tls_dialer_sptr dialer = tls_dialer::create(bind_address, peer_address, 1000);
 
     std::shared_ptr<my_tls_dialer> my_dialer(new my_tls_dialer);
     my_dialer->set_dialer(dialer);
 
     pump::dialer_callbacks cbs;
-    cbs.dialed_cb =
-        pump_bind(&my_tls_dialer::on_dialed_callback, my_dialer.get(), _1, _2);
-    cbs.stopped_cb =
-        pump_bind(&my_tls_dialer::on_stopped_dialing_callback, my_dialer.get());
-    cbs.timeouted_cb =
-        pump_bind(&my_tls_dialer::on_dialed_timeout_callback, my_dialer.get());
+    cbs.dialed_cb = pump_bind(
+        &my_tls_dialer::on_dialed_callback,
+        my_dialer.get(),
+        _1,
+        _2);
+    cbs.stopped_cb = pump_bind(
+        &my_tls_dialer::on_stopped_dialing_callback,
+        my_dialer.get());
+    cbs.timeouted_cb = pump_bind(
+        &my_tls_dialer::on_dialed_timeout_callback,
+        my_dialer.get());
 
     if (dialer->start(sv, cbs) != 0) {
         printf("tcp dialer start error\n");
@@ -191,9 +200,10 @@ void start_once_tls_dialer() {
     my_dialers[my_dialer.get()] = my_dialer;
 }
 
-void start_tls_client(const std::string &ip,
-                      uint16_t port,
-                      int32_t conn_count) {
+void start_tls_client(
+    const std::string &ip,
+    uint16_t port,
+    int32_t conn_count) {
     server_ip = ip;
     server_port = port;
 

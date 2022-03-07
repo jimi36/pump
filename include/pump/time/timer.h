@@ -17,7 +17,6 @@
 #ifndef pump_time_timer_h
 #define pump_time_timer_h
 
-#include <list>
 #include <atomic>
 
 #include "pump/types.h"
@@ -28,17 +27,9 @@ namespace time {
 class manager;
 
 class timer;
-DEFINE_SMART_POINTER_TYPE(timer);
-
-typedef std::list<timer_wptr> timer_list;
-DEFINE_SMART_POINTER_TYPE(timer_list);
+DEFINE_SMART_POINTERS(timer);
 
 typedef pump_function<void()> timer_callback;
-
-constexpr static int32_t TIMER_INIT = 0;
-constexpr static int32_t TIMER_STOPPED = 1;
-constexpr static int32_t TIMER_STARTED = 2;
-constexpr static int32_t TIMER_PENDING = 3;
 
 class pump_lib timer : public std::enable_shared_from_this<timer> {
   protected:
@@ -48,9 +39,10 @@ class pump_lib timer : public std::enable_shared_from_this<timer> {
     /*********************************************************************************
      * Create instance
      ********************************************************************************/
-    pump_inline static timer_sptr create(uint64_t timeout,
-                                         const timer_callback &cb,
-                                         bool repeated = false) {
+    pump_inline static timer_sptr create(
+        uint64_t timeout,
+        const timer_callback &cb,
+        bool repeated = false) {
         INLINE_OBJECT_CREATE(obj, timer, (timeout, cb, repeated));
         return timer_sptr(obj, object_delete<timer>);
     }
@@ -63,9 +55,7 @@ class pump_lib timer : public std::enable_shared_from_this<timer> {
     /*********************************************************************************
      * Stop
      ********************************************************************************/
-    pump_inline void stop() {
-        __force_set_state(TIMER_STOPPED);
-    }
+    void stop();
 
     /*********************************************************************************
      * Handle timeout
@@ -82,9 +72,7 @@ class pump_lib timer : public std::enable_shared_from_this<timer> {
     /*********************************************************************************
      * Get starting state
      ********************************************************************************/
-    pump_inline bool is_started() const {
-        return status_.load() > TIMER_STOPPED;
-    }
+    bool is_started() const;
 
     /*********************************************************************************
      * Get repeated status
@@ -108,21 +96,21 @@ class pump_lib timer : public std::enable_shared_from_this<timer> {
      * Set state
      ********************************************************************************/
     pump_inline bool __set_state(int32_t expected, int32_t desired) {
-        return status_.compare_exchange_strong(expected, desired);
+        return state_.compare_exchange_strong(expected, desired);
     }
 
     /*********************************************************************************
      * Set state
      ********************************************************************************/
     pump_inline void __force_set_state(int32_t desired) {
-        status_.store(desired);
+        state_.store(desired);
     }
 
   private:
     // Timer queue
     manager *queue_;
     // Timer status
-    std::atomic_int32_t status_;
+    std::atomic_int32_t state_;
     // Timer callback
     timer_callback cb_;
     // Repeated status

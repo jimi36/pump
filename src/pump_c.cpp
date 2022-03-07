@@ -50,7 +50,7 @@ pump_c_service pump_c_service_create(int with_poller) {
 
 void pump_c_service_destory(pump_c_service sv) {
     pump_c_service_impl *impl = (pump_c_service_impl *)sv;
-    PUMP_ASSERT(impl);
+    pump_assert(impl);
 
     if (impl->sv) {
         object_delete(impl->sv);
@@ -62,7 +62,7 @@ void pump_c_service_destory(pump_c_service sv) {
 
 int pump_c_service_start(pump_c_service sv) {
     pump_c_service_impl *impl = (pump_c_service_impl *)sv;
-    PUMP_ASSERT(impl && impl->sv);
+    pump_assert(impl && impl->sv);
 
     if (!impl->sv->start()) {
         return -1;
@@ -73,7 +73,7 @@ int pump_c_service_start(pump_c_service sv) {
 
 int pump_c_service_stop(pump_c_service sv) {
     pump_c_service_impl *impl = (pump_c_service_impl *)sv;
-    PUMP_ASSERT(impl && impl->sv);
+    pump_assert(impl && impl->sv);
 
     impl->sv->stop();
     impl->sv->wait_stopped();
@@ -97,16 +97,16 @@ pump_c_timer pump_c_timer_create(int timeout_ms,
 }
 
 void pump_c_timer_destory(pump_c_timer timer) {
-    PUMP_ASSERT(timer);
+    pump_assert(timer);
     object_delete((pump_c_timer_impl *)timer);
 }
 
 int pump_c_timer_start(pump_c_service sv, pump_c_timer timer) {
     pump_c_service_impl *impl_sv = (pump_c_service_impl *)sv;
-    PUMP_ASSERT(impl_sv && impl_sv->sv);
+    pump_assert(impl_sv && impl_sv->sv);
 
     pump_c_timer_impl *impl_timer = (pump_c_timer_impl *)timer;
-    PUMP_ASSERT(impl_timer);
+    pump_assert(impl_timer);
     if (!impl_sv->sv->start_timer(impl_timer->t)) {
         return -1;
     }
@@ -116,7 +116,7 @@ int pump_c_timer_start(pump_c_service sv, pump_c_timer timer) {
 
 int pump_c_timer_stop(pump_c_timer timer) {
     pump_c_timer_impl *impl = (pump_c_timer_impl *)timer;
-    PUMP_ASSERT(impl);
+    pump_assert(impl);
 
     impl->t->stop();
 
@@ -180,7 +180,7 @@ pump_c_acceptor pump_c_tls_acceptor_create(const char *ip,
 }
 
 void pump_c_acceptor_destory(pump_c_acceptor acceptor) {
-    PUMP_ASSERT(acceptor);
+    pump_assert(acceptor);
     object_delete((pump_c_acceptor_impl *)acceptor);
 }
 
@@ -209,10 +209,10 @@ int pump_c_acceptor_start(pump_c_service sv,
                           pump_c_acceptor acceptor,
                           struct pump_c_acceptor_callbacks cbs) {
     pump_c_service_impl *impl_sv = (pump_c_service_impl *)sv;
-    PUMP_ASSERT(impl_sv && impl_sv->sv);
+    pump_assert(impl_sv && impl_sv->sv);
 
     pump_c_acceptor_impl *impl_acceptor = (pump_c_acceptor_impl *)acceptor;
-    PUMP_ASSERT(impl_acceptor && impl_acceptor->acceptor);
+    pump_assert(impl_acceptor && impl_acceptor->acceptor);
 
     impl_acceptor->cbs = cbs;
 
@@ -229,7 +229,7 @@ int pump_c_acceptor_start(pump_c_service sv,
 
 int pump_c_acceptor_stop(pump_c_acceptor acceptor) {
     pump_c_acceptor_impl *impl_acceptor = (pump_c_acceptor_impl *)acceptor;
-    PUMP_ASSERT(impl_acceptor && impl_acceptor->acceptor);
+    pump_assert(impl_acceptor && impl_acceptor->acceptor);
 
     impl_acceptor->acceptor->stop();
 
@@ -272,7 +272,7 @@ pump_c_acceptor pump_c_tls_dialer_create(const char *local_ip,
 }
 
 void pump_c_dialer_destory(pump_c_dialer dialer) {
-    PUMP_ASSERT(dialer);
+    pump_assert(dialer);
     object_delete((pump_c_dialer_impl *)dialer);
 }
 
@@ -309,10 +309,10 @@ int pump_c_dialer_start(pump_c_service sv,
                         pump_c_dialer dialer,
                         struct pump_c_dialer_callbacks cbs) {
     pump_c_service_impl *impl_sv = (pump_c_service_impl *)sv;
-    PUMP_ASSERT(impl_sv && impl_sv->sv);
+    pump_assert(impl_sv && impl_sv->sv);
 
     pump_c_dialer_impl *impl_dialer = (pump_c_dialer_impl *)dialer;
-    PUMP_ASSERT(impl_dialer && impl_dialer->dialer);
+    pump_assert(impl_dialer && impl_dialer->dialer);
 
     impl_dialer->cbs = cbs;
 
@@ -329,7 +329,7 @@ int pump_c_dialer_start(pump_c_service sv,
 
 int pump_c_dialer_stop(pump_c_dialer dialer) {
     pump_c_dialer_impl *impl_dialer = (pump_c_dialer_impl *)dialer;
-    PUMP_ASSERT(impl_dialer && impl_dialer->dialer);
+    pump_assert(impl_dialer && impl_dialer->dialer);
 
     impl_dialer->dialer->stop();
 
@@ -337,7 +337,7 @@ int pump_c_dialer_stop(pump_c_dialer dialer) {
 }
 
 void pump_c_transport_destory(pump_c_transport transp) {
-    PUMP_ASSERT(transp);
+    pump_assert(transp);
     object_delete((pump_c_transport_impl *)transp);
 }
 
@@ -378,10 +378,10 @@ int pump_c_transport_start(pump_c_service sv,
                            pump_c_transport transp,
                            struct pump_c_transport_callbacks cbs) {
     pump_c_service_impl *impl_sv = (pump_c_service_impl *)sv;
-    PUMP_ASSERT(impl_sv && impl_sv->sv);
+    pump_assert(impl_sv && impl_sv->sv);
 
     pump_c_transport_impl *impl_transp = (pump_c_transport_impl *)transp;
-    PUMP_ASSERT(impl_transp && impl_transp->transp);
+    pump_assert(impl_transp && impl_transp->transp);
 
     impl_transp->cbs = cbs;
 
@@ -393,7 +393,7 @@ int pump_c_transport_start(pump_c_service sv,
     impl_cbs.disconnected_cb =
         pump_bind(on_transport_disconnected, impl_transp);
     if (impl_transp->transp->start(impl_sv->sv,
-                                   transport::READ_MODE_LOOP,
+                                   transport::read_mode_loop,
                                    impl_cbs) != 0) {
         return -1;
     }
@@ -403,7 +403,7 @@ int pump_c_transport_start(pump_c_service sv,
 
 int pump_c_transport_stop(pump_c_transport transp) {
     pump_c_transport_impl *impl_transp = (pump_c_transport_impl *)transp;
-    PUMP_ASSERT(impl_transp && impl_transp->transp);
+    pump_assert(impl_transp && impl_transp->transp);
 
     impl_transp->transp->stop();
 
@@ -412,7 +412,7 @@ int pump_c_transport_stop(pump_c_transport transp) {
 
 int pump_c_transport_send(pump_c_transport transp, const char *b, int size) {
     pump_c_transport_impl *impl_transp = (pump_c_transport_impl *)transp;
-    PUMP_ASSERT(impl_transp && impl_transp->transp);
+    pump_assert(impl_transp && impl_transp->transp);
 
     if (impl_transp->transp->send(b, size) <= 0) {
         return -1;

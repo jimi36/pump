@@ -50,8 +50,10 @@
 #define SHUT_RDWR SD_BOTH
 #endif
 
-#ifndef INVALID_SOCKET
-#define INVALID_SOCKET -1
+#if defined(INVALID_SOCKET)
+#define invalid_socket INVALID_SOCKET
+#else
+#define invalid_socket -1
 #endif
 
 namespace pump {
@@ -85,9 +87,10 @@ pump_lib bool set_send_bs(pump_socket fd, int32_t size);
 /*********************************************************************************
  * Set tcp keeplive
  ********************************************************************************/
-pump_lib bool set_keeplive(pump_socket fd,
-                           int32_t keeplive,
-                           int32_t keepinterval);
+pump_lib bool set_keeplive(
+    pump_socket fd,
+    int32_t keeplive,
+    int32_t keepinterval);
 
 /*********************************************************************************
  * Set reuse address
@@ -123,9 +126,10 @@ pump_lib bool listen(pump_socket fd, int32_t backlog = 65535);
 /*********************************************************************************
  * Accept socket
  ********************************************************************************/
-pump_lib pump_socket accept(pump_socket fd,
-                            struct sockaddr *addr,
-                            int32_t *addrlen);
+pump_lib pump_socket accept(
+    pump_socket fd,
+    struct sockaddr *addr,
+    int32_t *addrlen);
 
 /*********************************************************************************
  * Connect
@@ -140,11 +144,12 @@ pump_lib int32_t read(pump_socket fd, char *b, int32_t size);
 /*********************************************************************************
  * Readfrom
  ********************************************************************************/
-pump_lib int32_t read_from(pump_socket fd,
-                           char *b,
-                           int32_t size,
-                           struct sockaddr *addr,
-                           int32_t *addrlen);
+pump_lib int32_t read_from(
+    pump_socket fd,
+    char *b,
+    int32_t size,
+    struct sockaddr *addr,
+    int32_t *addrlen);
 
 /*********************************************************************************
  * Send
@@ -154,11 +159,12 @@ pump_lib int32_t send(pump_socket fd, const char *b, int32_t size);
 /*********************************************************************************
  * Sendto
  ********************************************************************************/
-pump_lib int32_t send_to(pump_socket fd,
-                         const char *b,
-                         int32_t size,
-                         struct sockaddr *addr,
-                         int32_t addrlen);
+pump_lib int32_t send_to(
+    pump_socket fd,
+    const char *b,
+    int32_t size,
+    struct sockaddr *addr,
+    int32_t addrlen);
 
 /*********************************************************************************
  * Close the ability of writing
@@ -183,16 +189,18 @@ pump_lib int32_t last_errno();
 /*********************************************************************************
  * Get local address of the socket
  ********************************************************************************/
-pump_lib bool local_address(pump_socket fd,
-                            struct sockaddr *addr,
-                            int32_t *addrlen);
+pump_lib bool local_address(
+    pump_socket fd,
+    struct sockaddr *addr,
+    int32_t *addrlen);
 
 /*********************************************************************************
  * Get remote address of the socket
  ********************************************************************************/
-pump_lib bool remote_address(pump_socket fd,
-                             struct sockaddr *addr,
-                             int32_t *addrlen);
+pump_lib bool remote_address(
+    pump_socket fd,
+    struct sockaddr *addr,
+    int32_t *addrlen);
 
 /*********************************************************************************
  * Transfrom address to string
@@ -204,10 +212,11 @@ pump_lib std::string address_to_string(struct sockaddr *addr, int32_t addrlen);
 /*********************************************************************************
  * Transfrom string to address
  ********************************************************************************/
-pump_lib bool string_to_address(const std::string &ip,
-                                uint16_t port,
-                                struct sockaddr *addr,
-                                int32_t *addrlen);
+pump_lib bool string_to_address(
+    const std::string &ip,
+    uint16_t port,
+    struct sockaddr *addr,
+    int32_t *addrlen);
 
 }  // namespace net
 }  // namespace pump

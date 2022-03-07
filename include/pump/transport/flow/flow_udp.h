@@ -38,8 +38,8 @@ class flow_udp : public flow_base {
     /*********************************************************************************
      * Init flow
      * Return results:
-     *     ERROR_OK    => success
-     *     ERROR_FAULT => error
+     *     error_none  => success
+     *     error_fault => error
      ********************************************************************************/
     error_code init(poll::channel_sptr &&ch, const address &bind_address);
 
@@ -47,7 +47,7 @@ class flow_udp : public flow_base {
      * Read from
      ********************************************************************************/
     pump_inline int32_t read_from(char *b, int32_t size, address *from) {
-        int32_t addrlen = ADDRESS_MAX_LEN;
+        int32_t addrlen = max_address_len;
         struct sockaddr *addr = from->get();
         size = net::read_from(fd_, b, size, addr, &addrlen);
         if (size > 0) {
@@ -62,7 +62,7 @@ class flow_udp : public flow_base {
      ********************************************************************************/
     int32_t send(const char *b, int32_t size, const address &to);
 };
-DEFINE_SMART_POINTER_TYPE(flow_udp);
+DEFINE_SMART_POINTERS(flow_udp);
 
 }  // namespace flow
 }  // namespace transport

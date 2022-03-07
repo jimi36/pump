@@ -32,7 +32,7 @@ using transport::base_acceptor_sptr;
 using transport::tls_credentials;
 
 class server;
-DEFINE_SMART_POINTER_TYPE(server);
+DEFINE_SMART_POINTERS(server);
 
 struct server_callbacks {
     // Http request callback
@@ -59,17 +59,19 @@ class pump_lib server : public std::enable_shared_from_this<server> {
     /*********************************************************************************
      * Start server
      ********************************************************************************/
-    bool start(service *sv,
-               const address &listen_address,
-               const server_callbacks &cbs);
+    bool start(
+        service *sv,
+        const address &listen_address,
+        const server_callbacks &cbs);
 
     /*********************************************************************************
      * Start server with tls
      ********************************************************************************/
-    bool start(service *sv,
-               tls_credentials xcred,
-               const address &listen_address,
-               const server_callbacks &cbs);
+    bool start(
+        service *sv,
+        tls_credentials xcred,
+        const address &listen_address,
+        const server_callbacks &cbs);
 
     /*********************************************************************************
      * Stop server
@@ -91,16 +93,18 @@ class pump_lib server : public std::enable_shared_from_this<server> {
     /*********************************************************************************
      * Http request callback
      ********************************************************************************/
-    static void on_http_request(server_wptr wptr,
-                                connection_wptr conn,
-                                packet_sptr &pk);
+    static void on_http_request(
+        server_wptr wptr,
+        connection_wptr conn,
+        packet_sptr &pk);
 
     /*********************************************************************************
      * Http error callback
      ********************************************************************************/
-    static void on_http_error(server_wptr wptr,
-                              connection_wptr conn,
-                              const std::string &msg);
+    static void on_http_error(
+        server_wptr wptr,
+        connection_wptr conn,
+        const std::string &msg);
 
   private:
     /*********************************************************************************

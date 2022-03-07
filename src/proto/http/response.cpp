@@ -112,7 +112,7 @@ int32_t response::parse(const char *b, int32_t size) {
     if (parse_status_ == PARSE_HEADER) {
         parse_size = __parse_header(pos, size);
         if (parse_size < 0) {
-            PUMP_WARN_LOG("parse response header failed");
+            pump_warn_log("parse response header failed");
             return -1;
         } else if (parse_size == 0) {
             return int32_t(pos - b);
@@ -131,7 +131,7 @@ int32_t response::parse(const char *b, int32_t size) {
             if (length > 0) {
                 body_.reset(object_create<body>(), object_delete<body>);
                 if (!body_) {
-                    PUMP_WARN_LOG("new response body object failed");
+                    pump_warn_log("new response body object failed");
                     return -1;
                 }
                 body_->set_expected_size(length);
@@ -143,7 +143,7 @@ int32_t response::parse(const char *b, int32_t size) {
                 if (transfer_encoding == "chunked") {
                     body_.reset(object_create<body>(), object_delete<body>);
                     if (!body_) {
-                        PUMP_WARN_LOG("new response chunk body object failed");
+                        pump_warn_log("new response chunk body object failed");
                         return -1;
                     }
                     body_->set_chunked();
@@ -159,9 +159,9 @@ int32_t response::parse(const char *b, int32_t size) {
     }
 
     if (parse_status_ == PARSE_BODY) {
-        PUMP_ASSERT(body_);
+        pump_assert(body_);
         if ((parse_size = body_->parse(pos, size)) < 0) {
-            PUMP_WARN_LOG("parse response body failed");
+            pump_warn_log("parse response body failed");
             return -1;
         }
 
@@ -181,14 +181,14 @@ int32_t response::serialize(std::string &buffer) const {
 
     int32_t size = __serialize_response_line(buffer);
     if (size < 0) {
-        PUMP_WARN_LOG("serialize response line failed");
+        pump_warn_log("serialize response line failed");
         return -1;
     }
     serialize_size += size;
 
     size = __serialize_header(buffer);
     if (size < 0) {
-        PUMP_WARN_LOG("serialize response header failed");
+        pump_warn_log("serialize response header failed");
         return -1;
     }
     serialize_size += size;
@@ -196,7 +196,7 @@ int32_t response::serialize(std::string &buffer) const {
     if (body_) {
         size = body_->serialize(buffer);
         if (size < 0) {
-            PUMP_WARN_LOG("serialize response body failed");
+            pump_warn_log("serialize response body failed");
             return -1;
         }
         serialize_size += size;
@@ -221,7 +221,7 @@ int32_t response::__parse_start_line(const char *b, int32_t size) {
     } else if (strncmp(pos, "HTTP/2.0", 8) == 0) {
         version_ = VERSION_20;
     } else {
-        PUMP_WARN_LOG("parse response http version failed");
+        pump_warn_log("parse response http version failed");
         return -1;
     }
     pos += 8;
@@ -234,7 +234,7 @@ int32_t response::__parse_start_line(const char *b, int32_t size) {
         status_code_ = status_code_ * 10 + int32_t(*(pos++) - '0');
     }
     if (pos == line_end) {
-        PUMP_WARN_LOG("parse response code failed");
+        pump_warn_log("parse response code failed");
         return -1;
     }
 
@@ -243,12 +243,13 @@ int32_t response::__parse_start_line(const char *b, int32_t size) {
 
 int32_t response::__serialize_response_line(std::string &buffer) const {
     char tmp[128] = {0};
-    int32_t size = pump_snprintf(tmp,
-                                 sizeof(tmp) - 1,
-                                 "%s %d %s\r\n",
-                                 get_http_version_string().c_str(),
-                                 status_code_,
-                                 get_http_code_desc(status_code_).c_str());
+    int32_t size = pump_snprintf(
+        tmp,
+        sizeof(tmp) - 1,
+        "%s %d %s\r\n",
+        get_http_version_string().c_str(),
+        status_code_,
+        get_http_code_desc(status_code_).c_str());
     buffer.append(tmp);
     return size;
 }

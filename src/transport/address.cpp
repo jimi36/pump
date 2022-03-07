@@ -21,12 +21,14 @@ namespace pump {
 namespace transport {
 
 address::address() noexcept :
-    is_v6_(false), addrlen_(sizeof(struct sockaddr_in)) {
+    is_v6_(false),
+    addrlen_(sizeof(struct sockaddr_in)) {
     memset(&addr_, 0, sizeof(addr_));
 }
 
 address::address(const std::string &ip, uint16_t port) :
-    is_v6_(false), addrlen_(sizeof(struct sockaddr_in)) {
+    is_v6_(false),
+    addrlen_(sizeof(struct sockaddr_in)) {
     if (net::string_to_address(ip, port, (struct sockaddr *)addr_, &addrlen_)) {
         if (addrlen_ == sizeof(struct sockaddr_in6)) {
             is_v6_ = true;
@@ -35,15 +37,17 @@ address::address(const std::string &ip, uint16_t port) :
 }
 
 address::address(const struct sockaddr *addr, int32_t addr_len) :
-    is_v6_(addr_len == sizeof(struct sockaddr_in6)), addrlen_(addr_len) {
+    is_v6_(addr_len == sizeof(struct sockaddr_in6)),
+    addrlen_(addr_len) {
     memcpy(&addr_, addr, addr_len);
 }
 
 bool address::set(const std::string &ip, uint16_t port) {
-    if (!net::string_to_address(ip,
-                                port,
-                                (struct sockaddr *)addr_,
-                                &addrlen_)) {
+    if (!net::string_to_address(
+            ip,
+            port,
+            (struct sockaddr *)addr_,
+            &addrlen_)) {
         return false;
     }
 

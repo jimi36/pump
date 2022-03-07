@@ -29,8 +29,8 @@ namespace pump {
  * Poller id in service
  ********************************************************************************/
 typedef int32_t poller_id;
-const poller_id READ_POLLER_ID = 0;
-const poller_id SEND_POLLER_ID = 1;
+const poller_id read_pid = 0;
+const poller_id send_pid = 1;
 
 class pump_lib service : public toolkit::noncopyable {
   public:
@@ -62,9 +62,10 @@ class pump_lib service : public toolkit::noncopyable {
     /*********************************************************************************
      * Add channel checker
      ********************************************************************************/
-    pump_inline bool add_channel_tracker(poll::channel_tracker_sptr &tracker,
-                                         poller_id pid) {
-        PUMP_ASSERT(pid <= SEND_POLLER_ID);
+    pump_inline bool add_channel_tracker(
+        poll::channel_tracker_sptr &tracker,
+        poller_id pid) {
+        pump_assert(pid <= send_pid);
         if (pollers_[pid]) {
             return pollers_[pid]->add_channel_tracker(tracker);
         }
@@ -74,9 +75,10 @@ class pump_lib service : public toolkit::noncopyable {
     /*********************************************************************************
      * Delete channel
      ********************************************************************************/
-    pump_inline void remove_channel_tracker(poll::channel_tracker_sptr &tracker,
-                                            poller_id pid) {
-        PUMP_ASSERT(pid <= SEND_POLLER_ID);
+    pump_inline void remove_channel_tracker(
+        poll::channel_tracker_sptr &tracker,
+        poller_id pid) {
+        pump_assert(pid <= send_pid);
         if (pollers_[pid]) {
             return pollers_[pid]->remove_channel_tracker(tracker);
         }
@@ -85,9 +87,10 @@ class pump_lib service : public toolkit::noncopyable {
     /*********************************************************************************
      * Resume channel
      ********************************************************************************/
-    pump_inline bool resume_channel_tracker(poll::channel_tracker *tracker,
-                                            poller_id pid) {
-        PUMP_ASSERT(pid <= SEND_POLLER_ID);
+    pump_inline bool resume_channel_tracker(
+        poll::channel_tracker *tracker,
+        poller_id pid) {
+        pump_assert(pid <= send_pid);
         if (pollers_[pid]) {
             return pollers_[pid]->resume_channel_tracker(tracker);
         }
@@ -97,12 +100,14 @@ class pump_lib service : public toolkit::noncopyable {
     /*********************************************************************************
      * Post channel event
      ********************************************************************************/
-    pump_inline bool post_channel_event(poll::channel_sptr &ch,
-                                        int32_t event,
-                                        poller_id pid) {
-        PUMP_ASSERT(pid <= SEND_POLLER_ID);
+    pump_inline bool post_channel_event(
+        poll::channel_sptr &ch,
+        int32_t event,
+        void *arg,
+        poller_id pid) {
+        pump_assert(pid <= send_pid);
         if (pump_likely(!!pollers_[pid])) {
-            return pollers_[pid]->push_channel_event(ch, event);
+            return pollers_[pid]->push_channel_event(ch, event, arg);
         }
         return false;
     }
@@ -163,14 +168,15 @@ class pump_lib service : public toolkit::noncopyable {
     typedef toolkit::fl_sc_queue<time::timer_list_sptr> timer_queue;
     toolkit::fl_queue<timer_queue> triggered_timers_;
 };
-DEFINE_SMART_POINTER_TYPE(service);
+DEFINE_SMART_POINTERS(service);
 
 class pump_lib service_getter {
   public:
     /*********************************************************************************
      * Constructor
      ********************************************************************************/
-    service_getter(service *sv) noexcept : service_(sv) {}
+    service_getter(service *sv) noexcept :
+        service_(sv) {}
 
     /*********************************************************************************
      * Deconstructor

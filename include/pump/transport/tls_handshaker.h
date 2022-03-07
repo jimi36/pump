@@ -25,7 +25,7 @@ namespace pump {
 namespace transport {
 
 class tls_handshaker;
-DEFINE_SMART_POINTER_TYPE(tls_handshaker);
+DEFINE_SMART_POINTERS(tls_handshaker);
 
 class tls_handshaker : public base_channel,
                        public std::enable_shared_from_this<tls_handshaker> {
@@ -49,18 +49,20 @@ class tls_handshaker : public base_channel,
     /*********************************************************************************
      * Init
      ********************************************************************************/
-    bool init(pump_socket fd,
-              bool client,
-              tls_credentials xcred,
-              const address &local_address,
-              const address &remote_address);
+    bool init(
+        pump_socket fd,
+        bool client,
+        tls_credentials xcred,
+        const address &local_address,
+        const address &remote_address);
 
     /*********************************************************************************
      * Start tls handshaker
      ********************************************************************************/
-    bool start(service *sv,
-               int64_t timeout,
-               const tls_handshaker_callbacks &cbs);
+    bool start(
+        service *sv,
+        int64_t timeout,
+        const tls_handshaker_callbacks &cbs);
 
     /*********************************************************************************
      * Stop transport
@@ -92,7 +94,7 @@ class tls_handshaker : public base_channel,
     /*********************************************************************************
      * Channel event callback
      ********************************************************************************/
-    virtual void on_channel_event(int32_t ev) override;
+    virtual void on_channel_event(int32_t ev, void *arg) override;
 
     /*********************************************************************************
      * Read event callback

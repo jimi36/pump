@@ -28,7 +28,7 @@ namespace pump {
 namespace transport {
 
 class tls_acceptor;
-DEFINE_SMART_POINTER_TYPE(tls_acceptor);
+DEFINE_SMART_POINTERS(tls_acceptor);
 
 class pump_lib tls_acceptor
     : public base_acceptor,
@@ -37,12 +37,15 @@ class pump_lib tls_acceptor
     /*********************************************************************************
      * Create instance
      ********************************************************************************/
-    pump_inline static tls_acceptor_sptr create(tls_credentials xcerd,
-                                                const address &listen_address,
-                                                int64_t handshake_timeout = 0) {
+    pump_inline static tls_acceptor_sptr create(
+        tls_credentials xcerd,
+        const address &listen_address,
+        int64_t handshake_timeout = 0) {
         INLINE_OBJECT_CREATE(obj,
                              tls_acceptor,
-                             (xcerd, listen_address, handshake_timeout));
+                             (xcerd,
+                              listen_address,
+                              handshake_timeout));
         return tls_acceptor_sptr(obj, object_delete<tls_acceptor>);
     }
 
@@ -54,8 +57,9 @@ class pump_lib tls_acceptor
     /*********************************************************************************
      * Start
      ********************************************************************************/
-    virtual error_code start(service *sv,
-                             const acceptor_callbacks &cbs) override;
+    virtual error_code start(
+        service *sv,
+        const acceptor_callbacks &cbs) override;
 
     /*********************************************************************************
      * Stop
@@ -71,23 +75,26 @@ class pump_lib tls_acceptor
     /*********************************************************************************
      * TLS handshaked callback
      ********************************************************************************/
-    static void on_handshaked(tls_acceptor_wptr wptr,
-                              tls_handshaker *handshaker,
-                              bool succ);
+    static void on_handshaked(
+        tls_acceptor_wptr wptr,
+        tls_handshaker *handshaker,
+        bool succ);
 
     /*********************************************************************************
      * Tls handskake stopped callback
      ********************************************************************************/
-    static void on_handshake_stopped(tls_acceptor_wptr wptr,
-                                     tls_handshaker *handshaker);
+    static void on_handshake_stopped(
+        tls_acceptor_wptr wptr,
+        tls_handshaker *handshaker);
 
   private:
     /*********************************************************************************
      * Constructor
      ********************************************************************************/
-    tls_acceptor(tls_credentials xcred,
-                 const address &listen_address,
-                 int64_t handshake_timeout) noexcept;
+    tls_acceptor(
+        tls_credentials xcred,
+        const address &listen_address,
+        int64_t handshake_timeout) noexcept;
 
     /*********************************************************************************
      * Open accept flow

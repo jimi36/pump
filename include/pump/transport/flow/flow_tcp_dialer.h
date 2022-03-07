@@ -38,16 +38,16 @@ class flow_tcp_dialer : public flow_base {
     /*********************************************************************************
      * Init
      * Return results:
-     *     ERROR_OK    => success
-     *     ERROR_FAULT => error
+     *     error_none    => success
+     *     error_fault => error
      ********************************************************************************/
     error_code init(poll::channel_sptr &&ch, const address &bind_address);
 
     /*********************************************************************************
      * Post connect
      * Return results:
-     *     ERROR_OK    => success
-     *     ERROR_FAULT => error
+     *     error_none    => success
+     *     error_fault => error
      ********************************************************************************/
     error_code post_connect(const address &remote_address);
 
@@ -61,7 +61,7 @@ class flow_tcp_dialer : public flow_base {
     // IPV6
     bool is_ipv6_;
 };
-DEFINE_SMART_POINTER_TYPE(flow_tcp_dialer);
+DEFINE_SMART_POINTERS(flow_tcp_dialer);
 
 }  // namespace flow
 }  // namespace transport

@@ -29,9 +29,6 @@ namespace pump {
 namespace transport {
 namespace flow {
 
-#define MAX_TCP_BUFFER_SIZE 4096  // 4KB
-#define MAX_UDP_BUFFER_SIZE 8192  // 8KB
-
 class flow_base : public toolkit::noncopyable {
   public:
     /*********************************************************************************

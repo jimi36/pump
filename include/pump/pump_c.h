@@ -18,9 +18,9 @@
 #define pump_c_h
 
 #if defined(pump_EXPORTS) && !defined(__linux__) && !defined(__unix__)
-#define LIB_PUMP_C __declspec(dllexport)
+#define pump_c_lib __declspec(dllexport)
 #else
-#define LIB_PUMP_C
+#define pump_c_lib
 #endif
 
 #ifdef __cplusplus
@@ -30,12 +30,12 @@ extern "C" {
 /*********************************************************************************
  * Pump c library init
  ********************************************************************************/
-LIB_PUMP_C void pump_c_init();
+pump_c_lib void pump_c_init();
 
 /*********************************************************************************
  * Pump c library uninit
  ********************************************************************************/
-LIB_PUMP_C void pump_c_uninit();
+pump_c_lib void pump_c_uninit();
 
 /*********************************************************************************
  * Pump c service
@@ -45,26 +45,26 @@ typedef void *pump_c_service;
 /*********************************************************************************
  * Pump c service create
  ********************************************************************************/
-LIB_PUMP_C pump_c_service pump_c_service_create(int with_poller);
+pump_c_lib pump_c_service pump_c_service_create(int with_poller);
 
 /*********************************************************************************
  * Pump c service destory
  ********************************************************************************/
-LIB_PUMP_C void pump_c_service_destory(pump_c_service sv);
+pump_c_lib void pump_c_service_destory(pump_c_service sv);
 
 /*********************************************************************************
  * Pump c service start
  * When successful, this returns 0.
  * When an error occurs, this returns -1.
  ********************************************************************************/
-LIB_PUMP_C int pump_c_service_start(pump_c_service sv);
+pump_c_lib int pump_c_service_start(pump_c_service sv);
 
 /*********************************************************************************
  * Pump c service stop
  * When successful, this returns 0.
  * When an error occurs, this returns -1.
  ********************************************************************************/
-LIB_PUMP_C int pump_c_service_stop(pump_c_service sv);
+pump_c_lib int pump_c_service_stop(pump_c_service sv);
 
 /*********************************************************************************
  * Pump c timer
@@ -79,28 +79,29 @@ typedef void (*pump_c_timeout_callback)();
 /*********************************************************************************
  * Pump c timer create
  ********************************************************************************/
-LIB_PUMP_C pump_c_timer pump_c_timer_create(int timeout_ms,
-                                            int repeated,
-                                            pump_c_timeout_callback cb);
+pump_c_lib pump_c_timer pump_c_timer_create(
+    int timeout_ms,
+    int repeated,
+    pump_c_timeout_callback cb);
 
 /*********************************************************************************
  * Pump c service destory
  ********************************************************************************/
-LIB_PUMP_C void pump_c_timer_destory(pump_c_timer timer);
+pump_c_lib void pump_c_timer_destory(pump_c_timer timer);
 
 /*********************************************************************************
  * Pump c timer start
  * When successful, this returns 0.
  * When an error occurs, this returns -1.
  ********************************************************************************/
-LIB_PUMP_C int pump_c_timer_start(pump_c_service sv, pump_c_timer timer);
+pump_c_lib int pump_c_timer_start(pump_c_service sv, pump_c_timer timer);
 
 /*********************************************************************************
  * Pump c timer stop
  * When successful, this returns 0.
  * When an error occurs, this returns -1.
  ********************************************************************************/
-LIB_PUMP_C int pump_c_timer_stop(pump_c_timer timer);
+pump_c_lib int pump_c_timer_stop(pump_c_timer timer);
 
 /*********************************************************************************
  * Pump c dialer
@@ -146,8 +147,7 @@ struct pump_c_transport_callbacks {
     // Read callback for tcp and tls
     void (*read_cb)(pump_c_transport, const char *, int);
     // Read from callback for udp
-    void (
-        *read_from_cb)(pump_c_transport, const char *, int, const char *, int);
+    void (*read_from_cb)(pump_c_transport, const char *, int, const char *, int);
     // Transport disconnected callback
     void (*disconnected_cb)(pump_c_transport);
     // Transport stopped callback
@@ -157,103 +157,110 @@ struct pump_c_transport_callbacks {
 /*********************************************************************************
  * Pump c tcp acceptor create
  ********************************************************************************/
-LIB_PUMP_C pump_c_acceptor pump_c_tcp_acceptor_create(const char *ip, int port);
+pump_c_lib pump_c_acceptor pump_c_tcp_acceptor_create(const char *ip, int port);
 
 /*********************************************************************************
  * Pump c tls acceptor create
  ********************************************************************************/
-LIB_PUMP_C pump_c_acceptor pump_c_tls_acceptor_create(const char *ip,
-                                                      int port,
-                                                      const char *cert,
-                                                      const char *key);
+pump_c_lib pump_c_acceptor pump_c_tls_acceptor_create(
+    const char *ip,
+    int port,
+    const char *cert,
+    const char *key);
 
 /*********************************************************************************
  * Pump c acceptor destory
  ********************************************************************************/
-LIB_PUMP_C void pump_c_acceptor_destory(pump_c_acceptor acceptor);
+pump_c_lib void pump_c_acceptor_destory(pump_c_acceptor acceptor);
 
 /*********************************************************************************
  * Pump c acceptor start
  * When successful, this returns 0.
  * When an error occurs, this returns -1.
  ********************************************************************************/
-LIB_PUMP_C int pump_c_acceptor_start(pump_c_service sv,
-                                     pump_c_acceptor acceptor,
-                                     struct pump_c_acceptor_callbacks cbs);
+pump_c_lib int pump_c_acceptor_start(
+    pump_c_service sv,
+    pump_c_acceptor acceptor,
+    struct pump_c_acceptor_callbacks cbs);
 
 /*********************************************************************************
  * Pump c acceptor stop
  * When successful, this returns 0.
  * When an error occurs, this returns -1.
  ********************************************************************************/
-LIB_PUMP_C int pump_c_acceptor_stop(pump_c_acceptor acceptor);
+pump_c_lib int pump_c_acceptor_stop(pump_c_acceptor acceptor);
 
 /*********************************************************************************
  * Pump c tcp dialer create
  ********************************************************************************/
-LIB_PUMP_C pump_c_dialer pump_c_tcp_dialer_create(const char *local_ip,
-                                                  int local_port,
-                                                  const char *remote_ip,
-                                                  int remote_port);
+pump_c_lib pump_c_dialer pump_c_tcp_dialer_create(
+    const char *local_ip,
+    int local_port,
+    const char *remote_ip,
+    int remote_port);
 
 /*********************************************************************************
  * Pump c tls dialer create
  ********************************************************************************/
-LIB_PUMP_C pump_c_dialer pump_c_tls_dialer_create(const char *local_ip,
-                                                  int local_port,
-                                                  const char *remote_ip,
-                                                  int remote_port);
+pump_c_lib pump_c_dialer pump_c_tls_dialer_create(
+    const char *local_ip,
+    int local_port,
+    const char *remote_ip,
+    int remote_port);
 
 /*********************************************************************************
  * Pump c dialer destory
  ********************************************************************************/
-LIB_PUMP_C void pump_c_dialer_destory(pump_c_dialer dialer);
+pump_c_lib void pump_c_dialer_destory(pump_c_dialer dialer);
 
 /*********************************************************************************
  * Pump c dialer start
  * When successful, this returns 0.
  * When an error occurs, this returns -1.
  ********************************************************************************/
-LIB_PUMP_C int pump_c_dialer_start(pump_c_service sv,
-                                   pump_c_dialer dialer,
-                                   struct pump_c_dialer_callbacks cbs);
+pump_c_lib int pump_c_dialer_start(
+    pump_c_service sv,
+    pump_c_dialer dialer,
+    struct pump_c_dialer_callbacks cbs);
 
 /*********************************************************************************
  * Pump c dialer stop
  * When successful, this returns 0.
  * When an error occurs, this returns -1.
  ********************************************************************************/
-LIB_PUMP_C int pump_c_dialer_stop(pump_c_dialer dialer);
+pump_c_lib int pump_c_dialer_stop(pump_c_dialer dialer);
 
 /*********************************************************************************
  * Pump c transport destory
  ********************************************************************************/
-LIB_PUMP_C void pump_c_transport_destory(pump_c_transport transp);
+pump_c_lib void pump_c_transport_destory(pump_c_transport transp);
 
 /*********************************************************************************
  * Pump c transport start
  * When successful, this returns 0.
  * When an error occurs, this returns -1.
  ********************************************************************************/
-LIB_PUMP_C int pump_c_transport_start(pump_c_service sv,
-                                      pump_c_transport transp,
-                                      struct pump_c_transport_callbacks cbs);
+pump_c_lib int pump_c_transport_start(
+    pump_c_service sv,
+    pump_c_transport transp,
+    struct pump_c_transport_callbacks cbs);
 
 /*********************************************************************************
  * Pump c transport stop
  * When successful, this returns 0.
  * When an error occurs, this returns -1.
  ********************************************************************************/
-LIB_PUMP_C int pump_c_transport_stop(pump_c_transport transp);
+pump_c_lib int pump_c_transport_stop(pump_c_transport transp);
 
 /*********************************************************************************
  * Pump c transport send
  * When successful, this returns 0.
  * When an error occurs, this returns -1.
  ********************************************************************************/
-LIB_PUMP_C int pump_c_transport_send(pump_c_transport transp,
-                                     const char *b,
-                                     int size);
+pump_c_lib int pump_c_transport_send(
+    pump_c_transport transp,
+    const char *b,
+    int size);
 
 #ifdef __cplusplus
 }

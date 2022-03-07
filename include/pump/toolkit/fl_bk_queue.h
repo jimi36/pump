@@ -30,7 +30,8 @@
 namespace pump {
 namespace toolkit {
 
-template <typename T> class fl_bk_queue : public noncopyable {
+template <typename T>
+class fl_bk_queue : public noncopyable {
   public:
     // Element type
     typedef T element_type;
@@ -81,8 +82,9 @@ template <typename T> class fl_bk_queue : public noncopyable {
     /*********************************************************************************
      * Push
      ********************************************************************************/
-    template <typename U> bool push(U &&data) {
-        PUMP_ASSERT(nodes_ != nullptr);
+    template <typename U>
+    bool push(U &&data) {
+        pump_assert(nodes_ != nullptr);
         if (nodes_ == nullptr) {
             return false;
         }
@@ -128,8 +130,9 @@ template <typename T> class fl_bk_queue : public noncopyable {
     /*********************************************************************************
      * Pop
      ********************************************************************************/
-    template <typename U> bool pop(U &data) {
-        PUMP_ASSERT(nodes_ != nullptr);
+    template <typename U>
+    bool pop(U &data) {
+        pump_assert(nodes_ != nullptr);
         if (nodes_ == nullptr) {
             return false;
         }

@@ -29,7 +29,7 @@ namespace http {
 using transport::address;
 
 class client;
-DEFINE_SMART_POINTER_TYPE(client);
+DEFINE_SMART_POINTERS(client);
 
 class pump_lib client : public toolkit::noncopyable,
                         public std::enable_shared_from_this<client> {
@@ -117,16 +117,18 @@ class pump_lib client : public toolkit::noncopyable,
     /*********************************************************************************
      * Handel connection response
      ********************************************************************************/
-    static void on_response(client_wptr wptr,
-                            connection *conn,
-                            packet_sptr &pk);
+    static void on_response(
+        client_wptr wptr,
+        connection *conn,
+        packet_sptr &pk);
 
     /*********************************************************************************
      * Handel connection disconnected
      ********************************************************************************/
-    static void on_error(client_wptr wptr,
-                         connection *conn,
-                         const std::string &msg);
+    static void on_error(
+        client_wptr wptr,
+        connection *conn,
+        const std::string &msg);
 
   private:
     // Service

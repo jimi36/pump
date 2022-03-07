@@ -30,26 +30,27 @@ class my_tls_acceptor : public std::enable_shared_from_this<my_tls_acceptor> {
      * Tcp accepted event callback
      ********************************************************************************/
     void on_accepted_callback(base_transport_sptr &transp) {
-        tls_transport_sptr transport =
-            std::static_pointer_cast<tls_transport>(transp);
+        tls_transport_sptr transport = std::static_pointer_cast<tls_transport>(transp);
         auto tctx = new transport_context(transport);
         transport->set_context(tctx);
 
         pump::transport_callbacks cbs;
-        cbs.read_cb = pump_bind(&my_tls_acceptor::on_read_callback,
-                                this,
-                                transp.get(),
-                                _1,
-                                _2);
-        cbs.stopped_cb = pump_bind(&my_tls_acceptor::on_stopped_callback,
-                                   this,
-                                   transp.get());
-        cbs.disconnected_cb =
-            pump_bind(&my_tls_acceptor::on_disconnected_callback,
-                      this,
-                      transp.get());
+        cbs.read_cb = pump_bind(
+            &my_tls_acceptor::on_read_callback,
+            this,
+            transp.get(),
+            _1,
+            _2);
+        cbs.stopped_cb = pump_bind(
+            &my_tls_acceptor::on_stopped_callback,
+            this,
+            transp.get());
+        cbs.disconnected_cb = pump_bind(
+            &my_tls_acceptor::on_disconnected_callback,
+            this,
+            transp.get());
 
-        if (transport->start(sv, READ_MODE_LOOP, cbs) == 0) {
+        if (transport->start(sv, read_mode_loop, cbs) == 0) {
             std::lock_guard<std::mutex> lock(mx_);
             transports_[transp.get()] = tctx;
         }
@@ -75,6 +76,8 @@ class my_tls_acceptor : public std::enable_shared_from_this<my_tls_acceptor> {
             ctx->read_pocket_size -= send_pocket_size;
             send_data(transp);
         }
+
+        //transp->continue_read();
     }
 
     /*********************************************************************************
@@ -84,10 +87,12 @@ class my_tls_acceptor : public std::enable_shared_from_this<my_tls_acceptor> {
         std::lock_guard<std::mutex> lock(mx_);
         auto it = transports_.find(transp);
         if (it != transports_.end()) {
-            printf("tls transport disconnected all read size %fMB\n",
-                   (double)it->second->read_size / 1024 / 1024);
-            printf("tls transport disconnected all read pocket %d\n",
-                   (int32_t)(it->second->read_size / 4096));
+            printf(
+                "tls transport disconnected all read size %fMB\n",
+                (double)it->second->read_size / 1024 / 1024);
+            printf(
+                "tls transport disconnected all read pocket %d\n",
+                (int32_t)(it->second->read_size / 4096));
             delete it->second;
             transports_.erase(it);
         }
@@ -100,10 +105,12 @@ class my_tls_acceptor : public std::enable_shared_from_this<my_tls_acceptor> {
         std::lock_guard<std::mutex> lock(mx_);
         auto it = transports_.find(transp);
         if (it != transports_.end()) {
-            printf("tls transport disconnected all read size %fMB\n",
-                   (double)it->second->read_size / 1024 / 1024);
-            printf("tls transport disconnected all read pocket %d\n",
-                   (int32_t)it->second->read_size / 4096);
+            printf(
+                "tls transport disconnected all read size %fMB\n",
+                (double)it->second->read_size / 1024 / 1024);
+            printf(
+                "tls transport disconnected all read pocket %d\n",
+                (int32_t)it->second->read_size / 4096);
             delete it->second;
         }
     }
@@ -190,20 +197,24 @@ tjiSDBXej+xcoYNOHSlaB+7fIqIq5IA6t5ZZB6xH3TwILG7AsUxV\n\
 -----END RSA PRIVATE KEY-----\
 ";
 
-void start_tls_server(const std::string &ip,
-                      uint16_t port,
-                      const std::string &cert_file,
-                      const std::string &key_file) {
+void start_tls_server(
+    const std::string &ip,
+    uint16_t port,
+    const std::string &cert_file,
+    const std::string &key_file) {
     sv = new service;
     sv->start();
 
     my_tls_acceptor *my_acceptor = new my_tls_acceptor;
 
     pump::acceptor_callbacks cbs;
-    cbs.accepted_cb =
-        pump_bind(&my_tls_acceptor::on_accepted_callback, my_acceptor, _1);
-    cbs.stopped_cb =
-        pump_bind(&my_tls_acceptor::on_stopped_accepting_callback, my_acceptor);
+    cbs.accepted_cb = pump_bind(
+        &my_tls_acceptor::on_accepted_callback,
+        my_acceptor,
+        _1);
+    cbs.stopped_cb = pump_bind(
+        &my_tls_acceptor::on_stopped_accepting_callback,
+        my_acceptor);
 
     address listen_address(ip, port);
     tls_credentials xcerd = load_tls_credentials_from_memory(false, cert, key);

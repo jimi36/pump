@@ -38,20 +38,23 @@ class my_tcp_acceptor : public std::enable_shared_from_this<my_tcp_acceptor> {
         transport->set_context(tctx);
 
         pump::transport_callbacks cbs;
-        cbs.read_cb = pump_bind(&my_tcp_acceptor::on_read_callback,
-                                this,
-                                transp.get(),
-                                _1,
-                                _2);
-        cbs.stopped_cb = pump_bind(&my_tcp_acceptor::on_stopped_callback,
-                                   this,
-                                   transp.get());
-        cbs.disconnected_cb =
-            pump_bind(&my_tcp_acceptor::on_disconnected_callback,
-                      this,
-                      transp.get());
+        cbs.read_cb = pump_bind(
+            &my_tcp_acceptor::on_read_callback,
+            this,
+            transp.get(),
+            _1,
+            _2);
+        cbs.stopped_cb = pump_bind(
+            &my_tcp_acceptor::on_stopped_callback,
+            this,
+            transp.get());
+        cbs.disconnected_cb = pump_bind(
+            &my_tcp_acceptor::on_disconnected_callback,
+            this,
+            transp.get());
+        cbs.sent_cb = pump_bind(&my_tcp_acceptor::on_sent_callback, this, _1);
 
-        if (transport->start(sv, READ_MODE_ONCE, cbs) == 0) {
+        if (transport->start(sv, read_mode_once, cbs) == 0) {
             std::lock_guard<std::mutex> lock(mx_);
             transports_[transp.get()] = tctx;
         }
@@ -82,6 +85,16 @@ class my_tcp_acceptor : public std::enable_shared_from_this<my_tcp_acceptor> {
         transp->continue_read();
     }
 
+    void on_sent_callback(toolkit::io_buffer *iob) {
+        if (iob == nullptr) {
+            printf("iob is nullptr\n");
+            return;
+        }
+        std::lock_guard<std::mutex> lock(buf_mx_);
+        iobs_.push_back(iob);
+        iob->refer();
+    }
+
     /*********************************************************************************
      * Tcp disconnected event callback
      ********************************************************************************/
@@ -110,8 +123,18 @@ class my_tcp_acceptor : public std::enable_shared_from_this<my_tcp_acceptor> {
         }
     }
 
-    inline void send_data(base_transport *transport) {
-        transport->send(send_data_.data(), (int32_t)send_data_.size());
+    void send_data(base_transport *transport) {
+        std::lock_guard<std::mutex> lock(buf_mx_);
+        if (iobs_.empty()) {
+            transport->send(send_data_.data(), (int32_t)send_data_.size());
+        } else {
+            auto iob = iobs_.front();
+            iobs_.pop_front();
+
+            iob->write(char(0), send_pocket_size);
+            transport->send(iob);
+            iob->unrefer();
+        }
     }
 
   private:
@@ -119,6 +142,9 @@ class my_tcp_acceptor : public std::enable_shared_from_this<my_tcp_acceptor> {
 
     std::mutex mx_;
     std::map<void *, transport_context *> transports_;
+
+    std::mutex buf_mx_;
+    std::list<toolkit::io_buffer *> iobs_;
 };
 
 void start_tcp_server(const std::string &ip, uint16_t port) {

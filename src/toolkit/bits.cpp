@@ -4,9 +4,12 @@ namespace pump {
 namespace toolkit {
 
 bits_reader::bits_reader(const uint8_t *b, uint32_t size) noexcept :
-    unread_bc_(size * 8), read_bc_(0), byte_left_bc_(8), byte_pos_(b) {
-    PUMP_ASSERT(b);
-    PUMP_ASSERT(size > 0);
+    unread_bc_(size * 8),
+    read_bc_(0),
+    byte_left_bc_(8),
+    byte_pos_(b) {
+    pump_assert(b);
+    pump_assert(size > 0);
 }
 
 bool bits_reader::read(uint32_t bc, uint8_t *val) {
@@ -111,9 +114,12 @@ uint8_t bits_reader::__read_from_byte(uint32_t bc) {
 }
 
 bits_writer::bits_writer(uint8_t *b, uint32_t size) noexcept :
-    unwritten_bc_(size * 8), written_bc_(0), byte_left_bc_(8), byte_pos_(b) {
-    PUMP_ASSERT(b);
-    PUMP_ASSERT(size > 0);
+    unwritten_bc_(size * 8),
+    written_bc_(0),
+    byte_left_bc_(8),
+    byte_pos_(b) {
+    pump_assert(b);
+    pump_assert(size > 0);
 }
 
 bool bits_writer::write(uint32_t bc, uint8_t val) {

@@ -21,42 +21,45 @@ namespace transport {
 namespace flow {
 
 flow_tls::flow_tls() noexcept :
-    is_handshaked_(false), session_(nullptr), send_iob_(nullptr) {}
+    is_handshaked_(false),
+    session_(nullptr),
+    send_iob_(nullptr) {}
 
 flow_tls::~flow_tls() {
     transport::delete_tls_session(session_);
 }
 
-error_code flow_tls::init(poll::channel_sptr &ch,
-                          bool client,
-                          pump_socket fd,
-                          transport::tls_credentials xcred) {
+error_code flow_tls::init(
+    poll::channel_sptr &ch,
+    bool client,
+    pump_socket fd,
+    transport::tls_credentials xcred) {
     if (!ch) {
-        PUMP_WARN_LOG("channel is invalid");
-        return ERROR_FAULT;
+        pump_warn_log("channel is invalid");
+        return error_fault;
     }
 
     if (fd < 0) {
-        PUMP_WARN_LOG("socket fd is invalid");
-        return ERROR_FAULT;
+        pump_warn_log("socket fd is invalid");
+        return error_fault;
     }
 
     session_ = transport::new_tls_session(client, fd, xcred);
     if (session_ == nullptr) {
-        PUMP_WARN_LOG("create tls session failed ");
-        return ERROR_FAULT;
+        pump_warn_log("create tls session failed ");
+        return error_fault;
     }
 
     ch_ = ch;
     fd_ = fd;
 
-    return ERROR_OK;
+    return error_none;
 }
 
 error_code flow_tls::want_to_send(toolkit::io_buffer *iob) {
     if (iob == nullptr) {
-        PUMP_WARN_LOG("io buffer is invalid");
-        return ERROR_FAULT;
+        pump_warn_log("io buffer is invalid");
+        return error_fault;
     }
     send_iob_ = iob;
 
@@ -65,41 +68,40 @@ error_code flow_tls::want_to_send(toolkit::io_buffer *iob) {
     if (pump_likely(size > 0)) {
         // Shift send buffer and check data size.
         if (send_iob_->shift(size) > 0) {
-            return ERROR_AGAIN;
+            return error_again;
         }
         send_iob_->clear();
         send_iob_ = nullptr;
-        return ERROR_OK;
+        return error_none;
     } else if (pump_unlikely(size < 0)) {
         // Send again
-        return ERROR_AGAIN;
+        return error_again;
     }
 
-    PUMP_WARN_LOG("send tls buffer failed with ec %d", net::last_errno());
+    pump_warn_log("send tls buffer failed with ec %d", net::last_errno());
 
-    return ERROR_FAULT;
+    return error_fault;
 }
 
 error_code flow_tls::send() {
-    PUMP_ASSERT(send_iob_);
-    int32_t size =
-        transport::tls_send(session_, send_iob_->data(), send_iob_->size());
+    pump_assert(send_iob_);
+    int32_t size = transport::tls_send(session_, send_iob_->data(), send_iob_->size());
     if (pump_likely(size > 0)) {
         // Shift send buffer and check data size.
         if (send_iob_->shift(size) > 0) {
-            return ERROR_AGAIN;
+            return error_again;
         }
         send_iob_->clear();
         send_iob_ = nullptr;
-        return ERROR_OK;
+        return error_none;
     } else if (pump_unlikely(size < 0)) {
         // Send again
-        return ERROR_AGAIN;
+        return error_again;
     }
 
-    PUMP_WARN_LOG("send tls buffer failed with ec %d", net::last_errno());
+    pump_warn_log("send tls buffer failed with ec %d", net::last_errno());
 
-    return ERROR_FAULT;
+    return error_fault;
 }
 
 }  // namespace flow

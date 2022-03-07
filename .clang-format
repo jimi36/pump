@@ -97,7 +97,7 @@ BreakConstructorInitializers: AfterColon
 # 是否允许在字符串常量中换行。
 BreakStringLiterals: true
 # 代码最大列数,值为0意味着不限制。
-ColumnLimit: 80
+ColumnLimit: 0
 # 可以通过正则表达式,来使特定的注释不受格式化影响。
 #CommentPragmas: '^ IWYU pragma:'
 # 如果为true，则连续的名称空间声明将在同一行上；如果为false，则在新的一行上声明每个名称空间。

@@ -24,14 +24,15 @@ namespace pump {
 namespace proto {
 namespace http {
 
-uri::uri() noexcept : tp_(URI_END) {}
+uri::uri() noexcept :
+    tp_(uri_end) {}
 
 uri::uri(const std::string &url) noexcept {
     parse(url);
 }
 
 void uri::reset() {
-    tp_ = URI_END;
+    tp_ = uri_end;
     params_.clear();
     host_.clear();
     path_.clear();
@@ -55,7 +56,7 @@ bool uri::parse(const std::string &url) {
         tp_ = sm[2].str();
         std::transform(tp_.begin(), tp_.end(), tp_.begin(), ::tolower);
     } else {
-        tp_ = URI_HTTP;
+        tp_ = uri_http;
     }
 
     // uri host
@@ -75,13 +76,13 @@ bool uri::parse(const std::string &url) {
     if (sm[6].matched) {
         std::string new_params;
         if (!url_decode(sm[6].str(), new_params)) {
-            PUMP_WARN_LOG("url params url decode failed");
+            pump_warn_log("url params url decode failed");
             return false;
         }
         auto kvs = split_string(new_params, "[=&]");
         uint32_t cnt = (uint32_t)kvs.size();
         if (cnt % 2 != 0) {
-            PUMP_WARN_LOG("url params is invalid");
+            pump_warn_log("url params is invalid");
             return false;
         }
         for (uint32_t i = 0; i < cnt; i += 2) {
@@ -102,7 +103,7 @@ bool uri::get_param(const std::string &key, std::string &value) const {
 }
 
 std::string uri::to_url() const {
-    if (tp_ == URI_END) {
+    if (tp_ == uri_end) {
         return std::string();
     }
 
@@ -128,7 +129,7 @@ address uri::to_address() const {
     uint16_t port = 80;
     if (results.size() > 1) {
         port = atoi(results[1].c_str());
-    } else if (tp_ == URI_HTTPS || tp_ == URI_WSS) {
+    } else if (tp_ == uri_https || tp_ == uri_wss) {
         port = 443;
     }
 

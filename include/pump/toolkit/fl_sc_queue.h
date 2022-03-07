@@ -113,7 +113,8 @@ class fl_sc_queue : public noncopyable {
     /*********************************************************************************
      * Push
      ********************************************************************************/
-    template <typename U> bool push(U &&data) {
+    template <typename U>
+    bool push(U &&data) {
         // Get tail block node
         block_node *blk = blk_tail_.load(std::memory_order_relaxed);
         // Get tail element position
@@ -185,7 +186,8 @@ class fl_sc_queue : public noncopyable {
     /*********************************************************************************
      * Pop
      ********************************************************************************/
-    template <typename U> bool pop(U &data) {
+    template <typename U>
+    bool pop(U &data) {
         // Get tail block node
         block_node *blk = blk_head_.load(std::memory_order_relaxed);
         // Get head element position
@@ -283,8 +285,7 @@ class fl_sc_queue : public noncopyable {
         for (int32_t i = 1; i < blk_count; i++) {
             // Create block node.
             tail->next = object_create<block_node>();
-            tail->next->data =
-                (char *)pump_malloc(block_element_size_ * element_size);
+            tail->next->data = (char *)pump_malloc(block_element_size_ * element_size);
             tail = tail->next;
         }
 

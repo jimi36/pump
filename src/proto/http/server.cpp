@@ -23,29 +23,31 @@ namespace proto {
 namespace http {
 
 using transport::acceptor_callbacks;
-using transport::ERROR_OK;
+using transport::error_none;
 using transport::tcp_acceptor;
 using transport::tls_acceptor;
 
-server::server() noexcept : sv_(nullptr) {}
+server::server() noexcept :
+    sv_(nullptr) {}
 
 server::~server() {}
 
-bool server::start(service *sv,
-                   const address &listen_address,
-                   const server_callbacks &cbs) {
+bool server::start(
+    service *sv,
+    const address &listen_address,
+    const server_callbacks &cbs) {
     if (acceptor_) {
-        PUMP_WARN_LOG("acceptor alread exists");
+        pump_warn_log("acceptor alread exists");
         return false;
     }
 
     if (sv == nullptr) {
-        PUMP_WARN_LOG("service invalid");
+        pump_warn_log("service invalid");
         return false;
     }
 
     if (!cbs.request_cb || !cbs.stopped_cb) {
-        PUMP_WARN_LOG("server callbacks invalid");
+        pump_warn_log("server callbacks invalid");
         return false;
     }
 
@@ -58,8 +60,8 @@ bool server::start(service *sv,
     acbs.accepted_cb = pump_bind(&server::on_accepted, wptr, _1);
 
     auto acceptor = tcp_acceptor::create(listen_address);
-    if (acceptor->start(sv, acbs) != ERROR_OK) {
-        PUMP_WARN_LOG("start tcp acceptor failed");
+    if (acceptor->start(sv, acbs) != error_none) {
+        pump_warn_log("start tcp acceptor failed");
         return false;
     }
     acceptor_ = acceptor;
@@ -67,23 +69,24 @@ bool server::start(service *sv,
     return true;
 }
 
-bool server::start(service *sv,
-                   tls_credentials xcred,
-                   const address &listen_address,
-                   const server_callbacks &cbs) {
+bool server::start(
+    service *sv,
+    tls_credentials xcred,
+    const address &listen_address,
+    const server_callbacks &cbs) {
     if (!acceptor_) {
-        PUMP_WARN_LOG("acceptor alread exists");
+        pump_warn_log("acceptor alread exists");
         return false;
     }
 
     if (sv == nullptr) {
-        PUMP_WARN_LOG("service invalid");
+        pump_warn_log("service invalid");
         return false;
     }
     sv_ = sv;
 
     if (!cbs.request_cb || !cbs.stopped_cb) {
-        PUMP_WARN_LOG("server callbacks invalid");
+        pump_warn_log("server callbacks invalid");
         return false;
     }
     cbs_ = cbs;
@@ -94,8 +97,8 @@ bool server::start(service *sv,
     acbs.accepted_cb = pump_bind(&server::on_accepted, wptr, _1);
 
     auto acceptor = tls_acceptor::create(xcred, listen_address, 1000);
-    if (acceptor->start(sv, acbs) != ERROR_OK) {
-        PUMP_WARN_LOG("start tls acceptor failed");
+    if (acceptor->start(sv, acbs) != error_none) {
+        pump_warn_log("start tls acceptor failed");
         return false;
     }
     acceptor_ = acceptor;
@@ -122,7 +125,7 @@ void server::on_accepted(server_wptr wptr, base_transport_sptr &transp) {
         cbs.error_cb = pump_bind(&server::on_http_error, wptr, conn, _1);
         cbs.packet_cb = pump_bind(&server::on_http_request, wptr, conn, _1);
         if (!conn->start_http(svr->sv_, cbs)) {
-            PUMP_WARN_LOG("start http connection failed");
+            pump_warn_log("start http connection failed");
             std::unique_lock<std::mutex> lock(svr->conn_mx_);
             svr->conns_.erase(conn.get());
         }
@@ -145,20 +148,21 @@ void server::on_stopped(server_wptr wptr) {
     }
 }
 
-void server::on_http_request(server_wptr wptr,
-                             connection_wptr wconn,
-                             packet_sptr &pk) {
+void server::on_http_request(
+    server_wptr wptr,
+    connection_wptr wconn,
+    packet_sptr &pk) {
     auto svr = wptr.lock();
     if (svr) {
         auto conn = wconn.lock();
         if (conn) {
             svr->cbs_.request_cb(wconn, std::static_pointer_cast<request>(pk));
             if (conn->is_upgraded()) {
-                PUMP_DEBUG_LOG("http connection upgrade to websocket");
+                pump_debug_log("http connection upgrade to websocket");
                 std::unique_lock<std::mutex> lock(svr->conn_mx_);
                 svr->conns_.erase(conn.get());
             } else {
-                PUMP_WARN_LOG("try to read next http request failed");
+                pump_warn_log("try to read next http request failed");
                 if (!conn->__read_next_http_packet()) {
                     // Stop http connection.
                     conn->stop();
@@ -171,12 +175,13 @@ void server::on_http_request(server_wptr wptr,
     }
 }
 
-void server::on_http_error(server_wptr wptr,
-                           connection_wptr wconn,
-                           const std::string &msg) {
+void server::on_http_error(
+    server_wptr wptr,
+    connection_wptr wconn,
+    const std::string &msg) {
     auto conn = wconn.lock();
     if (conn) {
-        PUMP_DEBUG_LOG("connection of http server %s", msg.c_str());
+        pump_debug_log("connection of http server %s", msg.c_str());
         // Stop http connection.
         conn->stop();
         // Delete http connection.
@@ -215,8 +220,7 @@ bool upgrade_to_websocket(connection *conn, request_sptr &req) {
 
     std::vector<std::string> connection;
     if (!req->get_head("Connection", connection) ||
-        std::find(connection.begin(), connection.end(), "Upgrade") ==
-            connection.end()) {
+        std::find(connection.begin(), connection.end(), "Upgrade") == connection.end()) {
         __send_simple_response(conn, 400);
         return false;
     }

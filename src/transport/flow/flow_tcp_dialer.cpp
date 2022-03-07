@@ -20,79 +20,90 @@ namespace pump {
 namespace transport {
 namespace flow {
 
-flow_tcp_dialer::flow_tcp_dialer() noexcept : is_ipv6_(false) {}
+flow_tcp_dialer::flow_tcp_dialer() noexcept :
+    is_ipv6_(false) {}
 
 flow_tcp_dialer::~flow_tcp_dialer() {}
 
-error_code flow_tcp_dialer::init(poll::channel_sptr &&ch,
-                                 const address &bind_address) {
+error_code flow_tcp_dialer::init(
+    poll::channel_sptr &&ch,
+    const address &bind_address) {
     if (!ch) {
-        PUMP_WARN_LOG("channel is invalid");
-        return ERROR_FAULT;
+        pump_warn_log("channel is invalid");
+        return error_fault;
     }
 
     int32_t domain = bind_address.is_ipv6() ? AF_INET6 : AF_INET;
-    if ((fd_ = net::create_socket(domain, SOCK_STREAM)) == INVALID_SOCKET) {
-        PUMP_WARN_LOG("create socket failed with ec %d", net::last_errno());
-        return ERROR_FAULT;
+    if ((fd_ = net::create_socket(domain, SOCK_STREAM)) == invalid_socket) {
+        pump_warn_log(
+            "create socket failed with ec %d",
+            net::last_errno());
+        return error_fault;
     }
     if (!net::set_reuse(fd_, 1)) {
-        PUMP_WARN_LOG("set socket address reuse failed with ec %d",
-                      net::last_errno());
-        return ERROR_FAULT;
+        pump_warn_log(
+            "set socket address reuse failed with ec %d",
+            net::last_errno());
+        return error_fault;
     }
     if (!net::set_noblock(fd_, 1)) {
-        PUMP_WARN_LOG("set socket noblock failed with ec %d",
-                      net::last_errno());
-        return ERROR_FAULT;
+        pump_warn_log(
+            "set socket noblock failed with ec %d",
+            net::last_errno());
+        return error_fault;
     }
     if (!net::set_nodelay(fd_, 1)) {
-        PUMP_WARN_LOG("set socket nodelay failed with ec %d",
-                      net::last_errno());
-        return ERROR_FAULT;
+        pump_warn_log(
+            "set socket nodelay failed with ec %d",
+            net::last_errno());
+        return error_fault;
     }
     if (!net::bind(fd_, (sockaddr *)bind_address.get(), bind_address.len())) {
-        PUMP_WARN_LOG("bind socket address failed with ec %d",
-                      net::last_errno());
-        return ERROR_FAULT;
+        pump_warn_log(
+            "bind socket address failed with ec %d",
+            net::last_errno());
+        return error_fault;
     }
 
     ch_ = ch;
 
-    return ERROR_OK;
+    return error_none;
 }
 
 int32_t flow_tcp_dialer::post_connect(const address &remote_address) {
-    if (!net::connect(fd_,
-                      (sockaddr *)remote_address.get(),
-                      remote_address.len())) {
-        PUMP_WARN_LOG("socket connect failed with ec %d", net::last_errno());
-        return ERROR_FAULT;
+    if (!net::connect(
+            fd_,
+            (sockaddr *)remote_address.get(),
+            remote_address.len())) {
+        pump_warn_log("socket connect failed with ec %d", net::last_errno());
+        return error_fault;
     }
-    return ERROR_OK;
+    return error_none;
 }
 
-int32_t flow_tcp_dialer::connect(address *local_address,
-                                 address *remote_address) {
+int32_t flow_tcp_dialer::connect(
+    address *local_address,
+    address *remote_address) {
     int32_t ec = net::get_socket_error(fd_);
     if (ec != 0) {
         return ec;
     }
 
     if (!net::update_connect_context(fd_)) {
-        PUMP_WARN_LOG("update socket connect context failed with ec %d",
-                      net::last_errno());
+        pump_warn_log(
+            "update socket connect context failed with ec %d",
+            net::last_errno());
         return net::get_socket_error(fd_);
     }
 
     int32_t addrlen = 0;
-    char addr[ADDRESS_MAX_LEN];
+    char addr[max_address_len];
 
-    addrlen = ADDRESS_MAX_LEN;
+    addrlen = max_address_len;
     net::local_address(fd_, (sockaddr *)addr, &addrlen);
     local_address->set((sockaddr *)addr, addrlen);
 
-    addrlen = ADDRESS_MAX_LEN;
+    addrlen = max_address_len;
     net::remote_address(fd_, (sockaddr *)addr, &addrlen);
     remote_address->set((sockaddr *)addr, addrlen);
 

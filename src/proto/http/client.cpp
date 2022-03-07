@@ -42,27 +42,26 @@ response_sptr client::do_request(request_sptr &req) {
         std::unique_lock<std::mutex> lock(resp_mx_);
 
         const uri *u = req->get_uri();
-        if (u->get_type() != URI_HTTP && u->get_type() != URI_HTTPS) {
-            PUMP_WARN_LOG("request uri type is not http or https");
+        if (u->get_type() != uri_http && u->get_type() != uri_https) {
+            pump_warn_log("request uri type is not http or https");
             break;
         }
 
         if (!__steup_connection_and_listen_response(u)) {
-            PUMP_WARN_LOG("setup connection or listen response failed");
+            pump_warn_log("setup connection or listen response failed");
             break;
         }
 
         if (!conn_->send(std::static_pointer_cast<packet>(req))) {
-            PUMP_WARN_LOG("send the http request failed");
+            pump_warn_log("send the http request failed");
             break;
         }
 
         wait_for_response_ = true;
-        if (resp_cond_.wait_for(lock, std::chrono::seconds(5)) !=
-            std::cv_status::timeout) {
+        if (resp_cond_.wait_for(lock, std::chrono::seconds(5)) != std::cv_status::timeout) {
             resp = std::move(resp_);
         } else {
-            PUMP_WARN_LOG("wait http response timeout");
+            pump_warn_log("wait http response timeout");
             __destroy_connection();
         }
         wait_for_response_ = false;
@@ -78,33 +77,33 @@ connection_sptr client::open_websocket(const std::string &url) {
         std::unique_lock<std::mutex> lock(resp_mx_);
 
         uri u(url);
-        if (u.get_type() != URI_WS && u.get_type() != URI_WSS) {
-            PUMP_WARN_LOG("request uri type is not ws or wss");
+        if (u.get_type() != uri_ws && u.get_type() != uri_wss) {
+            pump_warn_log("request uri type is not ws or wss");
             break;
         }
 
         if (!__steup_connection_and_listen_response(&u)) {
-            PUMP_WARN_LOG("setup connection or listen response failed");
+            pump_warn_log("setup connection or listen response failed");
             break;
         }
 
         std::map<std::string, std::string> headers;
         if (!__send_websocket_upgrade_request(url, headers)) {
-            PUMP_WARN_LOG("send websocket upgrade request failed");
+            pump_warn_log("send websocket upgrade request failed");
             break;
         }
 
         wait_for_response_ = true;
         if (resp_cond_.wait_for(lock, std::chrono::seconds(5)) ==
             std::cv_status::timeout) {
-            PUMP_WARN_LOG("wait websocket upgrade response timeout");
+            pump_warn_log("wait websocket upgrade response timeout");
             __destroy_connection();
             break;
         }
         wait_for_response_ = false;
 
         if (!resp_ || !__handle_websocket_upgrade_response(resp_)) {
-            PUMP_WARN_LOG("handle websocket upgrade response failed");
+            pump_warn_log("handle websocket upgrade response failed");
             __destroy_connection();
             break;
         }
@@ -128,36 +127,37 @@ bool client::__steup_connection_and_listen_response(const uri *u) {
         if (conn_->__read_next_http_packet()) {
             return true;
         } else {
-            PUMP_WARN_LOG("http connection start to read response failed");
+            pump_warn_log("http connection start to read response failed");
             conn_->stop();
             conn_.reset();
         }
     }
 
-    PUMP_DEBUG_LOG("create new http connection %s", u->to_url().c_str());
+    pump_debug_log("create new http connection %s", u->to_url().c_str());
 
     base_transport_sptr transp;
     address bind_address("0.0.0.0", 0);
     address peer_address = u->to_address();
-    if (u->get_type() == URI_WSS || u->get_type() == URI_HTTPS) {
+    if (u->get_type() == uri_wss || u->get_type() == uri_https) {
         auto dialer = transport::tls_sync_dialer::create();
-        transp = dialer->dial(sv_,
-                              bind_address,
-                              peer_address,
-                              dial_timeout_,
-                              tls_handshake_timeout_);
+        transp = dialer->dial(
+            sv_,
+            bind_address,
+            peer_address,
+            dial_timeout_,
+            tls_handshake_timeout_);
     } else {
         auto dialer = transport::tcp_sync_dialer::create();
         transp = dialer->dial(sv_, bind_address, peer_address, dial_timeout_);
     }
     if (!transp) {
-        PUMP_WARN_LOG("establish connection transport failed");
+        pump_warn_log("establish connection transport failed");
         return false;
     }
 
     conn_.reset(new connection(false, transp));
     if (!conn_) {
-        PUMP_ERR_LOG("new connection object failed");
+        pump_err_log("new connection object failed");
         return false;
     }
 
@@ -166,7 +166,7 @@ bool client::__steup_connection_and_listen_response(const uri *u) {
     cbs.error_cb = pump_bind(&client::on_error, cli, conn_.get(), _1);
     cbs.packet_cb = pump_bind(&client::on_response, cli, conn_.get(), _1);
     if (!conn_->start_http(sv_, cbs)) {
-        PUMP_WARN_LOG("start http connection failed");
+        pump_warn_log("start http connection failed");
         return false;
     }
 
@@ -241,17 +241,18 @@ void client::__notify_response(connection *conn, response_sptr &&resp) {
 void client::on_response(client_wptr wptr, connection *conn, packet_sptr &pk) {
     auto cli = wptr.lock();
     if (cli) {
-        PUMP_DEBUG_LOG("connection of http client receive response");
+        pump_debug_log("connection of http client receive response");
         cli->__notify_response(conn, std::static_pointer_cast<response>(pk));
     }
 }
 
-void client::on_error(client_wptr wptr,
-                      connection *conn,
-                      const std::string &msg) {
+void client::on_error(
+    client_wptr wptr,
+    connection *conn,
+    const std::string &msg) {
     auto cli = wptr.lock();
     if (cli) {
-        PUMP_DEBUG_LOG("connection of http client %s", msg.c_str());
+        pump_debug_log("connection of http client %s", msg.c_str());
         cli->__notify_response(conn, response_sptr());
     }
 }

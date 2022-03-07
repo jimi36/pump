@@ -69,7 +69,7 @@ class pump_lib epoll_poller : public poller {
     std::atomic_int32_t cur_event_count_;
 };
 
-DEFINE_SMART_POINTER_TYPE(epoll_poller);
+DEFINE_SMART_POINTERS(epoll_poller);
 
 }  // namespace poll
 }  // namespace pump

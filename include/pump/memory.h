@@ -59,7 +59,8 @@ pump_inline T *object_create(ArgTypes... args) {
     return new (p) T(args...);
 }
 
-template <typename T> pump_inline void object_delete(T *obj) {
+template <typename T>
+pump_inline void object_delete(T *obj) {
     if (pump_likely(obj != nullptr)) {
         obj->~T();
         pump_free(obj);

@@ -29,11 +29,11 @@ namespace http {
 using transport::address;
 
 typedef std::string uri_type;
-const static uri_type URI_HTTP = "http";
-const static uri_type URI_HTTPS = "https";
-const static uri_type URI_WS = "ws";
-const static uri_type URI_WSS = "wss";
-const static uri_type URI_END = "";
+const static uri_type uri_http = "http";
+const static uri_type uri_https = "https";
+const static uri_type uri_ws = "ws";
+const static uri_type uri_wss = "wss";
+const static uri_type uri_end = "";
 
 class pump_lib uri {
   public:
@@ -103,8 +103,9 @@ class pump_lib uri {
     /*********************************************************************************
      * Set param
      ********************************************************************************/
-    pump_inline void set_param(const std::string &key,
-                               const std::string &value) {
+    pump_inline void set_param(
+        const std::string &key,
+        const std::string &value) {
         params_[key] = value;
     }
 
@@ -133,7 +134,7 @@ class pump_lib uri {
     // Uri params
     std::map<std::string, std::string> params_;
 };
-DEFINE_SMART_POINTER_TYPE(uri);
+DEFINE_SMART_POINTERS(uri);
 
 }  // namespace http
 }  // namespace proto

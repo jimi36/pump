@@ -22,10 +22,10 @@
 namespace pump {
 namespace transport {
 
-const int32_t TLS_HANDSHAKE_OK = 0;
-const int32_t TLS_HANDSHAKE_READ = 1;
-const int32_t TLS_HANDSHAKE_SEND = 2;
-const int32_t TLS_HANDSHAKE_ERROR = 3;
+const int32_t tls_handshake_ok = 0;
+const int32_t tls_handshake_read = 1;
+const int32_t tls_handshake_send = 2;
+const int32_t tls_handshake_error = 3;
 
 /*********************************************************************************
  * TLS credentials.
@@ -76,10 +76,10 @@ void delete_tls_session(tls_session *session);
 /*********************************************************************************
  * Handshake.
  * Return results:
- *     TLS_HANDSHAKE_OK
- *     TLS_HANDSHAKE_READ
- *     TLS_HANDSHAKE_SEND
- *     TLS_HANDSHAKE_ERROR
+ *     tls_handshake_ok
+ *     tls_handshake_read
+ *     tls_handshake_send
+ *     tls_handshake_error
  ********************************************************************************/
 int32_t tls_handshake(tls_session *session);
 

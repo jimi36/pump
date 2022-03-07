@@ -92,27 +92,31 @@ HANDLE afd_create_device_handle(HANDLE iocp_handle) {
      */
     IO_STATUS_BLOCK iosb;
     HANDLE afd_device_handle;
-    NTSTATUS status = NtCreateFile(&afd_device_handle,
-                                   SYNCHRONIZE,
-                                   &afd__device_attributes,
-                                   &iosb,
-                                   nullptr,
-                                   0,
-                                   FILE_SHARE_READ | FILE_SHARE_WRITE,
-                                   FILE_OPEN,
-                                   0,
-                                   nullptr,
-                                   0);
+    NTSTATUS status = NtCreateFile(
+        &afd_device_handle,
+        SYNCHRONIZE,
+        &afd__device_attributes,
+        &iosb,
+        nullptr,
+        0,
+        FILE_SHARE_READ | FILE_SHARE_WRITE,
+        FILE_OPEN,
+        0,
+        nullptr,
+        0);
     PUMP_ABORT_WITH_LOG(status != STATUS_SUCCESS,
                         "afd_create_device_handle: create NT file failed");
 
-    PUMP_ABORT_WITH_LOG(
-        CreateIoCompletionPort(afd_device_handle, iocp_handle, 0, 0) ==
-                nullptr ||
-            SetFileCompletionNotificationModes(afd_device_handle,
-                                               FILE_SKIP_SET_EVENT_ON_HANDLE) ==
-                FALSE,
-        "afd_create_device_handle: NT file bind iocp handle failed");
+    if (CreateIoCompletionPort(
+            afd_device_handle,
+            iocp_handle,
+            0,
+            0) == nullptr ||
+        SetFileCompletionNotificationModes(
+            afd_device_handle,
+            FILE_SKIP_SET_EVENT_ON_HANDLE) == FALSE) {
+        PUMP_ABORT_WITH_LOG("afd_create_device_handle: NT file bind iocp handle failed")
+    }
 
     return afd_device_handle;
 }
@@ -127,23 +131,23 @@ afd_poller::afd_poller() noexcept :
 #if defined(PUMP_HAVE_IOCP)
     iocp_handler_ = CreateIoCompletionPort(INVALID_HANDLE_VALUE, nullptr, 0, 0);
     if (iocp_handler_ == nullptr) {
-        PUMP_ERR_LOG("create iocp headler failed");
-        PUMP_ABORT();
+        pump_err_log("create iocp headler failed");
+        pump_abort();
     }
 
     afd_device_handler_ = afd_create_device_handle(iocp_handler_);
     if (afd_device_handler_ == nullptr) {
-        PUMP_ERR_LOG("create afd device headler failed");
-        PUMP_ABORT();
+        pump_err_log("create afd device headler failed");
+        pump_abort();
     }
 
     events_ = pump_malloc(sizeof(OVERLAPPED_ENTRY) * max_event_count_);
     if (events_ == nullptr) {
-        PUMP_ERR_LOG("allocate afd events memory failed");
-        PUMP_ABORT();
+        pump_err_log("allocate afd events memory failed");
+        pump_abort();
     }
 #else
-    PUMP_ABORT();
+    pump_abort();
 #endif
 }
 
@@ -165,7 +169,7 @@ bool afd_poller::__install_channel_tracker(channel_tracker *tracker) {
         return true;
     }
 #endif
-    PUMP_WARN_LOG("install channel tracker failed %d", net::last_errno());
+    pump_warn_log("install channel tracker failed %d", net::last_errno());
     return false;
 }
 
@@ -185,7 +189,7 @@ bool afd_poller::__uninstall_channel_tracker(channel_tracker *tracker) {
         return true;
     }
 #endif
-    PUMP_WARN_LOG("uninstall channel tracker failed %d", net::last_errno());
+    pump_warn_log("uninstall channel tracker failed %d", net::last_errno());
     return false;
 }
 
@@ -198,28 +202,29 @@ bool afd_poller::__resume_channel_tracker(channel_tracker *tracker) {
     event->info.NumberOfHandles = 1;
     event->info.Handles[0].Status = 0;
     event->info.Handles[0].Handle = (HANDLE)tracker->get_fd();
-    if (expected_event & IO_EVENT_READ) {
+    if (expected_event & io_read) {
         event->info.Handles[0].Events = AL_READ_EVENT;
-    } else if (expected_event & IO_EVENT_SEND) {
+    } else if (expected_event & io_send) {
         event->info.Handles[0].Events = AL_SEND_EVENT;
     }
     event->iosb.Status = STATUS_PENDING;
 
-    NTSTATUS status = NtDeviceIoControlFile(afd_device_handler_,
-                                            nullptr,
-                                            nullptr,
-                                            tracker,
-                                            &(event->iosb),
-                                            IOCTL_AFD_POLL,
-                                            &(event->info),
-                                            sizeof(event->info),
-                                            event,
-                                            sizeof(event->info));
+    NTSTATUS status = NtDeviceIoControlFile(
+        afd_device_handler_,
+        nullptr,
+        nullptr,
+        tracker,
+        &(event->iosb),
+        IOCTL_AFD_POLL,
+        &(event->info),
+        sizeof(event->info),
+        event,
+        sizeof(event->info));
     if (status == STATUS_SUCCESS || status == STATUS_PENDING) {
         return true;
     }
 #endif
-    PUMP_WARN_LOG("resume channel tracker fialed %d", net::last_errno());
+    pump_warn_log("resume channel tracker fialed %d", net::last_errno());
     return false;
 }
 
@@ -231,19 +236,20 @@ void afd_poller::__poll(int32_t timeout) {
         events_ =
             pump_realloc(events_, sizeof(OVERLAPPED_ENTRY) * max_event_count_);
         if (events_ == nullptr) {
-            PUMP_ERR_LOG("reallocate afd events memory failed");
-            PUMP_ABORT();
+            pump_err_log("reallocate afd events memory failed");
+            pump_abort();
         }
     }
 
     DWORD completion_count = 0;
     LPOVERLAPPED_ENTRY iocp_events = (LPOVERLAPPED_ENTRY)events_;
-    if (GetQueuedCompletionStatusEx(iocp_handler_,
-                                    iocp_events,
-                                    max_event_count_,
-                                    &completion_count,
-                                    timeout,
-                                    FALSE) == FALSE) {
+    if (GetQueuedCompletionStatusEx(
+            iocp_handler_,
+            iocp_events,
+            max_event_count_,
+            &completion_count,
+            timeout,
+            FALSE) == FALSE) {
         return;
     }
 

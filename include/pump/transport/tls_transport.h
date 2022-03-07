@@ -25,7 +25,7 @@ namespace pump {
 namespace transport {
 
 class tls_transport;
-DEFINE_SMART_POINTER_TYPE(tls_transport);
+DEFINE_SMART_POINTERS(tls_transport);
 
 class pump_lib tls_transport : public base_transport {
   public:
@@ -45,16 +45,18 @@ class pump_lib tls_transport : public base_transport {
     /*********************************************************************************
      * Init
      ********************************************************************************/
-    void init(flow::flow_tls_sptr &&flow,
-              const address &local_address,
-              const address &remote_address);
+    void init(
+        flow::flow_tls_sptr &&flow,
+        const address &local_address,
+        const address &remote_address);
 
     /*********************************************************************************
      * Start tls transport
      ********************************************************************************/
-    virtual error_code start(service *sv,
-                             read_mode mode,
-                             const transport_callbacks &cbs) override;
+    virtual error_code start(
+        service *sv,
+        read_mode mode,
+        const transport_callbacks &cbs) override;
 
     /*********************************************************************************
      * Stop
@@ -87,7 +89,7 @@ class pump_lib tls_transport : public base_transport {
     /*********************************************************************************
      * Channel event callback
      ********************************************************************************/
-    virtual void on_channel_event(int32_t ev) override;
+    virtual void on_channel_event(int32_t ev, void *arg) override;
 
     /*********************************************************************************
      * Read event callback
@@ -126,17 +128,14 @@ class pump_lib tls_transport : public base_transport {
     error_code __send_once();
 
     /*********************************************************************************
+     * Handle sent buffer
+     ********************************************************************************/
+    void __handle_sent_buffer();
+
+    /*********************************************************************************
      * Clear send pockets
      ********************************************************************************/
     void __clear_send_pockets();
-
-    /*********************************************************************************
-     * Reset last sent io buffer
-     ********************************************************************************/
-    pump_inline void __reset_last_sent_iobuffer() {
-        last_send_iob_->unrefer();
-        last_send_iob_ = nullptr;
-    }
 
   private:
     // TLS flow
@@ -145,7 +144,6 @@ class pump_lib tls_transport : public base_transport {
     // Last send buffer
     volatile int32_t last_send_iob_size_;
     toolkit::io_buffer *last_send_iob_;
-    // volatile toolkit::io_buffer *last_send_iob_;
 
     // Pending send count
     std::atomic_int32_t pending_opt_cnt_;

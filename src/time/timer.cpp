@@ -22,33 +22,46 @@
 namespace pump {
 namespace time {
 
+constexpr static int32_t state_none = 0;
+constexpr static int32_t state_stopped = 1;
+constexpr static int32_t state_started = 2;
+constexpr static int32_t state_pending = 3;
+
 timer::timer(uint64_t timeout, const timer_callback &cb, bool repeated) :
     queue_(nullptr),
-    status_(TIMER_INIT),
+    state_(state_none),
     cb_(cb),
     repeated_(repeated),
     timeout_(timeout),
     overtime_(0) {}
 
+void timer::stop() {
+    __force_set_state(state_stopped);
+}
+
 void timer::handle_timeout() {
-    if (__set_state(TIMER_STARTED, TIMER_PENDING)) {
+    if (__set_state(state_started, state_pending)) {
         cb_();
 
         if (pump_likely(repeated_)) {
-            if (__set_state(TIMER_PENDING, TIMER_STARTED)) {
+            if (__set_state(state_pending, state_started)) {
                 // Update overtime.
                 overtime_ = get_clock_milliseconds() + timeout_;
                 // Add to timer queue.
                 queue_->restart_timer(shared_from_this());
             }
         } else {
-            __set_state(TIMER_PENDING, TIMER_STOPPED);
+            __set_state(state_pending, state_stopped);
         }
     }
 }
 
+bool timer::is_started() const {
+    return state_.load() > state_stopped;
+}
+
 bool timer::__start(manager *queue) {
-    if (!__set_state(TIMER_INIT, TIMER_STARTED)) {
+    if (!__set_state(state_none, state_started)) {
         return false;
     }
 

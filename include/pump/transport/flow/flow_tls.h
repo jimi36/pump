@@ -25,7 +25,7 @@ namespace transport {
 namespace flow {
 
 struct tls_session;
-DEFINE_SMART_POINTER_TYPE(tls_session);
+DEFINE_SMART_POINTERS(tls_session);
 
 class flow_tls : public flow_base {
   public:
@@ -42,8 +42,8 @@ class flow_tls : public flow_base {
     /*********************************************************************************
      * Init flow
      * Return results:
-     *     ERROR_OK    => success
-     *     ERROR_FAULT => error
+     *     error_none    => success
+     *     error_fault => error
      ********************************************************************************/
     error_code init(poll::channel_sptr &ch,
                     bool client,
@@ -53,10 +53,10 @@ class flow_tls : public flow_base {
     /*********************************************************************************
      * Handshake
      * Return results:
-     *     TLS_HANDSHAKE_OK
-     *     TLS_HANDSHAKE_READ
-     *     TLS_HANDSHAKE_SEND
-     *     TLS_HANDSHAKE_ERROR
+     *     tls_handshake_ok
+     *     tls_handshake_read
+     *     tls_handshake_send
+     *     tls_handshake_error
      ********************************************************************************/
     pump_inline int32_t handshake() {
         return transport::tls_handshake(session_);
@@ -73,7 +73,6 @@ class flow_tls : public flow_base {
      * Check there are data to read or not
      ********************************************************************************/
     pump_inline bool has_unread_data() const {
-        PUMP_ASSERT(session_);
         return transport::tls_has_unread_data(session_);
     }
 
@@ -81,18 +80,18 @@ class flow_tls : public flow_base {
      * Want to send
      * If using iocp this post an iocp task for sending, else this try sending
      * data. Return results:
-     *     ERROR_OK      => send completely
-     *     ERROR_AGAIN   => try again
-     *     ERROR_FAULT   => error
+     *     error_none    => send completely
+     *     error_again   => try again
+     *     error_fault   => error
      ********************************************************************************/
     error_code want_to_send(toolkit::io_buffer *iob);
 
     /*********************************************************************************
      * Send to net
      * Return results:
-     *     ERROR_OK      => send completely
-     *     ERROR_AGAIN   => try again
-     *     ERROR_FAULT   => error
+     *     error_none    => send completely
+     *     error_again   => try again
+     *     error_fault   => error
      ********************************************************************************/
     error_code send();
 
@@ -100,7 +99,7 @@ class flow_tls : public flow_base {
      * Check there are data to send or not
      ********************************************************************************/
     pump_inline bool has_unsend_data() const {
-        PUMP_ASSERT(session_);
+        pump_assert(session_);
         return false;
     }
 
@@ -119,7 +118,7 @@ class flow_tls : public flow_base {
     // Current sending io buffer
     toolkit::io_buffer *send_iob_;
 };
-DEFINE_SMART_POINTER_TYPE(flow_tls);
+DEFINE_SMART_POINTERS(flow_tls);
 
 }  // namespace flow
 }  // namespace transport

@@ -20,31 +20,32 @@ namespace pump {
 namespace transport {
 namespace flow {
 
-flow_tcp::flow_tcp() noexcept : send_iob_(nullptr) {}
+flow_tcp::flow_tcp() noexcept :
+    send_iob_(nullptr) {}
 
 flow_tcp::~flow_tcp() {}
 
 error_code flow_tcp::init(poll::channel_sptr &&ch, pump_socket fd) {
     if (!ch) {
-        PUMP_WARN_LOG("channel is invalid");
-        return ERROR_FAULT;
+        pump_warn_log("channel is invalid");
+        return error_fault;
     }
 
     if (fd < 0) {
-        PUMP_WARN_LOG("socket fd is invalid");
-        return ERROR_FAULT;
+        pump_warn_log("socket fd is invalid");
+        return error_fault;
     }
 
     ch_ = ch;
     fd_ = fd;
 
-    return ERROR_OK;
+    return error_none;
 }
 
 error_code flow_tcp::want_to_send(toolkit::io_buffer *iob) {
     if (iob == nullptr) {
-        PUMP_WARN_LOG("io buffer is invalid");
-        return ERROR_FAULT;
+        pump_warn_log("io buffer is invalid");
+        return error_fault;
     }
     send_iob_ = iob;
 
@@ -52,36 +53,36 @@ error_code flow_tcp::want_to_send(toolkit::io_buffer *iob) {
     if (pump_likely(size > 0)) {
         if (send_iob_->shift(size) == 0) {
             send_iob_ = nullptr;
-            return ERROR_OK;
+            return error_none;
         }
-        return ERROR_AGAIN;
+        return error_again;
     } else if (size < 0) {
-        return ERROR_AGAIN;
+        return error_again;
     }
 
-    PUMP_WARN_LOG("send buffer failed with ec %d", net::last_errno());
+    pump_warn_log("send buffer failed with ec %d", net::last_errno());
 
-    return ERROR_FAULT;
+    return error_fault;
 }
 
 error_code flow_tcp::send() {
-    PUMP_ASSERT(send_iob_);
-    PUMP_ASSERT(send_iob_->size() > 0);
+    pump_assert(send_iob_);
+    pump_assert(send_iob_->size() > 0);
     int32_t data_size = (int32_t)send_iob_->size();
     int32_t size = net::send(fd_, send_iob_->data(), data_size);
     if (pump_likely(size > 0)) {
         if (send_iob_->shift(size) == 0) {
             send_iob_ = nullptr;
-            return ERROR_OK;
+            return error_none;
         }
-        return ERROR_AGAIN;
+        return error_again;
     } else if (size < 0) {
-        return ERROR_AGAIN;
+        return error_again;
     }
 
-    PUMP_WARN_LOG("send buffer failed with ec %d", net::last_errno());
+    pump_warn_log("send buffer failed with ec %d", net::last_errno());
 
-    return ERROR_FAULT;
+    return error_fault;
 }
 
 }  // namespace flow

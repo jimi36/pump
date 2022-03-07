@@ -106,7 +106,7 @@ class pump_lib request : public packet {
     // Request method
     http_method method_;
 };
-DEFINE_SMART_POINTER_TYPE(request);
+DEFINE_SMART_POINTERS(request);
 
 }  // namespace http
 }  // namespace proto

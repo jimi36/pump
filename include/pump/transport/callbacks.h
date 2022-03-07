@@ -23,7 +23,7 @@ namespace pump {
 namespace transport {
 
 class base_transport;
-DEFINE_SMART_POINTER_TYPE(base_transport);
+DEFINE_SMART_POINTERS(base_transport);
 
 struct acceptor_callbacks {
     // Accepted callback
@@ -46,6 +46,8 @@ struct transport_callbacks {
     pump_function<void(const char *, int32_t)> read_cb;
     // Read from callback for udp
     pump_function<void(const char *, int32_t, const address &)> read_from_cb;
+    // Sent callabck
+    pump_function<void(toolkit::io_buffer *)> sent_cb;
     // Transport disconnected callback for tcp and tls
     pump_function<void()> disconnected_cb;
     // Transport stopped callback

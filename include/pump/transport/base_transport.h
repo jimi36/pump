@@ -31,7 +31,11 @@ namespace flow {
 class flow_base;
 }
 
-class pump_lib base_channel : public service_getter, public poll::channel {
+const static int32_t max_tcp_buffer_size = 4096;  // 4KB
+const static int32_t max_udp_buffer_size = 8192;  // 8KB
+
+class pump_lib base_channel : public service_getter,
+                              public poll::channel {
   public:
     /*********************************************************************************
      * Constructor
@@ -40,7 +44,7 @@ class pump_lib base_channel : public service_getter, public poll::channel {
         service_getter(sv),
         poll::channel(fd),
         type_(type),
-        state_(TRANSPORT_INITED) {}
+        state_(state_none) {}
 
     /*********************************************************************************
      * Deconstructor
@@ -58,15 +62,16 @@ class pump_lib base_channel : public service_getter, public poll::channel {
      * Get started status
      ********************************************************************************/
     pump_inline bool is_started() const {
-        return __is_state(TRANSPORT_STARTED, std::memory_order_relaxed);
+        return __is_state(state_started, std::memory_order_relaxed);
     }
 
   protected:
     /*********************************************************************************
      * Set channel state
      ********************************************************************************/
-    pump_inline bool __set_state(transport_state expected,
-                                 transport_state desired) {
+    pump_inline bool __set_state(
+        transport_state expected,
+        transport_state desired) {
         return state_.compare_exchange_strong(expected, desired);
     }
 
@@ -74,18 +79,20 @@ class pump_lib base_channel : public service_getter, public poll::channel {
      * Check transport state
      ********************************************************************************/
     pump_inline bool __is_state(
-        transport_state status,
+        transport_state state,
         std::memory_order order = std::memory_order_acquire) const {
-        return state_.load(order) == status;
+        return state_.load(order) == state;
     }
 
     /*********************************************************************************
      * Post channel event
      ********************************************************************************/
-    pump_inline bool __post_channel_event(poll::channel_sptr &&ch,
-                                          int32_t event,
-                                          poller_id pid = SEND_POLLER_ID) {
-        return get_service()->post_channel_event(ch, event, pid);
+    pump_inline bool __post_channel_event(
+        poll::channel_sptr &&ch,
+        int32_t event,
+        void *arg = nullptr,
+        poller_id pid = send_pid) {
+        return get_service()->post_channel_event(ch, event, arg, pid);
     }
 
   protected:
@@ -94,6 +101,10 @@ class pump_lib base_channel : public service_getter, public poll::channel {
     // Transport state
     std::atomic<transport_state> state_;
 };
+
+const static int32_t channel_event_disconnected = 0;
+const static int32_t channel_event_buffer_sent = 1;
+const static int32_t channel_event_read = 2;
 
 class pump_lib base_transport
     : public base_channel,
@@ -104,8 +115,8 @@ class pump_lib base_transport
      ********************************************************************************/
     base_transport(int32_t type, service *sv, int32_t fd) noexcept :
         base_channel(type, sv, fd),
-        rmode_(READ_MODE_NONE),
-        rstate_(READ_NONE),
+        rmode_(read_mode_none),
+        rstate_(read_none),
         pending_send_size_(0) {}
 
     /*********************************************************************************
@@ -116,10 +127,11 @@ class pump_lib base_transport
     /*********************************************************************************
      * Start
      ********************************************************************************/
-    virtual error_code start(service *sv,
-                             read_mode mode,
-                             const transport_callbacks &cbs) {
-        return ERROR_FAULT;
+    virtual error_code start(
+        service *sv,
+        read_mode mode,
+        const transport_callbacks &cbs) {
+        return error_fault;
     }
 
     /*********************************************************************************
@@ -136,14 +148,14 @@ class pump_lib base_transport
      * Continue read  for read once mode
      ********************************************************************************/
     virtual error_code continue_read() {
-        return ERROR_FAULT;
+        return error_fault;
     }
 
     /*********************************************************************************
      * Send
      ********************************************************************************/
     virtual error_code send(const char *b, int32_t size) {
-        return ERROR_DISABLE;
+        return error_disable;
     }
 
     /*********************************************************************************
@@ -151,16 +163,17 @@ class pump_lib base_transport
      * The ownership of io buffer will be transferred.
      ********************************************************************************/
     virtual error_code send(toolkit::io_buffer *iob) {
-        return ERROR_DISABLE;
+        return error_disable;
     }
 
     /*********************************************************************************
      * Send
      ********************************************************************************/
-    virtual error_code send(const char *b,
-                            int32_t size,
-                            const address &address) {
-        return ERROR_DISABLE;
+    virtual error_code send(
+        const char *b,
+        int32_t size,
+        const address &address) {
+        return error_disable;
     }
 
     /*********************************************************************************
@@ -188,7 +201,7 @@ class pump_lib base_transport
     /*********************************************************************************
      * Channel event callback
      ********************************************************************************/
-    virtual void on_channel_event(int32_t ev) override;
+    virtual void on_channel_event(int32_t ev, void *arg) override;
 
   protected:
     /*********************************************************************************
@@ -227,46 +240,36 @@ class pump_lib base_transport
     pump_inline bool __start_read_tracker() {
         if (pump_unlikely(!r_tracker_)) {
             r_tracker_.reset(
-                object_create<poll::channel_tracker>(shared_from_this(),
-                                                     poll::TRACK_READ),
+                object_create<poll::channel_tracker>(
+                    shared_from_this(),
+                    poll::track_read),
                 object_delete<poll::channel_tracker>);
             if (!r_tracker_ ||
-                !get_service()->add_channel_tracker(r_tracker_,
-                                                    READ_POLLER_ID)) {
-                PUMP_WARN_LOG("add transport's read tracker to service failed");
+                !get_service()->add_channel_tracker(r_tracker_, read_pid)) {
+                pump_warn_log("add transport's read tracker to service failed");
                 return false;
             }
-        } else {
-            auto poller = r_tracker_->get_poller();
-            if (poller == nullptr ||
-                !poller->resume_channel_tracker(r_tracker_.get())) {
-                PUMP_WARN_LOG("resume transport's read tracker failed");
-                return false;
-            }
+            return true;
         }
-        return true;
+
+        return __resume_read_tracker();
     }
     pump_inline bool __start_send_tracker() {
         if (pump_unlikely(!s_tracker_)) {
             s_tracker_.reset(
-                object_create<poll::channel_tracker>(shared_from_this(),
-                                                     poll::TRACK_SEND),
+                object_create<poll::channel_tracker>(
+                    shared_from_this(),
+                    poll::track_send),
                 object_delete<poll::channel_tracker>);
             if (!s_tracker_ ||
-                !get_service()->add_channel_tracker(s_tracker_,
-                                                    SEND_POLLER_ID)) {
-                PUMP_WARN_LOG("add transport's send tracker to service failed");
+                !get_service()->add_channel_tracker(s_tracker_, send_pid)) {
+                pump_warn_log("add transport's send tracker to service failed");
                 return false;
             }
-        } else {
-            auto poller = s_tracker_->get_poller();
-            if (poller == nullptr ||
-                !poller->resume_channel_tracker(s_tracker_.get())) {
-                PUMP_WARN_LOG("resume transport's send tracker failed");
-                return false;
-            }
+            return true;
         }
-        return true;
+
+        return __resume_send_tracker();
     }
 
     /*********************************************************************************
@@ -287,12 +290,12 @@ class pump_lib base_transport
      * Resume trackers
      ********************************************************************************/
     pump_inline bool __resume_read_tracker() {
-        PUMP_ASSERT(r_tracker_);
+        pump_assert(r_tracker_);
         auto tracker = r_tracker_.get();
         return tracker->get_poller()->resume_channel_tracker(tracker);
     }
     pump_inline bool __resume_send_tracker() {
-        PUMP_ASSERT(s_tracker_);
+        pump_assert(s_tracker_);
         auto tracker = s_tracker_.get();
         return tracker->get_poller()->resume_channel_tracker(tracker);
     }

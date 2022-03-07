@@ -24,7 +24,7 @@ namespace pump {
 namespace transport {
 
 class udp_transport;
-DEFINE_SMART_POINTER_TYPE(udp_transport);
+DEFINE_SMART_POINTERS(udp_transport);
 
 class pump_lib udp_transport : public base_transport {
   public:
@@ -45,9 +45,10 @@ class pump_lib udp_transport : public base_transport {
      * Start
      * max_pending_send_size is ignore on udp transport.
      ********************************************************************************/
-    virtual error_code start(service *sv,
-                             read_mode mode,
-                             const transport_callbacks &cbs) override;
+    virtual error_code start(
+        service *sv,
+        read_mode mode,
+        const transport_callbacks &cbs) override;
 
     /*********************************************************************************
      * Stop
@@ -69,9 +70,10 @@ class pump_lib udp_transport : public base_transport {
     /*********************************************************************************
      * Send
      ********************************************************************************/
-    virtual error_code send(const char *b,
-                            int32_t size,
-                            const address &address) override;
+    virtual error_code send(
+        const char *b,
+        int32_t size,
+        const address &address) override;
 
   protected:
     /*********************************************************************************

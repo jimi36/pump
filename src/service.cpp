@@ -26,14 +26,14 @@ service::service(bool enable_poller) : running_(false) {
     memset(pollers_, 0, sizeof(pollers_));
     if (enable_poller) {
 #if defined(PUMP_HAVE_IOCP)
-        pollers_[READ_POLLER_ID] = object_create<poll::afd_poller>();
-        pollers_[SEND_POLLER_ID] = object_create<poll::afd_poller>();
+        pollers_[read_pid] = object_create<poll::afd_poller>();
+        pollers_[send_pid] = object_create<poll::afd_poller>();
 #elif defined(PUMP_HAVE_SELECT)
-        pollers_[READ_POLLER_ID] = object_create<poll::select_poller>();
-        pollers_[SEND_POLLER_ID] = object_create<poll::select_poller>();
+        pollers_[read_pid] = object_create<poll::select_poller>();
+        pollers_[send_pid] = object_create<poll::select_poller>();
 #elif defined(PUMP_HAVE_EPOLL)
-        pollers_[READ_POLLER_ID] = object_create<poll::epoll_poller>();
-        pollers_[SEND_POLLER_ID] = object_create<poll::epoll_poller>();
+        pollers_[read_pid] = object_create<poll::epoll_poller>();
+        pollers_[send_pid] = object_create<poll::epoll_poller>();
 #endif
     }
 
@@ -41,17 +41,17 @@ service::service(bool enable_poller) : running_(false) {
 }
 
 service::~service() {
-    if (pollers_[READ_POLLER_ID]) {
-        delete pollers_[READ_POLLER_ID];
+    if (pollers_[read_pid]) {
+        delete pollers_[read_pid];
     }
-    if (pollers_[SEND_POLLER_ID]) {
-        delete pollers_[SEND_POLLER_ID];
+    if (pollers_[send_pid]) {
+        delete pollers_[send_pid];
     }
 }
 
 bool service::start() {
     if (running_) {
-        PUMP_DEBUG_LOG("service: start failed for having started");
+        pump_debug_log("service: start failed for having started");
         return false;
     }
 
@@ -60,11 +60,11 @@ bool service::start() {
     if (timers_) {
         timers_->start(pump_bind(&service::__post_triggered_timers, this, _1));
     }
-    if (pollers_[READ_POLLER_ID]) {
-        pollers_[READ_POLLER_ID]->start();
+    if (pollers_[read_pid]) {
+        pollers_[read_pid]->start();
     }
-    if (pollers_[SEND_POLLER_ID]) {
-        pollers_[SEND_POLLER_ID]->start();
+    if (pollers_[send_pid]) {
+        pollers_[send_pid]->start();
     }
 
     __start_task_worker();
@@ -80,20 +80,20 @@ void service::stop() {
     if (timers_) {
         timers_->stop();
     }
-    if (pollers_[READ_POLLER_ID]) {
-        pollers_[READ_POLLER_ID]->stop();
+    if (pollers_[read_pid]) {
+        pollers_[read_pid]->stop();
     }
-    if (pollers_[SEND_POLLER_ID]) {
-        pollers_[SEND_POLLER_ID]->stop();
+    if (pollers_[send_pid]) {
+        pollers_[send_pid]->stop();
     }
 }
 
 void service::wait_stopped() {
-    if (pollers_[READ_POLLER_ID]) {
-        pollers_[READ_POLLER_ID]->wait_stopped();
+    if (pollers_[read_pid]) {
+        pollers_[read_pid]->wait_stopped();
     }
-    if (pollers_[SEND_POLLER_ID]) {
-        pollers_[SEND_POLLER_ID]->wait_stopped();
+    if (pollers_[send_pid]) {
+        pollers_[send_pid]->wait_stopped();
     }
     if (timers_) {
         timers_->wait_stopped();

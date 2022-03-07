@@ -22,9 +22,9 @@
 namespace pump {
 namespace time {
 
-const static uint64_t US_PER_MS = 1000;
-const static uint64_t MS_PER_SECOND = US_PER_MS;
-const static uint64_t US_PER_SECOND = US_PER_MS * US_PER_MS;
+const static uint64_t us_from_ms = 1000;
+const static uint64_t ms_from_second = us_from_ms;
+const static uint64_t us_from_second = us_from_ms * us_from_ms;
 
 uint64_t get_clock_microseconds() {
     return std::chrono::time_point_cast<std::chrono::microseconds>(
@@ -44,32 +44,34 @@ std::string timestamp::to_string() const {
     struct tm tm_time;
     char date[64] = {0};
     uint64_t ms = ms_.count();
-    time_t seconds = static_cast<time_t>(ms / MS_PER_SECOND);
-    uint32_t milliseconds = static_cast<uint32_t>(ms % MS_PER_SECOND);
+    time_t seconds = static_cast<time_t>(ms / ms_from_second);
+    uint32_t milliseconds = static_cast<uint32_t>(ms % ms_from_second);
 #if defined(OS_WINDOWS)
     localtime_s(&tm_time, &seconds);
-    PUMP_SNPRINTF(date,
-                  sizeof(date) - 1,
-                  "%4d-%d-%d %d:%d:%d:%d",
-                  tm_time.tm_year + 1900,
-                  tm_time.tm_mon + 1,
-                  tm_time.tm_mday,
-                  tm_time.tm_hour,
-                  tm_time.tm_min,
-                  tm_time.tm_sec,
-                  milliseconds);
+    PUMP_SNPRINTF(
+        date,
+        sizeof(date) - 1,
+        "%4d-%d-%d %d:%d:%d:%d",
+        tm_time.tm_year + 1900,
+        tm_time.tm_mon + 1,
+        tm_time.tm_mday,
+        tm_time.tm_hour,
+        tm_time.tm_min,
+        tm_time.tm_sec,
+        milliseconds);
 #else
     gmtime_r(&seconds, &tm_time);
-    pump_snprintf(date,
-                  sizeof(date) - 1,
-                  "%4d-%d-%d %d:%d:%d:%d",
-                  tm_time.tm_year + 1970,
-                  tm_time.tm_mon + 1,
-                  tm_time.tm_mday,
-                  tm_time.tm_hour - 8,
-                  tm_time.tm_min,
-                  tm_time.tm_sec,
-                  milliseconds);
+    pump_snprintf(
+        date,
+        sizeof(date) - 1,
+        "%4d-%d-%d %d:%d:%d:%d",
+        tm_time.tm_year + 1970,
+        tm_time.tm_mon + 1,
+        tm_time.tm_mday,
+        tm_time.tm_hour - 8,
+        tm_time.tm_min,
+        tm_time.tm_sec,
+        milliseconds);
 #endif
     return date;
 }
@@ -79,53 +81,60 @@ std::string timestamp::format(const std::string &format) const {
     char date[64] = {0};
     uint32_t idx = 0, len = 0;
     uint64_t ms = ms_.count();
-    time_t seconds = static_cast<time_t>(ms / MS_PER_SECOND);
-    uint32_t millisecond = static_cast<uint32_t>(ms % MS_PER_SECOND);
+    time_t seconds = static_cast<time_t>(ms / ms_from_second);
+    uint32_t millisecond = static_cast<uint32_t>(ms % ms_from_second);
 #if defined(OS_WINDOWS)
     localtime_s(&tm_time, &seconds);
     while (idx < format.size()) {
         if (strncmp(format.c_str() + idx, "YY", 2) == 0) {
             idx += 2;
-            len += pump_snprintf(date + len,
-                                 sizeof(date) - len - 1,
-                                 "%4d",
-                                 tm_time.tm_year + 1900);
+            len += pump_snprintf(
+                date + len,
+                sizeof(date) - len - 1,
+                "%4d",
+                tm_time.tm_year + 1900);
         } else if (strncmp(format.c_str() + idx, "MM", 2) == 0) {
             idx += 2;
-            len += pump_snprintf(date + len,
-                                 sizeof(date) - len - 1,
-                                 "%d",
-                                 tm_time.tm_mon + 1);
+            len += pump_snprintf(
+                date + len,
+                sizeof(date) - len - 1,
+                "%d",
+                tm_time.tm_mon + 1);
         } else if (strncmp(format.c_str() + idx, "DD", 2) == 0) {
             idx += 2;
-            len += pump_snprintf(date + len,
-                                 sizeof(date) - len - 1,
-                                 "%d",
-                                 tm_time.tm_mday);
+            len += pump_snprintf(
+                date + len,
+                sizeof(date) - len - 1,
+                "%d",
+                tm_time.tm_mday);
         } else if (strncmp(format.c_str() + idx, "hh", 2) == 0) {
             idx += 2;
-            len += pump_snprintf(date + len,
-                                 sizeof(date) - len - 1,
-                                 "%d",
-                                 tm_time.tm_hour);
+            len += pump_snprintf(
+                date + len,
+                sizeof(date) - len - 1,
+                "%d",
+                tm_time.tm_hour);
         } else if (strncmp(format.c_str() + idx, "mm", 2) == 0) {
             idx += 2;
-            len += pump_snprintf(date + len,
-                                 sizeof(date) - len - 1,
-                                 "%d",
-                                 tm_time.tm_min);
+            len += pump_snprintf(
+                date + len,
+                sizeof(date) - len - 1,
+                "%d",
+                tm_time.tm_min);
         } else if (strncmp(format.c_str() + idx, "ss", 2) == 0) {
             idx += 2;
-            len += pump_snprintf(date + idx,
-                                 sizeof(date) - len - 1,
-                                 "%d",
-                                 tm_time.tm_sec);
+            len += pump_snprintf(
+                date + idx,
+                sizeof(date) - len - 1,
+                "%d",
+                tm_time.tm_sec);
         } else if (strncmp(format.c_str() + idx, "ms", 2) == 0) {
             idx += 2;
-            len += pump_snprintf(date + len,
-                                 sizeof(date) - len - 1,
-                                 "%d",
-                                 millisecond);
+            len += pump_snprintf(
+                date + len,
+                sizeof(date) - len - 1,
+                "%d",
+                millisecond);
         } else {
             date[len++] = format[idx++];
         }
@@ -135,46 +144,53 @@ std::string timestamp::format(const std::string &format) const {
     while (idx < format.size()) {
         if (strncmp(format.c_str() + idx, "YY", 2) == 0) {
             idx += 2;
-            len += pump_snprintf(date + len,
-                                 sizeof(date) - len - 1,
-                                 "%4d",
-                                 tm_time.tm_year + 1970);
+            len += pump_snprintf(
+                date + len,
+                sizeof(date) - len - 1,
+                "%4d",
+                tm_time.tm_year + 1970);
         } else if (strncmp(format.c_str() + idx, "MM", 2) == 0) {
             idx += 2;
-            len += pump_snprintf(date + len,
-                                 sizeof(date) - len - 1,
-                                 "%d",
-                                 tm_time.tm_mon + 1);
+            len += pump_snprintf(
+                date + len,
+                sizeof(date) - len - 1,
+                "%d",
+                tm_time.tm_mon + 1);
         } else if (strncmp(format.c_str() + idx, "DD", 2) == 0) {
             idx += 2;
-            len += pump_snprintf(date + len,
-                                 sizeof(date) - len - 1,
-                                 "%d",
-                                 tm_time.tm_mday);
+            len += pump_snprintf(
+                date + len,
+                sizeof(date) - len - 1,
+                "%d",
+                tm_time.tm_mday);
         } else if (strncmp(format.c_str() + idx, "hh", 2) == 0) {
             idx += 2;
-            len += pump_snprintf(date + len,
-                                 sizeof(date) - len - 1,
-                                 "%d",
-                                 tm_time.tm_hour - 8);
+            len += pump_snprintf(
+                date + len,
+                sizeof(date) - len - 1,
+                "%d",
+                tm_time.tm_hour - 8);
         } else if (strncmp(format.c_str() + idx, "mm", 2) == 0) {
             idx += 2;
-            len += pump_snprintf(date + len,
-                                 sizeof(date) - len - 1,
-                                 "%d",
-                                 tm_time.tm_min);
+            len += pump_snprintf(
+                date + len,
+                sizeof(date) - len - 1,
+                "%d",
+                tm_time.tm_min);
         } else if (strncmp(format.c_str() + idx, "ss", 2) == 0) {
             idx += 2;
-            len += pump_snprintf(date + idx,
-                                 sizeof(date) - len - 1,
-                                 "%d",
-                                 tm_time.tm_sec);
+            len += pump_snprintf(
+                date + idx,
+                sizeof(date) - len - 1,
+                "%d",
+                tm_time.tm_sec);
         } else if (strncmp(format.c_str() + idx, "ms", 2) == 0) {
             idx += 2;
-            len += pump_snprintf(date + len,
-                                 sizeof(date) - len - 1,
-                                 "%d",
-                                 millisecond);
+            len += pump_snprintf(
+                date + len,
+                sizeof(date) - len - 1,
+                "%d",
+                millisecond);
         } else {
             date[len++] = format[idx++];
         }

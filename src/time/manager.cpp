@@ -22,9 +22,10 @@
 namespace pump {
 namespace time {
 
-const static uint64_t TIMER_DEFAULT_INTERVAL = 100;
+const static uint64_t default_interval = 100;
 
-manager::manager() noexcept : started_(false) {}
+manager::manager() noexcept :
+    started_(false) {}
 
 manager::~manager() {}
 
@@ -33,16 +34,17 @@ bool manager::start(const timer_pending_callback &cb) {
         started_.store(true);
 
         if (!cb) {
-            PUMP_WARN_LOG("timer pending callback invalid");
+            pump_warn_log("timer pending callback invalid");
             return false;
         }
         pending_cb_ = cb;
 
-        observer_.reset(object_create<std::thread>(
-                            pump_bind(&manager::__observe_thread, this)),
-                        object_delete<std::thread>);
+        observer_.reset(
+            object_create<std::thread>(
+                pump_bind(&manager::__observe_thread, this)),
+            object_delete<std::thread>);
         if (!observer_) {
-            PUMP_WARN_LOG("create observer thread failed");
+            pump_warn_log("create observer thread failed");
             started_.store(false);
             return false;
         }
@@ -59,28 +61,27 @@ void manager::wait_stopped() {
 
 bool manager::start_timer(timer_sptr &ptr) {
     if (pump_unlikely(!started_.load())) {
-        PUMP_WARN_LOG("manager is not started, can't start timer");
+        pump_warn_log("manager is not started, can't start timer");
         return false;
     }
     if (pump_unlikely(!ptr->__start(this))) {
-        PUMP_WARN_LOG("start timer failed");
+        pump_warn_log("start timer failed");
         return false;
     }
     if (!new_timers_.enqueue(ptr)) {
-        PUMP_ERR_LOG("push timer to queue failed");
-        PUMP_ABORT();
+        pump_abort_with_log("push timer to queue failed");
     }
     return true;
 }
 
 bool manager::restart_timer(timer_sptr &&ptr) {
     if (pump_unlikely(!started_.load())) {
-        PUMP_WARN_LOG("manager is not started, can't restart timer");
+        pump_warn_log("manager is not started, can't restart timer");
         return false;
     }
     if (!new_timers_.enqueue(std::move(ptr))) {
-        PUMP_ERR_LOG("push timer to queue failed");
-        PUMP_ABORT();
+        pump_err_log("push timer to queue failed");
+        pump_abort();
     }
     return true;
 }
@@ -98,13 +99,14 @@ void manager::__observe_thread() {
 
     while (started_.load()) {
         if (!triggered_timers) {
-            triggered_timers.reset(object_create<time::timer_list>(),
-                                   object_delete<time::timer_list>);
+            triggered_timers.reset(
+                object_create<time::timer_list>(),
+                object_delete<time::timer_list>);
         }
 
         // Update check time point.
         now_time = get_clock_milliseconds();
-        next_observe_time = now_time + TIMER_DEFAULT_INTERVAL;
+        next_observe_time = now_time + default_interval;
 
         // Observe triggered timers.
         __observe(triggered_timers, next_observe_time, now_time);
@@ -113,9 +115,9 @@ void manager::__observe_thread() {
         if (triggered_timers->empty() && next_observe_time > now_time) {
             // Add new timer.
             // Reduce dequeue timeout by 1 milliseconds for time consuming.
-            if (new_timers_.dequeue(new_timer,
-                                    (next_observe_time - now_time - 1) *
-                                        1000)) {
+            if (new_timers_.dequeue(
+                    new_timer,
+                    (next_observe_time - now_time - 1) * 1000)) {
                 now_time = get_clock_milliseconds();
 
                 // Queue the new timer.
@@ -123,9 +125,10 @@ void manager::__observe_thread() {
 
                 // Try to queue more new timers.
                 while (new_timers_.try_dequeue(new_timer)) {
-                    __queue_timer(triggered_timers,
-                                  std::move(new_timer),
-                                  now_time);
+                    __queue_timer(
+                        triggered_timers,
+                        std::move(new_timer),
+                        now_time);
                 }
             }
         } else {
@@ -146,9 +149,10 @@ void manager::__observe_thread() {
     }
 }
 
-void manager::__observe(timer_list_sptr &tl,
-                        uint64_t &next_observe_time,
-                        uint64_t now) {
+void manager::__observe(
+    timer_list_sptr &tl,
+    uint64_t &next_observe_time,
+    uint64_t now) {
     if (!timers_.empty()) {
         auto end = timers_.end();
         auto beg = timers_.begin();

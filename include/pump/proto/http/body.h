@@ -111,7 +111,7 @@ class pump_lib body {
     // Parse finished flag
     bool is_parse_finished_;
 };
-DEFINE_SMART_POINTER_TYPE(body);
+DEFINE_SMART_POINTERS(body);
 
 }  // namespace http
 }  // namespace proto

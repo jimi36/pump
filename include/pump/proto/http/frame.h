@@ -23,24 +23,28 @@ namespace pump {
 namespace proto {
 namespace http {
 
-const uint8_t WS_OPT_SLICE = 0x00;
-const uint8_t WS_OPT_TEXT = 0x01;
-const uint8_t WS_OPT_BIN = 0x02;
-const uint8_t WS_OPT_CLOSE = 0x08;
-const uint8_t WS_OPT_PING = 0x09;
-const uint8_t WS_OPT_PONG = 0x0A;
-const uint8_t WS_OPT_END = 0xFF;
+const uint8_t ws_opt_slice = 0x00;
+const uint8_t ws_opt_text = 0x01;
+const uint8_t ws_opt_bin = 0x02;
+const uint8_t ws_opt_close = 0x08;
+const uint8_t ws_opt_ping = 0x09;
+const uint8_t ws_opt_pong = 0x0A;
+const uint8_t ws_opt_end = 0xFF;
 
 class pump_lib frame {
   public:
     /*********************************************************************************
      * Constructor
      ********************************************************************************/
-    frame(bool fin = true, uint8_t opt = WS_OPT_END, uint64_t payload_len = 0);
-    frame(bool fin,
-          uint8_t opt,
-          uint64_t payload_len,
-          const std::string &payload_mask_key);
+    frame(
+        bool fin = true,
+        uint8_t opt = ws_opt_end,
+        uint64_t payload_len = 0);
+    frame(
+        bool fin,
+        uint8_t opt,
+        uint64_t payload_len,
+        const std::string &payload_mask_key);
 
     /*********************************************************************************
      * unpack websocket frame header

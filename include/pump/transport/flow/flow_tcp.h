@@ -38,8 +38,8 @@ class flow_tcp : public flow_base {
     /*********************************************************************************
      * Init
      * Return results:
-     *     ERROR_OK    => success
-     *     ERROR_FAULT => error
+     *     error_none    => success
+     *     error_fault => error
      ********************************************************************************/
     error_code init(poll::channel_sptr &&ch, pump_socket fd);
 
@@ -54,18 +54,18 @@ class flow_tcp : public flow_base {
      * Want to send
      * Try sending data as much as possible.
      * Return results:
-     *      ERROR_OK    => send completely
-     *      ERROR_AGAIN => try again
-     *      ERROR_FAULT => error
+     *      error_none    => send completely
+     *      error_again => try again
+     *      error_fault => error
      ********************************************************************************/
     error_code want_to_send(toolkit::io_buffer *iob);
 
     /*********************************************************************************
      * Send
      * Return results:
-     *     ERROR_OK      => send completely
-     *     ERROR_AGAIN   => try again
-     *     ERROR_FAULT   => error
+     *     error_none      => send completely
+     *     error_again   => try again
+     *     error_fault   => error
      ********************************************************************************/
     error_code send();
 
@@ -80,7 +80,7 @@ class flow_tcp : public flow_base {
     // Send buffer
     toolkit::io_buffer *send_iob_;
 };
-DEFINE_SMART_POINTER_TYPE(flow_tcp);
+DEFINE_SMART_POINTERS(flow_tcp);
 
 }  // namespace flow
 }  // namespace transport
