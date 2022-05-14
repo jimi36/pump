@@ -40,10 +40,10 @@ class pump_lib timer : public std::enable_shared_from_this<timer> {
      * Create instance
      ********************************************************************************/
     pump_inline static timer_sptr create(
-        uint64_t timeout,
+        uint64_t timeout_ns,
         const timer_callback &cb,
         bool repeated = false) {
-        INLINE_OBJECT_CREATE(obj, timer, (timeout, cb, repeated));
+        INLINE_OBJECT_CREATE(obj, timer, (timeout_ns, cb, repeated));
         return timer_sptr(obj, object_delete<timer>);
     }
 
@@ -63,10 +63,10 @@ class pump_lib timer : public std::enable_shared_from_this<timer> {
     void handle_timeout();
 
     /*********************************************************************************
-     * Get overtime
+     * Get timeout 
      ********************************************************************************/
-    pump_inline uint64_t time() const {
-        return overtime_;
+    pump_inline uint64_t timeout() const {
+        return timeout_ns_;
     }
 
     /*********************************************************************************
@@ -85,12 +85,12 @@ class pump_lib timer : public std::enable_shared_from_this<timer> {
     /*********************************************************************************
      * Constructor
      ********************************************************************************/
-    timer(uint64_t timeout, const timer_callback &cb, bool repeated);
+    timer(uint64_t timeout_ns, const timer_callback &cb, bool repeated);
 
     /*********************************************************************************
      * Start
      ********************************************************************************/
-    bool __start(manager *queue);
+    bool __start(manager *mgr);
 
     /*********************************************************************************
      * Set state
@@ -107,18 +107,16 @@ class pump_lib timer : public std::enable_shared_from_this<timer> {
     }
 
   private:
-    // Timer queue
-    manager *queue_;
-    // Timer status
+    // Timer manager
+    manager *mgr_;
+    // Timer state
     std::atomic_int32_t state_;
     // Timer callback
     timer_callback cb_;
-    // Repeated status
+    // Repeated flag
     bool repeated_;
-    // Timeout with ms
-    uint64_t timeout_;
-    // Timeout time with ms
-    uint64_t overtime_;
+    // Timeout time
+    uint64_t timeout_ns_;
 };
 
 }  // namespace time

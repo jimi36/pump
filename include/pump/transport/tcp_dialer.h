@@ -37,12 +37,12 @@ class pump_lib tcp_dialer : public base_dialer,
     pump_inline static tcp_dialer_sptr create(
         const address &local_address,
         const address &remote_address,
-        int64_t connect_timeout = 0) {
+        uint64_t connect_timeout_ns = 0) {
         INLINE_OBJECT_CREATE(obj,
                              tcp_dialer,
                              (local_address,
                               remote_address,
-                              connect_timeout));
+                              connect_timeout_ns));
         return tcp_dialer_sptr(obj, object_delete<tcp_dialer>);
     }
 
@@ -95,7 +95,7 @@ class pump_lib tcp_dialer : public base_dialer,
     tcp_dialer(
         const address &local_address,
         const address &remote_address,
-        int64_t timeout) noexcept;
+        uint64_t timeout_ns) noexcept;
 
   private:
     // Dialer flow
@@ -127,7 +127,7 @@ class pump_lib tcp_sync_dialer
         service *sv,
         const address &local_address,
         const address &remote_address,
-        int64_t timeout = 0);
+        uint64_t timeout_ns = 0);
 
   protected:
     /*********************************************************************************

@@ -38,15 +38,15 @@ class pump_lib tls_dialer : public base_dialer,
     pump_inline static tls_dialer_sptr create(
         const address &local_address,
         const address &remote_address,
-        int64_t dial_timeout = 0,
-        int64_t handshake_timeout = 0) {
+        uint64_t dial_timeout_ns = 0,
+        uint64_t handshake_timeout_ns = 0) {
         INLINE_OBJECT_CREATE(obj,
                              tls_dialer,
                              (nullptr,
                               local_address,
                               remote_address,
-                              dial_timeout,
-                              handshake_timeout));
+                              dial_timeout_ns,
+                              handshake_timeout_ns));
         return tls_dialer_sptr(obj, object_delete<tls_dialer>);
     }
 
@@ -54,15 +54,15 @@ class pump_lib tls_dialer : public base_dialer,
         tls_credentials xcred,
         const address &local_address,
         const address &remote_address,
-        int64_t dial_timeout = 0,
-        int64_t handshake_timeout = 0) {
+        uint64_t dial_timeout_ns = 0,
+        uint64_t handshake_timeout_ns = 0) {
         INLINE_OBJECT_CREATE(obj,
                              tls_dialer,
                              (xcred,
                               local_address,
                               remote_address,
-                              dial_timeout,
-                              handshake_timeout));
+                              dial_timeout_ns,
+                              handshake_timeout_ns));
         return tls_dialer_sptr(obj, object_delete<tls_dialer>);
     }
 
@@ -131,15 +131,15 @@ class pump_lib tls_dialer : public base_dialer,
         void *xcred,
         const address &local_address,
         const address &remote_address,
-        int64_t dial_timeout,
-        int64_t handshake_timeout);
+        uint64_t dial_timeout_ns,
+        uint64_t handshake_timeout_ns);
 
   private:
     // Credentials
     tls_credentials xcred_;
 
     // Handshaker
-    int64_t handshake_timeout_;
+    uint64_t handshake_timeout_ns_;
     tls_handshaker_sptr handshaker_;
 
     // Dialer flow
@@ -172,8 +172,8 @@ class pump_lib tls_sync_dialer
         service *sv,
         const address &local_address,
         const address &remote_address,
-        int64_t connect_timeout,
-        int64_t handshake_timeout);
+        uint64_t connect_timeout_ns,
+        uint64_t handshake_timeout_ns);
 
   protected:
     /*********************************************************************************

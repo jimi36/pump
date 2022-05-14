@@ -8,8 +8,13 @@
             "name": "(gdb) 启动",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/build/test_timer",
-            "args": [],
+            "program": "${workspaceFolder}/build/test_transport",
+            "args": [
+                "tcp",
+                "c",
+                "127.0.0.1",
+                "10000"
+            ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
             "environment": [],

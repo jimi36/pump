@@ -40,12 +40,12 @@ class pump_lib tls_acceptor
     pump_inline static tls_acceptor_sptr create(
         tls_credentials xcerd,
         const address &listen_address,
-        int64_t handshake_timeout = 0) {
+        uint64_t handshake_timeout_ns = 0) {
         INLINE_OBJECT_CREATE(obj,
                              tls_acceptor,
                              (xcerd,
                               listen_address,
-                              handshake_timeout));
+                              handshake_timeout_ns));
         return tls_acceptor_sptr(obj, object_delete<tls_acceptor>);
     }
 
@@ -94,7 +94,7 @@ class pump_lib tls_acceptor
     tls_acceptor(
         tls_credentials xcred,
         const address &listen_address,
-        int64_t handshake_timeout) noexcept;
+        uint64_t handshake_timeout) noexcept;
 
     /*********************************************************************************
      * Open accept flow
@@ -126,7 +126,7 @@ class pump_lib tls_acceptor
     tls_credentials xcred_;
 
     // Handshake timeout
-    int64_t handshake_timeout_;
+    uint64_t handshake_timeout_ns_;
 
     // Handshakers
     std::mutex handshaker_mx_;

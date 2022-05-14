@@ -61,7 +61,7 @@ class tls_handshaker : public base_channel,
      ********************************************************************************/
     bool start(
         service *sv,
-        int64_t timeout,
+        uint64_t timeout_ns,
         const tls_handshaker_callbacks &cbs);
 
     /*********************************************************************************
@@ -125,7 +125,7 @@ class tls_handshaker : public base_channel,
     /*********************************************************************************
      * Start handshake timer
      ********************************************************************************/
-    bool __start_handshake_timer(int64_t timeout);
+    bool __start_handshake_timer(uint64_t timeout_ns);
 
     /*********************************************************************************
      * Stop handshake timer

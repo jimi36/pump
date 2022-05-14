@@ -23,8 +23,9 @@ namespace transport {
 tcp_dialer::tcp_dialer(
     const address &local_address,
     const address &remote_address,
-    int64_t timeout) noexcept :
-    base_dialer(transport_tcp_dialer, local_address, remote_address, timeout) {}
+    uint64_t timeout_ns) noexcept :
+    base_dialer(transport_tcp_dialer, local_address, remote_address, timeout_ns) {
+}
 
 tcp_dialer::~tcp_dialer() {
     __stop_dial_tracker();
@@ -176,7 +177,7 @@ base_transport_sptr tcp_sync_dialer::dial(
     service *sv,
     const address &local_address,
     const address &remote_address,
-    int64_t timeout) {
+    uint64_t timeout_ns) {
     if (dialer_) {
         return base_transport_sptr();
     }
@@ -188,7 +189,7 @@ base_transport_sptr tcp_sync_dialer::dial(
         pump_bind(&tcp_sync_dialer::on_timeouted, shared_from_this());
     cbs.stopped_cb = pump_bind(&tcp_sync_dialer::on_stopped);
 
-    dialer_ = tcp_dialer::create(local_address, remote_address, timeout);
+    dialer_ = tcp_dialer::create(local_address, remote_address, timeout_ns);
     if (!dialer_ || dialer_->start(sv, cbs) != error_none) {
         return base_transport_sptr();
     }

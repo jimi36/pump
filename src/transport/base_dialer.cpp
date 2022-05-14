@@ -50,11 +50,11 @@ void base_dialer::__stop_dial_tracker() {
 }
 
 bool base_dialer::__start_dial_timer(const time::timer_callback &cb) {
-    if (connect_timeout_ <= 0) {
+    if (connect_timeout_ns_ == 0) {
         return true;
     }
 
-    connect_timer_ = time::timer::create(connect_timeout_, cb);
+    connect_timer_ = time::timer::create(connect_timeout_ns_, cb);
     if (!connect_timer_) {
         pump_warn_log("new dialer's timer object failed");
         return false;

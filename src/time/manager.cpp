@@ -22,7 +22,7 @@
 namespace pump {
 namespace time {
 
-const static uint64_t default_interval = 100;
+const static uint64_t default_observe_interval_ns = 200 * 1000000; // 200 ms
 
 manager::manager() noexcept :
     started_(false) {}
@@ -93,10 +93,6 @@ void manager::__observe_thread() {
     // Triggered timers
     timer_list_sptr triggered_timers;
 
-    // Check time points
-    uint64_t now_time = 0;
-    uint64_t next_observe_time = 0;
-
     while (started_.load()) {
         if (!triggered_timers) {
             triggered_timers.reset(
@@ -104,38 +100,39 @@ void manager::__observe_thread() {
                 object_delete<time::timer_list>);
         }
 
-        // Update check time point.
-        now_time = get_clock_milliseconds();
-        next_observe_time = now_time + default_interval;
+        // Every loop max new timers count.
+        int32_t max_new_timers = 1024;
+
+        // Init check time point.
+        uint64_t now_time_ns = get_clock_nanoseconds();
+        uint64_t next_observe_time_ns = now_time_ns + default_observe_interval_ns;
 
         // Observe triggered timers.
-        __observe(triggered_timers, next_observe_time, now_time);
+        __observe(triggered_timers, next_observe_time_ns, now_time_ns);
+
+        // Update now time.
+        now_time_ns = get_clock_nanoseconds();
 
         // Wait until next observe time arrived.
-        if (triggered_timers->empty() && next_observe_time > now_time) {
-            // Add new timer.
-            // Reduce dequeue timeout by 1 milliseconds for time consuming.
-            if (new_timers_.dequeue(
-                    new_timer,
-                    (next_observe_time - now_time - 1) * 1000)) {
-                now_time = get_clock_milliseconds();
+        if (triggered_timers->empty() && next_observe_time_ns > now_time_ns) {
+            // Get new timer.
+            uint64_t wait_time_us = (next_observe_time_ns - now_time_ns) / 1000;
+            new_timers_.dequeue(new_timer, wait_time_us);
 
+            // Update now time.
+            now_time_ns = get_clock_nanoseconds();
+
+            if (new_timer) {
                 // Queue the new timer.
-                __queue_timer(triggered_timers, std::move(new_timer), now_time);
+                __queue_timer(new_timer, now_time_ns);
+                // Reduce max new timers count.
+                max_new_timers--;
+            }
+        }
 
-                // Try to queue more new timers.
-                while (new_timers_.try_dequeue(new_timer)) {
-                    __queue_timer(
-                        triggered_timers,
-                        std::move(new_timer),
-                        now_time);
-                }
-            }
-        } else {
-            // Try to queue more new timers.
-            while (new_timers_.try_dequeue(new_timer)) {
-                __queue_timer(triggered_timers, std::move(new_timer), now_time);
-            }
+        // Try to queue more new timers.
+        while (max_new_timers-- > 0 && new_timers_.try_dequeue(new_timer)) {
+            __queue_timer(new_timer, now_time_ns);
         }
 
         if (new_timer) {
@@ -151,20 +148,20 @@ void manager::__observe_thread() {
 
 void manager::__observe(
     timer_list_sptr &tl,
-    uint64_t &next_observe_time,
-    uint64_t now) {
+    uint64_t &next_time_ns,
+    uint64_t now_ns) {
     if (!timers_.empty()) {
         auto end = timers_.end();
         auto beg = timers_.begin();
         auto pos = timers_.begin();
 
-        while (pos != end && pos->first <= now) {
+        while (pos != end && pos->first <= now_ns) {
             tl->splice(tl->end(), std::move((pos++)->second));
         }
 
         // Update next observe time.
         if (pos != end) {
-            next_observe_time = pos->first;
+            next_time_ns = pos->first;
         }
 
         // Delete timeout timers.

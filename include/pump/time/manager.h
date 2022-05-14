@@ -95,21 +95,14 @@ class pump_lib manager : public toolkit::noncopyable {
      ********************************************************************************/
     void __observe(
         timer_list_sptr &tl,
-        uint64_t &next_observe_time,
-        uint64_t now);
+        uint64_t &next_time_ns,
+        uint64_t now_ns);
 
     /*********************************************************************************
      * Observe timers
      ********************************************************************************/
-    pump_inline void __queue_timer(
-        timer_list_sptr &tl,
-        timer_sptr &&ptr,
-        uint64_t now) {
-        if (ptr->time() <= now) {
-            tl->push_back(std::move(ptr));
-        } else {
-            timers_[ptr->time()].push_back(std::move(ptr));
-        }
+    pump_inline void __queue_timer(timer_sptr &ptr, uint64_t now_ns) {
+       timers_[ptr->timeout() + now_ns].push_back(ptr);
     }
 
   private:

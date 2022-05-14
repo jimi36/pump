@@ -24,14 +24,14 @@ tls_dialer::tls_dialer(
     tls_credentials xcred,
     const address &local_address,
     const address &remote_address,
-    int64_t dial_timeout,
-    int64_t handshake_timeout) :
+    uint64_t dial_timeout_ns,
+    uint64_t handshake_timeout_ns) :
     base_dialer(transport_tls_dialer,
                 local_address,
                 remote_address,
-                dial_timeout),
+                dial_timeout_ns),
     xcred_(xcred),
-    handshake_timeout_(handshake_timeout) {
+    handshake_timeout_ns_(handshake_timeout_ns) {
     if (xcred_ == nullptr) {
         xcred_ = new_client_tls_credentials();
     }
@@ -179,7 +179,7 @@ void tls_dialer::on_send_event() {
             &tls_dialer::on_handshake_stopped,
             shared_from_this(),
             _1);
-        if (!handshaker_->start(get_service(), handshake_timeout_, tls_cbs)) {
+        if (!handshaker_->start(get_service(), handshake_timeout_ns_, tls_cbs)) {
             pump_warn_log("start tls handshaker failed");
             if (__set_state(state_handshaking, state_error)) {
                 break;
@@ -231,7 +231,8 @@ void tls_dialer::on_handshaked(
 
 void tls_dialer::on_handshake_stopped(
     tls_dialer_wptr wptr,
-    tls_handshaker *handshaker) {}
+    tls_handshaker *handshaker) {
+}
 
 bool tls_dialer::__open_dial_flow() {
     // Init tls dialer flow.
@@ -269,8 +270,8 @@ base_transport_sptr tls_sync_dialer::dial(
     service *sv,
     const address &local_address,
     const address &remote_address,
-    int64_t connect_timeout,
-    int64_t handshake_timeout) {
+    uint64_t connect_timeout_ns,
+    uint64_t handshake_timeout_ns) {
     if (dialer_) {
         return base_transport_sptr();
     }
@@ -285,8 +286,8 @@ base_transport_sptr tls_sync_dialer::dial(
     dialer_ = tls_dialer::create(
         local_address,
         remote_address,
-        connect_timeout,
-        handshake_timeout);
+        connect_timeout_ns,
+        handshake_timeout_ns);
     if (!dialer_ || dialer_->start(sv, cbs) != error_none) {
         return base_transport_sptr();
     }

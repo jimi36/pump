@@ -23,10 +23,10 @@ namespace transport {
 tls_acceptor::tls_acceptor(
     tls_credentials xcred,
     const address &listen_address,
-    int64_t handshake_timeout) noexcept :
+    uint64_t handshake_timeout_ns) noexcept :
     base_acceptor(transport_tls_acceptor, listen_address),
     xcred_(xcred),
-    handshake_timeout_(handshake_timeout) {}
+    handshake_timeout_ns_(handshake_timeout_ns) {}
 
 tls_acceptor::~tls_acceptor() {
     __stop_all_handshakers();
@@ -117,7 +117,7 @@ void tls_acceptor::on_read_event() {
             }
             if (!handshaker->start(
                     get_service(),
-                    handshake_timeout_,
+                    handshake_timeout_ns_,
                     handshaker_cbs)) {
                 pump_warn_log("start tls handshaker failed");
                 __remove_handshaker(handshaker);

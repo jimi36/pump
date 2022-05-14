@@ -50,7 +50,7 @@ bool tls_handshaker::init(
 
 bool tls_handshaker::start(
     service *sv,
-    int64_t timeout,
+    uint64_t timeout_ns,
     const tls_handshaker_callbacks &cbs) {
     if (sv == nullptr) {
         pump_warn_log("service is invalid");
@@ -85,7 +85,7 @@ bool tls_handshaker::start(
         }
 
         // Start handshake timeout timer
-        if (!__start_handshake_timer(timeout)) {
+        if (!__start_handshake_timer(timeout_ns)) {
             pump_warn_log("starting tls handshaker's timer failed");
             break;
         }
@@ -232,13 +232,13 @@ void tls_handshaker::__process_handshake() {
     }
 }
 
-bool tls_handshaker::__start_handshake_timer(int64_t timeout) {
-    if (timeout <= 0) {
+bool tls_handshaker::__start_handshake_timer(uint64_t timeout_ns) {
+    if (timeout_ns == 0) {
         return true;
     }
 
     auto cb = pump_bind(&tls_handshaker::on_timeout, shared_from_this());
-    if (!(timer_ = time::timer::create(timeout, cb))) {
+    if (!(timer_ = time::timer::create(timeout_ns, cb))) {
         return false;
     }
 

@@ -28,12 +28,12 @@ constexpr static int32_t state_started = 2;
 constexpr static int32_t state_pending = 3;
 
 timer::timer(uint64_t timeout, const timer_callback &cb, bool repeated) :
-    queue_(nullptr),
+    mgr_(nullptr),
     state_(state_none),
     cb_(cb),
     repeated_(repeated),
-    timeout_(timeout),
-    overtime_(0) {}
+    timeout_ns_(timeout) {
+}
 
 void timer::stop() {
     __force_set_state(state_stopped);
@@ -45,10 +45,8 @@ void timer::handle_timeout() {
 
         if (pump_likely(repeated_)) {
             if (__set_state(state_pending, state_started)) {
-                // Update overtime.
-                overtime_ = get_clock_milliseconds() + timeout_;
-                // Add to timer queue.
-                queue_->restart_timer(shared_from_this());
+                // Add to timer manager.
+                mgr_->restart_timer(shared_from_this());
             }
         } else {
             __set_state(state_pending, state_stopped);
@@ -60,15 +58,13 @@ bool timer::is_started() const {
     return state_.load() > state_stopped;
 }
 
-bool timer::__start(manager *queue) {
+bool timer::__start(manager *mgr) {
     if (!__set_state(state_none, state_started)) {
         return false;
     }
 
-    // Save timer queue.
-    queue_ = queue;
-    // Update overtime.
-    overtime_ = get_clock_milliseconds() + timeout_;
+    // Save timer manager.
+    mgr_ = mgr;
 
     return true;
 }

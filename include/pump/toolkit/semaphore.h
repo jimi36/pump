@@ -100,8 +100,8 @@ class pump_lib semaphore : public noncopyable {
         return WaitForSingleObject(sema_, (unsigned long)(usecs / 1000)) == 0;
 #elif defined(OS_LINUX)
         struct timespec ts;
-        const int32_t usecs_in_1_sec = 1000000;
-        const int32_t nsecs_in_1_sec = 1000000000;
+        const static int32_t usecs_in_1_sec = 1000000;
+        const static int32_t nsecs_in_1_sec = 1000000000;
         clock_gettime(CLOCK_REALTIME, &ts);
         ts.tv_sec += (time_t)(usecs / usecs_in_1_sec);
         ts.tv_nsec += (long)(usecs % usecs_in_1_sec) * 1000;

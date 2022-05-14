@@ -31,11 +31,11 @@ class pump_lib base_dialer : public base_channel {
         int32_t type,
         const address &local_address,
         const address &remote_address,
-        int64_t connect_timeout) noexcept :
+        uint64_t connect_timeout_ns) noexcept :
         base_channel(type, nullptr, -1),
         local_address_(local_address),
         remote_address_(remote_address),
-        connect_timeout_(connect_timeout) {}
+        connect_timeout_ns_(connect_timeout_ns) {}
 
     /*********************************************************************************
      * Deconstructor
@@ -123,7 +123,7 @@ class pump_lib base_dialer : public base_channel {
     address remote_address_;
 
     // Connect timer
-    int64_t connect_timeout_;
+    uint64_t connect_timeout_ns_;
     std::shared_ptr<time::timer> connect_timer_;
 
     // Channel tracker

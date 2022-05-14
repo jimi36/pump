@@ -244,7 +244,7 @@ void start_tcp_client(const std::string &ip,
     dial_mx.unlock();
 
     time::timer_callback cb = pump_bind(&time_report::on_timer_timeout);
-    time::timer_sptr t = time::timer::create(1000 * 1, cb, true);
+    time::timer_sptr t = time::timer::create(1000000000, cb, true);
     sv->start_timer(t);
 
     sv->wait_stopped();

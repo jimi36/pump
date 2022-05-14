@@ -26,6 +26,13 @@ const static uint64_t us_from_ms = 1000;
 const static uint64_t ms_from_second = us_from_ms;
 const static uint64_t us_from_second = us_from_ms * us_from_ms;
 
+uint64_t get_clock_nanoseconds() {
+    return std::chrono::time_point_cast<std::chrono::nanoseconds>(
+               std::chrono::high_resolution_clock::now())
+        .time_since_epoch()
+        .count();
+}
+
 uint64_t get_clock_microseconds() {
     return std::chrono::time_point_cast<std::chrono::microseconds>(
                std::chrono::high_resolution_clock::now())

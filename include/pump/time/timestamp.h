@@ -26,6 +26,11 @@ namespace pump {
 namespace time {
 
 /*********************************************************************************
+ * Get clock nanoseconds, just for calculating time difference
+ ********************************************************************************/
+pump_lib uint64_t get_clock_nanoseconds();
+
+/*********************************************************************************
  * Get clock microseconds, just for calculating time difference
  ********************************************************************************/
 pump_lib uint64_t get_clock_microseconds();
