@@ -37,7 +37,8 @@ class fl_mc_queue : public noncopyable {
 
     // Element node
     struct element_node {
-        element_node() : ready(0), next(this + 1) {}
+        element_node() :
+            ready(0), next(this + 1) {}
         volatile int32_t ready;
         element_node *next;
         char data[element_size];
@@ -92,7 +93,8 @@ class fl_mc_queue : public noncopyable {
     /*********************************************************************************
      * Push
      ********************************************************************************/
-    template <typename U> bool push(U &&data) {
+    template <typename U>
+    bool push(U &&data) {
         // Get current head node as write node.
         element_node *next_write_node = head_.load(std::memory_order_relaxed);
         do {
@@ -107,10 +109,11 @@ class fl_mc_queue : public noncopyable {
             if (next_write_node->ready == 0 &&
                 next_write_node->next !=
                     tail_.load(std::memory_order_relaxed)) {
-                if (head_.compare_exchange_strong(next_write_node,
-                                                  next_write_node->next,
-                                                  std::memory_order_acquire,
-                                                  std::memory_order_relaxed)) {
+                if (head_.compare_exchange_strong(
+                        next_write_node,
+                        next_write_node->next,
+                        std::memory_order_acquire,
+                        std::memory_order_relaxed)) {
                     break;
                 }
             } else {
@@ -132,7 +135,8 @@ class fl_mc_queue : public noncopyable {
     /*********************************************************************************
      * Pop
      ********************************************************************************/
-    template <typename U> bool pop(U &data) {
+    template <typename U>
+    bool pop(U &data) {
         // Next read node.
         element_node *next_read_node = nullptr;
         // Get current tail node.
@@ -148,10 +152,11 @@ class fl_mc_queue : public noncopyable {
             }
 
             // Update tail node to next node.
-            if (tail_.compare_exchange_strong(current_tail,
-                                              next_read_node,
-                                              std::memory_order_release,
-                                              std::memory_order_relaxed)) {
+            if (tail_.compare_exchange_strong(
+                    current_tail,
+                    next_read_node,
+                    std::memory_order_release,
+                    std::memory_order_relaxed)) {
                 break;
             }
         } while (true);
@@ -229,10 +234,11 @@ class fl_mc_queue : public noncopyable {
      ********************************************************************************/
     bool __extend_list(element_node *&enode) {
         // Try to lock the element list head node.
-        if (!head_.compare_exchange_strong(enode,
-                                           nullptr,
-                                           std::memory_order_acquire,
-                                           std::memory_order_relaxed)) {
+        if (!head_.compare_exchange_strong(
+                enode,
+                nullptr,
+                std::memory_order_acquire,
+                std::memory_order_relaxed)) {
             return false;
         }
 

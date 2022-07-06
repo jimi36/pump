@@ -27,7 +27,10 @@ constexpr static int32_t state_stopped = 1;
 constexpr static int32_t state_started = 2;
 constexpr static int32_t state_pending = 3;
 
-timer::timer(uint64_t timeout, const timer_callback &cb, bool repeated) :
+timer::timer(
+    uint64_t timeout,
+    const timer_callback &cb,
+    bool repeated) :
     mgr_(nullptr),
     state_(state_none),
     cb_(cb),

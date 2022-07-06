@@ -72,20 +72,22 @@ typedef struct _AFD_POLL_EVENT {
     IO_STATUS_BLOCK iosb;
 } AFD_POLL_EVENT, *PAFD_POLL_EVENT;
 
-typedef VOID(NTAPI *PIO_APC_ROUTINE)(PVOID ApcContext,
-                                     PIO_STATUS_BLOCK IoStatusBlock,
-                                     ULONG Reserved);
+typedef VOID(NTAPI *PIO_APC_ROUTINE)(
+    PVOID ApcContext,
+    PIO_STATUS_BLOCK IoStatusBlock,
+    ULONG Reserved);
 
-typedef NTSTATUS(NTAPI *FnNtDeviceIoControlFile)(HANDLE FileHandle,
-                                                 HANDLE Event,
-                                                 PIO_APC_ROUTINE ApcRoutine,
-                                                 PVOID ApcContext,
-                                                 PIO_STATUS_BLOCK IoStatusBlock,
-                                                 ULONG IoControlCode,
-                                                 PVOID InputBuffer,
-                                                 ULONG InputBufferLength,
-                                                 PVOID OutputBuffer,
-                                                 ULONG OutputBufferLength);
+typedef NTSTATUS(NTAPI *FnNtDeviceIoControlFile)(
+    HANDLE FileHandle,
+    HANDLE Event,
+    PIO_APC_ROUTINE ApcRoutine,
+    PVOID ApcContext,
+    PIO_STATUS_BLOCK IoStatusBlock,
+    ULONG IoControlCode,
+    PVOID InputBuffer,
+    ULONG InputBufferLength,
+    PVOID OutputBuffer,
+    ULONG OutputBufferLength);
 extern FnNtDeviceIoControlFile NtDeviceIoControlFile;
 
 typedef struct _UNICODE_STRING {

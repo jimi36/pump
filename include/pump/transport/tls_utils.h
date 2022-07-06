@@ -47,12 +47,14 @@ tls_credentials new_client_tls_credentials();
 /*********************************************************************************
  * Load tls credentials.
  ********************************************************************************/
-tls_credentials load_tls_credentials_from_file(bool client,
-                                               const std::string &cert,
-                                               const std::string &key);
-tls_credentials load_tls_credentials_from_memory(bool client,
-                                                 const std::string &cert,
-                                                 const std::string &key);
+tls_credentials load_tls_credentials_from_file(
+    bool client,
+    const std::string &cert,
+    const std::string &key);
+tls_credentials load_tls_credentials_from_memory(
+    bool client,
+    const std::string &cert,
+    const std::string &key);
 
 /*********************************************************************************
  * Delete tls certificate.
@@ -63,9 +65,10 @@ void delete_tls_credentials(tls_credentials xcred);
  * New tls session
  * This will new ssl context, net read buffer and net send buffer.
  ********************************************************************************/
-tls_session *new_tls_session(bool client,
-                             pump_socket fd,
-                             tls_credentials xcred);
+tls_session *new_tls_session(
+    bool client,
+    pump_socket fd,
+    tls_credentials xcred);
 
 /*********************************************************************************
  * Delete tls session
@@ -92,13 +95,19 @@ bool tls_has_unread_data(tls_session *session);
  * Read
  * If success return read size, else return 0.
  ********************************************************************************/
-int32_t tls_read(tls_session *session, char *b, int32_t size);
+int32_t tls_read(
+    tls_session *session,
+    char *b,
+    int32_t size);
 
 /*********************************************************************************
  * Send
  * If success return send size, else return 0.
  ********************************************************************************/
-int32_t tls_send(tls_session *session, const char *b, int32_t size);
+int32_t tls_send(
+    tls_session *session,
+    const char *b,
+    int32_t size);
 
 }  // namespace transport
 }  // namespace pump

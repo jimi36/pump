@@ -56,7 +56,10 @@ pump_lib int32_t random();
  * Random a value between min and max.
  ********************************************************************************/
 template <typename T>
-pump_lib T random(uint32_t seed, T min, T max) {
+pump_lib T random(
+    uint32_t seed,
+    T min,
+    T max) {
     std::default_random_engine e(seed);
     std::uniform_int_distribution<T> u(min, max);
     return u(e);
@@ -66,7 +69,11 @@ pump_lib T random(uint32_t seed, T min, T max) {
  * Random an array with value between min and max.
  ********************************************************************************/
 template <typename T>
-pump_lib std::vector<T> random(uint32_t seed, T min, T max, int32_t count) {
+pump_lib std::vector<T> random(
+    uint32_t seed,
+    T min,
+    T max,
+    int32_t count) {
     std::vector<T> out(count, 0);
     std::default_random_engine e(seed);
     std::uniform_int_distribution<T> u(min, max);

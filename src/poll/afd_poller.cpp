@@ -104,8 +104,9 @@ HANDLE afd_create_device_handle(HANDLE iocp_handle) {
         0,
         nullptr,
         0);
-    PUMP_ABORT_WITH_LOG(status != STATUS_SUCCESS,
-                        "afd_create_device_handle: create NT file failed");
+    if (status != STATUS_SUCCESS) {
+        pump_abort_with_log("afd_create_device_handle: create NT file failed");
+    }
 
     if (CreateIoCompletionPort(
             afd_device_handle,
@@ -115,7 +116,7 @@ HANDLE afd_create_device_handle(HANDLE iocp_handle) {
         SetFileCompletionNotificationModes(
             afd_device_handle,
             FILE_SKIP_SET_EVENT_ON_HANDLE) == FALSE) {
-        PUMP_ABORT_WITH_LOG("afd_create_device_handle: NT file bind iocp handle failed")
+        pump_abort_with_log("afd_create_device_handle: NT file bind iocp handle failed")
     }
 
     return afd_device_handle;
@@ -129,7 +130,11 @@ afd_poller::afd_poller() noexcept :
     max_event_count_(1024),
     cur_event_count_(0) {
 #if defined(PUMP_HAVE_IOCP)
-    iocp_handler_ = CreateIoCompletionPort(INVALID_HANDLE_VALUE, nullptr, 0, 0);
+    iocp_handler_ = CreateIoCompletionPort(
+        INVALID_HANDLE_VALUE,
+        nullptr,
+        0,
+        0);
     if (iocp_handler_ == nullptr) {
         pump_err_log("create iocp headler failed");
         pump_abort();
@@ -182,9 +187,12 @@ bool afd_poller::__uninstall_channel_tracker(channel_tracker *tracker) {
     }
 
     IO_STATUS_BLOCK cancel_iosb;
-    NTSTATUS cancel_status =
-        NtCancelIoFileEx(afd_device_handler_, &(event->iosb), &cancel_iosb);
-    if (cancel_status == STATUS_SUCCESS || cancel_status == STATUS_NOT_FOUND) {
+    NTSTATUS cancel_status = NtCancelIoFileEx(
+        afd_device_handler_,
+        &(event->iosb),
+        &cancel_iosb);
+    if (cancel_status == STATUS_SUCCESS ||
+        cancel_status == STATUS_NOT_FOUND) {
         cur_event_count_.fetch_sub(1, std::memory_order_relaxed);
         return true;
     }
@@ -233,8 +241,7 @@ void afd_poller::__poll(int32_t timeout) {
     auto cur_event_count = cur_event_count_.load(std::memory_order_relaxed);
     if (pump_unlikely(cur_event_count > max_event_count_)) {
         max_event_count_ = cur_event_count;
-        events_ =
-            pump_realloc(events_, sizeof(OVERLAPPED_ENTRY) * max_event_count_);
+        events_ = pump_realloc(events_, sizeof(OVERLAPPED_ENTRY) * max_event_count_);
         if (events_ == nullptr) {
             pump_err_log("reallocate afd events memory failed");
             pump_abort();

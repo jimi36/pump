@@ -40,13 +40,14 @@ class pump_lib tls_dialer : public base_dialer,
         const address &remote_address,
         uint64_t dial_timeout_ns = 0,
         uint64_t handshake_timeout_ns = 0) {
-        INLINE_OBJECT_CREATE(obj,
-                             tls_dialer,
-                             (nullptr,
-                              local_address,
-                              remote_address,
-                              dial_timeout_ns,
-                              handshake_timeout_ns));
+        INLINE_OBJECT_CREATE(
+            obj,
+            tls_dialer,
+            (nullptr,
+             local_address,
+             remote_address,
+             dial_timeout_ns,
+             handshake_timeout_ns));
         return tls_dialer_sptr(obj, object_delete<tls_dialer>);
     }
 
@@ -56,13 +57,14 @@ class pump_lib tls_dialer : public base_dialer,
         const address &remote_address,
         uint64_t dial_timeout_ns = 0,
         uint64_t handshake_timeout_ns = 0) {
-        INLINE_OBJECT_CREATE(obj,
-                             tls_dialer,
-                             (xcred,
-                              local_address,
-                              remote_address,
-                              dial_timeout_ns,
-                              handshake_timeout_ns));
+        INLINE_OBJECT_CREATE(
+            obj,
+            tls_dialer,
+            (xcred,
+             local_address,
+             remote_address,
+             dial_timeout_ns,
+             handshake_timeout_ns));
         return tls_dialer_sptr(obj, object_delete<tls_dialer>);
     }
 

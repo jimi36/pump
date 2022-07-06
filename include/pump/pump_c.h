@@ -133,7 +133,10 @@ struct pump_c_acceptor_callbacks {
  ********************************************************************************/
 struct pump_c_dialer_callbacks {
     // Dialed callback
-    void (*dialed_cb)(pump_c_dialer, pump_c_transport, int);
+    void (*dialed_cb)(
+        pump_c_dialer,
+        pump_c_transport,
+        int);
     // Dialer timouted callback
     void (*timeouted_cb)(pump_c_dialer);
     // Dialer stopped callback
@@ -145,9 +148,17 @@ struct pump_c_dialer_callbacks {
  ********************************************************************************/
 struct pump_c_transport_callbacks {
     // Read callback for tcp and tls
-    void (*read_cb)(pump_c_transport, const char *, int);
+    void (*read_cb)(
+        pump_c_transport,
+        const char *,
+        int);
     // Read from callback for udp
-    void (*read_from_cb)(pump_c_transport, const char *, int, const char *, int);
+    void (*read_from_cb)(
+        pump_c_transport,
+        const char *,
+        int,
+        const char *,
+        int);
     // Transport disconnected callback
     void (*disconnected_cb)(pump_c_transport);
     // Transport stopped callback

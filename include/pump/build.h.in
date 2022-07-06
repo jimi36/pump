@@ -50,10 +50,8 @@
 #endif
 
 #define @pump_WITH_TLS@
-#if defined(WITH_OPENSSL)
-#define PUMP_HAVE_OPENSSL
-#elif defined(WITH_GNUTLS)
-#define PUMP_HAVE_GNUTLS
+#if defined(WITH_TLS)
+#define PUMP_HAVE_TLS
 #endif
 
 #define @pump_WITH_JEMALLOC@

@@ -188,7 +188,10 @@ bool connection::is_upgraded() const {
     return state_.load() == state_upgraded;
 }
 
-void connection::on_read(connection_wptr wptr, const char *b, int32_t size) {
+void connection::on_read(
+    connection_wptr wptr,
+    const char *b,
+    int32_t size) {
     auto conn = wptr.lock();
     if (conn) {
         bool cached = false;

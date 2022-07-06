@@ -8,7 +8,9 @@ namespace pump {
 namespace toolkit {
 
 base_buffer::base_buffer() noexcept :
-    owner_(true), raw_(nullptr), raw_size_(0) {}
+    owner_(true),
+    raw_(nullptr),
+    raw_size_(0) {}
 
 base_buffer::~base_buffer() {
     if (owner_ && raw_ != nullptr) {
@@ -51,16 +53,15 @@ bool base_buffer::__init_by_copy(const char *b, uint32_t size) {
 }
 
 bool base_buffer::__init_by_reference(const char *b, uint32_t size) {
-    if (b == nullptr || size == 0) {
+    if (raw_ == nullptr ||
+        b == nullptr ||
+        size == 0) {
         return false;
     }
-    if (raw_ == nullptr) {
-        owner_ = false;
-        raw_ = (char *)b;
-        raw_size_ = size;
-        return true;
-    }
-    return false;
+    owner_ = false;
+    raw_ = (char *)b;
+    raw_size_ = size;
+    return true;
 }
 
 bool io_buffer::write(const char *b, uint32_t size) {

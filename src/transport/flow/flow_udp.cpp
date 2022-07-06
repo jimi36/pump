@@ -60,8 +60,16 @@ int32_t flow_udp::init(poll::channel_sptr &&ch, const address &bind_address) {
     return error_none;
 }
 
-int32_t flow_udp::send(const char *b, int32_t size, const address &to) {
-    return net::send_to(fd_, b, size, (struct sockaddr *)to.get(), to.len());
+int32_t flow_udp::send(
+    const char *b,
+    int32_t size,
+    const address &to) {
+    return net::send_to(
+        fd_,
+        b,
+        size,
+        (struct sockaddr *)to.get(),
+        to.len());
 }
 
 }  // namespace flow

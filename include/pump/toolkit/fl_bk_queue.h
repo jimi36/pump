@@ -72,8 +72,8 @@ class fl_bk_queue : public noncopyable {
             int32_t beg = read_index_.load();
             int32_t end = write_index_.load();
             for (int32_t i = beg; i < end; i++) {
-                ((element_type *)nodes_[__count_to_index(i)].data)
-                    ->~element_type();
+                int32_t idx = __count_to_index(i);
+                ((element_type *)nodes_[idx].data)->~element_type();
             }
             pump_free(nodes_);
         }

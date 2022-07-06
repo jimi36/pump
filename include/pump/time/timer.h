@@ -63,7 +63,7 @@ class pump_lib timer : public std::enable_shared_from_this<timer> {
     void handle_timeout();
 
     /*********************************************************************************
-     * Get timeout 
+     * Get timeout
      ********************************************************************************/
     pump_inline uint64_t timeout() const {
         return timeout_ns_;
@@ -85,7 +85,10 @@ class pump_lib timer : public std::enable_shared_from_this<timer> {
     /*********************************************************************************
      * Constructor
      ********************************************************************************/
-    timer(uint64_t timeout_ns, const timer_callback &cb, bool repeated);
+    timer(
+        uint64_t timeout_ns,
+        const timer_callback &cb,
+        bool repeated);
 
     /*********************************************************************************
      * Start

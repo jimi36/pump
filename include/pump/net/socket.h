@@ -72,7 +72,10 @@ pump_lib bool set_noblock(pump_socket fd, int32_t noblock);
 /*********************************************************************************
  * Set linger flag
  ********************************************************************************/
-pump_lib bool set_linger(pump_socket fd, uint16_t on, uint16_t linger);
+pump_lib bool set_linger(
+    pump_socket fd,
+    uint16_t on,
+    uint16_t linger);
 
 /*********************************************************************************
  * Set read buffer size
@@ -116,7 +119,10 @@ pump_lib bool set_udp_conn_reset(pump_socket fd, bool enable);
 /*********************************************************************************
  * Bind address
  ********************************************************************************/
-pump_lib bool bind(pump_socket fd, struct sockaddr *addr, int32_t addrlen);
+pump_lib bool bind(
+    pump_socket fd,
+    struct sockaddr *addr,
+    int32_t addrlen);
 
 /*********************************************************************************
  * Listen socket
@@ -134,12 +140,18 @@ pump_lib pump_socket accept(
 /*********************************************************************************
  * Connect
  ********************************************************************************/
-pump_lib bool connect(pump_socket fd, struct sockaddr *addr, int32_t addrlen);
+pump_lib bool connect(
+    pump_socket fd,
+    struct sockaddr *addr,
+    int32_t addrlen);
 
 /*********************************************************************************
  * Read
  ********************************************************************************/
-pump_lib int32_t read(pump_socket fd, char *b, int32_t size);
+pump_lib int32_t read(
+    pump_socket fd,
+    char *b,
+    int32_t size);
 
 /*********************************************************************************
  * Readfrom
@@ -154,7 +166,10 @@ pump_lib int32_t read_from(
 /*********************************************************************************
  * Send
  ********************************************************************************/
-pump_lib int32_t send(pump_socket fd, const char *b, int32_t size);
+pump_lib int32_t send(
+    pump_socket fd,
+    const char *b,
+    int32_t size);
 
 /*********************************************************************************
  * Sendto

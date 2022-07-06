@@ -277,10 +277,14 @@ base_transport_sptr tls_sync_dialer::dial(
     }
 
     dialer_callbacks cbs;
-    cbs.dialed_cb =
-        pump_bind(&tls_sync_dialer::on_dialed, shared_from_this(), _1, _2);
-    cbs.timeouted_cb =
-        pump_bind(&tls_sync_dialer::on_timeouted, shared_from_this());
+    cbs.dialed_cb = pump_bind(
+        &tls_sync_dialer::on_dialed,
+        shared_from_this(),
+        _1,
+        _2);
+    cbs.timeouted_cb = pump_bind(
+        &tls_sync_dialer::on_timeouted,
+        shared_from_this());
     cbs.stopped_cb = pump_bind(&tls_sync_dialer::on_stopped);
 
     dialer_ = tls_dialer::create(

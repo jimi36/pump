@@ -97,9 +97,14 @@ int32_t random() {
 std::string gbk_to_utf8(const std::string &in) {
     std::string out;
 #if !defined(PUMP_HAVE_ICONV_HEADER)
-    std::wstring wstr(MultiByteToWideChar(CP_ACP, 0, in.c_str(), -1, NULL, 0) -
-                          1,
-                      wchar_t(0));
+    int32_t len = MultiByteToWideChar(
+        CP_ACP,
+        0,
+        in.c_str(),
+        -1,
+        nullptr,
+        0);
+    std::wstring wstr(len - 1, wchar_t(0));
     MultiByteToWideChar(CP_ACP,
                         0,
                         in.c_str(),
@@ -107,24 +112,23 @@ std::string gbk_to_utf8(const std::string &in) {
                         (wchar_t *)wstr.data(),
                         (int32_t)wstr.size());
 
-    std::string str(WideCharToMultiByte(CP_UTF8,
-                                        0,
-                                        (wchar_t *)wstr.data(),
-                                        -1,
-                                        NULL,
-                                        0,
-                                        NULL,
-                                        NULL) -
-                        1,
-                    char(0));
+    len = WideCharToMultiByte(CP_UTF8,
+                              0,
+                              (wchar_t *)wstr.data(),
+                              -1,
+                              nullptr,
+                              0,
+                              nullptr,
+                              nullptr);
+    std::string str(len - 1, char(0));
     WideCharToMultiByte(CP_UTF8,
                         0,
                         (wchar_t *)wstr.data(),
                         -1,
                         (char *)str.data(),
                         (int32_t)str.size(),
-                        NULL,
-                        NULL);
+                        nullptr,
+                        nullptr);
 
     out.append(str.data(), str.size());
 #else
@@ -150,8 +154,14 @@ std::string gbk_to_utf8(const std::string &in) {
 std::string utf8_to_gbk(const std::string &in) {
     std::string out;
 #if !defined(PUMP_HAVE_ICONV_HEADER)
-    std::wstring wstr(MultiByteToWideChar(CP_UTF8, 0, in.c_str(), -1, NULL, 0),
-                      wchar_t(0));
+    int32_t len = MultiByteToWideChar(
+        CP_UTF8,
+        0,
+        in.c_str(),
+        -1,
+        nullptr,
+        0);
+    std::wstring wstr(len, wchar_t(0));
     MultiByteToWideChar(CP_UTF8,
                         0,
                         (LPCSTR)in.c_str(),
@@ -159,17 +169,24 @@ std::string utf8_to_gbk(const std::string &in) {
                         (wchar_t *)wstr.data(),
                         (int32_t)wstr.size() - 1);
 
-    std::string str(
-        WideCharToMultiByte(CP_ACP, 0, wstr.data(), -1, NULL, 0, NULL, NULL),
-        0);
+    len = WideCharToMultiByte(
+        CP_ACP,
+        0,
+        wstr.data(),
+        -1,
+        nullptr,
+        0,
+        nullptr,
+        nullptr);
+    std::string str(len, 0);
     WideCharToMultiByte(CP_ACP,
                         0,
                         wstr.data(),
                         -1,
                         (char *)str.data(),
                         (int32_t)str.size() - 1,
-                        NULL,
-                        NULL);
+                        nullptr,
+                        nullptr);
 
     out.append(str.data(), str.size() - 1);
 #else
@@ -191,8 +208,9 @@ std::string utf8_to_gbk(const std::string &in) {
     return std::forward<std::string>(out);
 }
 
-std::string join_strings(const std::vector<std::string> &src,
-                         const std::string &sep) {
+std::string join_strings(
+    const std::vector<std::string> &src,
+    const std::string &sep) {
     std::string out;
 
     if (src.empty()) {
@@ -209,8 +227,9 @@ std::string join_strings(const std::vector<std::string> &src,
     return std::forward<std::string>(out);
 }
 
-std::vector<std::string> split_string(const std::string &src,
-                                      const std::string &sep) {
+std::vector<std::string> split_string(
+    const std::string &src,
+    const std::string &sep) {
     std::regex regx(sep);
     std::vector<std::string> result;
     std::sregex_token_iterator iter(src.begin(), src.end(), regx, -1);

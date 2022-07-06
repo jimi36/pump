@@ -24,7 +24,7 @@ namespace pump {
 namespace poll {
 
 #if defined(PUMP_HAVE_EPOLL)
-//const static uint32_t EL_TRI_TYPE = 0;  // (EPOLLET)
+// const static uint32_t EL_TRI_TYPE = 0;  // (EPOLLET)
 const static uint32_t epoll_read = (EPOLLONESHOT | EPOLLIN | EPOLLPRI | EPOLLRDHUP);
 const static uint32_t epoll_send = (EPOLLONESHOT | EPOLLOUT);
 const static uint32_t epoll_error = (EPOLLERR | EPOLLHUP);
@@ -72,7 +72,11 @@ bool epoll_poller::__install_channel_tracker(channel_tracker *tracker) {
     } else if (expected_event & io_send) {
         event->events = epoll_send;
     }
-    if (epoll_ctl(fd_, EPOLL_CTL_ADD, tracker->get_fd(), event) == 0) {
+    if (epoll_ctl(
+            fd_,
+            EPOLL_CTL_ADD,
+            tracker->get_fd(),
+            event) == 0) {
         cur_event_count_.fetch_add(1, std::memory_order_relaxed);
         return true;
     }
@@ -84,7 +88,11 @@ bool epoll_poller::__install_channel_tracker(channel_tracker *tracker) {
 bool epoll_poller::__uninstall_channel_tracker(channel_tracker *tracker) {
 #if defined(PUMP_HAVE_EPOLL)
     auto event = tracker->get_event();
-    if (epoll_ctl(fd_, EPOLL_CTL_DEL, tracker->get_fd(), event) == 0) {
+    if (epoll_ctl(
+            fd_,
+            EPOLL_CTL_DEL,
+            tracker->get_fd(),
+            event) == 0) {
         cur_event_count_.fetch_sub(1, std::memory_order_relaxed);
         return true;
     } else if (errno == ENOENT) {
@@ -105,7 +113,11 @@ bool epoll_poller::__resume_channel_tracker(channel_tracker *tracker) {
     } else if (expected_event & io_send) {
         event->events = epoll_send;
     }
-    if (epoll_ctl(fd_, EPOLL_CTL_MOD, tracker->get_fd(), event) == 0) {
+    if (epoll_ctl(
+            fd_,
+            EPOLL_CTL_MOD,
+            tracker->get_fd(),
+            event) == 0) {
         return true;
     }
 #endif

@@ -29,7 +29,11 @@ address::address() noexcept :
 address::address(const std::string &ip, uint16_t port) :
     is_v6_(false),
     addrlen_(sizeof(struct sockaddr_in)) {
-    if (net::string_to_address(ip, port, (struct sockaddr *)addr_, &addrlen_)) {
+    if (net::string_to_address(
+            ip,
+            port,
+            (struct sockaddr *)addr_,
+            &addrlen_)) {
         if (addrlen_ == sizeof(struct sockaddr_in6)) {
             is_v6_ = true;
         }
@@ -79,12 +83,20 @@ std::string address::ip() const {
     char host[128] = {0};
     if (is_v6_) {
         auto v6 = (struct sockaddr_in6 *)addr_;
-        if (!::inet_ntop(AF_INET6, &(v6->sin6_addr), host, sizeof(host) - 1)) {
+        if (!inet_ntop(
+                AF_INET6,
+                &(v6->sin6_addr),
+                host,
+                sizeof(host) - 1)) {
             return std::string();
         }
     } else {
         auto v4 = (struct sockaddr_in *)addr_;
-        if (!::inet_ntop(AF_INET, &(v4->sin_addr), host, sizeof(host) - 1)) {
+        if (!inet_ntop(
+                AF_INET,
+                &(v4->sin_addr),
+                host,
+                sizeof(host) - 1)) {
             return std::string();
         }
     }
@@ -110,13 +122,21 @@ std::string address::to_string() const {
     char host[128] = {0};
     if (is_v6_) {
         auto v6 = (struct sockaddr_in6 *)addr_;
-        if (!::inet_ntop(AF_INET6, &(v6->sin6_addr), host, sizeof(host) - 1)) {
+        if (!inet_ntop(
+                AF_INET6,
+                &(v6->sin6_addr),
+                host,
+                sizeof(host) - 1)) {
             return std::string();
         }
         port = ntohs(v6->sin6_port);
     } else {
         auto v4 = (struct sockaddr_in *)addr_;
-        if (!::inet_ntop(AF_INET, &(v4->sin_addr), host, sizeof(host) - 1)) {
+        if (!inet_ntop(
+                AF_INET,
+                &(v4->sin_addr),
+                host,
+                sizeof(host) - 1)) {
             return std::string();
         }
         port = ntohs(v4->sin_port);

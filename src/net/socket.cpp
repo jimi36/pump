@@ -49,11 +49,19 @@ bool set_noblock(pump_socket fd, int32_t noblock) {
     return false;
 }
 
-bool set_linger(pump_socket fd, uint16_t on, uint16_t linger) {
+bool set_linger(
+    pump_socket fd,
+    uint16_t on,
+    uint16_t linger) {
     struct linger lgr;
     lgr.l_onoff = on;
     lgr.l_linger = linger;
-    if (setsockopt(fd, SOL_SOCKET, SO_LINGER, &lgr, sizeof(lgr)) == 0) {
+    if (setsockopt(
+            fd,
+            SOL_SOCKET,
+            SO_LINGER,
+            &lgr,
+            sizeof(lgr)) == 0) {
         return true;
     }
     pump_warn_log("socket set linger failed %d", last_errno());
@@ -61,7 +69,12 @@ bool set_linger(pump_socket fd, uint16_t on, uint16_t linger) {
 }
 
 bool set_read_bs(pump_socket fd, int32_t size) {
-    if (setsockopt(fd, SOL_SOCKET, SO_RCVBUF, &size, sizeof(size)) == 0) {
+    if (setsockopt(
+            fd,
+            SOL_SOCKET,
+            SO_RCVBUF,
+            &size,
+            sizeof(size)) == 0) {
         return true;
     }
     pump_warn_log("socket set read buffer size failed %d", last_errno());
@@ -69,16 +82,29 @@ bool set_read_bs(pump_socket fd, int32_t size) {
 }
 
 bool set_send_bs(pump_socket fd, int32_t size) {
-    if (setsockopt(fd, SOL_SOCKET, SO_SNDBUF, &size, sizeof(size)) == 0) {
+    if (setsockopt(
+            fd,
+            SOL_SOCKET,
+            SO_SNDBUF,
+            &size,
+            sizeof(size)) == 0) {
         return true;
     }
     pump_warn_log("socket set send buffer size failed %d", last_errno());
     return false;
 }
 
-bool set_keeplive(pump_socket fd, int32_t keeplive, int32_t interval) {
+bool set_keeplive(
+    pump_socket fd,
+    int32_t keeplive,
+    int32_t interval) {
     int32_t on = 1;
-    if (setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &on, sizeof(on)) == -1) {
+    if (setsockopt(
+            fd,
+            SOL_SOCKET,
+            SO_KEEPALIVE,
+            &on,
+            sizeof(on)) == -1) {
         pump_warn_log("socket set keeplive failed %d", last_errno());
         return false;
     }
@@ -104,9 +130,24 @@ bool set_keeplive(pump_socket fd, int32_t keeplive, int32_t interval) {
     }
 #else
     int32_t count = 3;
-    if (setsockopt(fd, SOL_TCP, TCP_KEEPIDLE, &keeplive, sizeof(keeplive)) == -1 ||
-        setsockopt(fd, SOL_TCP, TCP_KEEPINTVL, &interval, sizeof(interval)) == -1 ||
-        setsockopt(fd, SOL_TCP, TCP_KEEPCNT, &count, sizeof(count)) == -1) {
+    if (setsockopt(
+            fd,
+            SOL_TCP,
+            TCP_KEEPIDLE,
+            &keeplive,
+            sizeof(keeplive)) == -1 ||
+        setsockopt(
+            fd,
+            SOL_TCP,
+            TCP_KEEPINTVL,
+            &interval,
+            sizeof(interval)) == -1 ||
+        setsockopt(
+            fd,
+            SOL_TCP,
+            TCP_KEEPCNT,
+            &count,
+            sizeof(count)) == -1) {
         pump_warn_log("socket set keeplive failed %d", last_errno());
         return false;
     }
@@ -115,7 +156,12 @@ bool set_keeplive(pump_socket fd, int32_t keeplive, int32_t interval) {
 }
 
 bool set_reuse(pump_socket fd, int32_t reuse) {
-    if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse)) == 0) {
+    if (setsockopt(
+            fd,
+            SOL_SOCKET,
+            SO_REUSEADDR,
+            &reuse,
+            sizeof(reuse)) == 0) {
         return true;
     }
     pump_warn_log("socket set reuse address mode failed %d", last_errno());
@@ -123,7 +169,12 @@ bool set_reuse(pump_socket fd, int32_t reuse) {
 }
 
 bool set_nodelay(pump_socket fd, int32_t nodelay) {
-    if (setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &nodelay, sizeof(nodelay)) == 0) {
+    if (setsockopt(
+            fd,
+            IPPROTO_TCP,
+            TCP_NODELAY,
+            &nodelay,
+            sizeof(nodelay)) == 0) {
         return true;
     }
     pump_warn_log("socket set nodelay mode failed %d", last_errno());
@@ -132,7 +183,12 @@ bool set_nodelay(pump_socket fd, int32_t nodelay) {
 
 bool update_connect_context(pump_socket fd) {
 #if defined(PUMP_HAVE_WINSOCK)
-    if (setsockopt(fd, SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT, nullptr, 0) == 0) {
+    if (setsockopt(
+            fd,
+            SOL_SOCKET,
+            SO_UPDATE_CONNECT_CONTEXT,
+            nullptr,
+            0) == 0) {
         return true;
     }
     pump_warn_log("socket update connect context failed %d", last_errno());
@@ -164,7 +220,10 @@ bool set_udp_conn_reset(pump_socket fd, bool enable) {
     return true;
 }
 
-bool bind(pump_socket fd, struct sockaddr *addr, int32_t addrlen) {
+bool bind(
+    pump_socket fd,
+    struct sockaddr *addr,
+    int32_t addrlen) {
     if (::bind(fd, addr, addrlen) == 0) {
         return true;
     }
@@ -180,7 +239,10 @@ bool listen(pump_socket fd, int32_t backlog) {
     return false;
 }
 
-pump_socket accept(pump_socket fd, struct sockaddr *addr, int32_t *addrlen) {
+pump_socket accept(
+    pump_socket fd,
+    struct sockaddr *addr,
+    int32_t *addrlen) {
     pump_socket client = ::accept(fd, addr, (socklen_t *)addrlen);
     if (client < 0) {
         pump_warn_log("socket accept failed %d", last_errno());
@@ -188,10 +250,14 @@ pump_socket accept(pump_socket fd, struct sockaddr *addr, int32_t *addrlen) {
     return client;
 }
 
-bool connect(pump_socket fd, struct sockaddr *addr, int32_t addrlen) {
+bool connect(
+    pump_socket fd,
+    struct sockaddr *addr,
+    int32_t addrlen) {
     if (::connect(fd, addr, addrlen) != 0) {
         int32_t ec = net::last_errno();
-        if (ec != LANE_EALREADY && ec != LANE_EWOULDBLOCK &&
+        if (ec != LANE_EALREADY &&
+            ec != LANE_EWOULDBLOCK &&
             ec != LANE_EINPROGRESS) {
             pump_warn_log("socket connect failed %d", ec);
             return false;
@@ -200,7 +266,10 @@ bool connect(pump_socket fd, struct sockaddr *addr, int32_t addrlen) {
     return true;
 }
 
-int32_t read(pump_socket fd, char *b, int32_t size) {
+int32_t read(
+    pump_socket fd,
+    char *b,
+    int32_t size) {
     size = ::recv(fd, b, size, 0);
     if (pump_likely(size > 0)) {
         return size;
@@ -239,7 +308,10 @@ int32_t read_from(
     return size;
 }
 
-int32_t send(pump_socket fd, const char *b, int32_t size) {
+int32_t send(
+    pump_socket fd,
+    const char *b,
+    int32_t size) {
     size = ::send(fd, b, size, 0);
     if (pump_likely(size > 0)) {
         return size;
@@ -289,10 +361,20 @@ int32_t get_socket_error(pump_socket fd) {
     int32_t res = 0;
 #if defined(PUMP_HAVE_WINSOCK)
     int32_t len = sizeof(res);
-    getsockopt(fd, SOL_SOCKET, SO_ERROR, (block_t *)&res, &len);
+    getsockopt(
+        fd,
+        SOL_SOCKET,
+        SO_ERROR,
+        (block_t *)&res,
+        &len);
 #else
     socklen_t len = sizeof(res);
-    getsockopt(fd, SOL_SOCKET, SO_ERROR, &res, &len);
+    getsockopt(
+        fd,
+        SOL_SOCKET,
+        SO_ERROR,
+        &res,
+        &len);
 #endif
     return res;
 }
@@ -306,7 +388,10 @@ int32_t last_errno() {
 }
 
 bool local_address(pump_socket fd, struct sockaddr *addr, int32_t *addrlen) {
-    if (getsockname(fd, addr, (socklen_t *)addrlen) == 0) {
+    if (getsockname(
+            fd,
+            addr,
+            (socklen_t *)addrlen) == 0) {
         return true;
     }
     pump_warn_log("socket get local address failed %d", last_errno());
@@ -314,7 +399,10 @@ bool local_address(pump_socket fd, struct sockaddr *addr, int32_t *addrlen) {
 }
 
 bool remote_address(pump_socket fd, struct sockaddr *addr, int32_t *addrlen) {
-    if (getpeername(fd, addr, (socklen_t *)addrlen) == 0) {
+    if (getpeername(
+            fd,
+            addr,
+            (socklen_t *)addrlen) == 0) {
         return true;
     }
     pump_warn_log("socket get remote_address failed %d", last_errno());
@@ -325,15 +413,21 @@ std::string address_to_string(struct sockaddr *addr, int32_t addrlen) {
     char host[128] = {0};
     if (addrlen == sizeof(struct sockaddr_in)) {
         struct sockaddr_in *v4 = (struct sockaddr_in *)addr;
-        if (inet_ntop(AF_INET, &(v4->sin_addr), host, sizeof(host)) !=
-            nullptr) {
+        if (inet_ntop(
+                AF_INET,
+                &(v4->sin_addr),
+                host,
+                sizeof(host)) != nullptr) {
             pump_snprintf(host + strlen(host), 10, ":%d", ntohs(v4->sin_port));
             return std::string(host);
         }
     } else {
         struct sockaddr_in6 *v6 = (struct sockaddr_in6 *)addr;
-        if (::inet_ntop(AF_INET6, &(v6->sin6_addr), host, sizeof(host)) !=
-            nullptr) {
+        if (inet_ntop(
+                AF_INET6,
+                &(v6->sin6_addr),
+                host,
+                sizeof(host)) != nullptr) {
             pump_snprintf(host + strlen(host), 10, ":%d", ntohs(v6->sin6_port));
             return std::string(host);
         }

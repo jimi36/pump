@@ -85,7 +85,10 @@ error_code flow_tls::want_to_send(toolkit::io_buffer *iob) {
 
 error_code flow_tls::send() {
     pump_assert(send_iob_);
-    int32_t size = transport::tls_send(session_, send_iob_->data(), send_iob_->size());
+    int32_t size = transport::tls_send(
+        session_,
+        send_iob_->data(),
+        send_iob_->size());
     if (pump_likely(size > 0)) {
         // Shift send buffer and check data size.
         if (send_iob_->shift(size) > 0) {

@@ -45,10 +45,11 @@ class flow_tls : public flow_base {
      *     error_none    => success
      *     error_fault => error
      ********************************************************************************/
-    error_code init(poll::channel_sptr &ch,
-                    bool client,
-                    pump_socket fd,
-                    transport::tls_credentials xcred);
+    error_code init(
+        poll::channel_sptr &ch,
+        bool client,
+        pump_socket fd,
+        transport::tls_credentials xcred);
 
     /*********************************************************************************
      * Handshake

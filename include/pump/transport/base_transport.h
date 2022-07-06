@@ -106,14 +106,16 @@ const static int32_t channel_event_disconnected = 0;
 const static int32_t channel_event_buffer_sent = 1;
 const static int32_t channel_event_read = 2;
 
-class pump_lib base_transport
-    : public base_channel,
-      public std::enable_shared_from_this<base_transport> {
+class pump_lib base_transport : public base_channel,
+                                public std::enable_shared_from_this<base_transport> {
   public:
     /*********************************************************************************
      * Constructor
      ********************************************************************************/
-    base_transport(int32_t type, service *sv, int32_t fd) noexcept :
+    base_transport(
+        int32_t type,
+        service *sv,
+        int32_t fd) noexcept :
         base_channel(type, sv, fd),
         rmode_(read_mode_none),
         rstate_(read_none),

@@ -183,13 +183,20 @@ base_transport_sptr tcp_sync_dialer::dial(
     }
 
     dialer_callbacks cbs;
-    cbs.dialed_cb =
-        pump_bind(&tcp_sync_dialer::on_dialed, shared_from_this(), _1, _2);
-    cbs.timeouted_cb =
-        pump_bind(&tcp_sync_dialer::on_timeouted, shared_from_this());
+    cbs.dialed_cb = pump_bind(
+        &tcp_sync_dialer::on_dialed,
+        shared_from_this(),
+        _1,
+        _2);
+    cbs.timeouted_cb = pump_bind(
+        &tcp_sync_dialer::on_timeouted,
+        shared_from_this());
     cbs.stopped_cb = pump_bind(&tcp_sync_dialer::on_stopped);
 
-    dialer_ = tcp_dialer::create(local_address, remote_address, timeout_ns);
+    dialer_ = tcp_dialer::create(
+        local_address,
+        remote_address,
+        timeout_ns);
     if (!dialer_ || dialer_->start(sv, cbs) != error_none) {
         return base_transport_sptr();
     }

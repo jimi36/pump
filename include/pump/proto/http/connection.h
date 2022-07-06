@@ -86,7 +86,10 @@ class pump_lib connection : public std::enable_shared_from_this<connection> {
     /*********************************************************************************
      * Send websocket data
      ********************************************************************************/
-    bool send(const char *b, int32_t size, bool text = true);
+    bool send(
+        const char *b,
+        int32_t size,
+        bool text = true);
 
     /*********************************************************************************
      * Stop connection
@@ -112,7 +115,10 @@ class pump_lib connection : public std::enable_shared_from_this<connection> {
     /*********************************************************************************
      * Read event callback
      ********************************************************************************/
-    static void on_read(connection_wptr wptr, const char *b, int32_t size);
+    static void on_read(
+        connection_wptr wptr,
+        const char *b,
+        int32_t size);
 
     /*********************************************************************************
      * Disconnected event callback

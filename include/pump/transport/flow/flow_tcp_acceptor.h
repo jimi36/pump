@@ -41,7 +41,9 @@ class flow_tcp_acceptor : public flow_base {
      *     error_none    => success
      *     error_fault => error
      ********************************************************************************/
-    error_code init(poll::channel_sptr &&ch, const address &listen_address);
+    error_code init(
+        poll::channel_sptr &&ch,
+        const address &listen_address);
 
     /*********************************************************************************
      * Accept
