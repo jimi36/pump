@@ -12,7 +12,7 @@ The library is an asynchronous net library, callback based. It implement udp, tc
 
 # Build
 
-Support tls transport, but not default. You can set WITH_TLS with OPENSSL or GNUTLS to turn on it.  
+Support tls transport, but not default. You can set WITH_TLS to turn on it.  
 Support jemalloc, but not default. You can turn on WITH_JEMALLOC option to support it.  
 To build the library, require [cmake](https://cmake.org/) and c++ compiler which support c++11.
 

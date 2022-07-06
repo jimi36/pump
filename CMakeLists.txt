@@ -39,7 +39,7 @@ OPTION(WITH_IOCP "Option build with iocp, only for windows" ON)
 OPTION(WITH_JEMALLOC "Option build with jemalloc" OFF)
 
 # Option build with TLS (default OFF)
-OPTION(WITH_TLS "Option build with tls" ON)
+OPTION(WITH_TLS "Option build with tls" OFF)
 
 # Option build with test (default ON)
 OPTION(WITH_TEST "Option build with test" ON)
