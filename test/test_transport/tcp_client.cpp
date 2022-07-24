@@ -181,7 +181,7 @@ void start_once_dialer() {
     address bind_address("0.0.0.0", 0);
     address peer_address(server_ip, server_port);
     tcp_dialer_sptr dialer =
-        tcp_dialer::create(bind_address, peer_address, 1000);
+        tcp_dialer::create(bind_address, peer_address, 5e9);
 
     std::shared_ptr<my_tcp_dialer> my_dialer(new my_tcp_dialer);
     my_dialer->set_dialer(dialer);

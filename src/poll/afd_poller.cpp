@@ -166,10 +166,16 @@ afd_poller::~afd_poller() {
 
 bool afd_poller::__install_channel_tracker(channel_tracker *tracker) {
 #if defined(PUMP_HAVE_IOCP)
-    if (__resume_channel_tracker(tracker)) {
-        cur_event_count_.fetch_add(1, std::memory_order_relaxed);
-        return true;
-    }
+	auto expected_event = tracker->get_expected_event();
+	if (expected_event == io_none) {
+		cur_event_count_.fetch_add(1, std::memory_order_relaxed);
+		return true;
+	}
+
+	if (__start_channel_tracker(tracker)) {
+		cur_event_count_.fetch_add(1, std::memory_order_relaxed);
+		return true;
+	}
 #endif
     pump_debug_log("install channel tracker failed %d", net::last_errno());
     return false;
@@ -177,9 +183,11 @@ bool afd_poller::__install_channel_tracker(channel_tracker *tracker) {
 
 bool afd_poller::__uninstall_channel_tracker(channel_tracker *tracker) {
 #if defined(PUMP_HAVE_IOCP)
+	// Reduce current event counts at first.
+	cur_event_count_.fetch_sub(1, std::memory_order_relaxed);
+
     auto event = tracker->get_event();
     if (event->iosb.Status != STATUS_PENDING) {
-        cur_event_count_.fetch_sub(1, std::memory_order_relaxed);
         return true;
     }
 
@@ -190,7 +198,6 @@ bool afd_poller::__uninstall_channel_tracker(channel_tracker *tracker) {
         &cancel_iosb);
     if (cancel_status == STATUS_SUCCESS ||
         cancel_status == STATUS_NOT_FOUND) {
-        cur_event_count_.fetch_sub(1, std::memory_order_relaxed);
         return true;
     }
 #endif

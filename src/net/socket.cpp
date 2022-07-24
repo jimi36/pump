@@ -60,7 +60,7 @@ bool set_linger(
             fd,
             SOL_SOCKET,
             SO_LINGER,
-            &lgr,
+            (const char*)&lgr,
             sizeof(lgr)) == 0) {
         return true;
     }
@@ -73,7 +73,7 @@ bool set_read_bs(pump_socket fd, int32_t size) {
             fd,
             SOL_SOCKET,
             SO_RCVBUF,
-            &size,
+            (const char*)&size,
             sizeof(size)) == 0) {
         return true;
     }
@@ -86,7 +86,7 @@ bool set_send_bs(pump_socket fd, int32_t size) {
             fd,
             SOL_SOCKET,
             SO_SNDBUF,
-            &size,
+            (const char*)&size,
             sizeof(size)) == 0) {
         return true;
     }
@@ -103,7 +103,7 @@ bool set_keeplive(
             fd,
             SOL_SOCKET,
             SO_KEEPALIVE,
-            &on,
+            (const char*)&on,
             sizeof(on)) == -1) {
         pump_warn_log("socket set keeplive failed %d", last_errno());
         return false;
@@ -160,7 +160,7 @@ bool set_reuse(pump_socket fd, int32_t reuse) {
             fd,
             SOL_SOCKET,
             SO_REUSEADDR,
-            &reuse,
+            (const char*)&reuse,
             sizeof(reuse)) == 0) {
         return true;
     }
@@ -173,7 +173,7 @@ bool set_nodelay(pump_socket fd, int32_t nodelay) {
             fd,
             IPPROTO_TCP,
             TCP_NODELAY,
-            &nodelay,
+            (const char*)&nodelay,
             sizeof(nodelay)) == 0) {
         return true;
     }
@@ -365,7 +365,7 @@ int32_t get_socket_error(pump_socket fd) {
         fd,
         SOL_SOCKET,
         SO_ERROR,
-        (block_t *)&res,
+        (char *)&res,
         &len);
 #else
     socklen_t len = sizeof(res);

@@ -55,7 +55,7 @@ std::string timestamp::to_string() const {
     uint32_t milliseconds = static_cast<uint32_t>(ms % ms_from_second);
 #if defined(OS_WINDOWS)
     localtime_s(&tm_time, &seconds);
-    PUMP_SNPRINTF(
+    pump_snprintf(
         date,
         sizeof(date) - 1,
         "%4d-%d-%d %d:%d:%d:%d",

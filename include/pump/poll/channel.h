@@ -206,7 +206,7 @@ class pump_lib channel_tracker : public toolkit::noncopyable {
         return &ev_;
     }
 #elif defined(PUMP_HAVE_IOCP)
-    PUMP_INLINE AFD_POLL_EVENT *get_event() {
+    pump_inline AFD_POLL_EVENT *get_event() {
         return &ev_;
     }
 #endif

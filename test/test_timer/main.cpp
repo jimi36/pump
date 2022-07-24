@@ -16,8 +16,9 @@ class Timeout : public std::enable_shared_from_this<Timeout> {
     void start() {
         printf("new timeout\n");
         auto cb = pump_bind(&Timeout::on_timer_timeout, this);
-        for (int i = 1; i <= 10000; i++) {
-            auto t = pump::time::timer::create(1000 * 1000 * 1000, cb, true);
+        for (int i = 1; i <= 1; i++) {
+			uint64_t timeout = 5e9;
+            auto t = pump::time::timer::create(timeout, cb, true);
             if (!sv_->start_timer(t)) {
                 printf("start timeout error\n");
             }
@@ -33,7 +34,7 @@ class Timeout : public std::enable_shared_from_this<Timeout> {
 
         int32_t now = (int32_t)::time(0);
         if (last_report_time_ != now) {
-            printf("timer pending count %d\n", count_);
+            printf("timer pending count %d at %u\n", count_, time(0));
             last_report_time_ = now;
             count_ = 0;
         }

@@ -4,6 +4,7 @@
 *.so
 *.lib
 *.dll
+*.pdb
 
 # Build path
 build/*
@@ -12,4 +13,5 @@ build/*
 .vscode/*
 
 # Cmake temporary header files
+lib/include/*
 include/pump/build.h

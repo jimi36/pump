@@ -38,6 +38,7 @@ LINK_DIRECTORIES(${CMAKE_BINARY_DIR})
 # Specifies include path
 INCLUDE_DIRECTORIES(${ROOT_DIR}/src)
 INCLUDE_DIRECTORIES(${ROOT_DIR}/include)
+INCLUDE_DIRECTORIES(${ROOT_DIR}/lib/include)
 MESSAGE(STATUS "INCLUDE path: ${ROOT_DIR}")
 
 # Specifies unicode character set on windows

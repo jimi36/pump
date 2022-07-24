@@ -176,7 +176,7 @@ class tls_time_report {
 void start_once_tls_dialer() {
     address bind_address("0.0.0.0", 0);
     address peer_address(server_ip, server_port);
-    tls_dialer_sptr dialer = tls_dialer::create(bind_address, peer_address, 1000);
+    tls_dialer_sptr dialer = tls_dialer::create(bind_address, peer_address, 1e9);
 
     std::shared_ptr<my_tls_dialer> my_dialer(new my_tls_dialer);
     my_dialer->set_dialer(dialer);

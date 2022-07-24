@@ -67,8 +67,6 @@ bool poller::install_channel_tracker(channel_tracker_sptr &tracker) {
         return false;
     }
 
-    tracker->set_poller(this);
-
     if (tracker->get_expected_event() != track_none) {
         if (!tracker->track()) {
             pump_debug_log("start tracker failed");
@@ -84,8 +82,10 @@ bool poller::install_channel_tracker(channel_tracker_sptr &tracker) {
     }
 
     // Install channel tracker
+	tracker->set_poller(this);
     if (!__install_channel_tracker(tracker.get())) {
         pump_debug_log("install tracker failed");
+		tracker->set_poller(nullptr);
         object_delete(ev);
         return false;
     }
