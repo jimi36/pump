@@ -28,8 +28,9 @@ namespace transport {
 class tcp_dialer;
 DEFINE_SMART_POINTERS(tcp_dialer);
 
-class pump_lib tcp_dialer : public base_dialer,
-                            public std::enable_shared_from_this<tcp_dialer> {
+class pump_lib tcp_dialer
+  : public base_dialer,
+    public std::enable_shared_from_this<tcp_dialer> {
   public:
     /*********************************************************************************
      * Create instance
@@ -38,23 +39,24 @@ class pump_lib tcp_dialer : public base_dialer,
         const address &local_address,
         const address &remote_address,
         uint64_t connect_timeout_ns = 0) {
-        INLINE_OBJECT_CREATE(obj,
-                             tcp_dialer,
-                             (local_address,
-                              remote_address,
-                              connect_timeout_ns));
+        INLINE_OBJECT_CREATE(
+            obj,
+            tcp_dialer,
+            (local_address, remote_address, connect_timeout_ns));
         return tcp_dialer_sptr(obj, object_delete<tcp_dialer>);
     }
 
     /*********************************************************************************
      * Deconstructor
      ********************************************************************************/
-    virtual ~tcp_dialer();
+    virtual ~tcp_dialer() = default;
 
     /*********************************************************************************
      * Start
      ********************************************************************************/
-    virtual error_code start(service *sv, const dialer_callbacks &cbs) override;
+    virtual error_code start(
+        service *sv,
+        const dialer_callbacks &cbs) override;
 
     /*********************************************************************************
      * Stop
@@ -106,13 +108,14 @@ class tcp_sync_dialer;
 DEFINE_SMART_POINTERS(tcp_sync_dialer);
 
 class pump_lib tcp_sync_dialer
-    : public std::enable_shared_from_this<tcp_sync_dialer> {
+  : public std::enable_shared_from_this<tcp_sync_dialer> {
   public:
     /*********************************************************************************
      * Create instance
      ********************************************************************************/
     static tcp_sync_dialer_sptr create() {
-        return tcp_sync_dialer_sptr(new tcp_sync_dialer);
+        INLINE_OBJECT_CREATE(obj, tcp_sync_dialer, ());
+        return tcp_sync_dialer_sptr(obj, object_delete<tcp_sync_dialer>);
     }
 
     /*********************************************************************************
@@ -134,14 +137,14 @@ class pump_lib tcp_sync_dialer
      * Dialed callback
      ********************************************************************************/
     static void on_dialed(
-        tcp_sync_dialer_wptr wptr,
+        tcp_sync_dialer_wptr dialer,
         base_transport_sptr &transp,
-        bool succ);
+        bool success);
 
     /*********************************************************************************
      * Dialed timeout callback
      ********************************************************************************/
-    static void on_timeouted(tcp_sync_dialer_wptr wptr);
+    static void on_timeouted(tcp_sync_dialer_wptr dialer);
 
     /*********************************************************************************
      * Stopped dialing callback
@@ -152,13 +155,7 @@ class pump_lib tcp_sync_dialer
     /*********************************************************************************
      * Constructor
      ********************************************************************************/
-    tcp_sync_dialer() noexcept {}
-
-    /*********************************************************************************
-     * Reset sync dialer
-     ********************************************************************************/
-    pump_inline void __reset() {
-        dialer_.reset();
+    tcp_sync_dialer() pump_noexcept {
     }
 
   private:

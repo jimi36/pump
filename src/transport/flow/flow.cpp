@@ -20,10 +20,11 @@ namespace pump {
 namespace transport {
 namespace flow {
 
-flow_base::flow_base() noexcept :
-    fd_(-1) {}
+flow_base::flow_base() pump_noexcept
+  : fd_(-1) {
+}
 
-pump_socket flow_base::unbind() {
+pump_socket flow_base::unbind() pump_noexcept {
     pump_socket fd = fd_;
     fd_ = -1;
     return fd;

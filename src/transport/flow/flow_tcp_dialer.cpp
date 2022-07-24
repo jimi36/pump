@@ -20,65 +20,57 @@ namespace pump {
 namespace transport {
 namespace flow {
 
-flow_tcp_dialer::flow_tcp_dialer() noexcept :
-    is_ipv6_(false) {}
+flow_tcp_dialer::flow_tcp_dialer() pump_noexcept
+  : is_ipv6_(false) {
+}
 
-flow_tcp_dialer::~flow_tcp_dialer() {}
+flow_tcp_dialer::~flow_tcp_dialer() {
+}
 
-error_code flow_tcp_dialer::init(
+bool flow_tcp_dialer::init(
     poll::channel_sptr &&ch,
     const address &bind_address) {
     if (!ch) {
-        pump_warn_log("channel is invalid");
-        return error_fault;
+        pump_debug_log("channel invalid");
+        return false;
     }
 
     int32_t domain = bind_address.is_ipv6() ? AF_INET6 : AF_INET;
     if ((fd_ = net::create_socket(domain, SOCK_STREAM)) == invalid_socket) {
-        pump_warn_log(
-            "create socket failed with ec %d",
-            net::last_errno());
-        return error_fault;
+        pump_debug_log("create socket failed %d", net::last_errno());
+        return false;
     }
     if (!net::set_reuse(fd_, 1)) {
-        pump_warn_log(
-            "set socket address reuse failed with ec %d",
-            net::last_errno());
-        return error_fault;
+        pump_debug_log("set socket address reuse failed %d", net::last_errno());
+        return false;
     }
     if (!net::set_noblock(fd_, 1)) {
-        pump_warn_log(
-            "set socket noblock failed with ec %d",
-            net::last_errno());
-        return error_fault;
+        pump_debug_log("set socket noblock failed %d", net::last_errno());
+        return false;
     }
     if (!net::set_nodelay(fd_, 1)) {
-        pump_warn_log(
-            "set socket nodelay failed with ec %d",
-            net::last_errno());
-        return error_fault;
+        pump_debug_log("set socket nodelay failed %d", net::last_errno());
+        return false;
     }
     if (!net::bind(fd_, (sockaddr *)bind_address.get(), bind_address.len())) {
-        pump_warn_log(
-            "bind socket address failed with ec %d",
-            net::last_errno());
-        return error_fault;
+        pump_debug_log("bind socket address failed %d", net::last_errno());
+        return false;
     }
 
     ch_ = ch;
 
-    return error_none;
+    return true;
 }
 
-int32_t flow_tcp_dialer::post_connect(const address &remote_address) {
+bool flow_tcp_dialer::post_connect(const address &remote_address) {
     if (!net::connect(
             fd_,
             (sockaddr *)remote_address.get(),
             remote_address.len())) {
-        pump_warn_log("socket connect failed with ec %d", net::last_errno());
-        return error_fault;
+        pump_debug_log("post connect failed %d", net::last_errno());
+        return false;
     }
-    return error_none;
+    return true;
 }
 
 int32_t flow_tcp_dialer::connect(
@@ -90,9 +82,7 @@ int32_t flow_tcp_dialer::connect(
     }
 
     if (!net::update_connect_context(fd_)) {
-        pump_warn_log(
-            "update socket connect context failed with ec %d",
-            net::last_errno());
+        pump_debug_log("update socket connect context failed %d", net::last_errno());
         return net::get_socket_error(fd_);
     }
 

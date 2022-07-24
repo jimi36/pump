@@ -5,16 +5,11 @@
 *.lib
 *.dll
 
-# Cmake temporary header files
-include/pump/build.h
-
-# Include path
-include/*
-!include/pump
-
-# Library path
-lib/*
-!lib/README.md
-
 # Build path
 build/*
+
+# vscode
+.vscode/*
+
+# Cmake temporary header files
+include/pump/build.h

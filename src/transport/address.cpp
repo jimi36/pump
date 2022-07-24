@@ -20,14 +20,14 @@
 namespace pump {
 namespace transport {
 
-address::address() noexcept :
-    is_v6_(false),
+address::address() pump_noexcept
+  : is_v6_(false),
     addrlen_(sizeof(struct sockaddr_in)) {
     memset(&addr_, 0, sizeof(addr_));
 }
 
-address::address(const std::string &ip, uint16_t port) :
-    is_v6_(false),
+address::address(const std::string &ip, uint16_t port)
+  : is_v6_(false),
     addrlen_(sizeof(struct sockaddr_in)) {
     if (net::string_to_address(
             ip,
@@ -40,8 +40,8 @@ address::address(const std::string &ip, uint16_t port) :
     }
 }
 
-address::address(const struct sockaddr *addr, int32_t addr_len) :
-    is_v6_(addr_len == sizeof(struct sockaddr_in6)),
+address::address(const struct sockaddr *addr, int32_t addr_len)
+  : is_v6_(addr_len == sizeof(struct sockaddr_in6)),
     addrlen_(addr_len) {
     memcpy(&addr_, addr, addr_len);
 }
@@ -101,7 +101,7 @@ std::string address::ip() const {
         }
     }
 
-    return std::move(std::string(host));
+    return std::string(host);
 }
 
 uint16_t address::port() const {
@@ -144,19 +144,18 @@ std::string address::to_string() const {
 
     char tmp[256] = {0};
     pump_snprintf(tmp, sizeof(tmp) - 1, "%s:%d", host, port);
-    return std::move(std::string(tmp));
+    return std::string(tmp);
 }
 
-bool address::operator==(const address &other) const noexcept {
+bool address::operator==(const address &other) const pump_noexcept {
     if (is_v6_ == other.is_v6_ && addrlen_ == other.addrlen_ &&
         memcmp(addr_, other.addr_, addrlen_) == 0) {
         return true;
     }
-
     return false;
 }
 
-bool address::operator<(const address &other) const noexcept {
+bool address::operator<(const address &other) const pump_noexcept {
     if (addrlen_ < other.addrlen_) {
         return true;
     } else if (addrlen_ > other.addrlen_) {

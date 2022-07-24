@@ -37,17 +37,25 @@ pump_lib void sha1_init(sha1_context *ctx);
 /*********************************************************************************
  * Update sha1 context
  ********************************************************************************/
-pump_lib void sha1_update(sha1_context *ctx, const char *data, int32_t size);
+pump_lib void sha1_update(
+    sha1_context *ctx,
+    const char *data,
+    int32_t size);
 
 /*********************************************************************************
  * Final sha1 context
  ********************************************************************************/
-pump_lib void sha1_final(sha1_context *ctx, uint8_t digest[20]);
+pump_lib void sha1_final(
+    sha1_context *ctx,
+    uint8_t digest[20]);
 
 /*********************************************************************************
  * Sha1
  ********************************************************************************/
-pump_lib void sha1(const char *data, int32_t size, uint8_t digest[20]);
+pump_lib void sha1(
+    const char *data,
+    int32_t size,
+    uint8_t digest[20]);
 
 }  // namespace codec
 }  // namespace pump

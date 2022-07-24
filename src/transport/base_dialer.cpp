@@ -19,12 +19,18 @@
 namespace pump {
 namespace transport {
 
+base_dialer::~base_dialer() {
+    __uninstall_dial_tracker();
+    __close_dial_flow();
+}
+
 void base_dialer::on_channel_event(int32_t ev, void *arg) {
     __trigger_interrupt_callbacks();
 }
 
-bool base_dialer::__start_dial_tracker(poll::channel_sptr &&ch) {
+bool base_dialer::__install_dial_tracker(poll::channel_sptr &&ch) {
     if (tracker_) {
+        pump_debug_log("dialer's tracker already exists");
         return false;
     }
 
@@ -35,17 +41,23 @@ bool base_dialer::__start_dial_tracker(poll::channel_sptr &&ch) {
         pump_warn_log("new dialer's tracker object failed");
         return false;
     }
-    if (!get_service()->add_channel_tracker(tracker_, send_pid)) {
-        pump_warn_log("add dialer's tracker to service failed");
+
+    auto poller = get_service()->get_poller(send_pid);
+    if (poller == nullptr) {
+        pump_debug_log("dialer got invalid send poller");
+        return false;
+    }
+    if (!poller->install_channel_tracker(tracker_)) {
+        pump_debug_log("poller install dialer's tracker failed");
         return false;
     }
 
     return true;
 }
 
-void base_dialer::__stop_dial_tracker() {
+void base_dialer::__uninstall_dial_tracker() {
     if (tracker_ && tracker_->get_poller() != nullptr) {
-        tracker_->get_poller()->remove_channel_tracker(tracker_);
+        tracker_->get_poller()->uninstall_channel_tracker(tracker_);
     }
 }
 

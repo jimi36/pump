@@ -43,8 +43,8 @@ class pump_lib channel : public toolkit::noncopyable {
     /*********************************************************************************
      * Constructor
      ********************************************************************************/
-    explicit channel(pump_socket fd) noexcept :
-        ctx_(nullptr), fd_(fd) {}
+    explicit channel(pump_socket fd) noexcept
+      : ctx_(nullptr), fd_(fd) {}
 
     /*********************************************************************************
      * Deconstructor
@@ -122,7 +122,7 @@ class pump_lib channel : public toolkit::noncopyable {
 };
 DEFINE_SMART_POINTERS(channel);
 
-const int32_t track_none = (io_none);
+const int32_t track_none = (io_error);
 const int32_t track_read = (io_read);
 const int32_t track_send = (io_send);
 const int32_t track_both = (io_read | io_send);
@@ -130,10 +130,8 @@ const int32_t track_both = (io_read | io_send);
 const int32_t tracker_remove = 0;
 const int32_t tracker_append = 1;
 
-const int32_t tracker_inited = 0x00;
-const int32_t tracker_stopped = 0x01;
+const int32_t tracker_idle = 0x00;
 const int32_t tracker_tracking = 0x02;
-const int32_t tracker_idle = 0x03;
 
 class poller;
 
@@ -142,8 +140,8 @@ class pump_lib channel_tracker : public toolkit::noncopyable {
     /*********************************************************************************
      * Constructor
      ********************************************************************************/
-    channel_tracker(channel_sptr &ch, int32_t ev) noexcept :
-        state_(tracker_inited),
+    channel_tracker(channel_sptr &ch, int32_t ev) noexcept
+      : state_(tracker_idle),
         expected_event_(ev),
         fd_(ch->get_fd()),
         ch_(ch),
@@ -152,9 +150,8 @@ class pump_lib channel_tracker : public toolkit::noncopyable {
         memset(&ev_, 0, sizeof(ev_));
 #endif
     }
-    channel_tracker(channel_sptr &&ch, int32_t ev) noexcept :
-        state_(tracker_inited),
-        // installed_(false),
+    channel_tracker(channel_sptr &&ch, int32_t ev) noexcept
+      : state_(tracker_idle),
         expected_event_(ev),
         fd_(ch->get_fd()),
         ch_(ch),
@@ -162,28 +159,6 @@ class pump_lib channel_tracker : public toolkit::noncopyable {
 #if defined(PUMP_HAVE_EPOLL) || defined(PUMP_HAVE_IOCP)
         memset(&ev_, 0, sizeof(ev_));
 #endif
-    }
-
-    /*********************************************************************************
-     * Start
-     ********************************************************************************/
-    pump_inline bool start() {
-        int32_t expected = tracker_inited;
-        return state_.compare_exchange_strong(expected, tracker_tracking);
-    }
-
-    /*********************************************************************************
-     * Stop
-     ********************************************************************************/
-    pump_inline bool stop() {
-        return state_.exchange(tracker_stopped) != tracker_stopped;
-    }
-
-    /*********************************************************************************
-     * Get tracked status
-     ********************************************************************************/
-    pump_inline bool is_started() const {
-        return state_.load() > tracker_stopped;
     }
 
     /*********************************************************************************
@@ -246,8 +221,8 @@ class pump_lib channel_tracker : public toolkit::noncopyable {
      * Set channel
      ********************************************************************************/
     pump_inline void set_channel(channel_sptr &ch) {
-        ch_ = ch;
         fd_ = net::get_base_socket(ch->get_fd());
+        ch_ = ch;
     }
 
     /*********************************************************************************

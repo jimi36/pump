@@ -39,7 +39,7 @@ class pump_lib udp_transport : public base_transport {
     /*********************************************************************************
      * Deconstructor
      ********************************************************************************/
-    virtual ~udp_transport();
+    virtual ~udp_transport() = default;
 
     /*********************************************************************************
      * Start
@@ -63,9 +63,11 @@ class pump_lib udp_transport : public base_transport {
     }
 
     /*********************************************************************************
-     * Continue read for read once mode
+     * Async read for read once mode
+     * For read loop mode, this will loop reading.
+     * For read once mode, this will read only once.
      ********************************************************************************/
-    virtual error_code continue_read() override;
+    virtual error_code async_read() override;
 
     /*********************************************************************************
      * Send
@@ -85,7 +87,7 @@ class pump_lib udp_transport : public base_transport {
     /*********************************************************************************
      * Constructor
      ********************************************************************************/
-    udp_transport(const address &bind_address) noexcept;
+    udp_transport(const address &bind_address) pump_noexcept;
 
     /*********************************************************************************
      * Open transport flow

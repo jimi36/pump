@@ -8,7 +8,7 @@ static std::string server_ip;
 static int count = 1;
 static int send_loop = 1;
 static int send_pocket_size = 1024 * 4;
-//static int send_pocket_count = 1024 * 100;
+// static int send_pocket_count = 1024 * 100;
 static int send_pocket_count = -1;
 
 class my_tls_dialer;
@@ -56,6 +56,8 @@ class my_tls_dialer : public std::enable_shared_from_this<my_tls_dialer> {
         if (transport_->start(sv, read_mode_loop, cbs) != 0)
             return;
 
+        transport_->async_read();
+
         printf("tls client dialed\n");
 
         for (int i = 0; i < send_loop; i++) {
@@ -97,7 +99,7 @@ class my_tls_dialer : public std::enable_shared_from_this<my_tls_dialer> {
             send_data();
         }
 
-        //transp->continue_read();
+        // transp->continue_read();
     }
 
     /*********************************************************************************

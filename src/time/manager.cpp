@@ -22,19 +22,18 @@
 namespace pump {
 namespace time {
 
-const static uint64_t default_observe_interval_ns = 200 * 1000000; // 200 ms
+const static uint64_t default_observe_interval_ns = 200 * 1000000;  // 200 ms
 
-manager::manager() noexcept :
-    started_(false) {}
-
-manager::~manager() {}
+manager::manager() pump_noexcept
+  : started_(false) {
+}
 
 bool manager::start(const timer_pending_callback &cb) {
     if (!started_.load()) {
         started_.store(true);
 
         if (!cb) {
-            pump_warn_log("timer pending callback invalid");
+            pump_debug_log("timer pending callback invalid");
             return false;
         }
         pending_cb_ = cb;
@@ -44,7 +43,7 @@ bool manager::start(const timer_pending_callback &cb) {
                 pump_bind(&manager::__observe_thread, this)),
             object_delete<std::thread>);
         if (!observer_) {
-            pump_warn_log("create observer thread failed");
+            pump_debug_log("create observer thread failed");
             started_.store(false);
             return false;
         }
@@ -61,11 +60,11 @@ void manager::wait_stopped() {
 
 bool manager::start_timer(timer_sptr &ptr) {
     if (pump_unlikely(!started_.load())) {
-        pump_warn_log("manager is not started, can't start timer");
+        pump_debug_log("manager is not started, can't start timer");
         return false;
     }
     if (pump_unlikely(!ptr->__start(this))) {
-        pump_warn_log("start timer failed");
+        pump_debug_log("start timer failed");
         return false;
     }
     if (!new_timers_.enqueue(ptr)) {
@@ -76,12 +75,11 @@ bool manager::start_timer(timer_sptr &ptr) {
 
 bool manager::restart_timer(timer_sptr &&ptr) {
     if (pump_unlikely(!started_.load())) {
-        pump_warn_log("manager is not started, can't restart timer");
+        pump_debug_log("manager is not started, can't restart timer");
         return false;
     }
     if (!new_timers_.enqueue(std::move(ptr))) {
-        pump_err_log("push timer to queue failed");
-        pump_abort();
+        pump_abort_with_log("push timer to queue failed");
     }
     return true;
 }

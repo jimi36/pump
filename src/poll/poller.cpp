@@ -19,8 +19,8 @@
 namespace pump {
 namespace poll {
 
-poller::poller() noexcept :
-    started_(false),
+poller::poller() noexcept
+  : started_(false),
     cev_cnt_(0),
     cevents_(1024),
     tev_cnt_(0),
@@ -61,29 +61,38 @@ void poller::wait_stopped() {
     }
 }
 
-bool poller::add_channel_tracker(channel_tracker_sptr &tracker) {
+bool poller::install_channel_tracker(channel_tracker_sptr &tracker) {
     if (pump_unlikely(!started_.load(std::memory_order_relaxed))) {
-        pump_warn_log("poller is not started, can't add channel tracker");
+        pump_debug_log("poller not started");
         return false;
     }
 
     tracker->set_poller(this);
 
-    if (!tracker->start()) {
-        pump_warn_log("start tracker failed");
+    if (tracker->get_expected_event() != track_none) {
+        if (!tracker->track()) {
+            pump_debug_log("start tracker failed");
+            return false;
+        }
+    }
+
+    // Create tracker event
+    auto ev = object_create<tracker_event>(tracker, tracker_append);
+    if (ev == nullptr) {
+        pump_warn_log("new tracker event object failed");
         return false;
     }
 
     // Install channel tracker
     if (!__install_channel_tracker(tracker.get())) {
-        pump_warn_log("install tracker failed");
+        pump_debug_log("install tracker failed");
+        object_delete(ev);
         return false;
     }
 
-    // Create tracker event
-    auto ev = object_create<tracker_event>(tracker, tracker_append);
+    // Queue tracker event
     if (pump_unlikely(!tevents_.push(ev))) {
-        pump_abort_with_log("push adding tracker event to queue failed");
+        pump_abort_with_log("push tracker event to queue failed");
     }
 
     // Add pending trakcer event count
@@ -92,46 +101,59 @@ bool poller::add_channel_tracker(channel_tracker_sptr &tracker) {
     return true;
 }
 
-void poller::remove_channel_tracker(channel_tracker_sptr &tracker) {
+void poller::uninstall_channel_tracker(channel_tracker_sptr &tracker) {
     if (pump_unlikely(!started_.load(std::memory_order_relaxed))) {
-        pump_warn_log("poller is not started, can't remove channel tracker");
+        pump_debug_log("poller not started");
         return;
     }
 
-    if (!tracker->stop()) {
-        pump_warn_log("stop tracker failed");
-        return;
-    }
+    tracker->untrack();
 
     // Uninstall channel tracker.
     __uninstall_channel_tracker(tracker.get());
 
     // Create tracker event
     auto ev = object_create<tracker_event>(tracker, tracker_remove);
+    if (ev == nullptr) {
+        pump_warn_log("new tracker event object failed");
+        return;
+    }
+
+    // Queue tracker event
     if (pump_unlikely(!tevents_.push(ev))) {
-        pump_abort_with_log("push removing tracker event to queue failed");
+        pump_abort_with_log("push tracker event to queue failed");
     }
 
     // Add pending trakcer event count
     tev_cnt_.fetch_add(1, std::memory_order_relaxed);
 }
 
-bool poller::resume_channel_tracker(channel_tracker *tracker) {
+bool poller::start_channel_tracker(channel_tracker_sptr &tracker) {
     if (pump_unlikely(!tracker->track())) {
-        pump_warn_log("track tracker failed");
+        pump_debug_log("track tracker failed");
         return false;
     }
-    return __resume_channel_tracker(tracker);
+    return __start_channel_tracker(tracker.get());
 }
 
-bool poller::push_channel_event(channel_sptr &c, int32_t event, void *arg) {
+bool poller::push_channel_event(
+    channel_sptr &c,
+    int32_t event,
+    void *arg) {
     if (pump_unlikely(!started_.load())) {
-        pump_warn_log("poller is not started, can't push channel event");
+        pump_debug_log("poller not started");
+        return false;
+    }
+
+    // Create channel event
+    auto ev = object_create<channel_event>(c, event, arg);
+    if (ev == nullptr) {
+        pump_warn_log("new channel event object failed");
         return false;
     }
 
     // Push channel event to queue.
-    if (pump_unlikely(!cevents_.push(object_create<channel_event>(c, event, arg)))) {
+    if (pump_unlikely(!cevents_.push(ev))) {
         pump_abort_with_log("push channel event to queue failed");
     }
 
@@ -148,10 +170,12 @@ void poller::__handle_channel_events() {
         if (pump_unlikely(!cevents_.pop(ev))) {
             pump_abort_with_log("pop channel event from queue failed");
         }
+
         auto ch = ev->ch.lock();
         if (ch) {
             ch->handle_channel_event(ev->event, ev->arg);
         }
+
         object_delete(ev);
     }
 }
@@ -163,6 +187,7 @@ void poller::__handle_channel_tracker_events() {
         if (pump_unlikely(!tevents_.pop(ev))) {
             pump_abort_with_log("pop tracker event from queue failed");
         }
+
         if (ev->event == tracker_append) {
             // Apeend to tracker list
             trackers_[ev->tracker.get()] = std::move(ev->tracker);
@@ -170,6 +195,7 @@ void poller::__handle_channel_tracker_events() {
             // Delete from tracker list
             trackers_.erase(ev->tracker.get());
         }
+
         object_delete(ev);
     }
 }

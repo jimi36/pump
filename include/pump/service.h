@@ -37,7 +37,7 @@ class pump_lib service : public toolkit::noncopyable {
     /*********************************************************************************
      * Constructor
      ********************************************************************************/
-    service(bool enable_poller = true);
+    service(bool enable_poll = true);
 
     /*********************************************************************************
      * Deconstructor
@@ -60,41 +60,11 @@ class pump_lib service : public toolkit::noncopyable {
     void wait_stopped();
 
     /*********************************************************************************
-     * Add channel checker
+     * Get poller
      ********************************************************************************/
-    pump_inline bool add_channel_tracker(
-        poll::channel_tracker_sptr &tracker,
-        poller_id pid) {
+    pump_inline poll::poller *get_poller(poller_id pid) {
         pump_assert(pid <= send_pid);
-        if (pollers_[pid]) {
-            return pollers_[pid]->add_channel_tracker(tracker);
-        }
-        return false;
-    }
-
-    /*********************************************************************************
-     * Delete channel
-     ********************************************************************************/
-    pump_inline void remove_channel_tracker(
-        poll::channel_tracker_sptr &tracker,
-        poller_id pid) {
-        pump_assert(pid <= send_pid);
-        if (pollers_[pid]) {
-            return pollers_[pid]->remove_channel_tracker(tracker);
-        }
-    }
-
-    /*********************************************************************************
-     * Resume channel
-     ********************************************************************************/
-    pump_inline bool resume_channel_tracker(
-        poll::channel_tracker *tracker,
-        poller_id pid) {
-        pump_assert(pid <= send_pid);
-        if (pollers_[pid]) {
-            return pollers_[pid]->resume_channel_tracker(tracker);
-        }
-        return false;
+        return pollers_[pid];
     }
 
     /*********************************************************************************
@@ -175,8 +145,8 @@ class pump_lib service_getter {
     /*********************************************************************************
      * Constructor
      ********************************************************************************/
-    service_getter(service *sv) noexcept :
-        service_(sv) {}
+    service_getter(service *sv) pump_noexcept
+      : service_(sv) {}
 
     /*********************************************************************************
      * Deconstructor
@@ -186,7 +156,7 @@ class pump_lib service_getter {
     /*********************************************************************************
      * Get service
      ********************************************************************************/
-    pump_inline service *get_service() {
+    pump_inline service *get_service() pump_noexcept {
         return service_;
     }
 
@@ -194,7 +164,7 @@ class pump_lib service_getter {
     /*********************************************************************************
      * Set service
      ********************************************************************************/
-    pump_inline void __set_service(service *sv) {
+    pump_inline void __set_service(service *sv) pump_noexcept {
         service_ = sv;
     }
 

@@ -19,18 +19,16 @@
 namespace pump {
 namespace transport {
 
+base_transport::~base_transport() {
+    __uninstall_read_tracker();
+    __uninstall_send_tracker();
+    __close_transport_flow();
+}
+
 void base_transport::on_channel_event(int32_t ev, void *arg) {
     if (__trigger_disconnected_callback() ||
         __trigger_stopped_callback()) {
-        // Transport disabled.
     }
-}
-
-bool base_transport::__change_read_state(read_state from, read_state to) {
-    if (rstate_.compare_exchange_strong(from, to)) {
-        return true;
-    }
-    return false;
 }
 
 bool base_transport::__try_triggering_disconnected_callback() {
@@ -54,6 +52,94 @@ bool base_transport::__trigger_stopped_callback() {
         __shutdown_transport_flow(SHUT_RDWR);
         cbs_.stopped_cb();
         return true;
+    }
+    return false;
+}
+
+bool base_transport::__install_read_tracker() {
+    if (r_tracker_) {
+        return false;
+    }
+
+    r_tracker_.reset(
+        object_create<poll::channel_tracker>(
+            shared_from_this(),
+            poll::track_none),
+        object_delete<poll::channel_tracker>);
+    if (!r_tracker_) {
+        pump_debug_log("new transport's read tracker object failed");
+        return false;
+    }
+
+    auto poller = get_service()->get_poller(read_pid);
+    if (poller == nullptr) {
+        pump_debug_log("transport got invalid send poller");
+        return false;
+    }
+    if (!poller->install_channel_tracker(r_tracker_)) {
+        pump_debug_log("poller install transport's read tracker failed");
+        return false;
+    }
+
+    r_tracker_->set_expected_event(poll::track_read);
+
+    return true;
+}
+
+bool base_transport::__install_send_tracker() {
+    if (s_tracker_) {
+        return false;
+    }
+
+    s_tracker_.reset(
+        object_create<poll::channel_tracker>(
+            shared_from_this(),
+            poll::track_none),
+        object_delete<poll::channel_tracker>);
+    if (!s_tracker_) {
+        pump_debug_log("new transport's send tracker object failed");
+        return false;
+    }
+
+    auto poller = get_service()->get_poller(send_pid);
+    if (poller == nullptr) {
+        pump_debug_log("transport got invalid send poller");
+        return false;
+    }
+    if (!poller->install_channel_tracker(s_tracker_)) {
+        pump_debug_log("poller install transport's read tracker failed");
+        return false;
+    }
+
+    s_tracker_->set_expected_event(poll::track_send);
+
+    return true;
+}
+
+void base_transport::__uninstall_read_tracker() {
+    if (r_tracker_ && r_tracker_->get_poller() != nullptr) {
+        r_tracker_->get_poller()->uninstall_channel_tracker(r_tracker_);
+    }
+}
+
+void base_transport::__uninstall_send_tracker() {
+    if (s_tracker_ && s_tracker_->get_poller() != nullptr) {
+        s_tracker_->get_poller()->uninstall_channel_tracker(s_tracker_);
+    }
+}
+
+bool base_transport::__start_read_tracker() {
+    pump_assert(r_tracker_);
+    if (r_tracker_->get_poller() != nullptr) {
+        return r_tracker_->get_poller()->start_channel_tracker(r_tracker_);
+    }
+    return false;
+}
+
+bool base_transport::__start_send_tracker() {
+    pump_assert(s_tracker_);
+    if (s_tracker_->get_poller() != nullptr) {
+        return s_tracker_->get_poller()->start_channel_tracker(s_tracker_);
     }
     return false;
 }

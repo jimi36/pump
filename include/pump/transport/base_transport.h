@@ -34,17 +34,22 @@ class flow_base;
 const static int32_t max_tcp_buffer_size = 4096;  // 4KB
 const static int32_t max_udp_buffer_size = 8192;  // 8KB
 
-class pump_lib base_channel : public service_getter,
-                              public poll::channel {
+class pump_lib base_channel
+  : public service_getter,
+    public poll::channel {
   public:
     /*********************************************************************************
      * Constructor
      ********************************************************************************/
-    base_channel(transport_type type, service *sv, int32_t fd) noexcept :
-        service_getter(sv),
+    base_channel(
+        transport_type type,
+        service *sv,
+        int32_t fd) pump_noexcept
+      : service_getter(sv),
         poll::channel(fd),
         type_(type),
-        state_(state_none) {}
+        state_(state_none) {
+    }
 
     /*********************************************************************************
      * Deconstructor
@@ -54,14 +59,14 @@ class pump_lib base_channel : public service_getter,
     /*********************************************************************************
      * Get transport type
      ********************************************************************************/
-    pump_inline transport_type get_type() const {
+    pump_inline transport_type get_type() const pump_noexcept {
         return type_;
     }
 
     /*********************************************************************************
      * Get started status
      ********************************************************************************/
-    pump_inline bool is_started() const {
+    pump_inline bool is_started() const pump_noexcept {
         return __is_state(state_started, std::memory_order_relaxed);
     }
 
@@ -71,16 +76,19 @@ class pump_lib base_channel : public service_getter,
      ********************************************************************************/
     pump_inline bool __set_state(
         transport_state expected,
-        transport_state desired) {
+        transport_state desired) pump_noexcept {
         return state_.compare_exchange_strong(expected, desired);
     }
 
     /*********************************************************************************
      * Check transport state
      ********************************************************************************/
+    pump_inline bool __is_state(transport_state state) const pump_noexcept {
+        return state_.load(std::memory_order_acquire) == state;
+    }
     pump_inline bool __is_state(
         transport_state state,
-        std::memory_order order = std::memory_order_acquire) const {
+        std::memory_order order) const pump_noexcept {
         return state_.load(order) == state;
     }
 
@@ -106,8 +114,9 @@ const static int32_t channel_event_disconnected = 0;
 const static int32_t channel_event_buffer_sent = 1;
 const static int32_t channel_event_read = 2;
 
-class pump_lib base_transport : public base_channel,
-                                public std::enable_shared_from_this<base_transport> {
+class pump_lib base_transport
+  : public base_channel,
+    public std::enable_shared_from_this<base_transport> {
   public:
     /*********************************************************************************
      * Constructor
@@ -115,16 +124,17 @@ class pump_lib base_transport : public base_channel,
     base_transport(
         int32_t type,
         service *sv,
-        int32_t fd) noexcept :
-        base_channel(type, sv, fd),
+        int32_t fd) pump_noexcept
+      : base_channel(type, sv, fd),
         rmode_(read_mode_none),
         rstate_(read_none),
-        pending_send_size_(0) {}
+        pending_send_size_(0) {
+    }
 
     /*********************************************************************************
      * Deconstructor
      ********************************************************************************/
-    virtual ~base_transport() {}
+    virtual ~base_transport();
 
     /*********************************************************************************
      * Start
@@ -139,17 +149,21 @@ class pump_lib base_transport : public base_channel,
     /*********************************************************************************
      * Stop
      ********************************************************************************/
-    virtual void stop() {}
+    virtual void stop() {
+    }
 
     /*********************************************************************************
      * Force stop
      ********************************************************************************/
-    virtual void force_stop() {}
+    virtual void force_stop() {
+    }
 
     /*********************************************************************************
-     * Continue read  for read once mode
+     * Async read for read once mode
+     * For read loop mode, this will loop reading.
+     * For read once mode, this will read only once.
      ********************************************************************************/
-    virtual error_code continue_read() {
+    virtual error_code async_read() {
         return error_fault;
     }
 
@@ -181,21 +195,21 @@ class pump_lib base_transport : public base_channel,
     /*********************************************************************************
      * Get pending send buffer size
      ********************************************************************************/
-    pump_inline int32_t get_pending_send_size() const {
+    pump_inline int32_t get_pending_send_size() const pump_noexcept {
         return pending_send_size_.load(std::memory_order_relaxed);
     }
 
     /*********************************************************************************
      * Get local address
      ********************************************************************************/
-    pump_inline const address &get_local_address() const {
+    pump_inline const address &get_local_address() const pump_noexcept {
         return local_address_;
     }
 
     /*********************************************************************************
      * Get remote address
      ********************************************************************************/
-    pump_inline const address &get_remote_address() const {
+    pump_inline const address &get_remote_address() const pump_noexcept {
         return remote_address_;
     }
 
@@ -214,12 +228,17 @@ class pump_lib base_transport : public base_channel,
     /*********************************************************************************
      * Close transport flow
      ********************************************************************************/
-    virtual void __close_transport_flow() {}
+    virtual void __close_transport_flow() {
+    }
 
     /*********************************************************************************
      * Change read state
      ********************************************************************************/
-    bool __change_read_state(read_state from, read_state to);
+    pump_inline bool __change_read_state(
+        read_state from,
+        read_state to) pump_noexcept {
+        return rstate_.compare_exchange_strong(from, to);
+    }
 
     /*********************************************************************************
      * Try triggering dissconnected callback
@@ -237,70 +256,22 @@ class pump_lib base_transport : public base_channel,
     bool __trigger_stopped_callback();
 
     /*********************************************************************************
+     * Install trackers
+     ********************************************************************************/
+    bool __install_read_tracker();
+    bool __install_send_tracker();
+
+    /*********************************************************************************
+     * Uninstall tracker
+     ********************************************************************************/
+    void __uninstall_read_tracker();
+    void __uninstall_send_tracker();
+
+    /*********************************************************************************
      * Start trackers
      ********************************************************************************/
-    pump_inline bool __start_read_tracker() {
-        if (pump_unlikely(!r_tracker_)) {
-            r_tracker_.reset(
-                object_create<poll::channel_tracker>(
-                    shared_from_this(),
-                    poll::track_read),
-                object_delete<poll::channel_tracker>);
-            if (!r_tracker_ ||
-                !get_service()->add_channel_tracker(r_tracker_, read_pid)) {
-                pump_warn_log("add transport's read tracker to service failed");
-                return false;
-            }
-            return true;
-        }
-
-        return __resume_read_tracker();
-    }
-    pump_inline bool __start_send_tracker() {
-        if (pump_unlikely(!s_tracker_)) {
-            s_tracker_.reset(
-                object_create<poll::channel_tracker>(
-                    shared_from_this(),
-                    poll::track_send),
-                object_delete<poll::channel_tracker>);
-            if (!s_tracker_ ||
-                !get_service()->add_channel_tracker(s_tracker_, send_pid)) {
-                pump_warn_log("add transport's send tracker to service failed");
-                return false;
-            }
-            return true;
-        }
-
-        return __resume_send_tracker();
-    }
-
-    /*********************************************************************************
-     * Stop tracker
-     ********************************************************************************/
-    pump_inline void __stop_read_tracker() {
-        if (r_tracker_ && r_tracker_->get_poller() != nullptr) {
-            r_tracker_->get_poller()->remove_channel_tracker(r_tracker_);
-        }
-    }
-    pump_inline void __stop_send_tracker() {
-        if (s_tracker_ && s_tracker_->get_poller() != nullptr) {
-            s_tracker_->get_poller()->remove_channel_tracker(s_tracker_);
-        }
-    }
-
-    /*********************************************************************************
-     * Resume trackers
-     ********************************************************************************/
-    pump_inline bool __resume_read_tracker() {
-        pump_assert(r_tracker_);
-        auto tracker = r_tracker_.get();
-        return tracker->get_poller()->resume_channel_tracker(tracker);
-    }
-    pump_inline bool __resume_send_tracker() {
-        pump_assert(s_tracker_);
-        auto tracker = s_tracker_.get();
-        return tracker->get_poller()->resume_channel_tracker(tracker);
-    }
+    bool __start_read_tracker();
+    bool __start_send_tracker();
 
   protected:
     // Local address

@@ -37,13 +37,14 @@ class fl_sc_queue : public noncopyable {
 
     // Block node
     struct block_node {
-        block_node() :
-            next(nullptr),
+        block_node()
+          : next(nullptr),
             data(nullptr),
             head(0),
             cache_tail(0),
             tail(0),
-            cache_head(0) {}
+            cache_head(0) {
+        }
 
         block_node *next;
         char *data;
@@ -61,8 +62,8 @@ class fl_sc_queue : public noncopyable {
     /*********************************************************************************
      * Constructor
      ********************************************************************************/
-    fl_sc_queue(int32_t size) :
-        capacity_(0),
+    fl_sc_queue(int32_t size)
+      : capacity_(0),
         block_element_size_(PerBlockElementCount),
         blk_head_(nullptr),
         blk_tail_(nullptr) {
@@ -253,7 +254,7 @@ class fl_sc_queue : public noncopyable {
     /*********************************************************************************
      * Empty
      ********************************************************************************/
-    pump_inline bool empty() const {
+    pump_inline bool empty() const pump_noexcept {
         block_node *blk = blk_head_.load(std::memory_order_relaxed);
         int32_t head = blk->head.load(std::memory_order_relaxed);
         if (head != blk->tail.load(std::memory_order_relaxed)) {
@@ -267,7 +268,7 @@ class fl_sc_queue : public noncopyable {
     /*********************************************************************************
      * Get capacity
      ********************************************************************************/
-    pump_inline int32_t capacity() const {
+    pump_inline int32_t capacity() const pump_noexcept {
         return capacity_;
     }
 

@@ -31,7 +31,7 @@ tls_credentials new_client_tls_credentials() {
 #if defined(PUMP_HAVE_TLS)
     SSL_CTX *xcred = SSL_CTX_new(TLS_client_method());
     if (xcred == nullptr) {
-        pump_warn_log("create client tls certificate context failed");
+        pump_debug_log("create client tls certificate context failed");
         return nullptr;
     }
     SSL_CTX_set_options(xcred, SSL_EXT_TLS1_3_ONLY);
@@ -176,7 +176,7 @@ void delete_tls_session(tls_session *session) {
     object_delete(session);
 }
 
-int32_t tls_handshake(tls_session *session) {
+tls_handshake_phase tls_handshake(tls_session *session) {
 #if defined(PUMP_HAVE_TLS)
     int32_t ret = SSL_do_handshake((SSL *)session->ssl_ctx);
     int32_t ec = SSL_get_error((SSL *)session->ssl_ctx, ret);

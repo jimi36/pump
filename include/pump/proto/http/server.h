@@ -54,7 +54,7 @@ class pump_lib server : public std::enable_shared_from_this<server> {
     /*********************************************************************************
      * Deconstructor
      ********************************************************************************/
-    virtual ~server();
+    virtual ~server() = default;
 
     /*********************************************************************************
      * Start server
@@ -82,19 +82,21 @@ class pump_lib server : public std::enable_shared_from_this<server> {
     /*********************************************************************************
      * Acceptor accepted callback
      ********************************************************************************/
-    static void on_accepted(server_wptr wptr, base_transport_sptr &transp);
+    static void on_accepted(
+        server_wptr svr,
+        base_transport_sptr &transp);
 
     /*********************************************************************************
      * Acceptor stopped callback
      ********************************************************************************/
-    static void on_stopped(server_wptr wptr);
+    static void on_stopped(server_wptr svr);
 
   protected:
     /*********************************************************************************
      * Http request callback
      ********************************************************************************/
     static void on_http_request(
-        server_wptr wptr,
+        server_wptr svr,
         connection_wptr conn,
         packet_sptr &pk);
 
@@ -102,7 +104,7 @@ class pump_lib server : public std::enable_shared_from_this<server> {
      * Http error callback
      ********************************************************************************/
     static void on_http_error(
-        server_wptr wptr,
+        server_wptr svr,
         connection_wptr conn,
         const std::string &msg);
 
@@ -110,7 +112,7 @@ class pump_lib server : public std::enable_shared_from_this<server> {
     /*********************************************************************************
      * Constructor
      ********************************************************************************/
-    server() noexcept;
+    server() pump_noexcept;
 
   private:
     // Service

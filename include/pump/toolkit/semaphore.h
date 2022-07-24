@@ -161,8 +161,8 @@ class pump_lib light_semaphore : public noncopyable {
     /*********************************************************************************
      * Constructor
      ********************************************************************************/
-    light_semaphore(int32_t max_spin = 10000, int64_t init_count = 0) :
-        max_spin_(max_spin), count_(init_count) {
+    light_semaphore(int32_t max_spin = 10000, int64_t init_count = 0)
+      : max_spin_(max_spin), count_(init_count) {
         assert(init_count >= 0);
     }
 

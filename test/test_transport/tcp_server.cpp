@@ -59,6 +59,8 @@ class my_tcp_acceptor : public std::enable_shared_from_this<my_tcp_acceptor> {
             transports_[transp.get()] = tctx;
         }
 
+        transp->async_read();
+
         printf("server tcp transport accepted\n");
     }
 
@@ -82,7 +84,7 @@ class my_tcp_acceptor : public std::enable_shared_from_this<my_tcp_acceptor> {
             send_data(transp);
         }
 
-        transp->continue_read();
+        transp->async_read();
     }
 
     void on_sent_callback(toolkit::io_buffer *iob) {

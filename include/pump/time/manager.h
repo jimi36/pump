@@ -53,7 +53,7 @@ class pump_lib manager : public toolkit::noncopyable {
     /*********************************************************************************
      * Deconstructor
      ********************************************************************************/
-    ~manager();
+    ~manager() = default;
 
     /*********************************************************************************
      * Start
@@ -79,7 +79,7 @@ class pump_lib manager : public toolkit::noncopyable {
 
     /*********************************************************************************
      * Restart timer
-     * Just timer can call this function, user code must dont call this.
+     * Just user code must don't call this function.
      ********************************************************************************/
     bool restart_timer(timer_sptr &&ptr);
 
@@ -91,7 +91,6 @@ class pump_lib manager : public toolkit::noncopyable {
 
     /*********************************************************************************
      * Observe timers
-     * If there are more timers in queue, it will update next observe time.
      ********************************************************************************/
     void __observe(
         timer_list_sptr &tl,
@@ -102,14 +101,14 @@ class pump_lib manager : public toolkit::noncopyable {
      * Observe timers
      ********************************************************************************/
     pump_inline void __queue_timer(timer_sptr &ptr, uint64_t now_ns) {
-       timers_[ptr->timeout() + now_ns].push_back(ptr);
+        timers_[ptr->timeout() + now_ns].push_back(ptr);
     }
 
   private:
     /*********************************************************************************
      * Constructor
      ********************************************************************************/
-    manager() noexcept;
+    manager() pump_noexcept;
 
   private:
     // Started status

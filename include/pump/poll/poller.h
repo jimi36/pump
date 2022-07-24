@@ -35,8 +35,8 @@ class pump_lib poller : public toolkit::noncopyable {
         channel_event(
             std::shared_ptr<channel> &c,
             int32_t ev,
-            void *a) noexcept :
-            ch(c),
+            void *a) noexcept
+          : ch(c),
             event(ev),
             arg(a) {}
         channel_wptr ch;
@@ -45,8 +45,10 @@ class pump_lib poller : public toolkit::noncopyable {
     };
 
     struct tracker_event {
-        tracker_event(channel_tracker_sptr &t, int32_t ev) noexcept :
-            tracker(t),
+        tracker_event(
+            channel_tracker_sptr &t,
+            int32_t ev) noexcept
+          : tracker(t),
             event(ev) {}
         channel_tracker_sptr tracker;
         int32_t event;
@@ -79,24 +81,27 @@ class pump_lib poller : public toolkit::noncopyable {
     virtual void wait_stopped();
 
     /*********************************************************************************
-     * Add channel tracker
+     * Install channel tracker
      ********************************************************************************/
-    bool add_channel_tracker(channel_tracker_sptr &tracker);
+    bool install_channel_tracker(channel_tracker_sptr &tracker);
 
     /*********************************************************************************
-     * Remove channel tracker
+     * Uninstall channel tracker
      ********************************************************************************/
-    void remove_channel_tracker(channel_tracker_sptr &tracker);
+    void uninstall_channel_tracker(channel_tracker_sptr &tracker);
 
     /*********************************************************************************
-     * Resume channel tracker
+     * start channel tracker
      ********************************************************************************/
-    bool resume_channel_tracker(channel_tracker *tracker);
+    bool start_channel_tracker(channel_tracker_sptr &tracker);
 
     /*********************************************************************************
      * Push channel event
      ********************************************************************************/
-    virtual bool push_channel_event(channel_sptr &c, int32_t event, void *arg);
+    bool push_channel_event(
+        channel_sptr &c,
+        int32_t event,
+        void *arg);
 
   protected:
     /*********************************************************************************
@@ -114,9 +119,9 @@ class pump_lib poller : public toolkit::noncopyable {
     }
 
     /*********************************************************************************
-     * Awake channel tracker for derived class
+     * Start channel tracker for derived class
      ********************************************************************************/
-    virtual bool __resume_channel_tracker(channel_tracker *tracker) {
+    virtual bool __start_channel_tracker(channel_tracker *tracker) {
         return false;
     }
 

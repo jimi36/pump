@@ -34,7 +34,7 @@ class flow_base : public toolkit::noncopyable {
     /*********************************************************************************
      * Constructor
      ********************************************************************************/
-    flow_base() noexcept;
+    flow_base() pump_noexcept;
 
     /*********************************************************************************
      * Deconstructor
@@ -47,7 +47,7 @@ class flow_base : public toolkit::noncopyable {
      * Unbind fd
      * This will return and unbind the fd from the flow.
      ********************************************************************************/
-    pump_socket unbind();
+    pump_socket unbind() pump_noexcept;
 
     /*********************************************************************************
      * Shutdown
@@ -62,14 +62,14 @@ class flow_base : public toolkit::noncopyable {
     /*********************************************************************************
      * Get fd
      ********************************************************************************/
-    pump_inline pump_socket get_fd() const {
+    pump_inline pump_socket get_fd() const pump_noexcept {
         return fd_;
     }
 
     /*********************************************************************************
      * Check flow valid status
      ********************************************************************************/
-    pump_inline bool is_valid() const {
+    pump_inline bool is_valid() const pump_noexcept {
         return fd_ > 0;
     }
 

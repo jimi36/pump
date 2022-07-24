@@ -28,6 +28,12 @@ namespace http {
 
 using transport::base_transport_sptr;
 
+const static int32_t state_none = 0x00;
+const static int32_t state_started = 0x01;
+const static int32_t state_upgraded = 0x02;
+const static int32_t state_stopped = 0x04;
+const static int32_t state_error = 0x05;
+
 class connection;
 DEFINE_SMART_POINTERS(connection);
 
@@ -54,7 +60,7 @@ class pump_lib connection : public std::enable_shared_from_this<connection> {
     /*********************************************************************************
      * Constructor
      ********************************************************************************/
-    connection(bool server, base_transport_sptr &transp) noexcept;
+    connection(bool server, base_transport_sptr &transp);
 
     /*********************************************************************************
      * Deconstructor
@@ -99,12 +105,14 @@ class pump_lib connection : public std::enable_shared_from_this<connection> {
     /*********************************************************************************
      * Check connection upgraded status
      ********************************************************************************/
-    bool is_upgraded() const;
+    pump_inline bool is_upgraded() const pump_noexcept {
+        return state_.load() == state_upgraded;
+    }
 
     /*********************************************************************************
      * Check connection valid status
      ********************************************************************************/
-    pump_inline bool is_valid() const {
+    pump_inline bool is_valid() const pump_noexcept {
         if (!transp_ || !transp_->is_started()) {
             return false;
         }
@@ -116,30 +124,30 @@ class pump_lib connection : public std::enable_shared_from_this<connection> {
      * Read event callback
      ********************************************************************************/
     static void on_read(
-        connection_wptr wptr,
+        connection_wptr conn,
         const char *b,
         int32_t size);
 
     /*********************************************************************************
      * Disconnected event callback
      ********************************************************************************/
-    static void on_disconnected(connection_wptr wptr);
+    static void on_disconnected(connection_wptr conn);
 
     /*********************************************************************************
      * Stopped event callback
      ********************************************************************************/
-    static void on_stopped(connection_wptr wptr);
+    static void on_stopped(connection_wptr conn);
 
   private:
     /*********************************************************************************
      * Read next one http packet.
      ********************************************************************************/
-    bool __read_next_http_packet();
+    bool __async_read_http_packet();
 
     /*********************************************************************************
      * Init websocket mask.
      ********************************************************************************/
-    void __init_websocket_mask();
+    void __init_websocket_key();
 
     /*********************************************************************************
      * Send websocket ping frame
@@ -167,10 +175,12 @@ class pump_lib connection : public std::enable_shared_from_this<connection> {
     int32_t __handle_websocket_frame(const char *b, int32_t size);
 
     /*********************************************************************************
-     * Continue read
+     * Async read
      ********************************************************************************/
-    pump_inline bool __continue_read() {
-        if (!transp_ || transp_->continue_read() != transport::error_none) {
+    pump_inline bool __async_read() {
+        if (!transp_) {
+            return false;
+        } else if (transp_->async_read() != transport::error_none) {
             return false;
         }
         return true;
@@ -191,9 +201,9 @@ class pump_lib connection : public std::enable_shared_from_this<connection> {
     http_callbacks http_cbs_;
 
     // Websocket frame
-    frame ws_frame_;
+    frame_header ws_frame_;
     // Websocket mask key
-    std::string ws_mask_key_;
+    std::string ws_key_;
 
     // Websocket closed flag
     std::atomic_flag ws_closed_;

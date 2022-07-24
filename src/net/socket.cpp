@@ -409,7 +409,9 @@ bool remote_address(pump_socket fd, struct sockaddr *addr, int32_t *addrlen) {
     return false;
 }
 
-std::string address_to_string(struct sockaddr *addr, int32_t addrlen) {
+std::string address_to_string(
+    sockaddr *addr,
+    int32_t addrlen) {
     char host[128] = {0};
     if (addrlen == sizeof(struct sockaddr_in)) {
         struct sockaddr_in *v4 = (struct sockaddr_in *)addr;

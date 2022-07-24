@@ -69,9 +69,11 @@ class pump_lib tcp_transport : public base_transport {
     virtual void force_stop() override;
 
     /*********************************************************************************
-     * Continue read for read once mode
+     * Async read for read once mode
+     * For read loop mode, this will loop reading.
+     * For read once mode, this will read only once.
      ********************************************************************************/
-    virtual error_code continue_read() override;
+    virtual error_code async_read() override;
 
     /*********************************************************************************
      * Send
@@ -103,7 +105,7 @@ class pump_lib tcp_transport : public base_transport {
     /*********************************************************************************
      * Constructor
      ********************************************************************************/
-    tcp_transport() noexcept;
+    tcp_transport() pump_noexcept;
 
     /*********************************************************************************
      * Open transport flow

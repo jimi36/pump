@@ -23,35 +23,36 @@ namespace transport {
 tls_acceptor::tls_acceptor(
     tls_credentials xcred,
     const address &listen_address,
-    uint64_t handshake_timeout_ns) noexcept :
-    base_acceptor(transport_tls_acceptor, listen_address),
+    uint64_t handshake_timeout_ns) pump_noexcept
+  : base_acceptor(transport_tls_acceptor, listen_address),
     xcred_(xcred),
-    handshake_timeout_ns_(handshake_timeout_ns) {}
+    handshake_timeout_ns_(handshake_timeout_ns) {
+}
 
 tls_acceptor::~tls_acceptor() {
     __stop_all_handshakers();
-
     delete_tls_credentials(xcred_);
 }
 
 error_code tls_acceptor::start(service *sv, const acceptor_callbacks &cbs) {
     if (sv == nullptr) {
-        pump_warn_log("service is invalid");
+        pump_debug_log("service invalid");
         return error_invalid;
     }
 
-    if (!cbs.accepted_cb || !cbs.stopped_cb) {
-        pump_warn_log("callbacks is invalid");
+    if (!cbs.accepted_cb ||
+        !cbs.stopped_cb) {
+        pump_debug_log("callbacks invalid");
         return error_invalid;
     }
 
     if (xcred_ == nullptr) {
-        pump_warn_log("tls acceptor's cert is invalid");
+        pump_debug_log("cert invalid");
         return error_invalid;
     }
 
     if (!__set_state(state_none, state_starting)) {
-        pump_warn_log("tls acceptor is already started before");
+        pump_debug_log("tls acceptor already started");
         return error_fault;
     }
 
@@ -61,12 +62,12 @@ error_code tls_acceptor::start(service *sv, const acceptor_callbacks &cbs) {
         __set_service(sv);
 
         if (!__open_accept_flow()) {
-            pump_warn_log("open tls acceptor's flow failed");
+            pump_debug_log("open tls acceptor's flow failed");
             break;
         }
 
-        if (!__start_accept_tracker(shared_from_this())) {
-            pump_warn_log("start tls acceptor's tracker failed");
+        if (!__install_accept_tracker(shared_from_this())) {
+            pump_debug_log("install tls acceptor's tracker failed");
             break;
         }
 
@@ -91,11 +92,22 @@ void tls_acceptor::stop() {
 }
 
 void tls_acceptor::on_read_event() {
-    address local_address, remote_address;
-    pump_socket fd = flow_->accept(&local_address, &remote_address);
-    if (pump_likely(fd > 0)) {
-        tls_handshaker *handshaker = __create_handshaker();
-        if (pump_likely(handshaker != nullptr)) {
+    // Wait starting end
+    while (__is_state(state_starting, std::memory_order_relaxed)) {
+        //pump_debug_log("tls acceptor starting, wait");
+    }
+
+    do {
+        address local_address, remote_address;
+        pump_socket fd = flow_->accept(&local_address, &remote_address);
+        if (fd > 0) {
+            tls_handshaker *handshaker = __create_handshaker();
+            if (pump_unlikely(handshaker == nullptr)) {
+                pump_warn_log("create tls handshaker failed");
+                net::close(fd);
+                break;
+            }
+
             tls_handshaker::tls_handshaker_callbacks handshaker_cbs;
             handshaker_cbs.handshaked_cb = pump_bind(
                 &tls_acceptor::on_handshaked,
@@ -112,37 +124,39 @@ void tls_acceptor::on_read_event() {
                     xcred_,
                     local_address,
                     remote_address)) {
-                pump_warn_log("init tls handshaker failed");
+                pump_debug_log("init tls handshaker failed");
                 __remove_handshaker(handshaker);
+                break;
             }
             if (!handshaker->start(
                     get_service(),
                     handshake_timeout_ns_,
                     handshaker_cbs)) {
-                pump_warn_log("start tls handshaker failed");
+                pump_debug_log("start tls handshaker failed");
                 __remove_handshaker(handshaker);
+                break;
             }
-        } else {
-            pump_warn_log("create tls handshaker failed");
-            net::close(fd);
         }
-    }
+    } while (false);
 
-    if (!__resume_accept_tracker()) {
-        pump_warn_log("resume tls acceptor's tracker failed");
+    if (!__start_accept_tracker()) {
+        if (__is_state(state_started)) {
+            pump_err_log("start tls acceptor's tracker failed");
+        }
     }
 }
 
 void tls_acceptor::on_handshaked(
-    tls_acceptor_wptr wptr,
+    tls_acceptor_wptr acceptor,
     tls_handshaker *handshaker,
-    bool succ) {
-    auto acceptor = wptr.lock();
-    if (!acceptor || !acceptor->__remove_handshaker(handshaker)) {
+    bool success) {
+    auto acceptor_locker = acceptor.lock();
+    if (!acceptor_locker ||
+        !acceptor_locker->__remove_handshaker(handshaker)) {
         return;
     }
 
-    if (succ && acceptor->is_started()) {
+    if (success && acceptor_locker->is_started()) {
         tls_transport_sptr tls_transport = tls_transport::create();
         if (!tls_transport) {
             pump_warn_log("new tls transport object failed");
@@ -154,16 +168,16 @@ void tls_acceptor::on_handshaked(
             handshaker->get_remote_address());
 
         base_transport_sptr transport = tls_transport;
-        acceptor->cbs_.accepted_cb(transport);
+        acceptor_locker->cbs_.accepted_cb(transport);
     }
 }
 
 void tls_acceptor::on_handshake_stopped(
-    tls_acceptor_wptr wptr,
+    tls_acceptor_wptr acceptor,
     tls_handshaker *handshaker) {
-    auto acceptor = wptr.lock();
-    if (acceptor) {
-        acceptor->__remove_handshaker(handshaker);
+    auto acceptor_locker = acceptor.lock();
+    if (acceptor_locker) {
+        acceptor_locker->__remove_handshaker(handshaker);
     }
 }
 
@@ -175,9 +189,8 @@ bool tls_acceptor::__open_accept_flow() {
     if (!flow_) {
         pump_warn_log("new tls acceptor's flow failed");
         return false;
-    }
-    if (flow_->init(shared_from_this(), listen_address_) != error_none) {
-        pump_warn_log("init tls acceptor's flow failed");
+    } else if (!flow_->init(shared_from_this(), listen_address_)) {
+        pump_debug_log("init tls acceptor's flow failed");
         return false;
     }
 

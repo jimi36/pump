@@ -30,21 +30,19 @@ const static uint32_t epoll_send = (EPOLLONESHOT | EPOLLOUT);
 const static uint32_t epoll_error = (EPOLLERR | EPOLLHUP);
 #endif
 
-epoll_poller::epoll_poller() noexcept :
-    fd_(-1),
+epoll_poller::epoll_poller() noexcept
+  : fd_(-1),
     events_(nullptr),
     max_event_count_(1024),
     cur_event_count_(0) {
 #if defined(PUMP_HAVE_EPOLL)
     if ((fd_ = ::epoll_create1(0)) < 0) {
-        pump_err_log("create epoll fd failed %d", net::last_errno());
-        pump_abort();
+        pump_abort_with_log("create epoll fd failed %d", net::last_errno());
     }
 
     events_ = pump_malloc(sizeof(struct epoll_event) * max_event_count_);
     if (events_ == nullptr) {
-        pump_err_log("allocate epoll events memory failed");
-        pump_abort();
+        pump_abort_with_log("allocate epoll events memory failed");
     }
 #else
     pump_abort();
@@ -81,7 +79,7 @@ bool epoll_poller::__install_channel_tracker(channel_tracker *tracker) {
         return true;
     }
 #endif
-    pump_warn_log("install channel tracker failed %d", net::last_errno());
+    pump_debug_log("install channel tracker failed %d", net::last_errno());
     return false;
 }
 
@@ -99,11 +97,14 @@ bool epoll_poller::__uninstall_channel_tracker(channel_tracker *tracker) {
         return true;
     }
 #endif
-    pump_warn_log("uninstall channel tracker failed %d", net::last_errno());
+    pump_debug_log(
+        "uninstall channel tracker failed %d %d",
+        tracker->get_fd(),
+        net::last_errno());
     return false;
 }
 
-bool epoll_poller::__resume_channel_tracker(channel_tracker *tracker) {
+bool epoll_poller::__start_channel_tracker(channel_tracker *tracker) {
 #if defined(PUMP_HAVE_EPOLL)
     auto expected_event = tracker->get_expected_event();
     auto event = tracker->get_event();
@@ -121,7 +122,10 @@ bool epoll_poller::__resume_channel_tracker(channel_tracker *tracker) {
         return true;
     }
 #endif
-    pump_warn_log("resume channel tracker failed %d", net::last_errno());
+    pump_debug_log(
+        "start channel tracker failed %d %d",
+        tracker->get_fd(),
+        net::last_errno());
     return false;
 }
 

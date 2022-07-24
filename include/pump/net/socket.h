@@ -222,7 +222,9 @@ pump_lib bool remote_address(
  * On success return string address like 127.0.0.1:80, else return empty
  *string
  ********************************************************************************/
-pump_lib std::string address_to_string(struct sockaddr *addr, int32_t addrlen);
+pump_lib std::string address_to_string(
+    sockaddr *addr,
+    int32_t addrlen);
 
 /*********************************************************************************
  * Transfrom string to address

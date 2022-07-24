@@ -123,8 +123,8 @@ HANDLE afd_create_device_handle(HANDLE iocp_handle) {
 }
 #endif
 
-afd_poller::afd_poller() noexcept :
-    iocp_handler_(nullptr),
+afd_poller::afd_poller() noexcept
+  : iocp_handler_(nullptr),
     afd_device_handler_(nullptr),
     events_(nullptr),
     max_event_count_(1024),
@@ -136,23 +136,20 @@ afd_poller::afd_poller() noexcept :
         0,
         0);
     if (iocp_handler_ == nullptr) {
-        pump_err_log("create iocp headler failed");
-        pump_abort();
+        pump_abort_with_log("create iocp headler failed");
     }
 
     afd_device_handler_ = afd_create_device_handle(iocp_handler_);
     if (afd_device_handler_ == nullptr) {
-        pump_err_log("create afd device headler failed");
-        pump_abort();
+        pump_abort_with_log("create afd device headler failed");
     }
 
     events_ = pump_malloc(sizeof(OVERLAPPED_ENTRY) * max_event_count_);
     if (events_ == nullptr) {
-        pump_err_log("allocate afd events memory failed");
-        pump_abort();
+        pump_abort_with_log("allocate afd events memory failed");
     }
 #else
-    pump_abort();
+    pump_abort_with_log("unsupport afd poller");
 #endif
 }
 
@@ -174,7 +171,7 @@ bool afd_poller::__install_channel_tracker(channel_tracker *tracker) {
         return true;
     }
 #endif
-    pump_warn_log("install channel tracker failed %d", net::last_errno());
+    pump_debug_log("install channel tracker failed %d", net::last_errno());
     return false;
 }
 
@@ -197,11 +194,11 @@ bool afd_poller::__uninstall_channel_tracker(channel_tracker *tracker) {
         return true;
     }
 #endif
-    pump_warn_log("uninstall channel tracker failed %d", net::last_errno());
+    pump_debug_log("uninstall channel tracker failed %d", net::last_errno());
     return false;
 }
 
-bool afd_poller::__resume_channel_tracker(channel_tracker *tracker) {
+bool afd_poller::__start_channel_tracker(channel_tracker *tracker) {
 #if defined(PUMP_HAVE_IOCP)
     auto expected_event = tracker->get_expected_event();
     auto event = tracker->get_event();
@@ -232,7 +229,7 @@ bool afd_poller::__resume_channel_tracker(channel_tracker *tracker) {
         return true;
     }
 #endif
-    pump_warn_log("resume channel tracker fialed %d", net::last_errno());
+    pump_debug_log("resume channel tracker fialed %d", net::last_errno());
     return false;
 }
 
@@ -243,8 +240,7 @@ void afd_poller::__poll(int32_t timeout) {
         max_event_count_ = cur_event_count;
         events_ = pump_realloc(events_, sizeof(OVERLAPPED_ENTRY) * max_event_count_);
         if (events_ == nullptr) {
-            pump_err_log("reallocate afd events memory failed");
-            pump_abort();
+            pump_abort_with_log("reallocate afd events memory failed");
         }
     }
 

@@ -20,6 +20,7 @@
 #include <string>
 
 #include "pump/utils.h"
+#include "pump/memory.h"
 #include "pump/net/socket.h"
 
 namespace pump {
@@ -33,7 +34,7 @@ class pump_lib address {
     /*********************************************************************************
      * Constructor
      ********************************************************************************/
-    address() noexcept;
+    address() pump_noexcept;
     address(const std::string &ip, uint16_t port);
     address(const struct sockaddr *addr, int32_t addrlen);
 
@@ -51,10 +52,10 @@ class pump_lib address {
     /*********************************************************************************
      * Get address struct
      ********************************************************************************/
-    pump_inline struct sockaddr *get() {
+    pump_inline struct sockaddr *get() pump_noexcept {
         return (struct sockaddr *)addr_;
     }
-    pump_inline const struct sockaddr *get() const {
+    pump_inline const struct sockaddr *get() const pump_noexcept {
         return (const struct sockaddr *)addr_;
     }
 
@@ -71,14 +72,14 @@ class pump_lib address {
     /*********************************************************************************
      * Set and Get address struct size
      ********************************************************************************/
-    pump_inline int32_t len() const {
+    pump_inline int32_t len() const pump_noexcept {
         return addrlen_;
     }
 
     /*********************************************************************************
      * Is ipv6 or not
      ********************************************************************************/
-    pump_inline bool is_ipv6() const {
+    pump_inline bool is_ipv6() const pump_noexcept {
         return is_v6_;
     }
 
@@ -90,12 +91,12 @@ class pump_lib address {
     /*********************************************************************************
      * Operator ==
      ********************************************************************************/
-    bool operator==(const address &other) const noexcept;
+    bool operator==(const address &other) const pump_noexcept;
 
     /*********************************************************************************
      * Operator <
      ********************************************************************************/
-    bool operator<(const address &other) const noexcept;
+    bool operator<(const address &other) const pump_noexcept;
 
   private:
     bool is_v6_;

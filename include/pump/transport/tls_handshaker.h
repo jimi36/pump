@@ -27,8 +27,9 @@ namespace transport {
 class tls_handshaker;
 DEFINE_SMART_POINTERS(tls_handshaker);
 
-class tls_handshaker : public base_channel,
-                       public std::enable_shared_from_this<tls_handshaker> {
+class tls_handshaker
+  : public base_channel,
+    public std::enable_shared_from_this<tls_handshaker> {
   public:
     struct tls_handshaker_callbacks {
         pump_function<void(tls_handshaker *, bool)> handshaked_cb;
@@ -39,7 +40,7 @@ class tls_handshaker : public base_channel,
     /*********************************************************************************
      * Constructor
      ********************************************************************************/
-    tls_handshaker() noexcept;
+    tls_handshaker() pump_noexcept;
 
     /*********************************************************************************
      * Deconstructor
@@ -72,21 +73,21 @@ class tls_handshaker : public base_channel,
     /*********************************************************************************
      * Unlock flow
      ********************************************************************************/
-    pump_inline flow::flow_tls_sptr unlock_flow() {
+    pump_inline flow::flow_tls_sptr unlock_flow() pump_noexcept {
         return std::move(flow_);
     }
 
     /*********************************************************************************
      * Get local address
      ********************************************************************************/
-    pump_inline const address &get_local_address() const {
+    pump_inline const address &get_local_address() const pump_noexcept {
         return local_address_;
     }
 
     /*********************************************************************************
      * Get remote address
      ********************************************************************************/
-    pump_inline const address &get_remote_address() const {
+    pump_inline const address &get_remote_address() const pump_noexcept {
         return remote_address_;
     }
 
@@ -115,7 +116,10 @@ class tls_handshaker : public base_channel,
     /*********************************************************************************
      * Open flow
      ********************************************************************************/
-    bool __open_flow(bool client, pump_socket fd, tls_credentials xcred);
+    bool __open_flow(
+        bool client,
+        pump_socket fd,
+        tls_credentials xcred);
 
     /*********************************************************************************
      * Process handshake

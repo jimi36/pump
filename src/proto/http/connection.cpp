@@ -26,23 +26,10 @@ using transport::error_none;
 using transport::read_mode_once;
 using transport::transport_callbacks;
 
-const static int32_t state_none = 0x00;
-const static int32_t state_started = 0x01;
-const static int32_t state_upgraded = 0x02;
-const static int32_t state_stopped = 0x04;
-const static int32_t state_error = 0x05;
-
-connection::connection(bool server, base_transport_sptr &transp) noexcept :
-    state_(state_none),
+connection::connection(bool server, base_transport_sptr &transp)
+  : state_(state_none),
     cache_(nullptr),
     transp_(transp) {
-    // Init connection buffer cache.
-    cache_ = toolkit::io_buffer::create();
-    if (cache_ == nullptr) {
-        pump_err_log("create http connection cache failed");
-        pump_abort();
-    }
-
     if (server) {
         create_pending_packet_ = []() {
             return object_create<request>();
@@ -70,24 +57,25 @@ void connection::stop() {
 }
 
 bool connection::start_http(service *sv, const http_callbacks &cbs) {
-    if (sv == nullptr || !transp_) {
-        pump_abort_with_log("service or transport invalid");
+    if (sv == nullptr) {
+        pump_debug_log("service invalid");
+        return false;
     }
 
-    if (!cbs.packet_cb || !cbs.error_cb) {
-        pump_abort_with_log("http connection callbacks invalid");
+    if (!cbs.packet_cb ||
+        !cbs.error_cb) {
+        pump_debug_log("http callbacks invalid");
+        return false;
+    }
+
+    if (!transp_) {
+        pump_debug_log("connection transport invalid");
+        return false;
     }
 
     int32_t st = state_none;
     if (!state_.compare_exchange_strong(st, state_started)) {
-        pump_warn_log("http connection in wrong status");
-        return false;
-    }
-
-    pump_assert(!pending_packet_);
-    pending_packet_.reset(create_pending_packet_(), object_delete<packet>);
-    if (!pending_packet_) {
-        pump_warn_log("new http pending packet failed");
+        pump_debug_log("http connection in wrong state");
         return false;
     }
 
@@ -99,7 +87,7 @@ bool connection::start_http(service *sv, const http_callbacks &cbs) {
     tcbs.stopped_cb = pump_bind(&connection::on_stopped, wptr);
     tcbs.disconnected_cb = pump_bind(&connection::on_disconnected, wptr);
     if (transp_->start(sv, read_mode_once, tcbs) != error_none) {
-        pump_warn_log("start transport failed");
+        pump_debug_log("start connection transport failed");
         state_.store(state_error);
         return false;
     }
@@ -109,14 +97,14 @@ bool connection::start_http(service *sv, const http_callbacks &cbs) {
 
 bool connection::send(packet *pk) {
     if (!transp_ || !transp_->is_started()) {
-        pump_warn_log("transport invalid");
+        pump_debug_log("connection transport invalid");
         return false;
     }
 
     std::string data;
     pk->serialize(data);
     if (transp_->send(data.data(), (uint32_t)data.size()) != error_none) {
-        pump_warn_log("transport send data failed");
+        pump_debug_log("connection transport send http packet failed");
         return false;
     }
 
@@ -126,19 +114,20 @@ bool connection::send(packet *pk) {
 bool connection::start_websocket(const websocket_callbacks &cbs) {
     int32_t st = state_started;
     if (!state_.compare_exchange_strong(st, state_upgraded)) {
-        pump_warn_log("websocket connection in wrong status");
+        pump_debug_log("connection in wrong state");
         return false;
     }
 
-    if (!cbs.frame_cb || !cbs.error_cb) {
-        pump_warn_log("websocket connection callbacks invalid");
+    if (!cbs.frame_cb ||
+        !cbs.error_cb) {
+        pump_debug_log("websocket callbacks invalid");
         return false;
     }
 
     ws_cbs_ = cbs;
 
-    if (!__continue_read()) {
-        pump_warn_log("continue reading failed");
+    if (!__async_read()) {
+        pump_debug_log("async read failed");
         return false;
     }
 
@@ -147,113 +136,124 @@ bool connection::start_websocket(const websocket_callbacks &cbs) {
 
 bool connection::send(const char *b, int32_t size, bool text) {
     if (!transp_ || !transp_->is_started()) {
-        pump_warn_log("transport invalid");
+        pump_debug_log("connection transport invalid");
         return false;
     }
 
     bool ret = false;
-    auto iob = toolkit::io_buffer::create(16 + size);
-
+    toolkit::io_buffer *iob = nullptr;
     do {
-        // Pack frame header
-        uint8_t opt = text ? ws_opt_text : ws_opt_bin;
-        frame fm(true, opt, size, ws_mask_key_);
-        if (!fm.pack_header(iob)) {
-            pump_warn_log("pack websocket frame header failed");
+        iob = toolkit::io_buffer::create(16 + size);
+        if (iob == nullptr) {
+            pump_warn_log("new iob object failed");
             break;
         }
 
-        // Pack frame payload
-        if (!iob->write(b, size)) {
-            pump_warn_log("pack websocket frame payload failed");
+        uint8_t opt = text ? wscode_text : wscode_bin;
+        frame_header wf(true, opt, size, ws_key_);
+        if (!wf.pack_header(iob)) {
+            pump_debug_log("pack websocket frame header failed");
             break;
         }
-        fm.mask_payload((char *)(iob->data() - size));
+
+        if (!iob->write(b, size)) {
+            pump_debug_log("pack websocket frame payload failed");
+            break;
+        }
+
+        wf.mask_payload((char *)(iob->data() - size));
 
         if (transp_->send(iob) != error_none) {
-            pump_warn_log("transport send data failed");
+            pump_debug_log("connection transport send failed");
             break;
         }
 
         ret = true;
-
     } while (false);
 
-    iob->unrefer();
+    if (iob != nullptr) {
+        iob->unrefer();
+    }
 
     return ret;
 }
 
-bool connection::is_upgraded() const {
-    return state_.load() == state_upgraded;
-}
-
 void connection::on_read(
-    connection_wptr wptr,
+    connection_wptr conn,
     const char *b,
     int32_t size) {
-    auto conn = wptr.lock();
-    if (conn) {
-        bool cached = false;
-        if (pump_unlikely(conn->cache_->size() > 0)) {
-            if (!conn->cache_->write(b, size)) {
-                pump_warn_log("cache read data failed");
-                conn->stop();
-                return;
-            }
-
-            cached = true;
-
-            b = conn->cache_->data();
-            size = conn->cache_->size();
-        }
-
+    auto conn_locker = conn.lock();
+    if (conn_locker) {
         int32_t parse_size = -1;
-        switch (conn->state_.load()) {
-        case state_started:
-            parse_size = conn->__handle_http_packet(b, size);
-            break;
-        case state_upgraded:
-            parse_size = conn->__handle_websocket_frame(b, size);
-            break;
-        default:
-            pump_abort();
-            break;
-        }
-
-        if (parse_size >= 0) {
-            if (cached) {
-                conn->cache_->shift(parse_size);
-            } else if (parse_size < size) {
-                conn->cache_->write(b + parse_size, size - parse_size);
+        do {
+            if (conn_locker->cache_ == nullptr) {
+                conn_locker->cache_ = toolkit::io_buffer::create();
+                if (conn_locker->cache_ == nullptr) {
+                    pump_warn_log("create cache failed");
+                    break;
+                }
             }
-        } else {
-            pump_warn_log("parse data failed");
-            conn->stop();
+
+            bool cached = false;
+            if (conn_locker->cache_->size() > 0) {
+                cached = true;
+                if (!conn_locker->cache_->write(b, size)) {
+                    pump_debug_log("write data to cache failed");
+                    break;
+                }
+                b = conn_locker->cache_->data();
+                size = conn_locker->cache_->size();
+            }
+
+            switch (conn_locker->state_.load()) {
+            case state_started:
+                parse_size = conn_locker->__handle_http_packet(b, size);
+                break;
+            case state_upgraded:
+                parse_size = conn_locker->__handle_websocket_frame(b, size);
+                break;
+            default:
+                pump_debug_log("connection in wrong state");
+                break;
+            }
+            if (parse_size == -1) {
+                pump_debug_log("parse data failed");
+                break;
+            }
+
+            if (cached) {
+                conn_locker->cache_->shift(parse_size);
+            } else if (parse_size < size) {
+                conn_locker->cache_->write(b + parse_size, size - parse_size);
+            }
+        } while (false);
+
+        if (parse_size == -1) {
+            conn_locker->stop();
         }
     }
 }
 
-void connection::on_disconnected(connection_wptr wptr) {
-    auto conn = wptr.lock();
-    if (conn) {
+void connection::on_disconnected(connection_wptr conn) {
+    auto conn_locker = conn.lock();
+    if (conn_locker) {
         while (true) {
-            int32_t st = conn->state_.load();
-            switch (conn->state_) {
+            int32_t st = conn_locker->state_.load();
+            switch (conn_locker->state_) {
             case state_started:
-                if (conn->state_.compare_exchange_strong(st, state_error)) {
+                if (conn_locker->state_.compare_exchange_strong(st, state_error)) {
                     pump_debug_log("http connection disconnected");
-                    conn->http_cbs_.error_cb("disconnected");
+                    conn_locker->http_cbs_.error_cb("disconnected");
                     return;
                 }
                 break;
             case state_upgraded:
-                if (conn->state_.compare_exchange_strong(st, state_error)) {
+                if (conn_locker->state_.compare_exchange_strong(st, state_error)) {
                     pump_debug_log("websocket connection disconnected");
-                    if (conn->ws_closed_.test_and_set()) {
-                        conn->ws_cbs_.error_cb("closed");
+                    if (conn_locker->ws_closed_.test_and_set()) {
+                        conn_locker->ws_cbs_.error_cb("closed");
                     } else {
-                        conn->ws_cbs_.error_cb("disconnected");
+                        conn_locker->ws_cbs_.error_cb("disconnected");
                     }
                     return;
                 }
@@ -265,26 +265,26 @@ void connection::on_disconnected(connection_wptr wptr) {
     }
 }
 
-void connection::on_stopped(connection_wptr wptr) {
-    auto conn = wptr.lock();
-    if (conn) {
+void connection::on_stopped(connection_wptr conn) {
+    auto conn_locker = conn.lock();
+    if (conn_locker) {
         while (true) {
-            int32_t st = conn->state_.load();
+            int32_t st = conn_locker->state_.load();
             switch (st) {
             case state_started:
-                if (conn->state_.compare_exchange_strong(st, state_error)) {
+                if (conn_locker->state_.compare_exchange_strong(st, state_error)) {
                     pump_debug_log("http connection stopped");
-                    conn->http_cbs_.error_cb("stopped");
+                    conn_locker->http_cbs_.error_cb("stopped");
                     return;
                 }
                 break;
             case state_upgraded:
-                if (conn->state_.compare_exchange_strong(st, state_error)) {
+                if (conn_locker->state_.compare_exchange_strong(st, state_error)) {
                     pump_debug_log("websocket connection stopped");
-                    if (conn->ws_closed_.test_and_set()) {
-                        conn->ws_cbs_.error_cb("closed");
+                    if (conn_locker->ws_closed_.test_and_set()) {
+                        conn_locker->ws_cbs_.error_cb("closed");
                     } else {
-                        conn->ws_cbs_.error_cb("stopped");
+                        conn_locker->ws_cbs_.error_cb("stopped");
                     }
                     return;
                 }
@@ -296,38 +296,38 @@ void connection::on_stopped(connection_wptr wptr) {
     }
 }
 
-bool connection::__read_next_http_packet() {
+bool connection::__async_read_http_packet() {
     if (state_ != state_started) {
-        pump_warn_log("http connection in wrong status");
+        pump_debug_log("http connection in wrong state");
         return false;
     }
 
     if (pending_packet_ && !pending_packet_->is_parse_finished()) {
-        pump_warn_log("http pending packet is parsing");
+        pump_debug_log("http pending packet in parsing");
         return false;
     }
 
     pending_packet_.reset(create_pending_packet_(), object_delete<packet>);
     if (!pending_packet_) {
-        pump_warn_log("new http pending packet object failed");
+        pump_debug_log("new http pending packet object failed");
         return false;
     }
 
-    if (!__continue_read()) {
-        pump_warn_log("continue reading failed");
+    if (!__async_read()) {
+        pump_debug_log("async read failed");
         return false;
     }
 
     return true;
 }
 
-void connection::__init_websocket_mask() {
-    uint32_t mask = random();
-    ws_mask_key_.assign((char *)&mask, 4);
+void connection::__init_websocket_key() {
+    uint32_t key = random();
+    ws_key_.assign((char *)&key, 4);
 }
 
 void connection::__send_websocket_ping_frame() {
-    frame fm(true, ws_opt_ping, 0);
+    frame_header fm(true, wscode_ping, 0);
     auto iob = toolkit::io_buffer::create(16);
     if (fm.pack_header(iob)) {
         transp_->send(iob);
@@ -336,7 +336,7 @@ void connection::__send_websocket_ping_frame() {
 }
 
 void connection::__send_websocket_pong_frame() {
-    frame fm(true, ws_opt_pong, 0);
+    frame_header fm(true, wscode_pong, 0);
     auto iob = toolkit::io_buffer::create(16);
     if (fm.pack_header(iob)) {
         transp_->send(iob);
@@ -345,7 +345,7 @@ void connection::__send_websocket_pong_frame() {
 }
 
 void connection::__send_wbesocket_close_frame() {
-    frame fm(true, ws_opt_close, 0);
+    frame_header fm(true, wscode_close, 0);
     auto iob = toolkit::io_buffer::create(16);
     if (fm.pack_header(iob)) {
         transp_->send(iob);
@@ -355,15 +355,15 @@ void connection::__send_wbesocket_close_frame() {
 
 int32_t connection::__handle_http_packet(const char *b, int32_t size) {
     if (!pending_packet_) {
-        pump_warn_log("http pending packet invalid");
+        pump_debug_log("http pending packet invalid");
         return -1;
     }
 
     int32_t parse_size = pending_packet_->parse(b, size);
     if (pending_packet_->is_parse_finished()) {
         http_cbs_.packet_cb(pending_packet_);
-    } else if (!__continue_read()) {
-        pump_warn_log("continue reading failed");
+    } else if (!__async_read()) {
+        pump_debug_log("async read failed");
         return -1;
     }
 
@@ -375,13 +375,13 @@ int32_t connection::__handle_websocket_frame(const char *b, int32_t size) {
 
     do {
         // Decode websocket frame header.
-        if (!ws_frame_.is_header_unpacked()) {
+        if (!ws_frame_.is_unpacked()) {
             if (!ws_frame_.unpack_header(iob)) {
                 break;
             }
         }
 
-        if (ws_frame_.is_header_unpacked()) {
+        if (ws_frame_.is_unpacked()) {
             // Decode websocket frame payload.
             if (ws_frame_.get_payload_length() > iob->size()) {
                 break;
@@ -390,31 +390,29 @@ int32_t connection::__handle_websocket_frame(const char *b, int32_t size) {
                 ws_frame_.mask_payload((char *)iob->data());
             }
 
-            switch (ws_frame_.get_opt()) {
-            case ws_opt_slice:
-            case ws_opt_text:
-            case ws_opt_bin:
+            switch (ws_frame_.get_code()) {
+            case wscode_slice:
+            case wscode_text:
+            case wscode_bin:
                 ws_cbs_.frame_cb(
                     iob->data(),
                     ws_frame_.get_payload_length(),
                     ws_frame_.is_fin());
                 break;
-            case ws_opt_close:
+            case wscode_close:
                 if (!ws_closed_.test_and_set()) {
-                    // Send websocket close frame.
                     __send_wbesocket_close_frame();
-                    // Stop websocket connection.
                     stop();
                 }
                 break;
-            case ws_opt_ping:
+            case wscode_ping:
                 __send_websocket_pong_frame();
                 break;
-            case ws_opt_pong:
+            case wscode_pong:
                 // TODO: do nothing?
                 break;
             default:
-                pump_warn_log("unknown websocket frame");
+                pump_debug_log("unknown websocket frame");
                 iob->unrefer();
                 return -1;
             }
@@ -427,8 +425,8 @@ int32_t connection::__handle_websocket_frame(const char *b, int32_t size) {
 
     iob->unrefer();
 
-    if (!__continue_read()) {
-        pump_warn_log("continue reading failed");
+    if (!__async_read()) {
+        pump_debug_log("async read failed");
         return -1;
     }
 

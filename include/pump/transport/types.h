@@ -53,6 +53,15 @@ const transport_state state_finished = 10;
 const transport_state state_error = 11;
 
 /*********************************************************************************
+ * TLS handshake phase
+ ********************************************************************************/
+typedef int32_t tls_handshake_phase;
+const tls_handshake_phase tls_handshake_ok = 0;
+const tls_handshake_phase tls_handshake_read = 1;
+const tls_handshake_phase tls_handshake_send = 2;
+const tls_handshake_phase tls_handshake_error = 3;
+
+/*********************************************************************************
  * Transport read mode
  ********************************************************************************/
 typedef int32_t read_mode;

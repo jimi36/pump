@@ -25,16 +25,10 @@
 #include <signal.h>
 #endif
 
-#if defined(PUMP_HAVE_OPENSSL)
+#if defined(PUMP_HAVE_TLS)
 extern "C" {
 #include <openssl/ssl.h>
 #include <openssl/err.h>
-}
-#endif
-
-#if defined(PUMP_HAVE_GNUTLS)
-extern "C" {
-#include <gnutls/gnutls.h>
 }
 #endif
 
@@ -44,7 +38,7 @@ namespace pump {
 typedef void (*sighandler_t)(int32_t);
 static bool setup_signal(int32_t sig, sighandler_t handler) {
     if (signal(sig, NULL) != 0) {
-        pump_warn_log("setup_signal: signal failed sig=%d", sig);
+        pump_debug_log("setup signal %d failed", sig);
         return false;
     }
     return true;
@@ -59,8 +53,9 @@ bool init() {
         if (inited_count == -1) {
             return false;
         } else if (inited_count > 0) {
-            if (s_inited_count.compare_exchange_strong(inited_count,
-                                                       inited_count + 1)) {
+            if (s_inited_count.compare_exchange_strong(
+                    inited_count,
+                    inited_count + 1)) {
                 return true;
             }
         } else {
@@ -75,7 +70,7 @@ bool init() {
     WORD wVersionRequested;
     wVersionRequested = MAKEWORD(2, 2);
     if (::WSAStartup(wVersionRequested, &wsaData) == SOCKET_ERROR) {
-        pump_warn_log("init: WSAStartup failed");
+        pump_debug_log("init win socket library failed");
         return false;
     }
 #if defined(PUMP_HAVE_IOCP)
@@ -83,18 +78,16 @@ bool init() {
     if (!ntdll) {
         return false;
     }
-    if ((NtCreateFile =
-             (FnNtCreateFile)GetProcAddress(ntdll, "NtCreateFile")) ==
-        nullptr) {
+    NtCreateFile = (FnNtCreateFile)GetProcAddress(ntdll, "NtCreateFile");
+    if (NtCreateFile == nullptr) {
         return false;
     }
-    if ((NtDeviceIoControlFile = (FnNtDeviceIoControlFile)
-             GetProcAddress(ntdll, "NtDeviceIoControlFile")) == nullptr) {
+    NtDeviceIoControlFile = (FnNtDeviceIoControlFile)GetProcAddress(ntdll, "NtDeviceIoControlFile");
+    if (NtDeviceIoControlFile == nullptr) {
         return false;
     }
-    if ((NtCancelIoFileEx =
-             (FnNtCancelIoFileEx)GetProcAddress(ntdll, "NtCancelIoFileEx")) ==
-        nullptr) {
+    NtCancelIoFileEx = (FnNtCancelIoFileEx)GetProcAddress(ntdll, "NtCancelIoFileEx");
+    if (NtCancelIoFileEx == nullptr) {
         return false;
     }
 #endif
@@ -104,13 +97,7 @@ bool init() {
     setup_signal(SIGPIPE, SIG_IGN);
 #endif
 
-#if defined(PUMP_HAVE_GNUTLS)
-    if (gnutls_global_init() != 0) {
-        pump_warn_log("init: gnutls_global_init failed");
-        return false;
-    }
-    gnutls_global_set_log_level(0);
-#elif defined(PUMP_HAVE_OPENSSL)
+#if defined(PUMP_HAVE_TLS)
     SSL_library_init();
     SSL_load_error_strings();
     OpenSSL_add_all_algorithms();
@@ -127,8 +114,9 @@ void uninit() {
         if (inited_count <= 0) {
             return;
         } else if (inited_count > 1) {
-            if (s_inited_count.compare_exchange_strong(inited_count,
-                                                       inited_count - 1)) {
+            if (s_inited_count.compare_exchange_strong(
+                    inited_count,
+                    inited_count - 1)) {
                 return;
             }
         } else {
@@ -144,10 +132,6 @@ void uninit() {
 
 #if defined(OS_LINUX)
     setup_signal(SIGPIPE, SIG_DFL);
-#endif
-
-#if defined(PUMP_HAVE_GNUTLS)
-    gnutls_global_deinit();
 #endif
 
     s_inited_count.store(0);

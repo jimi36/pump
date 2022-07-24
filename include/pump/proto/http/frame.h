@@ -23,28 +23,28 @@ namespace pump {
 namespace proto {
 namespace http {
 
-const uint8_t ws_opt_slice = 0x00;
-const uint8_t ws_opt_text = 0x01;
-const uint8_t ws_opt_bin = 0x02;
-const uint8_t ws_opt_close = 0x08;
-const uint8_t ws_opt_ping = 0x09;
-const uint8_t ws_opt_pong = 0x0A;
-const uint8_t ws_opt_end = 0xFF;
+const uint8_t wscode_slice = 0x00;
+const uint8_t wscode_text = 0x01;
+const uint8_t wscode_bin = 0x02;
+const uint8_t wscode_close = 0x08;
+const uint8_t wscode_ping = 0x09;
+const uint8_t wscode_pong = 0x0A;
+const uint8_t wscode_end = 0xFF;
 
-class pump_lib frame {
+class pump_lib frame_header {
   public:
     /*********************************************************************************
      * Constructor
      ********************************************************************************/
-    frame(
+    frame_header(
         bool fin = true,
-        uint8_t opt = ws_opt_end,
+        uint8_t code = wscode_end,
         uint64_t payload_len = 0);
-    frame(
+    frame_header(
         bool fin,
-        uint8_t opt,
+        uint8_t code,
         uint64_t payload_len,
-        const std::string &payload_mask_key);
+        const std::string &key);
 
     /*********************************************************************************
      * unpack websocket frame header
@@ -67,44 +67,44 @@ class pump_lib frame {
     void reset();
 
     /*********************************************************************************
-     * Check websocket frame header unpacked flag
+     * Check unpacked flag
      ********************************************************************************/
-    pump_inline bool is_header_unpacked() const {
-        return is_header_unpacked_;
+    pump_inline bool is_unpacked() const pump_noexcept {
+        return is_unpacked_;
     }
 
     /*********************************************************************************
-     * Check websocket frame fin flag
+     * Check frame fin flag
      ********************************************************************************/
-    pump_inline bool is_fin() const {
+    pump_inline bool is_fin() const pump_noexcept {
         return fin_;
     }
 
     /*********************************************************************************
-     * Get websocket frame opt
+     * Get frame code
      ********************************************************************************/
-    pump_inline uint8_t get_opt() const {
-        return opt_;
+    pump_inline uint8_t get_code() const pump_noexcept {
+        return code_;
     }
 
     /*********************************************************************************
-     * Get websocket frame payload length
+     * Get payload length
      ********************************************************************************/
-    pump_inline uint64_t get_payload_length() const {
+    pump_inline uint64_t get_payload_length() const pump_noexcept {
         return payload_len_;
     }
 
   private:
-    // Frame fin flag
+    // Fin flag
     bool fin_;
-    // Frame opt code
-    uint8_t opt_;
-    // Frame payload length
+    // Code
+    uint8_t code_;
+    // Payload length
     uint64_t payload_len_;
-    // Frame payload mask key
-    std::string payload_mask_key_;
-    // Frame header unpacked flag
-    bool is_header_unpacked_;
+    // Mask key
+    std::string key_;
+    // Unpacked flag
+    bool is_unpacked_;
 };
 
 }  // namespace http

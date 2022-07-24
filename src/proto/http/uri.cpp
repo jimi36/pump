@@ -24,10 +24,11 @@ namespace pump {
 namespace proto {
 namespace http {
 
-uri::uri() noexcept :
-    tp_(uri_end) {}
+uri::uri() pump_noexcept
+  : tp_(uri_end) {
+}
 
-uri::uri(const std::string &url) noexcept {
+uri::uri(const std::string &url) pump_noexcept {
     parse(url);
 }
 
@@ -76,13 +77,13 @@ bool uri::parse(const std::string &url) {
     if (sm[6].matched) {
         std::string new_params;
         if (!url_decode(sm[6].str(), new_params)) {
-            pump_warn_log("url params url decode failed");
+            pump_debug_log("url params url decode failed");
             return false;
         }
         auto kvs = split_string(new_params, "[=&]");
         uint32_t cnt = (uint32_t)kvs.size();
         if (cnt % 2 != 0) {
-            pump_warn_log("url params is invalid");
+            pump_debug_log("url params is invalid");
             return false;
         }
         for (uint32_t i = 0; i < cnt; i += 2) {

@@ -33,7 +33,7 @@ class pump_lib base_buffer {
     /*********************************************************************************
      * Constructor
      ********************************************************************************/
-    base_buffer() noexcept;
+    base_buffer() pump_noexcept;
 
     /*********************************************************************************
      * Deconstructor
@@ -43,14 +43,14 @@ class pump_lib base_buffer {
     /*********************************************************************************
      * Get raw buffer pointer
      ********************************************************************************/
-    pump_inline const char *raw() const {
-        return raw_;
+    pump_inline const char *raw() const pump_noexcept {
+        return raw_buffer_;
     }
 
     /*********************************************************************************
      * Get buffer capacity
      ********************************************************************************/
-    pump_inline uint32_t capacity() const {
+    pump_inline uint32_t capacity() const pump_noexcept {
         return raw_size_;
     }
 
@@ -59,24 +59,24 @@ class pump_lib base_buffer {
      * Init by allocate
      * Allocate a memory with the size.
      ********************************************************************************/
-    bool __init_by_alloc(uint32_t size);
+    bool __init_by_alloc(uint32_t size) pump_noexcept;
 
     /*********************************************************************************
      * Init by copy
      * Allocate a memory block and copy input buffer to the buffer memory block.
      ********************************************************************************/
-    bool __init_by_copy(const char *b, uint32_t size);
+    bool __init_by_copy(const char *b, uint32_t size) pump_noexcept;
 
     /*********************************************************************************
      * Init by reference
      ********************************************************************************/
-    bool __init_by_reference(const char *b, uint32_t size);
+    bool __init_by_reference(const char *b, uint32_t size) pump_noexcept;
 
   protected:
-    // Owner flag
-    bool owner_;
+    // Free flag
+    bool free_;
     // Raw buffer
-    char *raw_;
+    char *raw_buffer_;
     // Raw buffer size
     uint32_t raw_size_;
 };
@@ -100,20 +100,19 @@ class pump_lib io_buffer : public base_buffer {
             INLINE_OBJECT_DELETE(obj, io_buffer)
             return nullptr;
         }
-
         obj->size_ = size;
-
         return obj;
     }
     static io_buffer *create_by_refence(const char *b, uint32_t size) {
         INLINE_OBJECT_CREATE(obj, io_buffer, ())
         if (obj != nullptr && !obj->__init_by_reference(b, size)) {
-            INLINE_OBJECT_DELETE(obj, io_buffer)
-            return nullptr;
+            obj->free_ = false;
+            if (!obj->__init_by_reference(b, size)) {
+                INLINE_OBJECT_DELETE(obj, io_buffer)
+                return nullptr;
+            }
         }
-
         obj->size_ = size;
-
         return obj;
     }
 
@@ -130,7 +129,7 @@ class pump_lib io_buffer : public base_buffer {
         if (size_ < size) {
             return false;
         }
-        memcpy(b, raw_ + rpos_, size);
+        memcpy(b, raw_buffer_ + rpos_, size);
         rpos_ += size;
         size_ -= size;
         return true;
@@ -139,7 +138,7 @@ class pump_lib io_buffer : public base_buffer {
         if (size_ < 1) {
             return false;
         }
-        *b = *(raw_ + rpos_);
+        *b = *(raw_buffer_ + rpos_);
         rpos_++;
         size_--;
         return true;
@@ -147,7 +146,7 @@ class pump_lib io_buffer : public base_buffer {
 
     /*********************************************************************************
      * Shift
-     * If success return current size, else return zero.
+     * If success return current size, else return -1.
      ********************************************************************************/
     pump_inline int32_t shift(int32_t size) {
         pump_assert(int32_t(size_) >= size);
@@ -162,9 +161,9 @@ class pump_lib io_buffer : public base_buffer {
     /*********************************************************************************
      * Get data
      ********************************************************************************/
-    pump_inline const char *data() const {
+    pump_inline const char *data() const pump_noexcept {
         if (size_ > 0) {
-            return raw_ + rpos_;
+            return raw_buffer_ + rpos_;
         }
         return nullptr;
     }
@@ -172,7 +171,7 @@ class pump_lib io_buffer : public base_buffer {
     /*********************************************************************************
      * Get data size
      ********************************************************************************/
-    pump_inline uint32_t size() const {
+    pump_inline uint32_t size() const pump_noexcept {
         return size_;
     }
 
@@ -180,10 +179,10 @@ class pump_lib io_buffer : public base_buffer {
      * Get string
      ********************************************************************************/
     pump_inline std::string string() const {
-        if (raw_ == nullptr || size_ == 0) {
+        if (raw_buffer_ == nullptr || size_ == 0) {
             return std::string();
         }
-        return std::string(raw_ + rpos_, size_);
+        return std::string(raw_buffer_ + rpos_, size_);
     }
 
     /*********************************************************************************
@@ -199,14 +198,15 @@ class pump_lib io_buffer : public base_buffer {
     /*********************************************************************************
      * Clear
      ********************************************************************************/
-    pump_inline void clear() {
-        size_ = rpos_ = 0;
+    pump_inline void clear() pump_noexcept {
+        size_ = 0;
+        rpos_ = 0;
     }
 
     /*********************************************************************************
      * Reference
      ********************************************************************************/
-    pump_inline void refer() {
+    pump_inline void refer() pump_noexcept {
         count_.fetch_add(1);
     }
 
@@ -223,10 +223,11 @@ class pump_lib io_buffer : public base_buffer {
     /*********************************************************************************
      * Constructor
      ********************************************************************************/
-    io_buffer() noexcept :
-        size_(0),
+    io_buffer() pump_noexcept
+      : size_(0),
         rpos_(0),
-        count_(1) {}
+        count_(1) {
+    }
 
     /*********************************************************************************
      * Copy constructor
@@ -236,7 +237,7 @@ class pump_lib io_buffer : public base_buffer {
     /*********************************************************************************
      * Deconstructor
      ********************************************************************************/
-    virtual ~io_buffer() {}
+    virtual ~io_buffer() = default;
 
     /*********************************************************************************
      * Assign operator

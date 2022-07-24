@@ -81,8 +81,9 @@ static const std::string &get_http_code_desc(int32_t code) {
     return http_code_desc_map[0];
 }
 
-response::response(void *ctx) noexcept :
-    packet(ctx, PK_RESPONSE), status_code_(0) {
+response::response(void *ctx) pump_noexcept
+  : packet(ctx, PK_RESPONSE),
+    status_code_(0) {
     init_http_code_desc_map();
 }
 
@@ -112,7 +113,7 @@ int32_t response::parse(const char *b, int32_t size) {
     if (parse_status_ == PARSE_HEADER) {
         parse_size = __parse_header(pos, size);
         if (parse_size < 0) {
-            pump_warn_log("parse response header failed");
+            pump_debug_log("parse response header failed");
             return -1;
         } else if (parse_size == 0) {
             return int32_t(pos - b);
@@ -161,7 +162,7 @@ int32_t response::parse(const char *b, int32_t size) {
     if (parse_status_ == PARSE_BODY) {
         pump_assert(body_);
         if ((parse_size = body_->parse(pos, size)) < 0) {
-            pump_warn_log("parse response body failed");
+            pump_debug_log("parse response body failed");
             return -1;
         }
 
@@ -181,14 +182,14 @@ int32_t response::serialize(std::string &buffer) const {
 
     int32_t size = __serialize_response_line(buffer);
     if (size < 0) {
-        pump_warn_log("serialize response line failed");
+        pump_debug_log("serialize response line failed");
         return -1;
     }
     serialize_size += size;
 
     size = __serialize_header(buffer);
     if (size < 0) {
-        pump_warn_log("serialize response header failed");
+        pump_debug_log("serialize response header failed");
         return -1;
     }
     serialize_size += size;
@@ -196,7 +197,7 @@ int32_t response::serialize(std::string &buffer) const {
     if (body_) {
         size = body_->serialize(buffer);
         if (size < 0) {
-            pump_warn_log("serialize response body failed");
+            pump_debug_log("serialize response body failed");
             return -1;
         }
         serialize_size += size;
@@ -221,7 +222,7 @@ int32_t response::__parse_start_line(const char *b, int32_t size) {
     } else if (strncmp(pos, "HTTP/2.0", 8) == 0) {
         version_ = VERSION_20;
     } else {
-        pump_warn_log("parse response http version failed");
+        pump_debug_log("parse response http version failed");
         return -1;
     }
     pos += 8;
@@ -234,7 +235,7 @@ int32_t response::__parse_start_line(const char *b, int32_t size) {
         status_code_ = status_code_ * 10 + int32_t(*(pos++) - '0');
     }
     if (pos == line_end) {
-        pump_warn_log("parse response code failed");
+        pump_debug_log("parse response code failed");
         return -1;
     }
 

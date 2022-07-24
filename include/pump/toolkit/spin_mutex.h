@@ -20,7 +20,7 @@
 #include <atomic>
 
 #include "pump/types.h"
-#include "pump/platform.h"
+#include "pump/memory.h"
 
 namespace pump {
 namespace toolkit {
@@ -30,7 +30,7 @@ class pump_lib spin_mutex {
     /*********************************************************************************
      * Constructor
      ********************************************************************************/
-    spin_mutex(int32_t per_loop = 32) noexcept;
+    spin_mutex(int32_t per_loop = 32) pump_noexcept;
 
     /*********************************************************************************
      * Deconstructor
@@ -40,12 +40,12 @@ class pump_lib spin_mutex {
     /*********************************************************************************
      * Lock
      ********************************************************************************/
-    void lock();
+    void lock() pump_noexcept;
 
     /*********************************************************************************
      * Try lock
      ********************************************************************************/
-    pump_inline bool try_lock() {
+    pump_inline bool try_lock() pump_noexcept {
         bool exp = false;
         return locked_.compare_exchange_strong(exp, true);
     }
@@ -53,14 +53,14 @@ class pump_lib spin_mutex {
     /*********************************************************************************
      * Unlock
      ********************************************************************************/
-    pump_inline void unlock() {
+    pump_inline void unlock() pump_noexcept {
         locked_.store(false);
     }
 
     /*********************************************************************************
      * Get locked status
      ********************************************************************************/
-    pump_inline bool is_locked() const {
+    pump_inline bool is_locked() const pump_noexcept {
         return locked_.load();
     }
 

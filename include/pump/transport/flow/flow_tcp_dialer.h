@@ -28,7 +28,7 @@ class flow_tcp_dialer : public flow_base {
     /*********************************************************************************
      * Constructor
      ********************************************************************************/
-    flow_tcp_dialer() noexcept;
+    flow_tcp_dialer() pump_noexcept;
 
     /*********************************************************************************
      * Deconstructor
@@ -37,25 +37,23 @@ class flow_tcp_dialer : public flow_base {
 
     /*********************************************************************************
      * Init
-     * Return results:
-     *     error_none    => success
-     *     error_fault => error
      ********************************************************************************/
-    error_code init(poll::channel_sptr &&ch, const address &bind_address);
+    bool init(
+        poll::channel_sptr &&ch,
+        const address &bind_address);
 
     /*********************************************************************************
      * Post connect
-     * Return results:
-     *     error_none    => success
-     *     error_fault => error
      ********************************************************************************/
-    error_code post_connect(const address &remote_address);
+    bool post_connect(const address &remote_address);
 
     /*********************************************************************************
      * Connect
      * Return socket error code.
      ********************************************************************************/
-    int32_t connect(address *local_address, address *remote_address);
+    int32_t connect(
+        address *local_address,
+        address *remote_address);
 
   private:
     // IPV6

@@ -28,36 +28,27 @@ class flow_udp : public flow_base {
     /*********************************************************************************
      * Constructor
      ********************************************************************************/
-    flow_udp() noexcept;
+    flow_udp() pump_noexcept;
 
     /*********************************************************************************
      * Deconstructor
      ********************************************************************************/
-    virtual ~flow_udp();
+    virtual ~flow_udp() = default;
 
     /*********************************************************************************
-     * Init flow
-     * Return results:
-     *     error_none  => success
-     *     error_fault => error
+     * Init
      ********************************************************************************/
-    error_code init(poll::channel_sptr &&ch, const address &bind_address);
+    bool init(
+        poll::channel_sptr &&ch,
+        const address &bind_address);
 
     /*********************************************************************************
      * Read from
      ********************************************************************************/
-    pump_inline int32_t read_from(
+    int32_t read_from(
         char *b,
         int32_t size,
-        address *from) {
-        int32_t addrlen = max_address_len;
-        struct sockaddr *addr = from->get();
-        size = net::read_from(fd_, b, size, addr, &addrlen);
-        if (size > 0) {
-            from->set((sockaddr *)addr, addrlen);
-        }
-        return size;
-    }
+        address *from);
 
     /*********************************************************************************
      * Send to

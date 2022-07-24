@@ -50,7 +50,7 @@ bool select_poller::__uninstall_channel_tracker(channel_tracker *tracker) {
 #endif
 }
 
-bool select_poller::__resume_channel_tracker(channel_tracker *tracker) {
+bool select_poller::__start_channel_tracker(channel_tracker *tracker) {
 #if defined(PUMP_HAVE_SELECT)
     return true;
 #else

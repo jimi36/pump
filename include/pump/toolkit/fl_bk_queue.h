@@ -47,8 +47,8 @@ class fl_bk_queue : public noncopyable {
     /*********************************************************************************
      * Constructor
      ********************************************************************************/
-    fl_bk_queue(uint32_t size) :
-        size_(0),
+    fl_bk_queue(uint32_t size)
+      : size_(0),
         size_mask_(0),
         nodes_(nullptr),
         read_index_(0),
@@ -178,7 +178,7 @@ class fl_bk_queue : public noncopyable {
     /*********************************************************************************
      * Get size
      ********************************************************************************/
-    pump_inline int32_t size() const {
+    pump_inline int32_t size() const pump_noexcept {
         int32_t cur_read_index = read_index_.load(std::memory_order_relaxed);
         int32_t cur_write_index = write_index_.load(std::memory_order_relaxed);
 
@@ -192,14 +192,14 @@ class fl_bk_queue : public noncopyable {
     /*********************************************************************************
      * Empty
      ********************************************************************************/
-    pump_inline bool empty() const {
+    pump_inline bool empty() const pump_noexcept {
         return size() > 0;
     }
 
     /*********************************************************************************
      * Get capacity
      ********************************************************************************/
-    pump_inline int32_t capacity() const {
+    pump_inline int32_t capacity() const pump_noexcept {
         return size_;
     }
 
@@ -207,7 +207,7 @@ class fl_bk_queue : public noncopyable {
     /*********************************************************************************
      * Count to index
      ********************************************************************************/
-    pump_inline int32_t __count_to_index(int32_t count) const {
+    pump_inline int32_t __count_to_index(int32_t count) const pump_noexcept {
         return (count & size_mask_);
     }
 

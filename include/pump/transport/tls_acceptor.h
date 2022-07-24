@@ -31,8 +31,8 @@ class tls_acceptor;
 DEFINE_SMART_POINTERS(tls_acceptor);
 
 class pump_lib tls_acceptor
-    : public base_acceptor,
-      public std::enable_shared_from_this<tls_acceptor> {
+  : public base_acceptor,
+    public std::enable_shared_from_this<tls_acceptor> {
   public:
     /*********************************************************************************
      * Create instance
@@ -44,9 +44,7 @@ class pump_lib tls_acceptor
         INLINE_OBJECT_CREATE(
             obj,
             tls_acceptor,
-            (xcerd,
-             listen_address,
-             handshake_timeout_ns));
+            (xcerd, listen_address, handshake_timeout_ns));
         return tls_acceptor_sptr(obj, object_delete<tls_acceptor>);
     }
 
@@ -77,15 +75,15 @@ class pump_lib tls_acceptor
      * TLS handshaked callback
      ********************************************************************************/
     static void on_handshaked(
-        tls_acceptor_wptr wptr,
+        tls_acceptor_wptr acceptor,
         tls_handshaker *handshaker,
-        bool succ);
+        bool success);
 
     /*********************************************************************************
      * Tls handskake stopped callback
      ********************************************************************************/
     static void on_handshake_stopped(
-        tls_acceptor_wptr wptr,
+        tls_acceptor_wptr acceptor,
         tls_handshaker *handshaker);
 
   private:
@@ -95,7 +93,7 @@ class pump_lib tls_acceptor
     tls_acceptor(
         tls_credentials xcred,
         const address &listen_address,
-        uint64_t handshake_timeout) noexcept;
+        uint64_t handshake_timeout) pump_noexcept;
 
     /*********************************************************************************
      * Open accept flow

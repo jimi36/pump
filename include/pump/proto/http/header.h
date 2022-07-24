@@ -19,6 +19,7 @@
 
 #include <map>
 
+#include "pump/memory.h"
 #include "pump/proto/http/utils.h"
 
 namespace pump {
@@ -30,7 +31,7 @@ class pump_lib header {
     /*********************************************************************************
      * Constructor
      ********************************************************************************/
-    header() noexcept;
+    header() pump_noexcept;
 
     /*********************************************************************************
      * Deconstructor
@@ -40,20 +41,32 @@ class pump_lib header {
     /*********************************************************************************
      * Set http head by append
      ********************************************************************************/
-    void set_head(const std::string &name, int32_t value);
-    void set_head(const std::string &name, const std::string &value);
+    void set_head(
+        const std::string &name,
+        int32_t value);
+    void set_head(
+        const std::string &name,
+        const std::string &value);
 
     /*********************************************************************************
      * Set http header by replace
      ********************************************************************************/
-    void set_unique_head(const std::string &name, int32_t value);
-    void set_unique_head(const std::string &name, const std::string &value);
+    void set_unique_head(
+        const std::string &name,
+        int32_t value);
+    void set_unique_head(
+        const std::string &name,
+        const std::string &value);
 
     /*********************************************************************************
      * Get http header
      ********************************************************************************/
-    bool get_head(const std::string &name, int32_t &value) const;
-    bool get_head(const std::string &name, std::string &value) const;
+    bool get_head(
+        const std::string &name,
+        int32_t &value) const;
+    bool get_head(
+        const std::string &name,
+        std::string &value) const;
     bool get_head(
         const std::string &name,
         std::vector<std::string> &values) const;
@@ -61,7 +74,7 @@ class pump_lib header {
     /*********************************************************************************
      * Check header field existed or not
      ********************************************************************************/
-    bool has_head(const std::string &name) const;
+    bool has_head(const std::string &name) const pump_noexcept;
 
   protected:
     /*********************************************************************************
@@ -74,7 +87,7 @@ class pump_lib header {
     /*********************************************************************************
      * Check parse is finished or not
      ********************************************************************************/
-    pump_inline bool __is_header_parsed() const {
+    pump_inline bool __is_header_parsed() const pump_noexcept {
         return header_parsed_;
     }
 

@@ -21,46 +21,43 @@ namespace pump {
 namespace proto {
 namespace http {
 
-frame::frame(bool fin, uint8_t opt, uint64_t payload_len) :
-    fin_(fin),
-    opt_(opt),
-    payload_len_(payload_len),
-    is_header_unpacked_(false) {}
-
-frame::frame(
+frame_header::frame_header(
     bool fin,
-    uint8_t opt,
-    uint64_t payload_len,
-    const std::string &payload_mask_key) :
-    fin_(fin),
-    opt_(opt),
+    uint8_t code,
+    uint64_t payload_len)
+  : fin_(fin),
+    code_(code),
     payload_len_(payload_len),
-    payload_mask_key_(payload_mask_key),
-    is_header_unpacked_(false) {}
+    is_unpacked_(false) {
+}
 
-bool frame::unpack_header(toolkit::io_buffer *iob) {
-    bool ret = false;
-    int32_t read_size = 0;
+frame_header::frame_header(
+    bool fin,
+    uint8_t code,
+    uint64_t payload_len,
+    const std::string &key)
+  : fin_(fin),
+    code_(code),
+    payload_len_(payload_len),
+    key_(key),
+    is_unpacked_(false) {
+}
 
+bool frame_header::unpack_header(toolkit::io_buffer *iob) {
+    int32_t iob_size = iob->size();
     do {
         char b = 0;
         if (!iob->read(&b)) {
             break;
         }
-        read_size += 1;
 
-        // Unpack fin flag.
         fin_ = (b & 0x80) > 0;
-
-        // Unpack opt code.
-        opt_ = b & 0x0f;
+        code_ = (b & 0x0f);
 
         if (!iob->read(&b)) {
             break;
         }
-        read_size += 1;
 
-        // Unpack payload length.
         payload_len_ = b & 0x0f;
         if (payload_len_ == 126) {
             uint16_t l = 0;
@@ -68,40 +65,34 @@ bool frame::unpack_header(toolkit::io_buffer *iob) {
                 break;
             }
             payload_len_ = transform_endian_i16(l);
-            read_size += 2;
         } else if (payload_len_ == 127) {
             uint64_t l = 0;
             if (!iob->read((char *)&l, sizeof(l))) {
                 break;
             }
             payload_len_ = transform_endian_i64(l);
-            read_size += 4;
         }
 
-        // Unpack payload mask key.
         if ((b & 0x80) > 0) {
-            payload_mask_key_.resize(4);
-            if (!iob->read((char *)payload_mask_key_.data(), 4)) {
+            key_.resize(4);
+            if (!iob->read((char *)key_.data(), 4)) {
                 break;
             }
-            read_size += 4;
         }
 
-        is_header_unpacked_ = true;
-
-        ret = true;
-
+        // Unpack header finished
+        is_unpacked_ = true;
     } while (false);
 
-    if (!ret) {
-        iob->shift(-read_size);
+    if (!is_unpacked_) {
+        iob->shift(iob->size() - iob_size);
     }
 
-    return ret;
+    return is_unpacked_;
 }
 
-bool frame::pack_header(toolkit::io_buffer *iob) {
-    uint8_t b = opt_;
+bool frame_header::pack_header(toolkit::io_buffer *iob) {
+    char b = (char)code_;
     if (fin_) {
         b |= 0x80;
     }
@@ -110,7 +101,7 @@ bool frame::pack_header(toolkit::io_buffer *iob) {
     }
 
     b = 0;
-    if (payload_mask_key_.size() == 4) {
+    if (key_.size() == 4) {
         b = 0x80;
     }
     if (payload_len_ < 126) {
@@ -136,8 +127,8 @@ bool frame::pack_header(toolkit::io_buffer *iob) {
         }
     }
 
-    if (payload_mask_key_.size() == 4) {
-        if (!iob->write(payload_mask_key_.data(), 4)) {
+    if (key_.size() == 4) {
+        if (!iob->write(key_.data(), 4)) {
             return false;
         }
     }
@@ -145,19 +136,19 @@ bool frame::pack_header(toolkit::io_buffer *iob) {
     return true;
 }
 
-void frame::mask_payload(char *b) {
-    if (payload_mask_key_.size() == 4) {
+void frame_header::mask_payload(char *b) {
+    if (key_.size() == 4) {
         for (uint64_t i = 0; i < payload_len_; i++) {
-            b[i] = b[i] ^ payload_mask_key_[i % 4];
+            b[i] = b[i] ^ key_[i % 4];
         }
     }
 }
 
-void frame::reset() {
+void frame_header::reset() {
     fin_ = true;
-    opt_ = ws_opt_end;
+    code_ = wscode_end;
     payload_len_ = 0;
-    payload_mask_key_.clear();
+    key_.clear();
 }
 
 }  // namespace http

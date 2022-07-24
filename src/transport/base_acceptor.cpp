@@ -20,7 +20,7 @@ namespace pump {
 namespace transport {
 
 base_acceptor::~base_acceptor() {
-    __stop_accept_tracker();
+    __uninstall_accept_tracker();
     __close_accept_flow();
 }
 
@@ -28,8 +28,9 @@ void base_acceptor::on_channel_event(int32_t ev, void *arg) {
     __trigger_interrupt_callbacks();
 }
 
-bool base_acceptor::__start_accept_tracker(poll::channel_sptr &&ch) {
+bool base_acceptor::__install_accept_tracker(poll::channel_sptr &&ch) {
     if (tracker_) {
+        pump_debug_log("acceptor's tracker already exists");
         return false;
     }
 
@@ -41,31 +42,32 @@ bool base_acceptor::__start_accept_tracker(poll::channel_sptr &&ch) {
         return false;
     }
 
-    if (!get_service()->add_channel_tracker(tracker_, read_pid)) {
-        pump_warn_log("add acceptor's tracker to service failed");
+    auto poller = get_service()->get_poller(read_pid);
+    if (poller == nullptr) {
+        pump_debug_log("acceptor got invalid read poller");
+        return false;
+    }
+    if (!poller->install_channel_tracker(tracker_)) {
+        pump_debug_log("poller install acceptor's tracker failed");
         return false;
     }
 
     return true;
 }
 
-bool base_acceptor::__resume_accept_tracker() {
-    auto tracker = tracker_.get();
-    if (tracker == nullptr) {
-        pump_warn_log("can't resume invalid acceptor's tracker");
-        return false;
-    }
+bool base_acceptor::__start_accept_tracker() {
+    pump_assert(tracker_);
     auto poller = tracker_->get_poller();
     if (poller == nullptr) {
-        pump_warn_log("acceptor's tracker is not started before");
+        pump_debug_log("acceptor's tracker not installed");
         return false;
     }
-    return poller->resume_channel_tracker(tracker);
+    return poller->start_channel_tracker(tracker_);
 }
 
-void base_acceptor::__stop_accept_tracker() {
+void base_acceptor::__uninstall_accept_tracker() {
     if (tracker_ && tracker_->get_poller() != nullptr) {
-        tracker_->get_poller()->remove_channel_tracker(tracker_);
+        tracker_->get_poller()->uninstall_channel_tracker(tracker_);
     }
 }
 

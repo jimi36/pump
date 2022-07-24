@@ -37,8 +37,8 @@ class pump_lib request : public packet {
      * Constructor
      * This construct a http request to serialize.
      ********************************************************************************/
-    request(void *ctx = nullptr) noexcept;
-    request(void *ctx, const std::string &url) noexcept;
+    request(void *ctx = nullptr) pump_noexcept;
+    request(void *ctx, const std::string &url) pump_noexcept;
 
     /*********************************************************************************
      * Deconstructor
@@ -48,14 +48,14 @@ class pump_lib request : public packet {
     /*********************************************************************************
      * Set request method
      ********************************************************************************/
-    pump_inline void set_method(http_method method) {
+    pump_inline void set_method(http_method method) pump_noexcept {
         method_ = method;
     }
 
     /*********************************************************************************
      * Get request method
      ********************************************************************************/
-    pump_inline http_method get_method() const {
+    pump_inline http_method get_method() const pump_noexcept {
         return method_;
     }
 
@@ -69,10 +69,10 @@ class pump_lib request : public packet {
     /*********************************************************************************
      * Get http uri
      ********************************************************************************/
-    pump_inline const uri *get_uri() const {
+    pump_inline const uri *get_uri() const pump_noexcept {
         return (const uri *)&uri_;
     }
-    pump_inline uri *get_uri() {
+    pump_inline uri *get_uri() pump_noexcept {
         return &uri_;
     }
 

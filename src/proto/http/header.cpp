@@ -23,16 +23,21 @@ namespace http {
 
 #define head_value_sep "; "
 
-header::header() noexcept :
-    header_parsed_(false) {}
+header::header() pump_noexcept
+  : header_parsed_(false) {
+}
 
-void header::set_head(const std::string &name, int32_t value) {
+void header::set_head(
+    const std::string &name,
+    int32_t value) {
     char strval[64] = {0};
     pump_snprintf(strval, sizeof(strval) - 1, "%d", value);
     headers_[name].push_back(strval);
 }
 
-void header::set_head(const std::string &name, const std::string &value) {
+void header::set_head(
+    const std::string &name,
+    const std::string &value) {
     auto vals = split_string(value, "[,;] *");
     auto it = headers_.find(name);
     if (it == headers_.end()) {
@@ -42,7 +47,9 @@ void header::set_head(const std::string &name, const std::string &value) {
     }
 }
 
-void header::set_unique_head(const std::string &name, int32_t value) {
+void header::set_unique_head(
+    const std::string &name,
+    int32_t value) {
     char strval[64] = {0};
     pump_snprintf(strval, sizeof(strval) - 1, "%d", value);
     headers_[name] = std::vector<std::string>(1, strval);
@@ -54,7 +61,9 @@ void header::set_unique_head(
     headers_[name] = split_string(value, "[,;] *");
 }
 
-bool header::get_head(const std::string &name, int32_t &value) const {
+bool header::get_head(
+    const std::string &name,
+    int32_t &value) const {
     auto it = headers_.find(name);
     if (it == headers_.end() || it->second.empty()) {
         return false;
@@ -63,7 +72,9 @@ bool header::get_head(const std::string &name, int32_t &value) const {
     return true;
 }
 
-bool header::get_head(const std::string &name, std::string &value) const {
+bool header::get_head(
+    const std::string &name,
+    std::string &value) const {
     auto it = headers_.find(name);
     if (it == headers_.end() || it->second.empty()) {
         return false;
@@ -83,7 +94,7 @@ bool header::get_head(
     return true;
 }
 
-bool header::has_head(const std::string &name) const {
+bool header::has_head(const std::string &name) const pump_noexcept {
     if (headers_.find(name) == headers_.end()) {
         return false;
     }

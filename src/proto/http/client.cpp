@@ -27,13 +27,12 @@ namespace pump {
 namespace proto {
 namespace http {
 
-client::client(service *sv) :
-    sv_(sv),
+client::client(service *sv) pump_noexcept
+  : sv_(sv),
     dial_timeout_(0),
     tls_handshake_timeout_(0),
-    wait_for_response_(false) {}
-
-client::~client() {}
+    wait_for_response_(false) {
+}
 
 response_sptr client::do_request(request_sptr &req) {
     response_sptr resp;
@@ -43,25 +42,26 @@ response_sptr client::do_request(request_sptr &req) {
 
         const uri *u = req->get_uri();
         if (u->get_type() != uri_http && u->get_type() != uri_https) {
-            pump_warn_log("request uri type is not http or https");
+            pump_debug_log("request type unsupport");
             break;
         }
 
-        if (!__steup_connection_and_listen_response(u)) {
-            pump_warn_log("setup connection or listen response failed");
+        if (!__async_read_http_response(u)) {
+            pump_debug_log("aync read http response failed");
             break;
         }
 
         if (!conn_->send(std::static_pointer_cast<packet>(req))) {
-            pump_warn_log("send the http request failed");
+            pump_debug_log("send the request failed");
             break;
         }
 
         wait_for_response_ = true;
-        if (resp_cond_.wait_for(lock, std::chrono::seconds(5)) != std::cv_status::timeout) {
+        auto status = resp_cond_.wait_for(lock, std::chrono::seconds(10));
+        if (status != std::cv_status::timeout) {
             resp = std::move(resp_);
         } else {
-            pump_warn_log("wait http response timeout");
+            pump_debug_log("wait response timeout");
             __destroy_connection();
         }
         wait_for_response_ = false;
@@ -78,37 +78,37 @@ connection_sptr client::open_websocket(const std::string &url) {
 
         uri u(url);
         if (u.get_type() != uri_ws && u.get_type() != uri_wss) {
-            pump_warn_log("request uri type is not ws or wss");
+            pump_debug_log("request type unsupport");
             break;
         }
 
-        if (!__steup_connection_and_listen_response(&u)) {
-            pump_warn_log("setup connection or listen response failed");
+        if (!__async_read_http_response(&u)) {
+            pump_debug_log("setup connection or listen response failed");
             break;
         }
 
         std::map<std::string, std::string> headers;
         if (!__send_websocket_upgrade_request(url, headers)) {
-            pump_warn_log("send websocket upgrade request failed");
+            pump_debug_log("send websocket upgrade request failed");
             break;
         }
 
         wait_for_response_ = true;
-        if (resp_cond_.wait_for(lock, std::chrono::seconds(5)) ==
-            std::cv_status::timeout) {
-            pump_warn_log("wait websocket upgrade response timeout");
+        auto status = resp_cond_.wait_for(lock, std::chrono::seconds(5));
+        if (status == std::cv_status::timeout) {
+            pump_debug_log("wait websocket upgrade response timeout");
             __destroy_connection();
             break;
         }
         wait_for_response_ = false;
 
         if (!resp_ || !__handle_websocket_upgrade_response(resp_)) {
-            pump_warn_log("handle websocket upgrade response failed");
+            pump_debug_log("handle websocket upgrade response failed");
             __destroy_connection();
             break;
         }
 
-        conn_->__init_websocket_mask();
+        conn_->__init_websocket_key();
 
         conn = conn_;
         conn_.reset();
@@ -117,20 +117,20 @@ connection_sptr client::open_websocket(const std::string &url) {
     return conn;
 }
 
-bool client::__steup_connection_and_listen_response(const uri *u) {
+bool client::__async_read_http_response(const uri *u) {
     if (u->get_host() != last_uri_.get_host() ||
         u->get_type() != last_uri_.get_type()) {
         __destroy_connection();
     }
 
     if (conn_ && conn_->is_valid()) {
-        if (conn_->__read_next_http_packet()) {
+        if (conn_->__async_read_http_packet()) {
             return true;
-        } else {
-            pump_warn_log("http connection start to read response failed");
-            conn_->stop();
-            conn_.reset();
         }
+
+        pump_debug_log("http connection async read response failed");
+        conn_->stop();
+        conn_.reset();
     }
 
     pump_debug_log("create new http connection %s", u->to_url().c_str());
@@ -151,13 +151,13 @@ bool client::__steup_connection_and_listen_response(const uri *u) {
         transp = dialer->dial(sv_, bind_address, peer_address, dial_timeout_);
     }
     if (!transp) {
-        pump_warn_log("establish connection transport failed");
+        pump_debug_log("establish http connection failed");
         return false;
     }
 
     conn_.reset(new connection(false, transp));
     if (!conn_) {
-        pump_err_log("new connection object failed");
+        pump_warn_log("new http connection object failed");
         return false;
     }
 
@@ -166,7 +166,14 @@ bool client::__steup_connection_and_listen_response(const uri *u) {
     cbs.error_cb = pump_bind(&client::on_error, cli, conn_.get(), _1);
     cbs.packet_cb = pump_bind(&client::on_response, cli, conn_.get(), _1);
     if (!conn_->start_http(sv_, cbs)) {
-        pump_warn_log("start http connection failed");
+        pump_debug_log("start http connection failed");
+        return false;
+    }
+
+    if (!conn_->__async_read_http_packet()) {
+        pump_debug_log("http connection aync read response failed");
+        conn_->stop();
+        conn_.reset();
         return false;
     }
 
@@ -216,9 +223,11 @@ bool client::__handle_websocket_upgrade_response(response_sptr &rsp) {
     }
 
     std::vector<std::string> connection;
-    if (!rsp->get_head("Connection", connection) ||
-        std::find(connection.begin(), connection.end(), "Upgrade") ==
-            connection.end()) {
+    if (!rsp->get_head("Connection", connection)) {
+        return false;
+    }
+    auto upgrade_it = std::find(connection.begin(), connection.end(), "Upgrade");
+    if (upgrade_it == connection.end()) {
         return false;
     }
 
@@ -238,22 +247,25 @@ void client::__notify_response(connection *conn, response_sptr &&resp) {
     }
 }
 
-void client::on_response(client_wptr wptr, connection *conn, packet_sptr &pk) {
-    auto cli = wptr.lock();
-    if (cli) {
+void client::on_response(
+    client_wptr cli,
+    connection *conn,
+    packet_sptr &pk) {
+    auto cli_locker = cli.lock();
+    if (cli_locker) {
         pump_debug_log("connection of http client receive response");
-        cli->__notify_response(conn, std::static_pointer_cast<response>(pk));
+        cli_locker->__notify_response(conn, std::static_pointer_cast<response>(pk));
     }
 }
 
 void client::on_error(
-    client_wptr wptr,
+    client_wptr cli,
     connection *conn,
     const std::string &msg) {
-    auto cli = wptr.lock();
-    if (cli) {
+    auto cli_locker = cli.lock();
+    if (cli_locker) {
         pump_debug_log("connection of http client %s", msg.c_str());
-        cli->__notify_response(conn, response_sptr());
+        cli_locker->__notify_response(conn, response_sptr());
     }
 }
 

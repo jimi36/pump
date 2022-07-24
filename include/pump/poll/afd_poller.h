@@ -46,9 +46,9 @@ class pump_lib afd_poller : public poller {
     virtual bool __uninstall_channel_tracker(channel_tracker *tracker) override;
 
     /*********************************************************************************
-     * Resume channel tracker for derived class
+     * Start channel tracker for derived class
      ********************************************************************************/
-    virtual bool __resume_channel_tracker(channel_tracker *tracker) override;
+    virtual bool __start_channel_tracker(channel_tracker *tracker) override;
 
     /*********************************************************************************
      * Poll

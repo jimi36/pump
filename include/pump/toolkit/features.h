@@ -18,6 +18,7 @@
 #define pump_toolkit_features_h
 
 #include "pump/types.h"
+#include "pump/memory.h"
 
 namespace pump {
 namespace toolkit {
@@ -57,10 +58,10 @@ class pump_lib defer : public noncopyable {
     /*********************************************************************************
      * Constructor
      ********************************************************************************/
-    defer(const pump_function<void()> &cb) {
+    defer(const pump_function<void()> &cb) pump_noexcept {
         cb_ = cb;
     }
-    defer(pump_function<void()> &&cb) {
+    defer(pump_function<void()> &&cb) pump_noexcept {
         cb_ = std::move(cb);
     }
 
@@ -76,7 +77,7 @@ class pump_lib defer : public noncopyable {
     /*********************************************************************************
      * Clear
      ********************************************************************************/
-    pump_inline void clear() {
+    pump_inline void clear() pump_noexcept {
         cb_ = pump_function<void()>();
     }
 

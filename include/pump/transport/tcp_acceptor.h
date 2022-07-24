@@ -27,8 +27,8 @@ class tcp_acceptor;
 DEFINE_SMART_POINTERS(tcp_acceptor);
 
 class pump_lib tcp_acceptor
-    : public base_acceptor,
-      public std::enable_shared_from_this<tcp_acceptor> {
+  : public base_acceptor,
+    public std::enable_shared_from_this<tcp_acceptor> {
   public:
     /*********************************************************************************
      * Create instance

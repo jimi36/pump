@@ -31,21 +31,24 @@ class pump_lib base_dialer : public base_channel {
         int32_t type,
         const address &local_address,
         const address &remote_address,
-        uint64_t connect_timeout_ns) noexcept :
-        base_channel(type, nullptr, -1),
+        uint64_t connect_timeout_ns) pump_noexcept
+      : base_channel(type, nullptr, -1),
         local_address_(local_address),
         remote_address_(remote_address),
-        connect_timeout_ns_(connect_timeout_ns) {}
+        connect_timeout_ns_(connect_timeout_ns) {
+    }
 
     /*********************************************************************************
      * Deconstructor
      ********************************************************************************/
-    virtual ~base_dialer() {}
+    virtual ~base_dialer();
 
     /*********************************************************************************
      * Start
      ********************************************************************************/
-    virtual error_code start(service *sv, const dialer_callbacks &cbs) = 0;
+    virtual error_code start(
+        service *sv,
+        const dialer_callbacks &cbs) = 0;
 
     /*********************************************************************************
      * Stop
@@ -55,14 +58,14 @@ class pump_lib base_dialer : public base_channel {
     /*********************************************************************************
      * Get local address
      ********************************************************************************/
-    pump_inline const address &get_local_address() const {
+    pump_inline const address &get_local_address() const pump_noexcept {
         return local_address_;
     }
 
     /*********************************************************************************
      * Get remote address
      ********************************************************************************/
-    pump_inline const address &get_remote_address() const {
+    pump_inline const address &get_remote_address() const pump_noexcept {
         return remote_address_;
     }
 
@@ -83,23 +86,25 @@ class pump_lib base_dialer : public base_channel {
     /*********************************************************************************
      * Shutdown dial flow
      ********************************************************************************/
-    virtual void __shutdown_dial_flow() {}
+    virtual void __shutdown_dial_flow() {
+    }
 
     /*********************************************************************************
      * Close dial flow
      ********************************************************************************/
-    virtual void __close_dial_flow() {}
+    virtual void __close_dial_flow() {
+    }
 
   protected:
     /*********************************************************************************
-     * Start dial tracker
+     * Install dial tracker
      ********************************************************************************/
-    bool __start_dial_tracker(poll::channel_sptr &&ch);
+    bool __install_dial_tracker(poll::channel_sptr &&ch);
 
     /*********************************************************************************
-     * Stop dial tracker
+     * Uninstall dial tracker
      ********************************************************************************/
-    void __stop_dial_tracker();
+    void __uninstall_dial_tracker();
 
     /*********************************************************************************
      * Start dial timer

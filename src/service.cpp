@@ -22,9 +22,10 @@
 
 namespace pump {
 
-service::service(bool enable_poller) : running_(false) {
+service::service(bool enable_poll)
+  : running_(false) {
     memset(pollers_, 0, sizeof(pollers_));
-    if (enable_poller) {
+    if (enable_poll) {
 #if defined(PUMP_HAVE_IOCP)
         pollers_[read_pid] = object_create<poll::afd_poller>();
         pollers_[send_pid] = object_create<poll::afd_poller>();

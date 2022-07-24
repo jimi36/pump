@@ -21,8 +21,10 @@ AlignOperands: true
 AlignTrailingComments: true
 # 如果函数调用或初始化器列表不适合放在一行中，则允许将所有参数放到下一行中，即使 BinPackArguments 为 false。
 AllowAllArgumentsOnNextLine: false
+# 允许构造函数的初始化参数放在下一行
+#AllowAllConstructorInitializersOnNextLine: false
 # 如果函数不适合一行展示,将函数的所有参数放到下一行,即使 BinPackParameters 为 false。
-AllowAllParametersOfDeclarationOnNextLine: false
+AllowAllParametersOfDeclarationOnNextLine: true
 # 允许短的块放在同一行。
 AllowShortBlocksOnASingleLine: false
 # 允许短的case标签放在同一行。
@@ -92,7 +94,7 @@ BreakInheritanceList: BeforeColon
 # 如果为true,则在三元算符之前换行。
 BreakBeforeTernaryOperators: true
 # 控制构造初始化函数样式
-BreakConstructorInitializers: AfterColon
+BreakConstructorInitializers: BeforeColon
 #BreakAfterJavaFieldAnnotations: false
 # 是否允许在字符串常量中换行。
 BreakStringLiterals: true
@@ -105,7 +107,7 @@ CompactNamespaces: false
 # 当true,如果构造函数初始化不适合一行显示,则每个初始化器独占一行。
 ConstructorInitializerAllOnOneLineOrOnePerLine: true
 # 用于设定构造函数和多继承的缩进长度。
-ConstructorInitializerIndentWidth: 4
+ConstructorInitializerIndentWidth: 2
 # 连续行的缩进长度。
 ContinuationIndentWidth: 4
 # 如果为true，则花括号列表会被格式化为最适合c++11的花括号列表样式。

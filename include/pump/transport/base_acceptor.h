@@ -27,9 +27,12 @@ class pump_lib base_acceptor : public base_channel {
     /*********************************************************************************
      * Constructor
      ********************************************************************************/
-    base_acceptor(int32_t type, const address &listen_address) noexcept :
-        base_channel(type, nullptr, -1),
-        listen_address_(listen_address) {}
+    base_acceptor(
+        int32_t type,
+        const address &listen_address) pump_except
+      : base_channel(type, nullptr, -1),
+        listen_address_(listen_address) {
+    }
 
     /*********************************************************************************
      * Deconstructor
@@ -39,7 +42,9 @@ class pump_lib base_acceptor : public base_channel {
     /*********************************************************************************
      * Start
      ********************************************************************************/
-    virtual error_code start(service *sv, const acceptor_callbacks &cbs) = 0;
+    virtual error_code start(
+        service *sv,
+        const acceptor_callbacks &cbs) = 0;
 
     /*********************************************************************************
      * Stop
@@ -49,7 +54,7 @@ class pump_lib base_acceptor : public base_channel {
     /*********************************************************************************
      * Get local address
      ********************************************************************************/
-    pump_inline const address &get_listen_address() const {
+    pump_inline const address &get_listen_address() const pump_noexcept {
         return listen_address_;
     }
 
@@ -72,19 +77,19 @@ class pump_lib base_acceptor : public base_channel {
 
   protected:
     /*********************************************************************************
+     * Install accept tracker
+     ********************************************************************************/
+    bool __install_accept_tracker(poll::channel_sptr &&ch);
+
+    /*********************************************************************************
      * Start accept tracker
      ********************************************************************************/
-    bool __start_accept_tracker(poll::channel_sptr &&ch);
+    bool __start_accept_tracker();
 
     /*********************************************************************************
-     * Resume accept tracker
+     * Uninstall accept tracker
      ********************************************************************************/
-    bool __resume_accept_tracker();
-
-    /*********************************************************************************
-     * Stop accept tracker
-     ********************************************************************************/
-    void __stop_accept_tracker();
+    void __uninstall_accept_tracker();
 
     /*********************************************************************************
      * Trigger interrupt callbacks

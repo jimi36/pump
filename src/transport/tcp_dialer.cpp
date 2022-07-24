@@ -23,27 +23,25 @@ namespace transport {
 tcp_dialer::tcp_dialer(
     const address &local_address,
     const address &remote_address,
-    uint64_t timeout_ns) noexcept :
-    base_dialer(transport_tcp_dialer, local_address, remote_address, timeout_ns) {
-}
-
-tcp_dialer::~tcp_dialer() {
-    __stop_dial_tracker();
+    uint64_t timeout_ns) noexcept
+  : base_dialer(transport_tcp_dialer, local_address, remote_address, timeout_ns) {
 }
 
 error_code tcp_dialer::start(service *sv, const dialer_callbacks &cbs) {
     if (sv == nullptr) {
-        pump_warn_log("service is invalid");
+        pump_debug_log("service invalid");
         return error_invalid;
     }
 
-    if (!cbs.dialed_cb || !cbs.stopped_cb || !cbs.timeouted_cb) {
-        pump_warn_log("callbacks is invalid");
+    if (!cbs.dialed_cb ||
+        !cbs.stopped_cb ||
+        !cbs.timeouted_cb) {
+        pump_debug_log("callbacks invalid");
         return error_invalid;
     }
 
     if (!__set_state(state_none, state_starting)) {
-        pump_warn_log("tcp dialer is already started before");
+        pump_debug_log("tcp dialer already started");
         return error_fault;
     }
 
@@ -53,22 +51,23 @@ error_code tcp_dialer::start(service *sv, const dialer_callbacks &cbs) {
         __set_service(sv);
 
         if (!__open_dial_flow()) {
-            pump_warn_log("open tcp dialer's flow failed");
+            pump_debug_log("open tcp dialer's flow failed");
             break;
         }
 
-        if (!__start_dial_timer(pump_bind(&tcp_dialer::on_timeout, shared_from_this()))) {
-            pump_warn_log("start tcp dialer's timer failed");
+        if (!__start_dial_timer(
+                pump_bind(&tcp_dialer::on_timeout, shared_from_this()))) {
+            pump_debug_log("start tcp dialer's timer failed");
             break;
         }
 
-        if (flow_->post_connect(remote_address_) != error_none) {
-            pump_warn_log("tcp dialer's flow connect failed");
+        if (!flow_->post_connect(remote_address_)) {
+            pump_debug_log("tcp dialer's flow post connect failed");
             break;
         }
 
-        if (!__start_dial_tracker(shared_from_this())) {
-            pump_warn_log("start tcp dialer's tracker failed");
+        if (!__install_dial_tracker(shared_from_this())) {
+            pump_debug_log("install tcp dialer's tracker failed");
             break;
         }
 
@@ -101,30 +100,32 @@ void tcp_dialer::stop() {
 void tcp_dialer::on_send_event() {
     // Stop timeout timer.
     __stop_dial_timer();
-    // Stop dial tracker.
-    __stop_dial_tracker();
+    // Uninstall dial tracker.
+    __uninstall_dial_tracker();
 
     address local_address, remote_address;
     bool success = (flow_->connect(&local_address, &remote_address) == 0);
     auto next_status = success ? state_finished : state_error;
     if (!__set_state(state_starting, next_status) &&
         !__set_state(state_started, next_status)) {
-        pump_warn_log(
-            "tcp dialer is finished, but it is already stopped or timeout");
+        pump_debug_log("tcp dialer already stopped or timeout");
         return;
     }
 
     tcp_transport_sptr tcp_transport;
-    if (pump_likely(success)) {
+    if (success) {
         tcp_transport = tcp_transport::create();
         if (tcp_transport) {
-            tcp_transport->init(flow_->unbind(), local_address, remote_address);
+            tcp_transport->init(
+                flow_->unbind(),
+                local_address,
+                remote_address);
         } else {
             pump_warn_log("new tcp transport object failed");
             success = false;
         }
     } else {
-        pump_warn_log("tcp dialer is failed");
+        pump_debug_log("tcp dialer dail failed");
     }
 
     base_transport_sptr transport = tcp_transport;
@@ -135,7 +136,7 @@ void tcp_dialer::on_timeout(tcp_dialer_wptr wptr) {
     auto dialer = wptr.lock();
     if (dialer) {
         if (dialer->__set_state(state_started, state_timeouting)) {
-            pump_warn_log("tcp dialer is timeout");
+            pump_debug_log("tcp dialer dial timeout");
             dialer->__post_channel_event(dialer, channel_event_disconnected);
         }
     }
@@ -149,9 +150,8 @@ bool tcp_dialer::__open_dial_flow() {
     if (!flow_) {
         pump_warn_log("new tcp dialer's flow object failed");
         return false;
-    }
-    if (flow_->init(shared_from_this(), local_address_) != error_none) {
-        pump_warn_log("init tcp dialer's flow failed");
+    } else if (!flow_->init(shared_from_this(), local_address_)) {
+        pump_debug_log("init tcp dialer's flow failed");
         return false;
     }
 
@@ -205,19 +205,19 @@ base_transport_sptr tcp_sync_dialer::dial(
 }
 
 void tcp_sync_dialer::on_dialed(
-    tcp_sync_dialer_wptr wptr,
+    tcp_sync_dialer_wptr dialer,
     base_transport_sptr &transp,
-    bool succ) {
-    auto dialer = wptr.lock();
-    if (dialer) {
-        dialer->dial_promise_.set_value(transp);
+    bool success) {
+    auto dialer_locker = dialer.lock();
+    if (dialer_locker) {
+        dialer_locker->dial_promise_.set_value(transp);
     }
 }
 
-void tcp_sync_dialer::on_timeouted(tcp_sync_dialer_wptr wptr) {
-    auto dialer = wptr.lock();
-    if (dialer) {
-        dialer->dial_promise_.set_value(base_transport_sptr());
+void tcp_sync_dialer::on_timeouted(tcp_sync_dialer_wptr dialer) {
+    auto dialer_locker = dialer.lock();
+    if (dialer_locker) {
+        dialer_locker->dial_promise_.set_value(base_transport_sptr());
     }
 }
 

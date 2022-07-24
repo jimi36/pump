@@ -22,24 +22,15 @@
 namespace pump {
 namespace time {
 
-constexpr static int32_t state_none = 0;
-constexpr static int32_t state_stopped = 1;
-constexpr static int32_t state_started = 2;
-constexpr static int32_t state_pending = 3;
-
 timer::timer(
     uint64_t timeout,
     const timer_callback &cb,
-    bool repeated) :
-    mgr_(nullptr),
+    bool repeated) pump_noexcept
+  : mgr_(nullptr),
     state_(state_none),
     cb_(cb),
     repeated_(repeated),
     timeout_ns_(timeout) {
-}
-
-void timer::stop() {
-    __force_set_state(state_stopped);
 }
 
 void timer::handle_timeout() {
@@ -55,21 +46,6 @@ void timer::handle_timeout() {
             __set_state(state_pending, state_stopped);
         }
     }
-}
-
-bool timer::is_started() const {
-    return state_.load() > state_stopped;
-}
-
-bool timer::__start(manager *mgr) {
-    if (!__set_state(state_none, state_started)) {
-        return false;
-    }
-
-    // Save timer manager.
-    mgr_ = mgr;
-
-    return true;
 }
 
 }  // namespace time

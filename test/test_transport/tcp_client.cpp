@@ -61,6 +61,8 @@ class my_tcp_dialer : public std::enable_shared_from_this<my_tcp_dialer> {
             return;
         }
 
+        transport_->async_read();
+
         printf("tcp client dialed\n");
 
         for (int i = 0; i < send_loop; i++) {
@@ -95,7 +97,7 @@ class my_tcp_dialer : public std::enable_shared_from_this<my_tcp_dialer> {
             send_data();
         }
 
-        transp->continue_read();
+        transp->async_read();
     }
 
     void on_sent_callback(toolkit::io_buffer *iob) {

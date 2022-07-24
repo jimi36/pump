@@ -31,8 +31,9 @@ using transport::address;
 class client;
 DEFINE_SMART_POINTERS(client);
 
-class pump_lib client : public toolkit::noncopyable,
-                        public std::enable_shared_from_this<client> {
+class pump_lib client
+  : public toolkit::noncopyable,
+    public std::enable_shared_from_this<client> {
   public:
     /*********************************************************************************
      * Create instance
@@ -45,19 +46,19 @@ class pump_lib client : public toolkit::noncopyable,
     /*********************************************************************************
      * Deconstructor
      ********************************************************************************/
-    ~client();
+    ~client() = default;
 
     /*********************************************************************************
      * Set connect timeout time
      ********************************************************************************/
-    pump_inline void set_connect_timeout(int64_t timeout) {
+    pump_inline void set_connect_timeout(int64_t timeout) pump_noexcept {
         dial_timeout_ = timeout > 0 ? timeout : 0;
     }
 
     /*********************************************************************************
      * Set tls handshake timeout time
      ********************************************************************************/
-    pump_inline void set_tls_handshake_timeout(int64_t timeout) {
+    pump_inline void set_tls_handshake_timeout(int64_t timeout) pump_noexcept {
         tls_handshake_timeout_ = timeout > 0 ? timeout : 0;
     }
 
@@ -84,12 +85,12 @@ class pump_lib client : public toolkit::noncopyable,
     /*********************************************************************************
      * Constructor
      ********************************************************************************/
-    client(service *sv);
+    client(service *sv) pump_noexcept;
 
     /*********************************************************************************
      * Setup http connection and listen http response
      ********************************************************************************/
-    bool __steup_connection_and_listen_response(const uri *u);
+    bool __async_read_http_response(const uri *u);
 
     /*********************************************************************************
      * Destroy http connection
@@ -118,7 +119,7 @@ class pump_lib client : public toolkit::noncopyable,
      * Handel connection response
      ********************************************************************************/
     static void on_response(
-        client_wptr wptr,
+        client_wptr cli,
         connection *conn,
         packet_sptr &pk);
 
@@ -126,7 +127,7 @@ class pump_lib client : public toolkit::noncopyable,
      * Handel connection disconnected
      ********************************************************************************/
     static void on_error(
-        client_wptr wptr,
+        client_wptr cli,
         connection *conn,
         const std::string &msg);
 

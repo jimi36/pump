@@ -20,22 +20,23 @@
 namespace pump {
 namespace transport {
 
-tcp_acceptor::tcp_acceptor(const address &listen_address) noexcept :
-    base_acceptor(transport_tcp_acceptor, listen_address) {}
+tcp_acceptor::tcp_acceptor(const address &listen_address) noexcept
+  : base_acceptor(transport_tcp_acceptor, listen_address) {}
 
 error_code tcp_acceptor::start(service *sv, const acceptor_callbacks &cbs) {
     if (sv == nullptr) {
-        pump_warn_log("service is invalid");
+        pump_debug_log("service is invalid");
         return error_invalid;
     }
 
-    if (!cbs.accepted_cb || !cbs.stopped_cb) {
-        pump_warn_log("callbacks is invalid");
+    if (!cbs.accepted_cb ||
+        !cbs.stopped_cb) {
+        pump_debug_log("callbacks is invalid");
         return error_invalid;
     }
 
     if (!__set_state(state_none, state_starting)) {
-        pump_warn_log("tcp acceptor is already started before");
+        pump_debug_log("tcp acceptor already started");
         return error_fault;
     }
 
@@ -45,12 +46,12 @@ error_code tcp_acceptor::start(service *sv, const acceptor_callbacks &cbs) {
         __set_service(sv);
 
         if (!__open_accept_flow()) {
-            pump_warn_log("open tcp acceptor's flow failed");
+            pump_debug_log("open tcp acceptor's flow failed");
             break;
         }
 
-        if (!__start_accept_tracker(shared_from_this())) {
-            pump_warn_log("start tcp acceptor's tracker failed");
+        if (!__install_accept_tracker(shared_from_this())) {
+            pump_debug_log("install tcp acceptor's tracker failed");
             break;
         }
 
@@ -74,7 +75,13 @@ void tcp_acceptor::stop() {
 }
 
 void tcp_acceptor::on_read_event() {
-    address local_address, remote_address;
+    // Wait starting end
+    while (__is_state(state_starting, std::memory_order_relaxed)) {
+        //pump_debug_log("tcp acceptor starting, wait");
+    }
+
+    address local_address;
+    address remote_address;
     pump_socket fd = flow_->accept(&local_address, &remote_address);
     if (fd > 0) {
         tcp_transport_sptr tcp_transport = tcp_transport::create();
@@ -83,13 +90,15 @@ void tcp_acceptor::on_read_event() {
             base_transport_sptr transport = tcp_transport;
             cbs_.accepted_cb(transport);
         } else {
-            pump_err_log("new tcp transport object failed");
+            pump_warn_log("new tcp transport object failed");
             net::close(fd);
         }
     }
 
-    if (!__resume_accept_tracker()) {
-        pump_warn_log("resume tcp acceptor's tracker failed");
+    if (!__start_accept_tracker()) {
+        if (__is_state(state_started)) {
+            pump_err_log("start tcp acceptor's tracker failed");
+        }
     }
 }
 
@@ -101,8 +110,7 @@ bool tcp_acceptor::__open_accept_flow() {
     if (!flow_) {
         pump_warn_log("new tcp acceptor's flow object failed");
         return false;
-    }
-    if (flow_->init(shared_from_this(), listen_address_) != error_none) {
+    } else if (!flow_->init(shared_from_this(), listen_address_)) {
         pump_debug_log("init tcp acceptor's flow failed");
         return false;
     }

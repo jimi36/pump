@@ -29,8 +29,9 @@ namespace transport {
 class tls_dialer;
 DEFINE_SMART_POINTERS(tls_dialer);
 
-class pump_lib tls_dialer : public base_dialer,
-                            public std::enable_shared_from_this<tls_dialer> {
+class pump_lib tls_dialer
+  : public base_dialer,
+    public std::enable_shared_from_this<tls_dialer> {
   public:
     /*********************************************************************************
      * Create instance
@@ -76,7 +77,9 @@ class pump_lib tls_dialer : public base_dialer,
     /*********************************************************************************
      * Start
      ********************************************************************************/
-    virtual error_code start(service *sv, const dialer_callbacks &cbs) override;
+    virtual error_code start(
+        service *sv,
+        const dialer_callbacks &cbs) override;
 
     /*********************************************************************************
      * Stop
@@ -92,21 +95,21 @@ class pump_lib tls_dialer : public base_dialer,
     /*********************************************************************************
      * Timeout event callback
      ********************************************************************************/
-    static void on_timeout(tls_dialer_wptr wptr);
+    static void on_timeout(tls_dialer_wptr dialer);
 
     /*********************************************************************************
      * TLS handshake success callback
      ********************************************************************************/
     static void on_handshaked(
-        tls_dialer_wptr wptr,
+        tls_dialer_wptr dialer,
         tls_handshaker *handshaker,
-        bool succ);
+        bool success);
 
     /*********************************************************************************
      * Tls handskake stopped callback
      ********************************************************************************/
     static void on_handshake_stopped(
-        tls_dialer_wptr wptr,
+        tls_dialer_wptr dialer,
         tls_handshaker *handshaker);
 
   protected:
@@ -152,7 +155,7 @@ class tls_sync_dialer;
 DEFINE_SMART_POINTERS(tls_sync_dialer);
 
 class pump_lib tls_sync_dialer
-    : public std::enable_shared_from_this<tls_sync_dialer> {
+  : public std::enable_shared_from_this<tls_sync_dialer> {
   public:
     /*********************************************************************************
      * Create instance
@@ -182,14 +185,14 @@ class pump_lib tls_sync_dialer
      * Dialed callback
      ********************************************************************************/
     static void on_dialed(
-        tls_sync_dialer_wptr wptr,
+        tls_sync_dialer_wptr dialer,
         base_transport_sptr &transp,
-        bool succ);
+        bool success);
 
     /*********************************************************************************
      * Dial timeouted callback
      ********************************************************************************/
-    static void on_timeouted(tls_sync_dialer_wptr wptr);
+    static void on_timeouted(tls_sync_dialer_wptr dialer);
 
     /*********************************************************************************
      * Dial stopped callback
@@ -200,13 +203,7 @@ class pump_lib tls_sync_dialer
     /*********************************************************************************
      * Constructor
      ********************************************************************************/
-    tls_sync_dialer() noexcept {}
-
-    /*********************************************************************************
-     * Reset sync dialer
-     ********************************************************************************/
-    pump_inline void __reset() {
-        dialer_.reset();
+    tls_sync_dialer() pump_noexcept {
     }
 
   private:

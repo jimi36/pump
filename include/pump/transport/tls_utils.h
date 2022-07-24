@@ -18,14 +18,10 @@
 #define pump_transport_tls_utils_h
 
 #include "pump/net/socket.h"
+#include "pump/transport/types.h"
 
 namespace pump {
 namespace transport {
-
-const int32_t tls_handshake_ok = 0;
-const int32_t tls_handshake_read = 1;
-const int32_t tls_handshake_send = 2;
-const int32_t tls_handshake_error = 3;
 
 /*********************************************************************************
  * TLS credentials.
@@ -78,13 +74,8 @@ void delete_tls_session(tls_session *session);
 
 /*********************************************************************************
  * Handshake.
- * Return results:
- *     tls_handshake_ok
- *     tls_handshake_read
- *     tls_handshake_send
- *     tls_handshake_error
  ********************************************************************************/
-int32_t tls_handshake(tls_session *session);
+tls_handshake_phase tls_handshake(tls_session *session);
 
 /*********************************************************************************
  * Check has unread data or not

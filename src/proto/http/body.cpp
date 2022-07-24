@@ -21,11 +21,12 @@ namespace pump {
 namespace proto {
 namespace http {
 
-body::body() noexcept :
-    is_chunk_mode_(false),
+body::body() pump_noexcept
+  : is_chunk_mode_(false),
     expected_size_(0),
     parsing_chunk_size_(0),
-    is_parse_finished_(false) {}
+    is_parse_finished_(false) {
+}
 
 int32_t body::serialize(std::string &buf) const {
     if (is_chunk_mode_) {

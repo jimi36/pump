@@ -37,8 +37,10 @@ class fl_mc_queue : public noncopyable {
 
     // Element node
     struct element_node {
-        element_node() :
-            ready(0), next(this + 1) {}
+        element_node()
+          : ready(0),
+            next(this + 1) {
+        }
         volatile int32_t ready;
         element_node *next;
         char data[element_size];
@@ -54,8 +56,8 @@ class fl_mc_queue : public noncopyable {
     /*********************************************************************************
      * Constructor
      ********************************************************************************/
-    fl_mc_queue(int32_t size) :
-        capacity_(0),
+    fl_mc_queue(int32_t size)
+      : capacity_(0),
         tail_block_node_(nullptr),
         head_(nullptr),
         tail_(nullptr) {
@@ -175,7 +177,7 @@ class fl_mc_queue : public noncopyable {
     /*********************************************************************************
      * Empty
      ********************************************************************************/
-    pump_inline bool empty() const {
+    pump_inline bool empty() const pump_noexcept {
         element_node *tail = tail_.load(std::memory_order_relaxed)->next;
         return tail == head_.load(std::memory_order_relaxed);
     }
@@ -183,7 +185,7 @@ class fl_mc_queue : public noncopyable {
     /*********************************************************************************
      * Get capacity
      ********************************************************************************/
-    pump_inline int32_t capacity() const {
+    pump_inline int32_t capacity() const pump_noexcept {
         return capacity_.load(std::memory_order_relaxed);
     }
 

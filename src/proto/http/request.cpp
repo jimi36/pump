@@ -32,12 +32,13 @@ static const char *request_method_strings[] =
      "PUT",
      "DELETE"};
 
-request::request(void *ctx) noexcept :
-    packet(ctx, PK_REQUEST),
-    method_(METHOD_UNKNOWN) {}
+request::request(void *ctx) pump_noexcept
+  : packet(ctx, PK_REQUEST),
+    method_(METHOD_UNKNOWN) {
+}
 
-request::request(void *ctx, const std::string &url) noexcept :
-    packet(ctx, PK_REQUEST),
+request::request(void *ctx, const std::string &url) pump_noexcept
+  : packet(ctx, PK_REQUEST),
     method_(METHOD_UNKNOWN) {
     uri_.parse(url);
 }
@@ -68,7 +69,7 @@ int32_t request::parse(const char *b, int32_t size) {
     if (parse_status_ == PARSE_HEADER) {
         parse_size = __parse_header(pos, size);
         if (parse_size < 0) {
-            pump_warn_log("parse request header failed");
+            pump_debug_log("parse request header failed");
             return -1;
         } else if (parse_size == 0) {
             return int32_t(pos - b);
@@ -122,7 +123,7 @@ int32_t request::parse(const char *b, int32_t size) {
     if (parse_status_ == PARSE_BODY) {
         pump_assert(body_);
         if ((parse_size = body_->parse(pos, size)) < 0) {
-            pump_warn_log("parse request body failed");
+            pump_debug_log("parse request body failed");
             return -1;
         }
 
@@ -142,14 +143,14 @@ int32_t request::serialize(std::string &buffer) const {
 
     int32_t size = __serialize_request_line(buffer);
     if (size < 0) {
-        pump_warn_log("serialize request line failed");
+        pump_debug_log("serialize request line failed");
         return -1;
     }
     serialize_size += size;
 
     size = __serialize_header(buffer);
     if (size < 0) {
-        pump_warn_log("serialize request header failed");
+        pump_debug_log("serialize request header failed");
         return -1;
     }
     serialize_size += size;
@@ -157,7 +158,7 @@ int32_t request::serialize(std::string &buffer) const {
     if (body_) {
         size = body_->serialize(buffer);
         if (size < 0) {
-            pump_warn_log("serialize request body failed");
+            pump_debug_log("serialize request body failed");
             return -1;
         }
         serialize_size += size;
@@ -187,7 +188,7 @@ int32_t request::__parse_start_line(const char *b, int32_t size) {
     } else if (pos + 7 < line_end && memcmp(pos, "DELETE ", 7) == 0) {
         method_ = METHOD_DELETE, pos += 7;
     } else {
-        pump_warn_log("parse request method failed");
+        pump_debug_log("parse request method failed");
         return -1;
     }
 
@@ -197,7 +198,7 @@ int32_t request::__parse_start_line(const char *b, int32_t size) {
         ++pos;
     }
     if (pos == old_pos || pos == line_end) {
-        pump_warn_log("parse request path failed");
+        pump_debug_log("parse request path failed");
         return -1;
     }
     uri_.set_path(std::string(old_pos, pos));
@@ -209,21 +210,21 @@ int32_t request::__parse_start_line(const char *b, int32_t size) {
             ++pos;
         }
         if (pos == old_pos || pos == line_end) {
-            pump_warn_log("parse request params failed");
+            pump_debug_log("parse request params failed");
             return -1;
         }
 
         std::string params;
         std::string raw_params(old_pos, pos);
         if (!url_decode(raw_params, params)) {
-            pump_warn_log("url decode request params failed");
+            pump_debug_log("url decode request params failed");
             return -1;
         }
 
         auto vals = split_string(params, "[=&]");
         uint32_t cnt = (uint32_t)vals.size();
         if (vals.empty() || cnt % 2 != 0) {
-            pump_warn_log("request params invalid");
+            pump_debug_log("request params invalid");
             return -1;
         }
         for (uint32_t i = 0; i < cnt; i += 2) {
@@ -240,7 +241,7 @@ int32_t request::__parse_start_line(const char *b, int32_t size) {
     } else if (memcmp(pos, "HTTP/2.0", 8) == 0) {
         version_ = VERSION_20;
     } else {
-        pump_warn_log("parse request http version invalid");
+        pump_debug_log("parse request http version invalid");
         return -1;
     }
 

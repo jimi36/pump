@@ -28,7 +28,7 @@ class flow_tcp : public flow_base {
     /*********************************************************************************
      * Constructor
      ********************************************************************************/
-    flow_tcp() noexcept;
+    flow_tcp() pump_noexcept;
 
     /*********************************************************************************
      * Deconstructor
@@ -37,11 +37,10 @@ class flow_tcp : public flow_base {
 
     /*********************************************************************************
      * Init
-     * Return results:
-     *     error_none    => success
-     *     error_fault => error
      ********************************************************************************/
-    error_code init(poll::channel_sptr &&ch, pump_socket fd);
+    bool init(
+        poll::channel_sptr &&ch,
+        pump_socket fd) pump_noexcept;
 
     /*********************************************************************************
      * Read
@@ -54,8 +53,8 @@ class flow_tcp : public flow_base {
      * Want to send
      * Try sending data as much as possible.
      * Return results:
-     *      error_none    => send completely
-     *      error_again => try again
+     *      error_none  => finish
+     *      error_again => again
      *      error_fault => error
      ********************************************************************************/
     error_code want_to_send(toolkit::io_buffer *iob);
@@ -63,18 +62,11 @@ class flow_tcp : public flow_base {
     /*********************************************************************************
      * Send
      * Return results:
-     *     error_none      => send completely
-     *     error_again   => try again
-     *     error_fault   => error
+     *     error_none  => finish
+     *     error_again => again
+     *     error_fault => error
      ********************************************************************************/
     error_code send();
-
-    /*********************************************************************************
-     * Check there are data to send or not
-     ********************************************************************************/
-    pump_inline bool has_data_to_send() const {
-        return (send_iob_ && send_iob_->size() > 0);
-    }
 
   private:
     // Send buffer

@@ -17,6 +17,7 @@
 #ifndef pump_proto_http_body_h
 #define pump_proto_http_body_h
 
+#include "pump/memory.h"
 #include "pump/proto/http/utils.h"
 
 namespace pump {
@@ -28,7 +29,7 @@ class pump_lib body {
     /*********************************************************************************
      * Constructor
      ********************************************************************************/
-    body() noexcept;
+    body() pump_noexcept;
 
     /*********************************************************************************
      * Deconstructor
@@ -38,7 +39,7 @@ class pump_lib body {
     /*********************************************************************************
      * Set chunked mode
      ********************************************************************************/
-    pump_inline void set_chunked() {
+    pump_inline void set_chunked() pump_noexcept {
         is_chunk_mode_ = true;
     }
 
@@ -66,21 +67,21 @@ class pump_lib body {
     /*********************************************************************************
      * Get data
      ********************************************************************************/
-    pump_inline const std::string &data() const {
+    pump_inline const std::string &data() const pump_noexcept {
         return data_;
     }
 
     /*********************************************************************************
      * Set expected data size
      ********************************************************************************/
-    pump_inline void set_expected_size(int32_t size) {
+    pump_inline void set_expected_size(int32_t size) pump_noexcept {
         expected_size_ = size;
     }
 
     /*********************************************************************************
      * Check parse status
      ********************************************************************************/
-    pump_inline bool is_parse_finished() const {
+    pump_inline bool is_parse_finished() const pump_noexcept {
         return is_parse_finished_;
     }
 

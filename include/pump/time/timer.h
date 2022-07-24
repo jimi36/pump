@@ -24,6 +24,11 @@
 namespace pump {
 namespace time {
 
+const static int32_t state_none = 0;
+const static int32_t state_stopped = 1;
+const static int32_t state_started = 2;
+const static int32_t state_pending = 3;
+
 class manager;
 
 class timer;
@@ -55,7 +60,9 @@ class pump_lib timer : public std::enable_shared_from_this<timer> {
     /*********************************************************************************
      * Stop
      ********************************************************************************/
-    void stop();
+    pump_inline void stop() pump_noexcept {
+        __force_set_state(state_stopped);
+    }
 
     /*********************************************************************************
      * Handle timeout
@@ -65,19 +72,21 @@ class pump_lib timer : public std::enable_shared_from_this<timer> {
     /*********************************************************************************
      * Get timeout
      ********************************************************************************/
-    pump_inline uint64_t timeout() const {
+    pump_inline uint64_t timeout() const pump_noexcept {
         return timeout_ns_;
     }
 
     /*********************************************************************************
      * Get starting state
      ********************************************************************************/
-    bool is_started() const;
+    pump_inline bool is_started() const pump_noexcept {
+        return state_.load() > state_stopped;
+    }
 
     /*********************************************************************************
      * Get repeated status
      ********************************************************************************/
-    pump_inline bool is_repeated() const {
+    pump_inline bool is_repeated() const pump_noexcept {
         return repeated_;
     }
 
@@ -88,24 +97,32 @@ class pump_lib timer : public std::enable_shared_from_this<timer> {
     timer(
         uint64_t timeout_ns,
         const timer_callback &cb,
-        bool repeated);
+        bool repeated) pump_noexcept;
 
     /*********************************************************************************
      * Start
      ********************************************************************************/
-    bool __start(manager *mgr);
+    pump_inline bool __start(manager *mgr) pump_noexcept {
+        if (!__set_state(state_none, state_started)) {
+            return false;
+        }
+        mgr_ = mgr;
+        return true;
+    }
 
     /*********************************************************************************
      * Set state
      ********************************************************************************/
-    pump_inline bool __set_state(int32_t expected, int32_t desired) {
+    pump_inline bool __set_state(
+        int32_t expected,
+        int32_t desired) pump_noexcept {
         return state_.compare_exchange_strong(expected, desired);
     }
 
     /*********************************************************************************
      * Set state
      ********************************************************************************/
-    pump_inline void __force_set_state(int32_t desired) {
+    pump_inline void __force_set_state(int32_t desired) pump_noexcept {
         state_.store(desired);
     }
 

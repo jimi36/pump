@@ -70,9 +70,11 @@ class pump_lib tls_transport : public base_transport {
     virtual void force_stop() override;
 
     /*********************************************************************************
-     * Continue read for read once mode
+     * Async read for read once mode
+     * For read loop mode, this will loop reading.
+     * For read once mode, this will read only once.
      ********************************************************************************/
-    virtual error_code continue_read() override;
+    virtual error_code async_read() override;
 
     /*********************************************************************************
      * Send
@@ -105,7 +107,7 @@ class pump_lib tls_transport : public base_transport {
     /*********************************************************************************
      * Constructor
      ********************************************************************************/
-    tls_transport() noexcept;
+    tls_transport() pump_noexcept;
 
     /*********************************************************************************
      * Shutdown transport flow

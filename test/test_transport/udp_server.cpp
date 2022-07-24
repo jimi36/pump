@@ -76,5 +76,7 @@ void start_udp_server(const std::string &ip, uint16_t port) {
         printf("udp server start error\n");
     }
 
+    transport->async_read();
+
     sv->wait_stopped();
 }

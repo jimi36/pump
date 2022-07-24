@@ -2,7 +2,7 @@
 
 #include "http.h"
 
-int loop = 2;
+int loop = 10;
 
 void start_http_client(pump::service *sv, const std::vector<std::string> &urls) {
     http::client_sptr cli = http::client::create(sv);
@@ -15,6 +15,7 @@ void start_http_client(pump::service *sv, const std::vector<std::string> &urls) 
         req->set_head("Host", req->get_uri()->get_host());
         req->set_head("User-Agent", "PostmanRuntime/7.24.0");
         req->set_head("Accept", "*/*");
+        req->set_head("Accept-Encoding", "gzip, deflate, br");
         req->set_head("Connection", "keep-alive");
 
         int succ = 0;
@@ -27,8 +28,8 @@ void start_http_client(pump::service *sv, const std::vector<std::string> &urls) 
             }
 
             if (resp->get_status_code() == 200) {
-                std::string html = pump::utf8_to_gbk(resp->get_body()->data());
-                std::cout << html.size() << std::endl;
+                //std::string html = pump::utf8_to_gbk(resp->get_body()->data());
+                //std::cout << html.size() << std::endl;
                 succ++;
             }
         }

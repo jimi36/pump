@@ -55,6 +55,8 @@ class my_tls_acceptor : public std::enable_shared_from_this<my_tls_acceptor> {
             transports_[transp.get()] = tctx;
         }
 
+        transport->async_read();
+
         printf("server tls transport accepted\n");
     }
 
@@ -77,7 +79,7 @@ class my_tls_acceptor : public std::enable_shared_from_this<my_tls_acceptor> {
             send_data(transp);
         }
 
-        //transp->continue_read();
+        // transp->continue_read();
     }
 
     /*********************************************************************************

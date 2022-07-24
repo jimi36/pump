@@ -32,7 +32,7 @@ class flow_tls : public flow_base {
     /*********************************************************************************
      * Constructor
      ********************************************************************************/
-    flow_tls() noexcept;
+    flow_tls() pump_noexcept;
 
     /*********************************************************************************
      * Deconstructor
@@ -40,12 +40,9 @@ class flow_tls : public flow_base {
     virtual ~flow_tls();
 
     /*********************************************************************************
-     * Init flow
-     * Return results:
-     *     error_none    => success
-     *     error_fault => error
+     * Init
      ********************************************************************************/
-    error_code init(
+    bool init(
         poll::channel_sptr &ch,
         bool client,
         pump_socket fd,
@@ -53,13 +50,8 @@ class flow_tls : public flow_base {
 
     /*********************************************************************************
      * Handshake
-     * Return results:
-     *     tls_handshake_ok
-     *     tls_handshake_read
-     *     tls_handshake_send
-     *     tls_handshake_error
      ********************************************************************************/
-    pump_inline int32_t handshake() {
+    pump_inline tls_handshake_phase handshake() {
         return transport::tls_handshake(session_);
     }
 
@@ -79,37 +71,22 @@ class flow_tls : public flow_base {
 
     /*********************************************************************************
      * Want to send
-     * If using iocp this post an iocp task for sending, else this try sending
-     * data. Return results:
-     *     error_none    => send completely
-     *     error_again   => try again
-     *     error_fault   => error
+     * Try sending data as much as possible.
+     * Return results:
+     *     error_none  => finish
+     *     error_again => again
+     *     error_fault => error
      ********************************************************************************/
     error_code want_to_send(toolkit::io_buffer *iob);
 
     /*********************************************************************************
-     * Send to net
+     * Send
      * Return results:
-     *     error_none    => send completely
-     *     error_again   => try again
-     *     error_fault   => error
+     *     error_none  => finish
+     *     error_again => again
+     *     error_fault => error
      ********************************************************************************/
     error_code send();
-
-    /*********************************************************************************
-     * Check there are data to send or not
-     ********************************************************************************/
-    pump_inline bool has_unsend_data() const {
-        pump_assert(session_);
-        return false;
-    }
-
-    /*********************************************************************************
-     * Check handshaked status
-     ********************************************************************************/
-    pump_inline bool is_handshaked() const {
-        return is_handshaked_;
-    }
 
   private:
     // Handshaked status

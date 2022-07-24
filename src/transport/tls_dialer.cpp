@@ -25,11 +25,12 @@ tls_dialer::tls_dialer(
     const address &local_address,
     const address &remote_address,
     uint64_t dial_timeout_ns,
-    uint64_t handshake_timeout_ns) :
-    base_dialer(transport_tls_dialer,
-                local_address,
-                remote_address,
-                dial_timeout_ns),
+    uint64_t handshake_timeout_ns)
+  : base_dialer(
+        transport_tls_dialer,
+        local_address,
+        remote_address,
+        dial_timeout_ns),
     xcred_(xcred),
     handshake_timeout_ns_(handshake_timeout_ns) {
     if (xcred_ == nullptr) {
@@ -38,33 +39,29 @@ tls_dialer::tls_dialer(
 }
 
 tls_dialer::~tls_dialer() {
-    __stop_dial_tracker();
-
-    if (flow_ && handshaker_) {
-        flow_->unbind();
-    }
-
     delete_tls_credentials(xcred_);
 }
 
 error_code tls_dialer::start(service *sv, const dialer_callbacks &cbs) {
     if (sv == nullptr) {
-        pump_warn_log("service is invalid");
+        pump_debug_log("service invalid");
         return error_invalid;
     }
 
-    if (!cbs.dialed_cb || !cbs.stopped_cb || !cbs.timeouted_cb) {
-        pump_warn_log("callbacks is invalid");
+    if (!cbs.dialed_cb ||
+        !cbs.stopped_cb ||
+        !cbs.timeouted_cb) {
+        pump_debug_log("callbacks invalid");
         return error_invalid;
     }
 
     if (xcred_ == nullptr) {
-        pump_warn_log("tls dialer's cert is invalid");
+        pump_debug_log("cert is invalid");
         return error_invalid;
     }
 
     if (!__set_state(state_none, state_starting)) {
-        pump_warn_log("tls dialer is already started before");
+        pump_debug_log("tls dialer already started");
         return error_fault;
     }
 
@@ -74,23 +71,23 @@ error_code tls_dialer::start(service *sv, const dialer_callbacks &cbs) {
         __set_service(sv);
 
         if (!__open_dial_flow()) {
-            pump_warn_log("open tls dialer's flow failed");
+            pump_debug_log("open tls dialer's flow failed");
             break;
         }
 
-        if (flow_->post_connect(remote_address_) != error_none) {
-            pump_warn_log("tls dialer's flow connect failed");
+        if (!flow_->post_connect(remote_address_)) {
+            pump_debug_log("tls dialer's post connect failed");
             break;
         }
 
         if (!__start_dial_timer(
                 pump_bind(&tls_dialer::on_timeout, shared_from_this()))) {
-            pump_warn_log("start tls dialer's timer failed");
+            pump_debug_log("start tls dialer's timer failed");
             break;
         }
 
-        if (!__start_dial_tracker(shared_from_this())) {
-            pump_warn_log("start tls dialer's tracker failed");
+        if (!__install_dial_tracker(shared_from_this())) {
+            pump_debug_log("install tls dialer's tracker failed");
             break;
         }
 
@@ -126,21 +123,21 @@ void tls_dialer::stop() {
 void tls_dialer::on_send_event() {
     // Stop dial timer.
     __stop_dial_timer();
-    // Stop dial tracker.
-    __stop_dial_tracker();
+    // Uninstall dial tracker.
+    __uninstall_dial_tracker();
 
     address local_address, remote_address;
     bool success = (flow_->connect(&local_address, &remote_address) == 0);
     auto next_status = success ? state_handshaking : state_error;
     if (!__set_state(state_starting, next_status) &&
         !__set_state(state_started, next_status)) {
-        pump_warn_log("tls dialer is finished, but it is already stopped or timeout");
+        pump_debug_log("tls dialer already stopped or timeout");
         return;
     }
 
     do {
         if (!success) {
-            pump_warn_log("tls dialer is failed");
+            pump_debug_log("tls dialer dail failed");
             break;
         }
 
@@ -149,24 +146,16 @@ void tls_dialer::on_send_event() {
             object_delete<tls_handshaker>);
         if (!handshaker_) {
             pump_warn_log("new tls handshaker object failed");
-            if (__set_state(state_handshaking, state_error)) {
-                break;
-            }
-            return;
+            break;
         }
-
-        pump_socket fd = flow_->get_fd();
         if (!handshaker_->init(
-                fd,
+                flow_->unbind(),
                 true,
                 xcred_,
                 local_address,
                 remote_address)) {
-            pump_warn_log("init tls handshaker failed");
-            if (__set_state(state_handshaking, state_error)) {
-                break;
-            }
-            return;
+            pump_debug_log("init tls handshaker failed");
+            break;
         }
 
         tls_handshaker::tls_handshaker_callbacks tls_cbs;
@@ -180,37 +169,40 @@ void tls_dialer::on_send_event() {
             shared_from_this(),
             _1);
         if (!handshaker_->start(get_service(), handshake_timeout_ns_, tls_cbs)) {
-            pump_warn_log("start tls handshaker failed");
-            if (__set_state(state_handshaking, state_error)) {
-                break;
-            }
+            pump_debug_log("start tls handshaker failed");
+            break;
         }
+
         return;
     } while (false);
 
-    base_transport_sptr tls_transport;
-    cbs_.dialed_cb(tls_transport, false);
+    if (__set_state(state_handshaking, state_error)) {
+        base_transport_sptr tls_transport;
+        cbs_.dialed_cb(tls_transport, false);
+    }
 }
 
-void tls_dialer::on_timeout(tls_dialer_wptr wptr) {
-    auto dialer = wptr.lock();
-    if (dialer) {
-        if (dialer->__set_state(state_started, state_timeouting)) {
-            pump_warn_log("tcp dialer is timeout");
-            dialer->__post_channel_event(dialer, channel_event_disconnected);
+void tls_dialer::on_timeout(tls_dialer_wptr dialer) {
+    auto dialer_locker = dialer.lock();
+    if (dialer_locker) {
+        if (dialer_locker->__set_state(state_started, state_timeouting)) {
+            pump_debug_log("tls dialer timeout");
+            dialer_locker->__post_channel_event(
+                dialer_locker,
+                channel_event_disconnected);
         }
     }
 }
 
 void tls_dialer::on_handshaked(
-    tls_dialer_wptr wptr,
+    tls_dialer_wptr dialer,
     tls_handshaker *handshaker,
-    bool succ) {
-    auto dialer = wptr.lock();
-    if (dialer) {
-        if (dialer->__set_state(state_handshaking, state_finished)) {
+    bool success) {
+    auto dialer_locker = dialer.lock();
+    if (dialer_locker) {
+        if (dialer_locker->__set_state(state_handshaking, state_finished)) {
             tls_transport_sptr tls_transport;
-            if (pump_likely(succ)) {
+            if (success) {
                 tls_transport = tls_transport::create();
                 if (tls_transport) {
                     tls_transport->init(
@@ -218,19 +210,19 @@ void tls_dialer::on_handshaked(
                         handshaker->get_local_address(),
                         handshaker->get_remote_address());
                 } else {
-                    pump_warn_log("new tls transport object failed");
-                    succ = false;
+                    pump_debug_log("new tls transport object failed");
+                    success = false;
                 }
             }
 
             base_transport_sptr transport = tls_transport;
-            dialer->cbs_.dialed_cb(transport, succ);
+            dialer_locker->cbs_.dialed_cb(transport, success);
         }
     }
 }
 
 void tls_dialer::on_handshake_stopped(
-    tls_dialer_wptr wptr,
+    tls_dialer_wptr dialer,
     tls_handshaker *handshaker) {
 }
 
@@ -242,9 +234,8 @@ bool tls_dialer::__open_dial_flow() {
     if (!flow_) {
         pump_warn_log("new tls dialer's flow object failed");
         return false;
-    }
-    if (flow_->init(shared_from_this(), local_address_) != error_none) {
-        pump_warn_log("init tls dialer's flow failed");
+    } else if (!flow_->init(shared_from_this(), local_address_)) {
+        pump_debug_log("init tls dialer's flow failed");
         return false;
     }
 
@@ -300,19 +291,19 @@ base_transport_sptr tls_sync_dialer::dial(
 }
 
 void tls_sync_dialer::on_dialed(
-    tls_sync_dialer_wptr wptr,
+    tls_sync_dialer_wptr dialer,
     base_transport_sptr &transp,
-    bool succ) {
-    auto dialer = wptr.lock();
-    if (dialer) {
-        dialer->dial_promise_.set_value(transp);
+    bool success) {
+    auto dialer_locker = dialer.lock();
+    if (dialer_locker) {
+        dialer_locker->dial_promise_.set_value(transp);
     }
 }
 
-void tls_sync_dialer::on_timeouted(tls_sync_dialer_wptr wptr) {
-    auto dialer = wptr.lock();
-    if (dialer) {
-        dialer->dial_promise_.set_value(base_transport_sptr());
+void tls_sync_dialer::on_timeouted(tls_sync_dialer_wptr dialer) {
+    auto dialer_locker = dialer.lock();
+    if (dialer_locker) {
+        dialer_locker->dial_promise_.set_value(base_transport_sptr());
     }
 }
 

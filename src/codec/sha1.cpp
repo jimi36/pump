@@ -197,7 +197,10 @@ void sha1_init(sha1_context *ctx) {
 
 /* Run your data through this. */
 
-void sha1_update(sha1_context *ctx, const char *data, int32_t size) {
+void sha1_update(
+    sha1_context *ctx,
+    const char *data,
+    int32_t size) {
     uint32_t i, j;
     uint32_t len = uint32_t(size);
 
@@ -222,7 +225,9 @@ void sha1_update(sha1_context *ctx, const char *data, int32_t size) {
 
 /* Add padding and return the message digest. */
 
-void sha1_final(sha1_context *ctx, uint8_t digest[20]) {
+void sha1_final(
+    sha1_context *ctx,
+    uint8_t digest[20]) {
     uint32_t i;
 
     uint8_t finalcount[8];
@@ -249,8 +254,7 @@ void sha1_final(sha1_context *ctx, uint8_t digest[20]) {
 #else
     for (i = 0; i < 8; i++) {
         /* Endian independent */
-        finalcount[i] = (uint8_t)(
-            (ctx->count[(i >= 4 ? 0 : 1)] >> ((3 - (i & 3)) * 8)) & 255);
+        finalcount[i] = (uint8_t)((ctx->count[(i >= 4 ? 0 : 1)] >> ((3 - (i & 3)) * 8)) & 255);
     }
 #endif
     c = 0200;
@@ -270,7 +274,10 @@ void sha1_final(sha1_context *ctx, uint8_t digest[20]) {
     memset(&finalcount, '\0', sizeof(finalcount));
 }
 
-void sha1(const char *data, int32_t size, uint8_t digest[20]) {
+void sha1(
+    const char *data,
+    int32_t size,
+    uint8_t digest[20]) {
     sha1_context ctx;
     sha1_init(&ctx);
     for (uint32_t i = 0; i < uint32_t(size); i += 1) {

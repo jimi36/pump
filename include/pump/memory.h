@@ -21,6 +21,9 @@
 
 #include "pump/platform.h"
 
+#define pump_except noexcept(false)
+#define pump_noexcept noexcept(true)
+
 #if defined(PUMP_HAVE_JEMALLOC)
 #define JEMALLOC_NO_RENAME
 #include <jemalloc/jemalloc.h>
