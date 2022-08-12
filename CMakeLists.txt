@@ -30,7 +30,7 @@ INCLUDE(CheckFunctionExists)
 LIST(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
 # Option build debug (default OFF)
-OPTION(BUILD_DEBUG "Option build debug" ON)
+OPTION(BUILD_DEBUG "Option build debug" OFF)
 
 # Option build with iocp, only for windows (default ON)
 OPTION(WITH_IOCP "Option build with iocp, only for windows" ON)
