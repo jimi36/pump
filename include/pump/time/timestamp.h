@@ -20,8 +20,8 @@
 #include <chrono>
 #include <string>
 
-#include "pump/types.h"
-#include "pump/memory.h"
+#include <pump/types.h>
+#include <pump/memory.h>
 
 namespace pump {
 namespace time {

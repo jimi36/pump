@@ -19,9 +19,9 @@
 
 #include <atomic>
 
-#include "pump/debug.h"
-#include "pump/types.h"
-#include "pump/toolkit/features.h"
+#include <pump/debug.h>
+#include <pump/types.h>
+#include <pump/toolkit/features.h>
 
 #if defined(OS_LINUX)
 #include <semaphore.h>

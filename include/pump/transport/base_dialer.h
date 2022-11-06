@@ -17,7 +17,7 @@
 #ifndef pump_transport_dialer_h
 #define pump_transport_dialer_h
 
-#include "pump/transport/base_transport.h"
+#include <pump/transport/base_transport.h>
 
 namespace pump {
 namespace transport {

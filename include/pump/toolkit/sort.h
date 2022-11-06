@@ -17,7 +17,7 @@
 #ifndef pump_toolkit_sort_h
 #define pump_toolkit_sort_h
 
-#include "pump/types.h"
+#include <pump/types.h>
 
 namespace pump {
 namespace toolkit {

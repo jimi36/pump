@@ -21,7 +21,7 @@
 #include <vector>
 #include <random>
 
-#include "pump/types.h"
+#include <pump/types.h>
 
 namespace pump {
 

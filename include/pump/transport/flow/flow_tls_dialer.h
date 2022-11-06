@@ -17,7 +17,7 @@
 #ifndef pump_transport_flow_tls_dialer_h
 #define pump_transport_flow_tls_dialer_h
 
-#include "pump/transport/flow/flow_tcp_dialer.h"
+#include <pump/transport/flow/flow_tcp_dialer.h>
 
 namespace pump {
 namespace transport {

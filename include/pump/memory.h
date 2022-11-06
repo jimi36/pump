@@ -19,7 +19,7 @@
 
 #include <stdlib.h>
 
-#include "pump/platform.h"
+#include <pump/platform.h>
 
 #define pump_except noexcept(false)
 #define pump_noexcept noexcept(true)

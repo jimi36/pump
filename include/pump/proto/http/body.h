@@ -17,8 +17,8 @@
 #ifndef pump_proto_http_body_h
 #define pump_proto_http_body_h
 
-#include "pump/memory.h"
-#include "pump/proto/http/utils.h"
+#include <pump/memory.h>
+#include <pump/proto/http/utils.h>
 
 namespace pump {
 namespace proto {

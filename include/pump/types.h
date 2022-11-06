@@ -20,7 +20,7 @@
 #include <memory>
 #include <functional>
 
-#include "pump/platform.h"
+#include <pump/platform.h>
 
 // For gnutls
 #if defined(OS_WINDOWS) && defined(PUMP_HAVE_GNUTLS)

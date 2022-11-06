@@ -17,7 +17,7 @@
 #ifndef pump_proto_http_frame_h
 #define pump_proto_http_frame_h
 
-#include "pump/toolkit/buffer.h"
+#include <pump/toolkit/buffer.h>
 
 namespace pump {
 namespace proto {

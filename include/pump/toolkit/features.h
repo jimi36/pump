@@ -17,8 +17,8 @@
 #ifndef pump_toolkit_features_h
 #define pump_toolkit_features_h
 
-#include "pump/types.h"
-#include "pump/memory.h"
+#include <pump/types.h>
+#include <pump/memory.h>
 
 namespace pump {
 namespace toolkit {

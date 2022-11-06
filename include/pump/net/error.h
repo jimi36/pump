@@ -17,7 +17,7 @@
 #ifndef pump_net_error_h
 #define pump_net_error_h
 
-#include "pump/build.h"
+#include <pump/build.h>
 
 #if defined(PUMP_HAVE_WINSOCK)
 #define LANE_EINTR WSAEINTR                      // 10004

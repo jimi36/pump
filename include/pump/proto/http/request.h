@@ -17,7 +17,7 @@
 #ifndef pump_proto_http_request_h
 #define pump_proto_http_request_h
 
-#include "pump/proto/http/packet.h"
+#include <pump/proto/http/packet.h>
 
 namespace pump {
 namespace proto {

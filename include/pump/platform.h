@@ -17,7 +17,7 @@
 #ifndef pump_platform_h
 #define pump_platform_h
 
-#include "pump/build.h"
+#include <pump/build.h>
 
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__NT__)
 #define OS_WINDOWS

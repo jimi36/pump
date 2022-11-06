@@ -19,8 +19,8 @@
 
 #include <map>
 
-#include "pump/memory.h"
-#include "pump/proto/http/utils.h"
+#include <pump/memory.h>
+#include <pump/proto/http/utils.h>
 
 namespace pump {
 namespace proto {

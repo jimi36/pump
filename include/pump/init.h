@@ -17,7 +17,7 @@
 #ifndef pump_init_h
 #define pump_init_h
 
-#include "pump/platform.h"
+#include <pump/platform.h>
 
 namespace pump {
 

@@ -17,12 +17,12 @@
 #ifndef pump_transport_channel_h
 #define pump_transport_channel_h
 
-#include "pump/service.h"
-#include "pump/poll/channel.h"
-#include "pump/toolkit/buffer.h"
-#include "pump/transport/types.h"
-#include "pump/transport/address.h"
-#include "pump/transport/callbacks.h"
+#include <pump/service.h>
+#include <pump/poll/channel.h>
+#include <pump/toolkit/buffer.h>
+#include <pump/transport/types.h>
+#include <pump/transport/address.h>
+#include <pump/transport/callbacks.h>
 
 namespace pump {
 namespace transport {

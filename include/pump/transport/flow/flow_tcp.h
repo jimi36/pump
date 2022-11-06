@@ -17,7 +17,7 @@
 #ifndef pump_transport_flow_tcp_h
 #define pump_transport_flow_tcp_h
 
-#include "pump/transport/flow/flow.h"
+#include <pump/transport/flow/flow.h>
 
 namespace pump {
 namespace transport {

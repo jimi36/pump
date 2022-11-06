@@ -17,8 +17,8 @@
 #ifndef pump_poll_select_poller_h
 #define pump_poll_select_poller_h
 
-#include "pump/net/socket.h"
-#include "pump/poll/poller.h"
+#include <pump/net/socket.h>
+#include <pump/poll/poller.h>
 
 #if defined(OS_LINUX) && !defined(OS_CYGWIN)
 #include <sys/select.h>

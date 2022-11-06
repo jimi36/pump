@@ -17,10 +17,10 @@
 #ifndef pump_proto_http_connection_h
 #define pump_proto_http_connection_h
 
-#include "pump/memory.h"
-#include "pump/proto/http/frame.h"
-#include "pump/proto/http/packet.h"
-#include "pump/transport/tcp_transport.h"
+#include <pump/memory.h>
+#include <pump/proto/http/frame.h>
+#include <pump/proto/http/packet.h>
+#include <pump/transport/tcp_transport.h>
 
 namespace pump {
 namespace proto {

@@ -17,7 +17,7 @@
 #ifndef pump_transport_types_h
 #define pump_transport_types_h
 
-#include "pump/types.h"
+#include <pump/types.h>
 
 namespace pump {
 namespace transport {

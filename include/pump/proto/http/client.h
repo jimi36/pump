@@ -17,10 +17,10 @@
 #ifndef pump_proto_http_client_h
 #define pump_proto_http_client_h
 
-#include "pump/toolkit/features.h"
-#include "pump/proto/http/request.h"
-#include "pump/proto/http/response.h"
-#include "pump/proto/http/connection.h"
+#include <pump/toolkit/features.h>
+#include <pump/proto/http/request.h>
+#include <pump/proto/http/response.h>
+#include <pump/proto/http/connection.h>
 
 namespace pump {
 namespace proto {

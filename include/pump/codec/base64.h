@@ -19,7 +19,7 @@
 
 #include <string>
 
-#include "pump/types.h"
+#include <pump/types.h>
 
 namespace pump {
 namespace codec {
