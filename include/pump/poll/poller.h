@@ -24,7 +24,7 @@
 #include <pump/memory.h>
 #include <pump/net/socket.h>
 #include <pump/poll/channel.h>
-#include <pump/toolkit/fl_mc_queue.h>
+#include <pump/toolkit/freelock_m2m_queue.h>
 
 namespace pump {
 namespace poll {
@@ -151,11 +151,11 @@ class pump_lib poller : public toolkit::noncopyable {
 
     // Channel event
     std::atomic_int32_t cev_cnt_;
-    toolkit::fl_mc_queue<channel_event *> cevents_;
+    toolkit::freelock_m2m_queue<channel_event *> cevents_;
 
     // Channel tracker event
     std::atomic_int32_t tev_cnt_;
-    toolkit::fl_mc_queue<tracker_event *> tevents_;
+    toolkit::freelock_m2m_queue<tracker_event *> tevents_;
 
     // Channel trackers
     std::map<channel_tracker *, channel_tracker_sptr> trackers_;

@@ -17,9 +17,9 @@
 #ifndef pump_transport_tls_transport_h
 #define pump_transport_tls_transport_h
 
-#include <pump/toolkit/fl_mc_queue.h>
 #include <pump/transport/flow/flow_tls.h>
 #include <pump/transport/base_transport.h>
+#include <pump/toolkit/freelock_m2m_queue.h>
 
 namespace pump {
 namespace transport {
@@ -151,7 +151,7 @@ class pump_lib tls_transport : public base_transport {
     std::atomic_int32_t pending_opt_cnt_;
 
     // Send buffer list
-    toolkit::fl_mc_queue<toolkit::io_buffer *, 8> sendlist_;
+    toolkit::freelock_m2m_queue<toolkit::io_buffer *, 8> sendlist_;
 };
 
 }  // namespace transport

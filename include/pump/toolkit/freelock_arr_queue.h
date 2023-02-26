@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef pump_toolkit_fl_bk_queue_h
-#define pump_toolkit_fl_bk_queue_h
+#ifndef pump_toolkit_freelock_arr_queue_h
+#define pump_toolkit_freelock_arr_queue_h
 
 #include <atomic>
 #include <chrono>
@@ -30,8 +30,13 @@
 namespace pump {
 namespace toolkit {
 
+/*********************************************************************************
+ * The freelock_arr_queue is freelock queue implemented by fix size array,
+ * and its use case is that many producers and many consumers push and pop
+ * elements at the same time.
+ ********************************************************************************/
 template <typename T>
-class fl_bk_queue : public noncopyable {
+class freelock_arr_queue : public noncopyable {
   public:
     // Element type
     typedef T element_type;
@@ -47,7 +52,7 @@ class fl_bk_queue : public noncopyable {
     /*********************************************************************************
      * Constructor
      ********************************************************************************/
-    fl_bk_queue(uint32_t size)
+    freelock_arr_queue(uint32_t size)
       : size_(0),
         size_mask_(0),
         nodes_(nullptr),
@@ -67,7 +72,7 @@ class fl_bk_queue : public noncopyable {
     /*********************************************************************************
      * Deconstructor
      ********************************************************************************/
-    ~fl_bk_queue() {
+    ~freelock_arr_queue() {
         if (nodes_) {
             int32_t beg = read_index_.load();
             int32_t end = write_index_.load();
@@ -161,8 +166,8 @@ class fl_bk_queue : public noncopyable {
 
         // Check the node is ready status.
         element_node *elem_node = nodes_ + __count_to_index(cur_read_index + 1);
-        while (elem_node->ready == 0)
-            ;
+        while (elem_node->ready == 0) {
+        }
 
         // Pop element.
         element_type *elem = (element_type *)(elem_node->data);

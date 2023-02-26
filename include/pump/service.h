@@ -19,9 +19,9 @@
 
 #include <pump/poll/poller.h>
 #include <pump/time/manager.h>
-#include <pump/toolkit/fl_queue.h>
-#include <pump/toolkit/fl_mc_queue.h>
-#include <pump/toolkit/fl_sc_queue.h>
+#include <pump/toolkit/freelock_queue.h>
+#include <pump/toolkit/freelock_m2m_queue.h>
+#include <pump/toolkit/freelock_o2o_queue.h>
 
 namespace pump {
 
@@ -127,16 +127,16 @@ class pump_lib service : public toolkit::noncopyable {
     // Task worker
     std::shared_ptr<std::thread> task_worker_;
     typedef pump_function<void()> task_callback;
-    typedef toolkit::fl_mc_queue<task_callback> task_queue;
-    toolkit::fl_queue<task_queue> posted_tasks_;
+    typedef toolkit::freelock_m2m_queue<task_callback> task_queue;
+    toolkit::freelock_queue<task_queue> posted_tasks_;
 
     // Timers
     time::manager_sptr timers_;
 
     // Timer worker
     std::shared_ptr<std::thread> timer_worker_;
-    typedef toolkit::fl_sc_queue<time::timer_list_sptr> timer_queue;
-    toolkit::fl_queue<timer_queue> triggered_timers_;
+    typedef toolkit::freelock_o2o_queue<time::timer_list_sptr> timer_queue;
+    toolkit::freelock_queue<timer_queue> triggered_timers_;
 };
 DEFINE_SMART_POINTERS(service);
 

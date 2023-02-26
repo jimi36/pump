@@ -25,8 +25,8 @@
 #include <condition_variable>
 
 #include <pump/time/timer.h>
-#include <pump/toolkit/fl_queue.h>
-#include <pump/toolkit/fl_mc_queue.h>
+#include <pump/toolkit/freelock_queue.h>
+#include <pump/toolkit/freelock_m2m_queue.h>
 
 namespace pump {
 namespace time {
@@ -118,8 +118,8 @@ class pump_lib manager : public toolkit::noncopyable {
     std::shared_ptr<std::thread> observer_;
 
     // New timers
-    typedef toolkit::fl_mc_queue<timer_sptr> timer_impl_queue;
-    toolkit::fl_queue<timer_impl_queue> new_timers_;
+    typedef toolkit::freelock_m2m_queue<timer_sptr> timer_impl_queue;
+    toolkit::freelock_queue<timer_impl_queue> new_timers_;
 
     // Observed Timers
     std::map<uint64_t, timer_list> timers_;

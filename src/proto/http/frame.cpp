@@ -92,7 +92,7 @@ bool frame_header::unpack_header(toolkit::io_buffer *iob) {
 }
 
 bool frame_header::pack_header(toolkit::io_buffer *iob) {
-    char b = (char)code_;
+    uint8_t b = code_;
     if (fin_) {
         b |= 0x80;
     }
@@ -111,7 +111,7 @@ bool frame_header::pack_header(toolkit::io_buffer *iob) {
     } else {
         b |= 127;
     }
-    if (!iob->write(b, 1)) {
+    if (!iob->write((char)b, 1)) {
         return false;
     }
 

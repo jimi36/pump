@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef pump_toolkit_fl_sc_queue_h
-#define pump_toolkit_fl_sc_queue_h
+#ifndef pump_toolkit_freelock_o2o_queue_h
+#define pump_toolkit_freelock_o2o_queue_h
 
 #include <atomic>
 #include <chrono>
@@ -27,8 +27,12 @@
 namespace pump {
 namespace toolkit {
 
+/*********************************************************************************
+ * The freelock_o2o_queue is freelock queue, and its use case is that one
+ * producer and one consumer push and pop elements at the same time.
+ ********************************************************************************/
 template <typename T, int32_t PerBlockElementCount = 1024>
-class fl_sc_queue : public noncopyable {
+class freelock_o2o_queue : public noncopyable {
   public:
     // Element type
     typedef T element_type;
@@ -62,7 +66,7 @@ class fl_sc_queue : public noncopyable {
     /*********************************************************************************
      * Constructor
      ********************************************************************************/
-    fl_sc_queue(int32_t size)
+    freelock_o2o_queue(int32_t size)
       : capacity_(0),
         block_element_size_(PerBlockElementCount),
         blk_head_(nullptr),
@@ -80,7 +84,7 @@ class fl_sc_queue : public noncopyable {
     /*********************************************************************************
      * Deconstructor
      ********************************************************************************/
-    ~fl_sc_queue() {
+    ~freelock_o2o_queue() {
         // Get head block node.
         block_node *head_blk = blk_head_.load(std::memory_order_relaxed);
         // Get tail block node.

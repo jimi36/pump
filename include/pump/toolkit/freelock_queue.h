@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef pump_toolkit_fl_queue_h
-#define pump_toolkit_fl_queue_h
+#ifndef pump_toolkit_freelock_queue_h
+#define pump_toolkit_freelock_queue_h
 
 #include <pump/platform.h>
 #include <pump/toolkit/features.h>
@@ -25,7 +25,7 @@ namespace pump {
 namespace toolkit {
 
 template <typename Q>
-class fl_queue : public noncopyable {
+class freelock_queue : public noncopyable {
   public:
     // Inner queue type
     typedef Q inner_queue_type;
@@ -36,7 +36,7 @@ class fl_queue : public noncopyable {
     /*********************************************************************************
      * Constructor
      ********************************************************************************/
-    fl_queue(uint32_t size = 1024) pump_noexcept
+    freelock_queue(uint32_t size = 1024) pump_noexcept
       : queue_(size) {
     }
 

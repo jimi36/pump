@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef pump_toolkit_fl_mc_queue_h
-#define pump_toolkit_fl_mc_queue_h
+#ifndef pump_toolkit_freelock_m2m_queue_h
+#define pump_toolkit_freelock_m2m_queue_h
 
 #include <atomic>
 #include <chrono>
@@ -27,8 +27,12 @@
 namespace pump {
 namespace toolkit {
 
+/*********************************************************************************
+ * The freelock_m2m_queue is freelock queue, and its use case is that many
+ * producers and many consumers push and pop elements at the same time.
+ ********************************************************************************/
 template <typename T, int32_t PerBlockElementCount = 1024>
-class fl_mc_queue : public noncopyable {
+class freelock_m2m_queue : public noncopyable {
   public:
     // Element type
     typedef T element_type;
@@ -38,11 +42,11 @@ class fl_mc_queue : public noncopyable {
     // Element node
     struct element_node {
         element_node()
-          : ready(0),
-            next(this + 1) {
+          : next(this + 1),
+            ready(0) {
         }
-        volatile int32_t ready;
         element_node *next;
+        volatile int32_t ready;
         char data[element_size];
     };
 
@@ -56,7 +60,7 @@ class fl_mc_queue : public noncopyable {
     /*********************************************************************************
      * Constructor
      ********************************************************************************/
-    fl_mc_queue(int32_t size)
+    freelock_m2m_queue(int32_t size)
       : capacity_(0),
         tail_block_node_(nullptr),
         head_(nullptr),
@@ -67,7 +71,7 @@ class fl_mc_queue : public noncopyable {
     /*********************************************************************************
      * Deconstructor
      ********************************************************************************/
-    ~fl_mc_queue() {
+    ~freelock_m2m_queue() {
         // Get next element node of the head element node.
         element_node *end_node = head_.load(std::memory_order_relaxed);
         // Get element head node.
@@ -109,8 +113,7 @@ class fl_mc_queue : public noncopyable {
             // If next write node is ready or is the tail node, list is full and
             // we need try to extend it.
             if (next_write_node->ready == 0 &&
-                next_write_node->next !=
-                    tail_.load(std::memory_order_relaxed)) {
+                next_write_node->next != tail_.load(std::memory_order_relaxed)) {
                 if (head_.compare_exchange_strong(
                         next_write_node,
                         next_write_node->next,
