@@ -29,55 +29,55 @@ namespace time {
 /*********************************************************************************
  * Get clock nanoseconds, just for calculating time difference
  ********************************************************************************/
-pump_lib uint64_t get_clock_nanoseconds() pump_noexcept;
+pump_lib uint64_t get_clock_nanoseconds() noexcept;
 
 /*********************************************************************************
  * Get clock microseconds, just for calculating time difference
  ********************************************************************************/
-pump_lib uint64_t get_clock_microseconds() pump_noexcept;
+pump_lib uint64_t get_clock_microseconds() noexcept;
 
 /*********************************************************************************
  * Get clock milliseconds, just for calculating time difference
  ********************************************************************************/
-pump_lib uint64_t get_clock_milliseconds() pump_noexcept;
+pump_lib uint64_t get_clock_milliseconds() noexcept;
 
 class pump_lib timestamp {
   public:
     /*********************************************************************************
      * Constructor
      ********************************************************************************/
-    timestamp() pump_noexcept {
+    timestamp() noexcept {
         ms_ = std::chrono::milliseconds(now_time());
     }
-    timestamp(uint64_t ms) pump_noexcept {
+    timestamp(uint64_t ms) noexcept {
         ms_ = std::chrono::milliseconds(ms);
     }
 
     /*********************************************************************************
      * Increase time value
      ********************************************************************************/
-    pump_inline void increase(uint64_t ms) pump_noexcept {
+    pump_inline void increase(uint64_t ms) noexcept {
         ms_ += std::chrono::milliseconds(ms);
     }
 
     /*********************************************************************************
      * Reduce time value
      ********************************************************************************/
-    pump_inline void reduce(uint64_t ms) pump_noexcept {
+    pump_inline void reduce(uint64_t ms) noexcept {
         ms_ -= std::chrono::milliseconds(ms);
     }
 
     /*********************************************************************************
      * Set the time value
      ********************************************************************************/
-    pump_inline void set(uint64_t ms) pump_noexcept {
+    pump_inline void set(uint64_t ms) noexcept {
         ms_ = std::chrono::milliseconds(ms);
     }
 
     /*********************************************************************************
      * Get the time value
      ********************************************************************************/
-    pump_inline uint64_t time() const pump_noexcept {
+    pump_inline uint64_t time() const noexcept {
         return ms_.count();
     }
 
@@ -101,12 +101,12 @@ class pump_lib timestamp {
     /*********************************************************************************
      * Get now milliseconds
      ********************************************************************************/
-    static uint64_t now_time() pump_noexcept;
+    static uint64_t now_time() noexcept;
 
     /*********************************************************************************
      * Create now timestamp
      ********************************************************************************/
-    pump_inline static timestamp now() pump_noexcept {
+    pump_inline static timestamp now() noexcept {
         return timestamp(now_time());
     }
 
@@ -114,7 +114,7 @@ class pump_lib timestamp {
     /*********************************************************************************
      * Overwrite operator =
      ********************************************************************************/
-    pump_inline timestamp &operator=(const timestamp &ts) pump_noexcept {
+    pump_inline timestamp &operator=(const timestamp &ts) noexcept {
         ms_ = ts.ms_;
         return *this;
     }
@@ -122,21 +122,21 @@ class pump_lib timestamp {
     /*********************************************************************************
      * Overwrite operator <
      ********************************************************************************/
-    pump_inline bool operator<(const timestamp &ts) const pump_noexcept {
+    pump_inline bool operator<(const timestamp &ts) const noexcept {
         return ms_ < ts.ms_;
     }
 
     /*********************************************************************************
      * Overwrite operator <=
      ********************************************************************************/
-    pump_inline bool operator<=(const timestamp &ts) const pump_noexcept {
+    pump_inline bool operator<=(const timestamp &ts) const noexcept {
         return ms_ <= ts.ms_;
     }
 
     /*********************************************************************************
      * Overwrite operator ==
      ********************************************************************************/
-    pump_inline bool operator==(const timestamp &ts) const pump_noexcept {
+    pump_inline bool operator==(const timestamp &ts) const noexcept {
         return ms_ == ts.ms_;
     }
 

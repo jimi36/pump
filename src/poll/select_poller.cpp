@@ -90,8 +90,12 @@ void select_poller::__poll(int32_t timeout) {
 
     tv_.tv_sec = timeout / 1000;
     tv_.tv_usec = (timeout % 1000) * 1000;
-    int32_t count =
-        ::select((int32_t)maxfd + 1, &read_fds_, &write_fds_, NULL, &tv_);
+    auto count = ::select(
+        (int32_t)maxfd + 1,
+        &read_fds_,
+        &write_fds_,
+        NULL,
+        &tv_);
 #if defined(OS_WINDOWS)
     if (maxfd == -1 && timeout > 0) {
         Sleep(1);

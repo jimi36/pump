@@ -21,7 +21,7 @@ namespace pump {
 namespace proto {
 namespace http {
 
-body::body() pump_noexcept
+body::body() noexcept
   : is_chunk_mode_(false),
     expected_size_(0),
     parsing_chunk_size_(0),
@@ -57,7 +57,7 @@ int32_t body::parse(const char *b, int32_t size) {
 }
 
 int32_t body::__parse_by_length(const char *b, int32_t size) {
-    int32_t parse_size = expected_size_ - (int32_t)data_.size();
+    auto parse_size = expected_size_ - (int32_t)data_.size();
     if (parse_size > size) {
         parse_size = size;
     }

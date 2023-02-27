@@ -44,7 +44,7 @@ frame_header::frame_header(
 }
 
 bool frame_header::unpack_header(toolkit::io_buffer *iob) {
-    int32_t iob_size = iob->size();
+    auto iob_size = iob->size();
     do {
         char b = 0;
         if (!iob->read(&b)) {
@@ -92,7 +92,7 @@ bool frame_header::unpack_header(toolkit::io_buffer *iob) {
 }
 
 bool frame_header::pack_header(toolkit::io_buffer *iob) {
-    uint8_t b = code_;
+    auto b = code_;
     if (fin_) {
         b |= 0x80;
     }
@@ -116,12 +116,12 @@ bool frame_header::pack_header(toolkit::io_buffer *iob) {
     }
 
     if (payload_len_ >= 126 && payload_len_ <= 65535) {
-        uint16_t l = transform_endian_i16(payload_len_);
+        auto l = transform_endian_i16(payload_len_);
         if (!iob->write((char *)&l, sizeof(l))) {
             return false;
         }
     } else if (payload_len_ > 65535) {
-        uint64_t l = transform_endian_i64(payload_len_);
+        auto l = transform_endian_i64(payload_len_);
         if (!iob->write((char *)&l, sizeof(l))) {
             return false;
         }

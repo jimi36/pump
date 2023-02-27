@@ -27,7 +27,7 @@ using transport::error_none;
 using transport::tcp_acceptor;
 using transport::tls_acceptor;
 
-server::server() pump_noexcept
+server::server() noexcept
   : sv_(nullptr) {
 }
 

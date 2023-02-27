@@ -26,21 +26,21 @@ const static uint64_t us_from_ms = 1000;
 const static uint64_t ms_from_second = us_from_ms;
 const static uint64_t us_from_second = us_from_ms * us_from_ms;
 
-uint64_t get_clock_nanoseconds() pump_noexcept {
+uint64_t get_clock_nanoseconds() noexcept {
     return std::chrono::time_point_cast<std::chrono::nanoseconds>(
                std::chrono::high_resolution_clock::now())
         .time_since_epoch()
         .count();
 }
 
-uint64_t get_clock_microseconds() pump_noexcept {
+uint64_t get_clock_microseconds() noexcept {
     return std::chrono::time_point_cast<std::chrono::microseconds>(
                std::chrono::high_resolution_clock::now())
         .time_since_epoch()
         .count();
 }
 
-uint64_t get_clock_milliseconds() pump_noexcept {
+uint64_t get_clock_milliseconds() noexcept {
     return std::chrono::time_point_cast<std::chrono::milliseconds>(
                std::chrono::high_resolution_clock::now())
         .time_since_epoch()
@@ -206,7 +206,7 @@ std::string timestamp::format(const std::string &format) const {
     return date;
 }
 
-uint64_t timestamp::now_time() pump_noexcept {
+uint64_t timestamp::now_time() noexcept {
     auto now = std::chrono::time_point_cast<std::chrono::milliseconds>(
         std::chrono::system_clock::now());
     std::chrono::milliseconds ms(now.time_since_epoch().count());

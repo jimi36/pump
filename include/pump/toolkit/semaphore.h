@@ -162,7 +162,8 @@ class pump_lib light_semaphore : public noncopyable {
      * Constructor
      ********************************************************************************/
     light_semaphore(int32_t max_spin = 10000, int64_t init_count = 0)
-      : max_spin_(max_spin), count_(init_count) {
+      : max_spin_(max_spin),
+        count_(init_count) {
         assert(init_count >= 0);
     }
 
@@ -170,7 +171,7 @@ class pump_lib light_semaphore : public noncopyable {
      * Try wait one signal and return immediately
      ********************************************************************************/
     bool try_wait() {
-        int64_t old_count = count_.load(std::memory_order_relaxed);
+        auto old_count = count_.load(std::memory_order_relaxed);
         while (old_count > 0) {
             if (count_.compare_exchange_weak(
                     old_count,
@@ -202,8 +203,8 @@ class pump_lib light_semaphore : public noncopyable {
      ********************************************************************************/
     void signal(int64_t count = 1) {
         pump_assert(count >= 0);
-        int64_t old_count = count_.fetch_add(count, std::memory_order_release);
-        int64_t to_release = -old_count < count ? -old_count : count;
+        auto old_count = count_.fetch_add(count, std::memory_order_release);
+        auto to_release = -old_count < count ? -old_count : count;
         if (to_release > 0) {
             semaphone_.signal((int32_t)to_release);
         }
@@ -213,7 +214,7 @@ class pump_lib light_semaphore : public noncopyable {
      * Get signal count
      ********************************************************************************/
     int64_t count() const {
-        int64_t count = count_.load(std::memory_order_relaxed);
+        auto count = count_.load(std::memory_order_relaxed);
         return count > 0 ? count : 0;
     }
 
@@ -226,7 +227,7 @@ class pump_lib light_semaphore : public noncopyable {
         // Is there a better way to set the initial spin count?
         // If we lower it to 1000, testBenaphore becomes 15x slower on my Core
         // i7-5930K Windows PC, as threads start hitting the kernel semaphore.
-        int32_t spin = max_spin_;
+        auto spin = max_spin_;
         while (--spin >= 0) {
             old_count = count_.load(std::memory_order_relaxed);
             if ((old_count > 0) &&

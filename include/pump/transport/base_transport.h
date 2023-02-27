@@ -44,7 +44,7 @@ class pump_lib base_channel
     base_channel(
         transport_type type,
         service *sv,
-        int32_t fd) pump_noexcept
+        int32_t fd) noexcept
       : service_getter(sv),
         poll::channel(fd),
         type_(type),
@@ -59,14 +59,14 @@ class pump_lib base_channel
     /*********************************************************************************
      * Get transport type
      ********************************************************************************/
-    pump_inline transport_type get_type() const pump_noexcept {
+    pump_inline transport_type get_type() const noexcept {
         return type_;
     }
 
     /*********************************************************************************
      * Get started status
      ********************************************************************************/
-    pump_inline bool is_started() const pump_noexcept {
+    pump_inline bool is_started() const noexcept {
         return __is_state(state_started, std::memory_order_relaxed);
     }
 
@@ -76,19 +76,19 @@ class pump_lib base_channel
      ********************************************************************************/
     pump_inline bool __set_state(
         transport_state expected,
-        transport_state desired) pump_noexcept {
+        transport_state desired) noexcept {
         return state_.compare_exchange_strong(expected, desired);
     }
 
     /*********************************************************************************
      * Check transport state
      ********************************************************************************/
-    pump_inline bool __is_state(transport_state state) const pump_noexcept {
+    pump_inline bool __is_state(transport_state state) const noexcept {
         return state_.load(std::memory_order_acquire) == state;
     }
     pump_inline bool __is_state(
         transport_state state,
-        std::memory_order order) const pump_noexcept {
+        std::memory_order order) const noexcept {
         return state_.load(order) == state;
     }
 
@@ -124,7 +124,7 @@ class pump_lib base_transport
     base_transport(
         int32_t type,
         service *sv,
-        int32_t fd) pump_noexcept
+        int32_t fd) noexcept
       : base_channel(type, sv, fd),
         rmode_(read_mode_none),
         rstate_(read_none),
@@ -195,21 +195,21 @@ class pump_lib base_transport
     /*********************************************************************************
      * Get pending send buffer size
      ********************************************************************************/
-    pump_inline int32_t get_pending_send_size() const pump_noexcept {
+    pump_inline int32_t get_pending_send_size() const noexcept {
         return pending_send_size_.load(std::memory_order_relaxed);
     }
 
     /*********************************************************************************
      * Get local address
      ********************************************************************************/
-    pump_inline const address &get_local_address() const pump_noexcept {
+    pump_inline const address &get_local_address() const noexcept {
         return local_address_;
     }
 
     /*********************************************************************************
      * Get remote address
      ********************************************************************************/
-    pump_inline const address &get_remote_address() const pump_noexcept {
+    pump_inline const address &get_remote_address() const noexcept {
         return remote_address_;
     }
 
@@ -236,7 +236,7 @@ class pump_lib base_transport
      ********************************************************************************/
     pump_inline bool __change_read_state(
         read_state from,
-        read_state to) pump_noexcept {
+        read_state to) noexcept {
         return rstate_.compare_exchange_strong(from, to);
     }
 

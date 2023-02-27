@@ -20,7 +20,7 @@
 namespace pump {
 namespace transport {
 
-tls_transport::tls_transport() pump_noexcept
+tls_transport::tls_transport() noexcept
   : base_transport(transport_tls, nullptr, -1),
     last_send_iob_size_(0),
     last_send_iob_(nullptr),
@@ -36,6 +36,7 @@ void tls_transport::init(
     flow::flow_tls_sptr &&flow,
     const address &local_address,
     const address &remote_address) {
+    // Set local and remote address.
     local_address_ = local_address;
     remote_address_ = remote_address;
 
@@ -154,7 +155,7 @@ error_code tls_transport::async_read() {
         return error_unstart;
     }
 
-    error_code ec = error_none;
+    auto ec = error_none;
     pending_opt_cnt_.fetch_add(1, std::memory_order_relaxed);
     if (rmode_ == read_mode_loop) {
         if (!__change_read_state(read_none, read_pending)) {
@@ -198,7 +199,7 @@ error_code tls_transport::send(const char *b, int32_t size) {
         return error_unstart;
     }
 
-    error_code ec = error_none;
+    auto ec = error_none;
     pending_opt_cnt_.fetch_add(1, std::memory_order_relaxed);
     do {
         if (pump_unlikely(!__is_state(state_started))) {
@@ -240,7 +241,7 @@ error_code tls_transport::send(toolkit::io_buffer *iob) {
         return error_unstart;
     }
 
-    error_code ec = error_none;
+    auto ec = error_none;
     pending_opt_cnt_.fetch_add(1, std::memory_order_relaxed);
     do {
         if (!__is_state(state_started)) {
@@ -274,12 +275,12 @@ void tls_transport::on_channel_event(int32_t ev, void *arg) {
     }
     case channel_event_read: {
         while (__is_state(state_starting, std::memory_order_relaxed)) {
-            //pump_debug_log("tls transport starting, wait");
+            // pump_debug_log("tls transport starting, wait");
         }
 
         bool disconnected = false;
         char data[max_tcp_buffer_size];
-        int32_t size = flow_->read(data, sizeof(data));
+        auto size = flow_->read(data, sizeof(data));
         if (size > 0) {
             if (rmode_ == read_mode_once) {
                 // Change read state from read_pending to read_none.
@@ -316,12 +317,12 @@ void tls_transport::on_channel_event(int32_t ev, void *arg) {
 void tls_transport::on_read_event() {
     // Wait transport starting end
     while (__is_state(state_starting, std::memory_order_relaxed)) {
-        //pump_debug_log("tls transport starting, wait");
+        // pump_debug_log("tls transport starting, wait");
     }
 
     bool disconnected = false;
     char data[max_tcp_buffer_size];
-    int32_t size = flow_->read(data, sizeof(data));
+    auto size = flow_->read(data, sizeof(data));
     if (size > 0) {
         if (rmode_ == read_mode_once) {
             // Free read state.

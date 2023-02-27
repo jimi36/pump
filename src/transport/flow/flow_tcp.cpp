@@ -20,7 +20,7 @@ namespace pump {
 namespace transport {
 namespace flow {
 
-flow_tcp::flow_tcp() pump_noexcept
+flow_tcp::flow_tcp() noexcept
   : send_iob_(nullptr) {
 }
 
@@ -29,7 +29,7 @@ flow_tcp::~flow_tcp() {
 
 bool flow_tcp::init(
     poll::channel_sptr &&ch,
-    pump_socket fd) pump_noexcept {
+    pump_socket fd) noexcept {
     if (!ch) {
         pump_debug_log("channel invalid");
         return false;
@@ -54,7 +54,7 @@ error_code flow_tcp::want_to_send(toolkit::io_buffer *iob) {
 }
 
 error_code flow_tcp::send() {
-    int32_t size = net::send(fd_, send_iob_->data(), send_iob_->size());
+    auto size = net::send(fd_, send_iob_->data(), send_iob_->size());
     if (size == 0) {
         return error_fault;
     } else if (size < 0) {

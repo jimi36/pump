@@ -31,7 +31,7 @@ class pump_lib base_dialer : public base_channel {
         int32_t type,
         const address &local_address,
         const address &remote_address,
-        uint64_t connect_timeout_ns) pump_noexcept
+        uint64_t connect_timeout_ns) noexcept
       : base_channel(type, nullptr, -1),
         local_address_(local_address),
         remote_address_(remote_address),
@@ -58,14 +58,14 @@ class pump_lib base_dialer : public base_channel {
     /*********************************************************************************
      * Get local address
      ********************************************************************************/
-    pump_inline const address &get_local_address() const pump_noexcept {
+    pump_inline const address &get_local_address() const noexcept {
         return local_address_;
     }
 
     /*********************************************************************************
      * Get remote address
      ********************************************************************************/
-    pump_inline const address &get_remote_address() const pump_noexcept {
+    pump_inline const address &get_remote_address() const noexcept {
         return remote_address_;
     }
 

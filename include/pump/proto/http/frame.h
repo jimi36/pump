@@ -69,28 +69,28 @@ class pump_lib frame_header {
     /*********************************************************************************
      * Check unpacked flag
      ********************************************************************************/
-    pump_inline bool is_unpacked() const pump_noexcept {
+    pump_inline bool is_unpacked() const noexcept {
         return is_unpacked_;
     }
 
     /*********************************************************************************
      * Check frame fin flag
      ********************************************************************************/
-    pump_inline bool is_fin() const pump_noexcept {
+    pump_inline bool is_fin() const noexcept {
         return fin_;
     }
 
     /*********************************************************************************
      * Get frame code
      ********************************************************************************/
-    pump_inline uint8_t get_code() const pump_noexcept {
+    pump_inline uint8_t get_code() const noexcept {
         return code_;
     }
 
     /*********************************************************************************
      * Get payload length
      ********************************************************************************/
-    pump_inline uint64_t get_payload_length() const pump_noexcept {
+    pump_inline uint64_t get_payload_length() const noexcept {
         return payload_len_;
     }
 

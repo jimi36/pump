@@ -39,10 +39,10 @@ struct pump_c_service_impl {
 };
 
 pump_c_service pump_c_service_create(int with_poller) {
-    pump_c_service_impl *impl = object_create<pump_c_service_impl>();
-    impl->sv = object_create<service>(with_poller);
+    pump_c_service_impl *impl = pump_object_create<pump_c_service_impl>();
+    impl->sv = pump_object_create<service>(with_poller);
     if (!impl->sv) {
-        object_delete(impl);
+        pump_object_destroy(impl);
         return nullptr;
     }
     return impl;
@@ -53,11 +53,11 @@ void pump_c_service_destory(pump_c_service sv) {
     pump_assert(impl);
 
     if (impl->sv) {
-        object_delete(impl->sv);
+        pump_object_destroy(impl->sv);
         impl->sv = nullptr;
     }
 
-    object_delete(impl);
+    pump_object_destroy(impl);
 }
 
 int pump_c_service_start(pump_c_service sv) {
@@ -89,7 +89,7 @@ pump_c_timer pump_c_timer_create(
     int timeout_ns,
     int repeated,
     pump_c_timeout_callback cb_func) {
-    pump_c_timer_impl *impl = object_create<pump_c_timer_impl>();
+    pump_c_timer_impl *impl = pump_object_create<pump_c_timer_impl>();
 
     time::timer_callback cb = pump_bind(cb_func);
     impl->t = time::timer::create(timeout_ns, cb, repeated);
@@ -99,7 +99,7 @@ pump_c_timer pump_c_timer_create(
 
 void pump_c_timer_destory(pump_c_timer timer) {
     pump_assert(timer);
-    object_delete((pump_c_timer_impl *)timer);
+    pump_object_destroy((pump_c_timer_impl *)timer);
 }
 
 int pump_c_timer_start(pump_c_service sv, pump_c_timer timer) {
@@ -140,7 +140,7 @@ struct pump_c_transport_impl {
 };
 
 pump_c_acceptor pump_c_tcp_acceptor_create(const char *ip, int port) {
-    pump_c_acceptor_impl *impl = object_create<pump_c_acceptor_impl>();
+    pump_c_acceptor_impl *impl = pump_object_create<pump_c_acceptor_impl>();
 
     transport::address addr(ip, port);
     impl->acceptor = transport::tcp_acceptor::create(addr);
@@ -162,7 +162,7 @@ pump_c_acceptor pump_c_tls_acceptor_create(
         return nullptr;
     }
 
-    pump_c_acceptor_impl *impl = object_create<pump_c_acceptor_impl>();
+    pump_c_acceptor_impl *impl = pump_object_create<pump_c_acceptor_impl>();
     if (impl == nullptr) {
         transport::delete_tls_credentials(xcred);
         return nullptr;
@@ -171,7 +171,7 @@ pump_c_acceptor pump_c_tls_acceptor_create(
     transport::address addr(ip, port);
     impl->acceptor = transport::tls_acceptor::create(xcred, addr, 1000);
     if (!impl->acceptor) {
-        object_delete(impl);
+        pump_object_destroy(impl);
         return nullptr;
     }
 
@@ -183,7 +183,7 @@ pump_c_acceptor pump_c_tls_acceptor_create(
 
 void pump_c_acceptor_destory(pump_c_acceptor acceptor) {
     pump_assert(acceptor);
-    object_delete((pump_c_acceptor_impl *)acceptor);
+    pump_object_destroy((pump_c_acceptor_impl *)acceptor);
 }
 
 static void on_acceptor_accepted_cb(
@@ -191,7 +191,7 @@ static void on_acceptor_accepted_cb(
     transport::base_transport_sptr &transp) {
     if (impl->cbs.accepted_cb) {
         pump_c_transport_impl *impl_transp =
-            object_create<pump_c_transport_impl>();
+            pump_object_create<pump_c_transport_impl>();
         impl_transp->transp = transp;
         impl_transp->cbs.read_cb = nullptr;
         impl_transp->cbs.read_from_cb = nullptr;
@@ -244,7 +244,7 @@ pump_c_acceptor pump_c_tcp_dialer_create(
     int local_port,
     const char *remote_ip,
     int remote_port) {
-    pump_c_dialer_impl *impl = object_create<pump_c_dialer_impl>();
+    pump_c_dialer_impl *impl = pump_object_create<pump_c_dialer_impl>();
 
     transport::address local_addr(local_ip, local_port);
     transport::address remote_addr(remote_ip, remote_port);
@@ -265,7 +265,7 @@ pump_c_acceptor pump_c_tls_dialer_create(
     int local_port,
     const char *remote_ip,
     int remote_port) {
-    pump_c_dialer_impl *impl = object_create<pump_c_dialer_impl>();
+    pump_c_dialer_impl *impl = pump_object_create<pump_c_dialer_impl>();
 
     transport::address local_addr(local_ip, local_port);
     transport::address remote_addr(remote_ip, remote_port);
@@ -284,7 +284,7 @@ pump_c_acceptor pump_c_tls_dialer_create(
 
 void pump_c_dialer_destory(pump_c_dialer dialer) {
     pump_assert(dialer);
-    object_delete((pump_c_dialer_impl *)dialer);
+    pump_object_destroy((pump_c_dialer_impl *)dialer);
 }
 
 static void on_dialer_dialed(
@@ -294,7 +294,7 @@ static void on_dialer_dialed(
     if (impl->cbs.dialed_cb) {
         pump_c_transport_impl *impl_transp = nullptr;
         if (succ) {
-            impl_transp = object_create<pump_c_transport_impl>();
+            impl_transp = pump_object_create<pump_c_transport_impl>();
             impl_transp->transp = transp;
             impl_transp->cbs.read_cb = nullptr;
             impl_transp->cbs.read_from_cb = nullptr;
@@ -351,7 +351,7 @@ int pump_c_dialer_stop(pump_c_dialer dialer) {
 
 void pump_c_transport_destory(pump_c_transport transp) {
     pump_assert(transp);
-    object_delete((pump_c_transport_impl *)transp);
+    pump_object_destroy((pump_c_transport_impl *)transp);
 }
 
 static void on_transport_read(

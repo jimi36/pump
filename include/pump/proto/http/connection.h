@@ -105,14 +105,14 @@ class pump_lib connection : public std::enable_shared_from_this<connection> {
     /*********************************************************************************
      * Check connection upgraded status
      ********************************************************************************/
-    pump_inline bool is_upgraded() const pump_noexcept {
+    pump_inline bool is_upgraded() const noexcept {
         return state_.load() == state_upgraded;
     }
 
     /*********************************************************************************
      * Check connection valid status
      ********************************************************************************/
-    pump_inline bool is_valid() const pump_noexcept {
+    pump_inline bool is_valid() const noexcept {
         if (!transp_ || !transp_->is_started()) {
             return false;
         }

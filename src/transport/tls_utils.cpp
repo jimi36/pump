@@ -29,7 +29,7 @@ namespace transport {
 
 tls_credentials new_client_tls_credentials() {
 #if defined(PUMP_HAVE_TLS)
-    SSL_CTX *xcred = SSL_CTX_new(TLS_client_method());
+    auto xcred = SSL_CTX_new(TLS_client_method());
     if (xcred == nullptr) {
         pump_debug_log("create client tls certificate context failed");
         return nullptr;
@@ -46,7 +46,7 @@ tls_credentials load_tls_credentials_from_file(
     const std::string &cert,
     const std::string &key) {
 #if defined(PUMP_HAVE_TLS)
-    SSL_CTX *xcred = nullptr;
+    auto xcred = nullptr;
     if (client) {
         xcred = SSL_CTX_new(TLS_client_method());
     } else {
@@ -72,7 +72,7 @@ tls_credentials load_tls_credentials_from_memory(
     const std::string &cert,
     const std::string &key) {
 #if defined(PUMP_HAVE_TLS)
-    SSL_CTX *xcred = nullptr;
+    SSL_CTX xcred = nullptr;
     if (client) {
         xcred = SSL_CTX_new(TLS_client_method());
     } else {
@@ -82,26 +82,26 @@ tls_credentials load_tls_credentials_from_memory(
         return nullptr;
     }
 
-    BIO *cert_bio = BIO_new_mem_buf((void *)cert.c_str(), -1);
+    auto cert_bio = BIO_new_mem_buf((void *)cert.c_str(), -1);
     if (cert_bio == nullptr) {
         SSL_CTX_free(xcred);
         return nullptr;
     }
 
-    X509 *x509_cert = PEM_read_bio_X509(cert_bio, nullptr, nullptr, nullptr);
+    auto x509_cert = PEM_read_bio_X509(cert_bio, nullptr, nullptr, nullptr);
     BIO_free(cert_bio);
     if (x509_cert == nullptr) {
         SSL_CTX_free(xcred);
         return nullptr;
     }
 
-    BIO *key_bio = BIO_new_mem_buf((void *)key.c_str(), -1);
+    auto key_bio = BIO_new_mem_buf((void *)key.c_str(), -1);
     if (key_bio == nullptr) {
         SSL_CTX_free(xcred);
         X509_free(x509_cert);
         return nullptr;
     }
-    EVP_PKEY *evp_key = PEM_read_bio_PrivateKey(key_bio, nullptr, 0, nullptr);
+    auto evp_key = PEM_read_bio_PrivateKey(key_bio, nullptr, 0, nullptr);
     BIO_free(key_bio);
     if (evp_key == nullptr) {
         SSL_CTX_free(xcred);
@@ -139,11 +139,11 @@ tls_session *new_tls_session(
     pump_socket fd,
     tls_credentials xcred) {
 #if defined(PUMP_HAVE_TLS)
-    tls_session *session = object_create<tls_session>();
+    auto session = object_create<tls_session>();
     if (session == nullptr) {
         return nullptr;
     }
-    SSL *ssl_ctx = SSL_new((SSL_CTX *)xcred);
+    auto ssl_ctx = SSL_new((SSL_CTX *)xcred);
     if (ssl_ctx == nullptr) {
         object_delete(session);
         return nullptr;
@@ -173,13 +173,13 @@ void delete_tls_session(tls_session *session) {
         SSL_free((SSL *)session->ssl_ctx);
 #endif
     }
-    object_delete(session);
+    pump_object_destroy(session);
 }
 
 tls_handshake_phase tls_handshake(tls_session *session) {
 #if defined(PUMP_HAVE_TLS)
-    int32_t ret = SSL_do_handshake((SSL *)session->ssl_ctx);
-    int32_t ec = SSL_get_error((SSL *)session->ssl_ctx, ret);
+    auto ret = SSL_do_handshake((SSL *)session->ssl_ctx);
+    auto ec = SSL_get_error((SSL *)session->ssl_ctx, ret);
     if (ec != SSL_ERROR_SSL) {
         if (ec == SSL_ERROR_NONE) {
             return tls_handshake_ok;
@@ -208,7 +208,7 @@ int32_t tls_read(
     char *b,
     int32_t size) {
 #if defined(PUMP_HAVE_TLS)
-    int32_t ret = SSL_read((SSL *)session->ssl_ctx, b, size);
+    auto ret = SSL_read((SSL *)session->ssl_ctx, b, size);
     if (pump_likely(ret > 0)) {
         return ret;
     } else if (SSL_get_error((SSL *)session->ssl_ctx, ret) == SSL_ERROR_WANT_READ) {
@@ -223,7 +223,7 @@ int32_t tls_send(
     const char *b,
     int32_t size) {
 #if defined(PUMP_HAVE_TLS)
-    int32_t ret = SSL_write((SSL *)session->ssl_ctx, b, size);
+    auto ret = SSL_write((SSL *)session->ssl_ctx, b, size);
     if (pump_likely(ret > 0)) {
         return ret;
     } else {

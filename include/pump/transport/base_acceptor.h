@@ -29,7 +29,7 @@ class pump_lib base_acceptor : public base_channel {
      ********************************************************************************/
     base_acceptor(
         int32_t type,
-        const address &listen_address) pump_except
+        const address &listen_address) noexcept
       : base_channel(type, nullptr, -1),
         listen_address_(listen_address) {
     }
@@ -54,7 +54,7 @@ class pump_lib base_acceptor : public base_channel {
     /*********************************************************************************
      * Get local address
      ********************************************************************************/
-    pump_inline const address &get_listen_address() const pump_noexcept {
+    pump_inline const address &get_listen_address() const noexcept {
         return listen_address_;
     }
 

@@ -58,10 +58,10 @@ class pump_lib defer : public noncopyable {
     /*********************************************************************************
      * Constructor
      ********************************************************************************/
-    defer(const pump_function<void()> &cb) pump_noexcept {
+    defer(const pump_function<void()> &cb) noexcept {
         cb_ = cb;
     }
-    defer(pump_function<void()> &&cb) pump_noexcept {
+    defer(pump_function<void()> &&cb) noexcept {
         cb_ = std::move(cb);
     }
 
@@ -77,7 +77,7 @@ class pump_lib defer : public noncopyable {
     /*********************************************************************************
      * Clear
      ********************************************************************************/
-    pump_inline void clear() pump_noexcept {
+    pump_inline void clear() noexcept {
         cb_ = pump_function<void()>();
     }
 

@@ -81,7 +81,7 @@ static const std::string &get_http_code_desc(int32_t code) {
     return http_code_desc_map[0];
 }
 
-response::response(void *ctx) pump_noexcept
+response::response(void *ctx) noexcept
   : packet(ctx, PK_RESPONSE),
     status_code_(0) {
     init_http_code_desc_map();
@@ -96,7 +96,7 @@ int32_t response::parse(const char *b, int32_t size) {
         parse_status_ = PARSE_LINE;
     }
 
-    const char *pos = b;
+    auto pos = b;
     int32_t parse_size = 0;
     if (parse_status_ == PARSE_LINE) {
         parse_size = __parse_start_line(pos, size);
@@ -130,7 +130,7 @@ int32_t response::parse(const char *b, int32_t size) {
         if (get_head("Content-Length", length) ||
             get_head("content-length", length)) {
             if (length > 0) {
-                body_.reset(object_create<body>(), object_delete<body>);
+                body_.reset(pump_object_create<body>(), pump_object_destroy<body>);
                 if (!body_) {
                     pump_warn_log("new response body object failed");
                     return -1;
@@ -142,7 +142,7 @@ int32_t response::parse(const char *b, int32_t size) {
             if (get_head("Transfer-Encoding", transfer_encoding) ||
                 get_head("transfer-encoding", transfer_encoding)) {
                 if (transfer_encoding == "chunked") {
-                    body_.reset(object_create<body>(), object_delete<body>);
+                    body_.reset(pump_object_create<body>(), pump_object_destroy<body>);
                     if (!body_) {
                         pump_warn_log("new response chunk body object failed");
                         return -1;
@@ -180,7 +180,7 @@ int32_t response::parse(const char *b, int32_t size) {
 int32_t response::serialize(std::string &buffer) const {
     int32_t serialize_size = 0;
 
-    int32_t size = __serialize_response_line(buffer);
+    auto size = __serialize_response_line(buffer);
     if (size < 0) {
         pump_debug_log("serialize response line failed");
         return -1;
@@ -207,9 +207,9 @@ int32_t response::serialize(std::string &buffer) const {
 }
 
 int32_t response::__parse_start_line(const char *b, int32_t size) {
-    const char *pos = b;
+    auto pos = b;
 
-    const char *line_end = find_http_line_end(pos, size);
+    auto line_end = find_http_line_end(pos, size);
     if (line_end == nullptr) {
         return 0;
     }

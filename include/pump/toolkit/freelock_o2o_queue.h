@@ -38,28 +38,31 @@ class freelock_o2o_queue : public noncopyable {
     typedef T element_type;
     // Element size
     constexpr static int32_t element_size = sizeof(element_type);
+    // Element no constructor flag
+    constexpr static bool no_constructor =
+        std::is_integral<element_type>::value ||
+        std::is_pointer<element_type>::value;
 
     // Block node
     struct block_node {
         block_node()
           : next(nullptr),
-            data(nullptr),
             head(0),
             cache_tail(0),
             tail(0),
-            cache_head(0) {
+            cache_head(0),
+            data(nullptr) {
         }
 
         block_node *next;
-        char *data;
 
-        char padding1_[64];
-        std::atomic_int32_t head;
+        pump_cache_line_alignas std::atomic_int32_t head;
         int32_t cache_tail;
 
-        char padding2_[64];
-        std::atomic_int32_t tail;
+        pump_cache_line_alignas std::atomic_int32_t tail;
         int32_t cache_head;
+
+        char *data;
     };
 
   public:
@@ -86,29 +89,32 @@ class freelock_o2o_queue : public noncopyable {
      ********************************************************************************/
     ~freelock_o2o_queue() {
         // Get head block node.
-        block_node *head_blk = blk_head_.load(std::memory_order_relaxed);
+        auto head_blk = blk_head_.load(std::memory_order_relaxed);
         // Get tail block node.
-        block_node *tail_blk = blk_tail_.load(std::memory_order_relaxed);
+        auto tail_blk = blk_tail_.load(std::memory_order_relaxed);
 
         do {
-            // Get head and tail element position
-            int32_t head = head_blk->head.load(std::memory_order_relaxed);
-            int32_t tail = head_blk->tail.load(std::memory_order_relaxed);
+            if (!no_constructor) {
+                // Get head and tail element position
+                auto head = head_blk->head.load(std::memory_order_relaxed);
+                auto tail = head_blk->tail.load(std::memory_order_relaxed);
 
-            while (head != tail) {
-                // Destory element
-                auto elem =
-                    (element_type *)(head_blk->data + head * element_size);
-                elem->~element_type();
-                // Move next element position
-                head = (head + 1) & block_element_size_mask_;
+                while (head != tail) {
+                    // Destory element
+                    auto elem = (element_type *)(head_blk->data + head * element_size);
+                    elem->~element_type();
+                    // Move next element position
+                    head = (head + 1) & block_element_size_mask_;
+                }
             }
 
             // Next block pointer.
-            block_node *next_blk = head_blk->next;
+            auto next_blk = head_blk->next;
+
             // Free block.
             pump_free(head_blk->data);
-            object_delete(head_blk);
+            pump_object_destroy(head_blk);
+
             // Move to next node.
             head_blk = next_blk;
 
@@ -121,20 +127,22 @@ class freelock_o2o_queue : public noncopyable {
     template <typename U>
     bool push(U &&data) {
         // Get tail block node
-        block_node *blk = blk_tail_.load(std::memory_order_relaxed);
+        auto blk = blk_tail_.load(std::memory_order_relaxed);
         // Get tail element position
-        int32_t tail = blk->tail.load(std::memory_order_relaxed);
+        auto tail = blk->tail.load(std::memory_order_relaxed);
         // Get next tail element position
-        int32_t next_tail = (tail + 1) & block_element_size_mask_;
+        auto next_tail = (tail + 1) & block_element_size_mask_;
 
         if (next_tail != blk->cache_head ||
-            next_tail !=
-                (blk->cache_head = blk->head.load(std::memory_order_relaxed))) {
+            next_tail != (blk->cache_head = blk->head.load(std::memory_order_relaxed))) {
             std::atomic_thread_fence(std::memory_order_acquire);
 
             // Construct element
-            new (blk->data + tail * element_size)
-                element_type(std::forward<U>(data));
+            if (no_constructor) {
+                *(element_type *)(blk->data + tail * element_size) = data;
+            } else {
+                new (blk->data + tail * element_size) element_type(std::forward<U>(data));
+            }
 
             std::atomic_thread_fence(std::memory_order_release);
             // Move tail position of block
@@ -150,8 +158,11 @@ class freelock_o2o_queue : public noncopyable {
             std::atomic_thread_fence(std::memory_order_acquire);
 
             // Construct element
-            new (blk->data + tail * element_size)
-                element_type(std::forward<U>(data));
+            if (no_constructor) {
+                *(element_type *)(blk->data + tail * element_size) = data;
+            } else {
+                new (blk->data + tail * element_size) element_type(std::forward<U>(data));
+            }
 
             // Get next tail element position
             next_tail = (tail + 1) & block_element_size_mask_;
@@ -163,15 +174,24 @@ class freelock_o2o_queue : public noncopyable {
             blk_tail_.store(blk, std::memory_order_relaxed);
         } else {
             // Create new block node
-            block_node *new_blk = object_create<block_node>();
-            new_blk->data =
-                (char *)pump_malloc(block_element_size_ * element_size);
+            auto new_blk = pump_object_create<block_node>();
+            if (new_blk == nullptr) {
+                return false;
+            }
+            new_blk->data = (char *)pump_malloc(block_element_size_ * element_size);
+            if (new_blk->data == nullptr) {
+                return false;
+            }
             new_blk->next = blk->next;
             blk->next = new_blk;
             blk = new_blk;
 
             // Construct element
-            new (blk->data) element_type(std::forward<U>(data));
+            if (no_constructor) {
+                *(element_type *)(blk->data) = data;
+            } else {
+                new (blk->data) element_type(std::forward<U>(data));
+            }
 
             // Init tail and cache tail element position
             blk->cache_tail = 1;
@@ -194,20 +214,22 @@ class freelock_o2o_queue : public noncopyable {
     template <typename U>
     bool pop(U &data) {
         // Get tail block node
-        block_node *blk = blk_head_.load(std::memory_order_relaxed);
+        auto blk = blk_head_.load(std::memory_order_relaxed);
         // Get head element position
-        int32_t head = blk->head.load(std::memory_order_relaxed);
+        auto head = blk->head.load(std::memory_order_relaxed);
 
         if (head != blk->cache_tail ||
-            head !=
-                (blk->cache_tail = blk->tail.load(std::memory_order_relaxed))) {
+            head != (blk->cache_tail = blk->tail.load(std::memory_order_relaxed))) {
             std::atomic_thread_fence(std::memory_order_acquire);
 
             // Load element from block node data
-            element_type *elem =
-                (element_type *)(blk->data + head * element_size);
-            data = std::move(*elem);
-            elem->~element_type();
+            if (no_constructor) {
+                data = *(element_type *)(blk->data + head * element_size);
+            } else {
+                auto elem = (element_type *)(blk->data + head * element_size);
+                data = std::move(*elem);
+                elem->~element_type();
+            }
 
             // Get next head element position
             head = (head + 1) & block_element_size_mask_;
@@ -237,10 +259,13 @@ class freelock_o2o_queue : public noncopyable {
             }
 
             // Pop element data
-            element_type *elem =
-                (element_type *)(blk->data + head * element_size);
-            data = std::move(*elem);
-            elem->~element_type();
+            if (no_constructor) {
+                data = *(element_type *)(blk->data + head * element_size);
+            } else {
+                auto elem = (element_type *)(blk->data + head * element_size);
+                data = std::move(*elem);
+                elem->~element_type();
+            }
 
             // Get next head element position
             head = (head + 1) & block_element_size_mask_;
@@ -258,9 +283,9 @@ class freelock_o2o_queue : public noncopyable {
     /*********************************************************************************
      * Empty
      ********************************************************************************/
-    pump_inline bool empty() const pump_noexcept {
-        block_node *blk = blk_head_.load(std::memory_order_relaxed);
-        int32_t head = blk->head.load(std::memory_order_relaxed);
+    pump_inline bool empty() const noexcept {
+        auto blk = blk_head_.load(std::memory_order_relaxed);
+        auto head = blk->head.load(std::memory_order_relaxed);
         if (head != blk->tail.load(std::memory_order_relaxed)) {
             return false;
         } else if (blk != blk_tail_.load(std::memory_order_relaxed)) {
@@ -272,7 +297,7 @@ class freelock_o2o_queue : public noncopyable {
     /*********************************************************************************
      * Get capacity
      ********************************************************************************/
-    pump_inline int32_t capacity() const pump_noexcept {
+    pump_inline int32_t capacity() const noexcept {
         return capacity_;
     }
 
@@ -282,15 +307,28 @@ class freelock_o2o_queue : public noncopyable {
      ********************************************************************************/
     void __init_list(int32_t blk_count) {
         // Create first block node.
-        block_node *head = object_create<block_node>();
+        auto head = pump_object_create<block_node>();
+        if (head == nullptr) {
+            pump_abort();
+        }
         head->data = (char *)pump_malloc(block_element_size_ * element_size);
-        block_node *tail = head;
+        if (head->data == nullptr) {
+            pump_abort();
+        }
+
+        auto tail = head;
 
         // Create left block nodes.
         for (int32_t i = 1; i < blk_count; i++) {
             // Create block node.
-            tail->next = object_create<block_node>();
+            tail->next = pump_object_create<block_node>();
+            if (tail->next == nullptr) {
+                pump_abort();
+            }
             tail->next->data = (char *)pump_malloc(block_element_size_ * element_size);
+            if (tail->next->data == nullptr) {
+                pump_abort();
+            }
             tail = tail->next;
         }
 
@@ -308,16 +346,16 @@ class freelock_o2o_queue : public noncopyable {
   private:
     // Capacity
     int32_t capacity_;
+
     // Block element size
     int32_t block_element_size_;
     // Block element size mask
     int32_t block_element_size_mask_;
+
     // Head block node
-    char padding1_[64];
-    std::atomic<block_node *> blk_head_;
+    pump_cache_line_alignas std::atomic<block_node *> blk_head_;
     // Tail block node
-    char padding2_[64];
-    std::atomic<block_node *> blk_tail_;
+    pump_cache_line_alignas std::atomic<block_node *> blk_tail_;
 };
 
 }  // namespace toolkit

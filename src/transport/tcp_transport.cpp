@@ -20,7 +20,7 @@
 namespace pump {
 namespace transport {
 
-tcp_transport::tcp_transport() pump_noexcept
+tcp_transport::tcp_transport() noexcept
   : base_transport(transport_tcp, nullptr, -1),
     last_send_iob_size_(0),
     last_send_iob_(nullptr),
@@ -158,7 +158,7 @@ error_code tcp_transport::async_read() {
         return error_unstart;
     }
 
-    error_code ec = error_none;
+    auto ec = error_none;
     pending_opt_cnt_.fetch_add(1, std::memory_order_relaxed);
     if (!__is_state(state_started)) {
         pump_debug_log("tcp transport not started");
@@ -196,7 +196,7 @@ error_code tcp_transport::send(const char *b, int32_t size) {
         return error_unstart;
     }
 
-    error_code ec = error_none;
+    auto ec = error_none;
     pending_opt_cnt_.fetch_add(1, std::memory_order_relaxed);
     do {
         if (pump_unlikely(!__is_state(state_started))) {
@@ -238,7 +238,7 @@ error_code tcp_transport::send(toolkit::io_buffer *iob) {
         return error_unstart;
     }
 
-    error_code ec = error_none;
+    auto ec = error_none;
     pending_opt_cnt_.fetch_add(1, std::memory_order_relaxed);
     do {
         if (pump_unlikely(!__is_state(state_started))) {
@@ -278,12 +278,12 @@ void tcp_transport::on_channel_event(int32_t ev, void *arg) {
 void tcp_transport::on_read_event() {
     // Wait transport starting end
     while (__is_state(state_starting, std::memory_order_relaxed)) {
-        //pump_debug_log("tcp transport starting, wait");
+        // pump_debug_log("tcp transport starting, wait");
     }
 
     bool disconnected = false;
     char data[max_tcp_buffer_size];
-    int32_t size = flow_->read(data, max_tcp_buffer_size);
+    auto size = flow_->read(data, max_tcp_buffer_size);
     if (size > 0) {
         if (rmode_ == read_mode_once) {
             // Free read state.
@@ -356,8 +356,8 @@ end:
 
 bool tcp_transport::__open_transport_flow() {
     flow_.reset(
-        object_create<flow::flow_tcp>(),
-        object_delete<flow::flow_tcp>);
+        pump_object_create<flow::flow_tcp>(),
+        pump_object_destroy<flow::flow_tcp>);
     if (!flow_) {
         pump_warn_log("mew tcp transport's flow object failed");
         return false;

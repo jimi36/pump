@@ -145,8 +145,8 @@ void tcp_dialer::on_timeout(tcp_dialer_wptr wptr) {
 bool tcp_dialer::__open_dial_flow() {
     // Init tcp dialer flow.
     flow_.reset(
-        object_create<flow::flow_tcp_dialer>(),
-        object_delete<flow::flow_tcp_dialer>);
+        pump_object_create<flow::flow_tcp_dialer>(),
+        pump_object_destroy<flow::flow_tcp_dialer>);
     if (!flow_) {
         pump_warn_log("new tcp dialer's flow object failed");
         return false;

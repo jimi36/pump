@@ -142,8 +142,8 @@ void tls_dialer::on_send_event() {
         }
 
         handshaker_.reset(
-            object_create<tls_handshaker>(),
-            object_delete<tls_handshaker>);
+            pump_object_create<tls_handshaker>(),
+            pump_object_destroy<tls_handshaker>);
         if (!handshaker_) {
             pump_warn_log("new tls handshaker object failed");
             break;
@@ -229,8 +229,8 @@ void tls_dialer::on_handshake_stopped(
 bool tls_dialer::__open_dial_flow() {
     // Init tls dialer flow.
     flow_.reset(
-        object_create<flow::flow_tcp_dialer>(),
-        object_delete<flow::flow_tcp_dialer>);
+        pump_object_create<flow::flow_tcp_dialer>(),
+        pump_object_destroy<flow::flow_tcp_dialer>);
     if (!flow_) {
         pump_warn_log("new tls dialer's flow object failed");
         return false;

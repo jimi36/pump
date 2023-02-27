@@ -166,16 +166,16 @@ afd_poller::~afd_poller() {
 
 bool afd_poller::__install_channel_tracker(channel_tracker *tracker) {
 #if defined(PUMP_HAVE_IOCP)
-	auto expected_event = tracker->get_expected_event();
-	if (expected_event == io_none) {
-		cur_event_count_.fetch_add(1, std::memory_order_relaxed);
-		return true;
-	}
+    auto expected_event = tracker->get_expected_event();
+    if (expected_event == io_none) {
+        cur_event_count_.fetch_add(1, std::memory_order_relaxed);
+        return true;
+    }
 
-	if (__start_channel_tracker(tracker)) {
-		cur_event_count_.fetch_add(1, std::memory_order_relaxed);
-		return true;
-	}
+    if (__start_channel_tracker(tracker)) {
+        cur_event_count_.fetch_add(1, std::memory_order_relaxed);
+        return true;
+    }
 #endif
     pump_debug_log("install channel tracker failed %d", net::last_errno());
     return false;
@@ -183,8 +183,8 @@ bool afd_poller::__install_channel_tracker(channel_tracker *tracker) {
 
 bool afd_poller::__uninstall_channel_tracker(channel_tracker *tracker) {
 #if defined(PUMP_HAVE_IOCP)
-	// Reduce current event counts at first.
-	cur_event_count_.fetch_sub(1, std::memory_order_relaxed);
+    // Reduce current event counts at first.
+    cur_event_count_.fetch_sub(1, std::memory_order_relaxed);
 
     auto event = tracker->get_event();
     if (event->iosb.Status != STATUS_PENDING) {
@@ -192,7 +192,7 @@ bool afd_poller::__uninstall_channel_tracker(channel_tracker *tracker) {
     }
 
     IO_STATUS_BLOCK cancel_iosb;
-    NTSTATUS cancel_status = NtCancelIoFileEx(
+    auto cancel_status = NtCancelIoFileEx(
         afd_device_handler_,
         &(event->iosb),
         &cancel_iosb);
@@ -221,7 +221,7 @@ bool afd_poller::__start_channel_tracker(channel_tracker *tracker) {
     }
     event->iosb.Status = STATUS_PENDING;
 
-    NTSTATUS status = NtDeviceIoControlFile(
+    auto status = NtDeviceIoControlFile(
         afd_device_handler_,
         nullptr,
         nullptr,
@@ -252,7 +252,7 @@ void afd_poller::__poll(int32_t timeout) {
     }
 
     DWORD completion_count = 0;
-    LPOVERLAPPED_ENTRY iocp_events = (LPOVERLAPPED_ENTRY)events_;
+    auto iocp_events = (LPOVERLAPPED_ENTRY)events_;
     if (GetQueuedCompletionStatusEx(
             iocp_handler_,
             iocp_events,

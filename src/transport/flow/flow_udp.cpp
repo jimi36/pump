@@ -20,7 +20,7 @@ namespace pump {
 namespace transport {
 namespace flow {
 
-flow_udp::flow_udp() pump_noexcept {
+flow_udp::flow_udp() noexcept {
 }
 
 bool flow_udp::init(
@@ -62,7 +62,7 @@ int32_t flow_udp::read_from(
     char *b,
     int32_t size,
     address *from) {
-    int32_t addrlen = max_address_len;
+    auto addrlen = max_address_len;
     struct sockaddr *addr = from->get();
     size = net::read_from(fd_, b, size, addr, &addrlen);
     if (size > 0) {

@@ -19,7 +19,7 @@
 namespace pump {
 namespace transport {
 
-udp_transport::udp_transport(const address &bind_address) pump_noexcept
+udp_transport::udp_transport(const address &bind_address) noexcept
   : base_transport(transport_udp, nullptr, -1) {
     local_address_ = bind_address;
 }
@@ -96,7 +96,7 @@ error_code udp_transport::async_read() {
         return error_unstart;
     }
 
-    error_code ec = error_none;
+    auto ec = error_none;
     if (rmode_ == read_mode_loop) {
         if (!__change_read_state(read_none, read_pending)) {
             pump_debug_log("udp transport already reading by loop");
@@ -173,7 +173,7 @@ void udp_transport::on_read_event() {
 
 bool udp_transport::__open_transport_flow() {
     // Init udp transport flow.
-    flow_.reset(object_create<flow::flow_udp>(), object_delete<flow::flow_udp>);
+    flow_.reset(pump_object_create<flow::flow_udp>(), pump_object_destroy<flow::flow_udp>);
     if (!flow_) {
         pump_debug_log("mew udp transport's flow object failed");
         return false;

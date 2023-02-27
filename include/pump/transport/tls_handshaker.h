@@ -40,7 +40,7 @@ class tls_handshaker
     /*********************************************************************************
      * Constructor
      ********************************************************************************/
-    tls_handshaker() pump_noexcept;
+    tls_handshaker() noexcept;
 
     /*********************************************************************************
      * Deconstructor
@@ -73,21 +73,21 @@ class tls_handshaker
     /*********************************************************************************
      * Unlock flow
      ********************************************************************************/
-    pump_inline flow::flow_tls_sptr unlock_flow() pump_noexcept {
+    pump_inline flow::flow_tls_sptr unlock_flow() noexcept {
         return std::move(flow_);
     }
 
     /*********************************************************************************
      * Get local address
      ********************************************************************************/
-    pump_inline const address &get_local_address() const pump_noexcept {
+    pump_inline const address &get_local_address() const noexcept {
         return local_address_;
     }
 
     /*********************************************************************************
      * Get remote address
      ********************************************************************************/
-    pump_inline const address &get_remote_address() const pump_noexcept {
+    pump_inline const address &get_remote_address() const noexcept {
         return remote_address_;
     }
 

@@ -3,6 +3,7 @@
 #include <thread>
 #include <queue>
 #include <mutex>
+#include <new>
 
 #include <pump/time/timestamp.h>
 #include <pump/toolkit/freelock_m2m_queue.h>
@@ -113,39 +114,37 @@ int test1(int loop) {
 }
 
 int test2(int loop) {
-    int val;
-
-    int pop_thread_cnt = 3;
-    int push_thread_cnt = 3;
+    int pop_thread_cnt = 5;
+    int push_thread_cnt = 5;
     std::vector<std::thread *> threads;
 
-    int *sums = new int[pop_thread_cnt];
+    std::atomic_int32_t sum(0);
+    int pop_loop = loop * push_thread_cnt / pop_thread_cnt;
 
-    toolkit::freelock_m2m_queue<int> q(512);
+    toolkit::freelock_m2m_queue<int> m2m_q(512);
     for (int i = 0; i < push_thread_cnt; i++) {
         std::thread *t = new std::thread([&]() {
             auto beg = time::get_clock_microseconds();
             for (int ii = 0; ii < loop;) {
-                if (q.push(ii)) {
+                if (m2m_q.push(ii)) {
                     ii++;
                 }
             }
             auto end = time::get_clock_microseconds();
             printf("freelock_m2m_queue push use %dus category %d\n",
                    int(end - beg),
-                   q.capacity());
+                   m2m_q.capacity());
         });
         threads.push_back(t);
     }
 
     for (int i = 0; i < pop_thread_cnt; i++) {
-        int j = i;
-        sums[j] = 0;
         std::thread *t = new std::thread([&]() {
+            int val;
             auto beg = time::get_clock_microseconds();
-            for (int ii = 0; ii < loop;) {
-                if (q.pop(val)) {
-                    sums[j] += val;
+            for (int ii = 0; ii < pop_loop;) {
+                if (m2m_q.pop(val)) {
+                    sum.fetch_add(val);
                     ii++;
                 }
             }
@@ -155,17 +154,13 @@ int test2(int loop) {
         threads.push_back(t);
     }
 
-    for (auto &t : threads) {
-        t->join();
-        delete t;
+    for (auto b = threads.begin(); b != threads.end(); b++) {
+        (*b)->join();
+        delete (*b);
     }
     threads.clear();
 
-    int sum = 0;
-    for (int i = 0; i < pop_thread_cnt; i++) {
-        sum += sums[i];
-    }
-    printf("freelock_m2m_queue sum %d\n", sum);
+    printf("freelock_m2m_queue sum %d %d\n", m2m_q.no_constructor, sum.load());
 
     moodycamel::ConcurrentQueue<int> cq;
     for (int i = 0; i < push_thread_cnt; i++) {
@@ -182,14 +177,14 @@ int test2(int loop) {
         threads.push_back(t);
     }
 
+    sum.store(0);
     for (int i = 0; i < pop_thread_cnt; i++) {
-        int j = i;
-        sums[j] = 0;
         std::thread *t = new std::thread([&]() {
+            int val;
             auto beg = time::get_clock_microseconds();
-            for (int ii = 0; ii < loop;) {
+            for (int ii = 0; ii < pop_loop;) {
                 if (cq.try_dequeue(val)) {
-                    sums[j] += val;
+                    sum.fetch_add(val);
                     ii++;
                 }
             }
@@ -199,17 +194,13 @@ int test2(int loop) {
         threads.push_back(t);
     }
 
-    for (auto &t : threads) {
-        t->join();
-        delete t;
+    for (auto b = threads.begin(); b != threads.end(); b++) {
+        (*b)->join();
+        delete (*b);
     }
     threads.clear();
 
-    sum = 0;
-    for (int i = 0; i < pop_thread_cnt; i++) {
-        sum += sums[i];
-    }
-    printf("moodycamel::ConcurrentQueue sum %d\n", sum);
+    printf("moodycamel::ConcurrentQueue sum %d\n", sum.load());
 
     std::mutex mx;
     std::queue<int> pq;
@@ -228,18 +219,18 @@ int test2(int loop) {
         threads.push_back(t);
     }
 
+    sum.store(0);
     for (int i = 0; i < pop_thread_cnt; i++) {
-        int j = i;
-        sums[j] = 0;
         std::thread *t = new std::thread([&]() {
+            int val;
             auto beg = time::get_clock_microseconds();
-            for (int ii = 0; ii < loop;) {
+            for (int ii = 0; ii < pop_loop;) {
                 mx.lock();
                 if (!pq.empty()) {
                     val = pq.front();
                     pq.pop();
 
-                    sums[j] += val;
+                    sum.fetch_add(val);
 
                     ii++;
                 }
@@ -251,17 +242,13 @@ int test2(int loop) {
         threads.push_back(t);
     }
 
-    for (auto &t : threads) {
-        t->join();
-        delete t;
+    for (auto b = threads.begin(); b != threads.end(); b++) {
+        (*b)->join();
+        delete (*b);
     }
     threads.clear();
 
-    sum = 0;
-    for (int i = 0; i < pop_thread_cnt; i++) {
-        sum += sums[i];
-    }
-    printf("std_queue sum %d\n", sum);
+    printf("std_queue sum %d\n", sum.load());
 
     return 0;
 }

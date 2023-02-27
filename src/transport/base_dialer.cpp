@@ -35,8 +35,8 @@ bool base_dialer::__install_dial_tracker(poll::channel_sptr &&ch) {
     }
 
     tracker_.reset(
-        object_create<poll::channel_tracker>(ch, poll::track_send),
-        object_delete<poll::channel_tracker>);
+        pump_object_create<poll::channel_tracker>(ch, poll::track_send),
+        pump_object_destroy<poll::channel_tracker>);
     if (!tracker_) {
         pump_warn_log("new dialer's tracker object failed");
         return false;

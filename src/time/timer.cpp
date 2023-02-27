@@ -25,7 +25,7 @@ namespace time {
 timer::timer(
     uint64_t timeout,
     const timer_callback &cb,
-    bool repeated) pump_noexcept
+    bool repeated) noexcept
   : mgr_(nullptr),
     state_(state_none),
     cb_(cb),

@@ -33,8 +33,8 @@ class pump_lib tcp_transport : public base_transport {
      * Create instance
      ********************************************************************************/
     pump_inline static tcp_transport_sptr create() {
-        INLINE_OBJECT_CREATE(obj, tcp_transport, ());
-        return tcp_transport_sptr(obj, object_delete<tcp_transport>);
+        pump_object_create_inline(obj, tcp_transport, ());
+        return tcp_transport_sptr(obj, pump_object_destroy<tcp_transport>);
     }
 
     /*********************************************************************************
@@ -105,7 +105,7 @@ class pump_lib tcp_transport : public base_transport {
     /*********************************************************************************
      * Constructor
      ********************************************************************************/
-    tcp_transport() pump_noexcept;
+    tcp_transport() noexcept;
 
     /*********************************************************************************
      * Open transport flow

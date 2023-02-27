@@ -77,7 +77,7 @@ void tcp_acceptor::stop() {
 void tcp_acceptor::on_read_event() {
     // Wait starting end
     while (__is_state(state_starting, std::memory_order_relaxed)) {
-        //pump_debug_log("tcp acceptor starting, wait");
+        // pump_debug_log("tcp acceptor starting, wait");
     }
 
     address local_address;
@@ -105,8 +105,8 @@ void tcp_acceptor::on_read_event() {
 bool tcp_acceptor::__open_accept_flow() {
     // Init tcp acceptor flow.
     flow_.reset(
-        object_create<flow::flow_tcp_acceptor>(),
-        object_delete<flow::flow_tcp_acceptor>);
+        pump_object_create<flow::flow_tcp_acceptor>(),
+        pump_object_destroy<flow::flow_tcp_acceptor>);
     if (!flow_) {
         pump_warn_log("new tcp acceptor's flow object failed");
         return false;

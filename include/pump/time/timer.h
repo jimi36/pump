@@ -48,8 +48,8 @@ class pump_lib timer : public std::enable_shared_from_this<timer> {
         uint64_t timeout_ns,
         const timer_callback &cb,
         bool repeated = false) {
-        INLINE_OBJECT_CREATE(obj, timer, (timeout_ns, cb, repeated));
-        return timer_sptr(obj, object_delete<timer>);
+        pump_object_create_inline(obj, timer, (timeout_ns, cb, repeated));
+        return timer_sptr(obj, pump_object_destroy<timer>);
     }
 
     /*********************************************************************************
@@ -60,7 +60,7 @@ class pump_lib timer : public std::enable_shared_from_this<timer> {
     /*********************************************************************************
      * Stop
      ********************************************************************************/
-    pump_inline void stop() pump_noexcept {
+    pump_inline void stop() noexcept {
         __force_set_state(state_stopped);
     }
 
@@ -72,21 +72,21 @@ class pump_lib timer : public std::enable_shared_from_this<timer> {
     /*********************************************************************************
      * Get timeout
      ********************************************************************************/
-    pump_inline uint64_t timeout() const pump_noexcept {
+    pump_inline uint64_t timeout() const noexcept {
         return timeout_ns_;
     }
 
     /*********************************************************************************
      * Get starting state
      ********************************************************************************/
-    pump_inline bool is_started() const pump_noexcept {
+    pump_inline bool is_started() const noexcept {
         return state_.load() > state_stopped;
     }
 
     /*********************************************************************************
      * Get repeated status
      ********************************************************************************/
-    pump_inline bool is_repeated() const pump_noexcept {
+    pump_inline bool is_repeated() const noexcept {
         return repeated_;
     }
 
@@ -97,12 +97,12 @@ class pump_lib timer : public std::enable_shared_from_this<timer> {
     timer(
         uint64_t timeout_ns,
         const timer_callback &cb,
-        bool repeated) pump_noexcept;
+        bool repeated) noexcept;
 
     /*********************************************************************************
      * Start
      ********************************************************************************/
-    pump_inline bool __start(manager *mgr) pump_noexcept {
+    pump_inline bool __start(manager *mgr) noexcept {
         if (!__set_state(state_none, state_started)) {
             return false;
         }
@@ -115,14 +115,14 @@ class pump_lib timer : public std::enable_shared_from_this<timer> {
      ********************************************************************************/
     pump_inline bool __set_state(
         int32_t expected,
-        int32_t desired) pump_noexcept {
+        int32_t desired) noexcept {
         return state_.compare_exchange_strong(expected, desired);
     }
 
     /*********************************************************************************
      * Set state
      ********************************************************************************/
-    pump_inline void __force_set_state(int32_t desired) pump_noexcept {
+    pump_inline void __force_set_state(int32_t desired) noexcept {
         state_.store(desired);
     }
 

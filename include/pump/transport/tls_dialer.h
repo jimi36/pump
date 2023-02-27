@@ -41,7 +41,7 @@ class pump_lib tls_dialer
         const address &remote_address,
         uint64_t dial_timeout_ns = 0,
         uint64_t handshake_timeout_ns = 0) {
-        INLINE_OBJECT_CREATE(
+        pump_object_create_inline(
             obj,
             tls_dialer,
             (nullptr,
@@ -49,7 +49,7 @@ class pump_lib tls_dialer
              remote_address,
              dial_timeout_ns,
              handshake_timeout_ns));
-        return tls_dialer_sptr(obj, object_delete<tls_dialer>);
+        return tls_dialer_sptr(obj, pump_object_destroy<tls_dialer>);
     }
 
     pump_inline static tls_dialer_sptr create_with_cred(
@@ -58,7 +58,7 @@ class pump_lib tls_dialer
         const address &remote_address,
         uint64_t dial_timeout_ns = 0,
         uint64_t handshake_timeout_ns = 0) {
-        INLINE_OBJECT_CREATE(
+        pump_object_create_inline(
             obj,
             tls_dialer,
             (xcred,
@@ -66,7 +66,7 @@ class pump_lib tls_dialer
              remote_address,
              dial_timeout_ns,
              handshake_timeout_ns));
-        return tls_dialer_sptr(obj, object_delete<tls_dialer>);
+        return tls_dialer_sptr(obj, pump_object_destroy<tls_dialer>);
     }
 
     /*********************************************************************************
@@ -161,8 +161,8 @@ class pump_lib tls_sync_dialer
      * Create instance
      ********************************************************************************/
     static tls_sync_dialer_sptr create() {
-        INLINE_OBJECT_CREATE(obj, tls_sync_dialer, ());
-        return tls_sync_dialer_sptr(obj, object_delete<tls_sync_dialer>);
+        pump_object_create_inline(obj, tls_sync_dialer, ());
+        return tls_sync_dialer_sptr(obj, pump_object_destroy<tls_sync_dialer>);
     }
 
     /*********************************************************************************
@@ -203,8 +203,7 @@ class pump_lib tls_sync_dialer
     /*********************************************************************************
      * Constructor
      ********************************************************************************/
-    tls_sync_dialer() pump_noexcept {
-    }
+    tls_sync_dialer() noexcept {}
 
   private:
     // Tcp dialer

@@ -45,7 +45,7 @@ const char *find_http_line_end(const char *src, int32_t len) {
 }
 
 bool url_decode(const std::string &src, std::string &des) {
-    uint32_t len = (uint32_t)src.length();
+    auto len = (uint32_t)src.length();
     for (uint32_t i = 0; i < len; i++) {
         char ch = src[i];
         if (ch == '+') {
@@ -63,8 +63,8 @@ bool url_decode(const std::string &src, std::string &des) {
 }
 
 bool url_encode(const std::string &src, std::string &des) {
-    const char *beg = src.c_str();
-    const char *end = beg + src.size();
+    auto beg = src.c_str();
+    auto end = beg + src.size();
     while (beg != end) {
         char val = *beg;
         if (isalnum(val) || strchr("_-.", val) != nullptr) {
@@ -83,7 +83,7 @@ bool url_encode(const std::string &src, std::string &des) {
 
 std::string compute_sec_key() {
     std::string s(16, 0);
-    int32_t *p = (int32_t *)s.data();
+    auto *p = (int32_t *)s.data();
     for (uint32_t i = 0; i < 4; i++) {
         *(p + i) = random();
     }

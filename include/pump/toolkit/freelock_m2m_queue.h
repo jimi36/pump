@@ -38,6 +38,10 @@ class freelock_m2m_queue : public noncopyable {
     typedef T element_type;
     // Element type size
     constexpr static int32_t element_size = sizeof(element_type);
+    // Element no constructor flag
+    constexpr static bool no_constructor =
+        std::is_integral<element_type>::value ||
+        std::is_pointer<element_type>::value;
 
     // Element node
     struct element_node {
@@ -45,14 +49,22 @@ class freelock_m2m_queue : public noncopyable {
           : next(this + 1),
             ready(0) {
         }
+
         element_node *next;
+
         volatile int32_t ready;
+
         char data[element_size];
     };
 
     // Block node
     struct block_node {
+        block_node()
+          : next(nullptr) {
+        }
+
         block_node *next;
+
         element_node elems[PerBlockElementCount];
     };
 
@@ -61,8 +73,8 @@ class freelock_m2m_queue : public noncopyable {
      * Constructor
      ********************************************************************************/
     freelock_m2m_queue(int32_t size)
-      : capacity_(0),
-        tail_block_node_(nullptr),
+      : tail_block_node_(nullptr),
+        capacity_(0),
         head_(nullptr),
         tail_(nullptr) {
         __init_list(size);
@@ -72,25 +84,27 @@ class freelock_m2m_queue : public noncopyable {
      * Deconstructor
      ********************************************************************************/
     ~freelock_m2m_queue() {
-        // Get next element node of the head element node.
-        element_node *end_node = head_.load(std::memory_order_relaxed);
-        // Get element head node.
-        element_node *beg_node = tail_.load(std::memory_order_relaxed)->next;
+        if (!no_constructor) {
+            // Get next element node of the head element node.
+            auto end_node = head_.load(std::memory_order_relaxed);
+            // Get element head node.
+            auto beg_node = tail_.load(std::memory_order_relaxed)->next;
 
-        while (beg_node != end_node) {
-            // Deconstruct element data.
-            if (beg_node->ready == 1) {
-                ((element_type *)beg_node->data)->~element_type();
+            while (beg_node != end_node) {
+                // Deconstruct element data.
+                if (beg_node->ready == 1) {
+                    ((element_type *)beg_node->data)->~element_type();
+                }
+                // Move to next node.
+                beg_node = beg_node->next;
             }
-            // Move to next node.
-            beg_node = beg_node->next;
         }
 
         while (tail_block_node_) {
             // Store next block node.
-            block_node *tmp = tail_block_node_->next;
+            auto tmp = tail_block_node_->next;
             // Delete block node.
-            object_delete(tail_block_node_);
+            pump_object_destroy(tail_block_node_);
             // Move to next node.
             tail_block_node_ = tmp;
         }
@@ -102,7 +116,7 @@ class freelock_m2m_queue : public noncopyable {
     template <typename U>
     bool push(U &&data) {
         // Get current head node as write node.
-        element_node *next_write_node = head_.load(std::memory_order_relaxed);
+        auto next_write_node = head_.load(std::memory_order_acquire);
         do {
             // If current write node is invalid, list is being extended and try
             // again.
@@ -112,12 +126,11 @@ class freelock_m2m_queue : public noncopyable {
 
             // If next write node is ready or is the tail node, list is full and
             // we need try to extend it.
-            if (next_write_node->ready == 0 &&
-                next_write_node->next != tail_.load(std::memory_order_relaxed)) {
+            if (next_write_node->next != tail_.load(std::memory_order_relaxed)) {
                 if (head_.compare_exchange_strong(
                         next_write_node,
                         next_write_node->next,
-                        std::memory_order_acquire,
+                        std::memory_order_release,
                         std::memory_order_relaxed)) {
                     break;
                 }
@@ -128,8 +141,16 @@ class freelock_m2m_queue : public noncopyable {
             }
         } while (true);
 
+        // Wait node is unready.
+        while (next_write_node->ready == 1) {
+        }
+
         // Construct node data.
-        new (next_write_node->data) element_type(std::forward<U>(data));
+        if (no_constructor) {
+            *(element_type *)(next_write_node->data) = data;
+        } else {
+            new (next_write_node->data) element_type(std::forward<U>(data));
+        }
 
         // Mark node ready.
         next_write_node->ready = 1;
@@ -144,14 +165,13 @@ class freelock_m2m_queue : public noncopyable {
     bool pop(U &data) {
         // Next read node.
         element_node *next_read_node = nullptr;
+
         // Get current tail node.
-        element_node *current_tail = tail_.load(std::memory_order_relaxed);
+        auto current_tail = tail_.load(std::memory_order_acquire);
 
         do {
             // Get next read node.
             next_read_node = current_tail->next;
-
-            // If next read node is not ready just return false.
             if (next_read_node->ready == 0) {
                 return false;
             }
@@ -167,11 +187,15 @@ class freelock_m2m_queue : public noncopyable {
         } while (true);
 
         // Pop element data.
-        element_type *elem = (element_type *)next_read_node->data;
-        data = std::move(*elem);
-        elem->~element_type();
+        if (no_constructor) {
+            data = *(element_type *)(next_read_node->data);
+        } else {
+            auto elem = (element_type *)next_read_node->data;
+            data = std::move(*elem);
+            elem->~element_type();
+        }
 
-        // Mark next read node not ready.
+        // Mark read node not ready.
         next_read_node->ready = 0;
 
         return true;
@@ -180,15 +204,15 @@ class freelock_m2m_queue : public noncopyable {
     /*********************************************************************************
      * Empty
      ********************************************************************************/
-    pump_inline bool empty() const pump_noexcept {
-        element_node *tail = tail_.load(std::memory_order_relaxed)->next;
+    pump_inline bool empty() const noexcept {
+        auto tail = tail_.load(std::memory_order_relaxed)->next;
         return tail == head_.load(std::memory_order_relaxed);
     }
 
     /*********************************************************************************
      * Get capacity
      ********************************************************************************/
-    pump_inline int32_t capacity() const pump_noexcept {
+    pump_inline int32_t capacity() const noexcept {
         return capacity_.load(std::memory_order_relaxed);
     }
 
@@ -201,11 +225,14 @@ class freelock_m2m_queue : public noncopyable {
         size = size > PerBlockElementCount ? size : PerBlockElementCount;
 
         // Create first block node.
-        tail_block_node_ = object_create<block_node>();
+        tail_block_node_ = pump_object_create<block_node>();
+        if (tail_block_node_ == nullptr) {
+            pump_abort();
+        }
 
         // Get head and tail element node.
-        element_node *head = tail_block_node_->elems + 0;
-        element_node *tail = tail_block_node_->elems + PerBlockElementCount - 1;
+        auto head = tail_block_node_->elems + 0;
+        auto tail = tail_block_node_->elems + PerBlockElementCount - 1;
 
         // Update list capacity.
         capacity_.fetch_add(PerBlockElementCount, std::memory_order_relaxed);
@@ -213,7 +240,10 @@ class freelock_m2m_queue : public noncopyable {
         for (size -= PerBlockElementCount; size > 0;
              size -= PerBlockElementCount) {
             // Insert new block node.
-            block_node *bnode = object_create<block_node>();
+            auto bnode = pump_object_create<block_node>();
+            if (bnode == nullptr) {
+                pump_abort();
+            }
             bnode->next = tail_block_node_;
             tail_block_node_ = bnode;
 
@@ -222,8 +252,7 @@ class freelock_m2m_queue : public noncopyable {
             tail = bnode->elems + PerBlockElementCount - 1;
 
             // Update list capacity.
-            capacity_.fetch_add(PerBlockElementCount,
-                                std::memory_order_relaxed);
+            capacity_.fetch_add(PerBlockElementCount, std::memory_order_relaxed);
         }
 
         // Link tail and head node.
@@ -248,7 +277,12 @@ class freelock_m2m_queue : public noncopyable {
         }
 
         // Insert new block node.
-        block_node *bnode = object_create<block_node>();
+        auto bnode = pump_object_create<block_node>();
+        if (bnode == nullptr) {
+            head_.store(enode, std::memory_order_release);
+            return false;
+        }
+
         bnode->next = tail_block_node_;
         tail_block_node_ = bnode;
 
@@ -266,16 +300,17 @@ class freelock_m2m_queue : public noncopyable {
     }
 
   private:
-    // Element capacity
-    std::atomic_int32_t capacity_;
     // Tail block node
     block_node *tail_block_node_;
+
+    // Element capacity
+    pump_cache_line_alignas std::atomic_int32_t capacity_;
+
     // Head element node
-    char padding1_[64];
-    std::atomic<element_node *> head_;
+    pump_cache_line_alignas std::atomic<element_node *> head_;
+
     // Tail element node
-    char padding_[64];
-    std::atomic<element_node *> tail_;
+    pump_cache_line_alignas std::atomic<element_node *> tail_;
 };
 
 }  // namespace toolkit

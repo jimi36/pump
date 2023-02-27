@@ -27,14 +27,14 @@ service::service(bool enable_poll)
     memset(pollers_, 0, sizeof(pollers_));
     if (enable_poll) {
 #if defined(PUMP_HAVE_IOCP)
-        pollers_[read_pid] = object_create<poll::afd_poller>();
-        pollers_[send_pid] = object_create<poll::afd_poller>();
+        pollers_[read_pid] = pump_object_create<poll::afd_poller>();
+        pollers_[send_pid] = pump_object_create<poll::afd_poller>();
 #elif defined(PUMP_HAVE_SELECT)
-        pollers_[read_pid] = object_create<poll::select_poller>();
-        pollers_[send_pid] = object_create<poll::select_poller>();
+        pollers_[read_pid] = pump_object_create<poll::select_poller>();
+        pollers_[send_pid] = pump_object_create<poll::select_poller>();
 #elif defined(PUMP_HAVE_EPOLL)
-        pollers_[read_pid] = object_create<poll::epoll_poller>();
-        pollers_[send_pid] = object_create<poll::epoll_poller>();
+        pollers_[read_pid] = pump_object_create<poll::epoll_poller>();
+        pollers_[send_pid] = pump_object_create<poll::epoll_poller>();
 #endif
     }
 
@@ -120,8 +120,9 @@ void service::__start_task_worker() {
             }
         }
     };
-    task_worker_.reset(object_create<std::thread>(func),
-                       object_delete<std::thread>);
+    task_worker_.reset(
+        pump_object_create<std::thread>(func),
+        pump_object_destroy<std::thread>);
 }
 
 void service::__start_timer_callback_worker() {
@@ -139,8 +140,9 @@ void service::__start_timer_callback_worker() {
             }
         }
     };
-    timer_worker_.reset(object_create<std::thread>(func),
-                        object_delete<std::thread>);
+    timer_worker_.reset(
+        pump_object_create<std::thread>(func),
+        pump_object_destroy<std::thread>);
 }
 
 }  // namespace pump

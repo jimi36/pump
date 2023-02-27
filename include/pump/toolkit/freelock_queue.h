@@ -36,7 +36,7 @@ class freelock_queue : public noncopyable {
     /*********************************************************************************
      * Constructor
      ********************************************************************************/
-    freelock_queue(uint32_t size = 1024) pump_noexcept
+    freelock_queue(uint32_t size = 1024) noexcept
       : queue_(size) {
     }
 
@@ -119,7 +119,7 @@ class freelock_queue : public noncopyable {
     /*********************************************************************************
      * Empty
      ********************************************************************************/
-    pump_inline bool empty() pump_noexcept {
+    pump_inline bool empty() noexcept {
         return queue_.empty();
     }
 

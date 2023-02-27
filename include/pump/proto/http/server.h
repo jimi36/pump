@@ -47,8 +47,8 @@ class pump_lib server : public std::enable_shared_from_this<server> {
      * Create instance
      ********************************************************************************/
     pump_inline static server_sptr create() {
-        INLINE_OBJECT_CREATE(obj, server, ());
-        return server_sptr(obj, object_delete<server>);
+        pump_object_create_inline(obj, server, ());
+        return server_sptr(obj, pump_object_destroy<server>);
     }
 
     /*********************************************************************************
@@ -112,7 +112,7 @@ class pump_lib server : public std::enable_shared_from_this<server> {
     /*********************************************************************************
      * Constructor
      ********************************************************************************/
-    server() pump_noexcept;
+    server() noexcept;
 
   private:
     // Service

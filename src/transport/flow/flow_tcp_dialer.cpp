@@ -20,7 +20,7 @@ namespace pump {
 namespace transport {
 namespace flow {
 
-flow_tcp_dialer::flow_tcp_dialer() pump_noexcept
+flow_tcp_dialer::flow_tcp_dialer() noexcept
   : is_ipv6_(false) {
 }
 
@@ -76,7 +76,7 @@ bool flow_tcp_dialer::post_connect(const address &remote_address) {
 int32_t flow_tcp_dialer::connect(
     address *local_address,
     address *remote_address) {
-    int32_t ec = net::get_socket_error(fd_);
+    auto ec = net::get_socket_error(fd_);
     if (ec != 0) {
         return ec;
     }

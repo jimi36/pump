@@ -20,7 +20,7 @@ namespace pump {
 namespace transport {
 namespace flow {
 
-flow_tcp_acceptor::flow_tcp_acceptor() pump_noexcept
+flow_tcp_acceptor::flow_tcp_acceptor() noexcept
   : is_ipv6_(false),
     iob_(nullptr) {
 }
@@ -83,7 +83,7 @@ pump_socket flow_tcp_acceptor::accept(
     address *local_address,
     address *remote_address) {
     int32_t addrlen = max_address_len;
-    pump_socket client_fd = net::accept(
+    auto client_fd = net::accept(
         fd_,
         (struct sockaddr *)iob_->raw(),
         &addrlen);

@@ -44,7 +44,8 @@ class pump_lib channel : public toolkit::noncopyable {
      * Constructor
      ********************************************************************************/
     explicit channel(pump_socket fd) noexcept
-      : ctx_(nullptr), fd_(fd) {}
+      : ctx_(nullptr),
+        fd_(fd) {}
 
     /*********************************************************************************
      * Deconstructor

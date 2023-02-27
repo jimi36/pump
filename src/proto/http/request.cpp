@@ -32,12 +32,12 @@ static const char *request_method_strings[] =
      "PUT",
      "DELETE"};
 
-request::request(void *ctx) pump_noexcept
+request::request(void *ctx) noexcept
   : packet(ctx, PK_REQUEST),
     method_(METHOD_UNKNOWN) {
 }
 
-request::request(void *ctx, const std::string &url) pump_noexcept
+request::request(void *ctx, const std::string &url) noexcept
   : packet(ctx, PK_REQUEST),
     method_(METHOD_UNKNOWN) {
     uri_.parse(url);
@@ -52,7 +52,7 @@ int32_t request::parse(const char *b, int32_t size) {
         parse_status_ = PARSE_LINE;
     }
 
-    const char *pos = b;
+    auto pos = b;
     int32_t parse_size = 0;
     if (parse_status_ == PARSE_LINE) {
         parse_size = __parse_start_line(pos, size);
@@ -91,7 +91,7 @@ int32_t request::parse(const char *b, int32_t size) {
         if (get_head("Content-Length", length) ||
             get_head("content-length", length)) {
             if (length > 0) {
-                body_.reset(object_create<body>(), object_delete<body>);
+                body_.reset(pump_object_create<body>(), pump_object_destroy<body>);
                 if (!body_) {
                     pump_warn_log("new request body object failed");
                     return -1;
@@ -103,7 +103,7 @@ int32_t request::parse(const char *b, int32_t size) {
             if (get_head("Transfer-Encoding", transfer_encoding) ||
                 get_head("transfer-encoding", transfer_encoding)) {
                 if (transfer_encoding == "chunked") {
-                    body_.reset(object_create<body>(), object_delete<body>);
+                    body_.reset(pump_object_create<body>(), pump_object_destroy<body>);
                     if (!body_) {
                         pump_warn_log("new request chunk body object failed");
                         return -1;
@@ -141,7 +141,7 @@ int32_t request::parse(const char *b, int32_t size) {
 int32_t request::serialize(std::string &buffer) const {
     int32_t serialize_size = 0;
 
-    int32_t size = __serialize_request_line(buffer);
+    auto size = __serialize_request_line(buffer);
     if (size < 0) {
         pump_debug_log("serialize request line failed");
         return -1;
@@ -168,10 +168,10 @@ int32_t request::serialize(std::string &buffer) const {
 }
 
 int32_t request::__parse_start_line(const char *b, int32_t size) {
-    const char *pos = b;
+    auto pos = b;
 
     // Find request line end
-    const char *line_end = find_http_line_end(pos, size);
+    auto line_end = find_http_line_end(pos, size);
     if (line_end == nullptr) {
         return 0;
     }
@@ -193,7 +193,7 @@ int32_t request::__parse_start_line(const char *b, int32_t size) {
     }
 
     // Parse request path
-    const char *old_pos = pos;
+    auto old_pos = pos;
     while (pos < line_end && *pos != ' ' && *pos != '?') {
         ++pos;
     }
@@ -222,7 +222,7 @@ int32_t request::__parse_start_line(const char *b, int32_t size) {
         }
 
         auto vals = split_string(params, "[=&]");
-        uint32_t cnt = (uint32_t)vals.size();
+        auto cnt = (uint32_t)vals.size();
         if (vals.empty() || cnt % 2 != 0) {
             pump_debug_log("request params invalid");
             return -1;

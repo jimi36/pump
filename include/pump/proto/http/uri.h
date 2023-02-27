@@ -40,8 +40,8 @@ class pump_lib uri {
     /*********************************************************************************
      * Constructor
      ********************************************************************************/
-    uri() pump_noexcept;
-    uri(const std::string &url) pump_noexcept;
+    uri() noexcept;
+    uri(const std::string &url) noexcept;
 
     /*********************************************************************************
      * Deconstructor
@@ -61,42 +61,42 @@ class pump_lib uri {
     /*********************************************************************************
      * Set uri type
      ********************************************************************************/
-    pump_inline void set_proto(uri_type proto) pump_noexcept {
+    pump_inline void set_proto(uri_type proto) noexcept {
         tp_ = proto;
     }
 
     /*********************************************************************************
      * Get uri type
      ********************************************************************************/
-    pump_inline uri_type get_type() const pump_noexcept {
+    pump_inline uri_type get_type() const noexcept {
         return tp_;
     }
 
     /*********************************************************************************
      * Set host
      ********************************************************************************/
-    pump_inline void set_host(const std::string &host) pump_noexcept {
+    pump_inline void set_host(const std::string &host) noexcept {
         host_ = host;
     }
 
     /*********************************************************************************
      * Get host
      ********************************************************************************/
-    pump_inline const std::string &get_host() const pump_noexcept {
+    pump_inline const std::string &get_host() const noexcept {
         return host_;
     }
 
     /*********************************************************************************
      * Set path
      ********************************************************************************/
-    pump_inline void set_path(const std::string &path) pump_noexcept {
+    pump_inline void set_path(const std::string &path) noexcept {
         path_ = path;
     }
 
     /*********************************************************************************
      * Get path
      ********************************************************************************/
-    pump_inline const std::string &get_path() const pump_noexcept {
+    pump_inline const std::string &get_path() const noexcept {
         return path_;
     }
 

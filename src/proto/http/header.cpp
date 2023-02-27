@@ -23,7 +23,7 @@ namespace http {
 
 #define head_value_sep "; "
 
-header::header() pump_noexcept
+header::header() noexcept
   : header_parsed_(false) {
 }
 
@@ -94,7 +94,7 @@ bool header::get_head(
     return true;
 }
 
-bool header::has_head(const std::string &name) const pump_noexcept {
+bool header::has_head(const std::string &name) const noexcept {
     if (headers_.find(name) == headers_.end()) {
         return false;
     }

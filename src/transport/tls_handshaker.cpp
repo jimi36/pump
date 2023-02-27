@@ -20,7 +20,7 @@
 namespace pump {
 namespace transport {
 
-tls_handshaker::tls_handshaker() pump_noexcept
+tls_handshaker::tls_handshaker() noexcept
   : base_channel(transport_tls_handshaker, nullptr, -1) {
 }
 
@@ -94,10 +94,10 @@ bool tls_handshaker::start(
 
         // New channel tracker
         tracker_.reset(
-            object_create<poll::channel_tracker>(
+            pump_object_create<poll::channel_tracker>(
                 shared_from_this(),
                 poll::track_none),
-            object_delete<poll::channel_tracker>);
+            pump_object_destroy<poll::channel_tracker>);
         if (!tracker_) {
             pump_warn_log("new tls handshaker's tracker object failed");
             break;
@@ -142,7 +142,7 @@ void tls_handshaker::on_channel_event(int32_t ev, void *arg) {
 void tls_handshaker::on_read_event() {
     // Wait starting end
     while (__is_state(state_starting, std::memory_order_relaxed)) {
-        //pump_debug_log("tls handshaker starting, wait");
+        // pump_debug_log("tls handshaker starting, wait");
     }
 
     __process_handshake();
@@ -151,7 +151,7 @@ void tls_handshaker::on_read_event() {
 void tls_handshaker::on_send_event() {
     // Wait starting end
     while (__is_state(state_starting, std::memory_order_relaxed)) {
-        //pump_debug_log("tls handshaker starting, wait");
+        // pump_debug_log("tls handshaker starting, wait");
     }
 
     __process_handshake();
@@ -170,8 +170,8 @@ void tls_handshaker::on_timeout(tls_handshaker_wptr wptr) {
 bool tls_handshaker::__open_flow(bool client, pump_socket fd, void *xcred) {
     // Create flow.
     flow_.reset(
-        object_create<flow::flow_tls>(),
-        object_delete<flow::flow_tls>);
+        pump_object_create<flow::flow_tls>(),
+        pump_object_destroy<flow::flow_tls>);
     if (!flow_) {
         pump_warn_log("new tls handshaker's flow object failed");
         return false;

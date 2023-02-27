@@ -32,11 +32,11 @@ connection::connection(bool server, base_transport_sptr &transp)
     transp_(transp) {
     if (server) {
         create_pending_packet_ = []() {
-            return object_create<request>();
+            return pump_object_create<request>();
         };
     } else {
         create_pending_packet_ = []() {
-            return object_create<response>();
+            return pump_object_create<response>();
         };
     }
 }
@@ -112,7 +112,7 @@ bool connection::send(packet *pk) {
 }
 
 bool connection::start_websocket(const websocket_callbacks &cbs) {
-    int32_t st = state_started;
+    auto st = state_started;
     if (!state_.compare_exchange_strong(st, state_upgraded)) {
         pump_debug_log("connection in wrong state");
         return false;
@@ -307,7 +307,7 @@ bool connection::__async_read_http_packet() {
         return false;
     }
 
-    pending_packet_.reset(create_pending_packet_(), object_delete<packet>);
+    pending_packet_.reset(create_pending_packet_(), pump_object_destroy<packet>);
     if (!pending_packet_) {
         pump_debug_log("new http pending packet object failed");
         return false;
@@ -322,7 +322,7 @@ bool connection::__async_read_http_packet() {
 }
 
 void connection::__init_websocket_key() {
-    uint32_t key = random();
+    auto key = random();
     ws_key_.assign((char *)&key, 4);
 }
 
@@ -359,7 +359,7 @@ int32_t connection::__handle_http_packet(const char *b, int32_t size) {
         return -1;
     }
 
-    int32_t parse_size = pending_packet_->parse(b, size);
+    auto parse_size = pending_packet_->parse(b, size);
     if (pending_packet_->is_parse_finished()) {
         http_cbs_.packet_cb(pending_packet_);
     } else if (!__async_read()) {

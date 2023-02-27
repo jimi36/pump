@@ -29,7 +29,7 @@ class pump_lib body {
     /*********************************************************************************
      * Constructor
      ********************************************************************************/
-    body() pump_noexcept;
+    body() noexcept;
 
     /*********************************************************************************
      * Deconstructor
@@ -39,7 +39,7 @@ class pump_lib body {
     /*********************************************************************************
      * Set chunked mode
      ********************************************************************************/
-    pump_inline void set_chunked() pump_noexcept {
+    pump_inline void set_chunked() noexcept {
         is_chunk_mode_ = true;
     }
 
@@ -67,21 +67,21 @@ class pump_lib body {
     /*********************************************************************************
      * Get data
      ********************************************************************************/
-    pump_inline const std::string &data() const pump_noexcept {
+    pump_inline const std::string &data() const noexcept {
         return data_;
     }
 
     /*********************************************************************************
      * Set expected data size
      ********************************************************************************/
-    pump_inline void set_expected_size(int32_t size) pump_noexcept {
+    pump_inline void set_expected_size(int32_t size) noexcept {
         expected_size_ = size;
     }
 
     /*********************************************************************************
      * Check parse status
      ********************************************************************************/
-    pump_inline bool is_parse_finished() const pump_noexcept {
+    pump_inline bool is_parse_finished() const noexcept {
         return is_parse_finished_;
     }
 

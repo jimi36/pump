@@ -24,7 +24,7 @@ namespace time {
 
 const static uint64_t default_observe_interval_ns = 200 * 1000000;  // 200 ms
 
-manager::manager() pump_noexcept
+manager::manager() noexcept
   : started_(false) {
 }
 
@@ -39,9 +39,9 @@ bool manager::start(const timer_pending_callback &cb) {
         pending_cb_ = cb;
 
         observer_.reset(
-            object_create<std::thread>(
+            pump_object_create<std::thread>(
                 pump_bind(&manager::__observe_thread, this)),
-            object_delete<std::thread>);
+            pump_object_destroy<std::thread>);
         if (!observer_) {
             pump_debug_log("create observer thread failed");
             started_.store(false);
@@ -94,16 +94,16 @@ void manager::__observe_thread() {
     while (started_.load()) {
         if (!triggered_timers) {
             triggered_timers.reset(
-                object_create<time::timer_list>(),
-                object_delete<time::timer_list>);
+                pump_object_create<time::timer_list>(),
+                pump_object_destroy<time::timer_list>);
         }
 
         // Every loop max new timers count.
         int32_t max_new_timers = 1024;
 
         // Init check time point.
-        uint64_t now_time_ns = get_clock_nanoseconds();
-        uint64_t next_observe_time_ns = now_time_ns + default_observe_interval_ns;
+        auto now_time_ns = get_clock_nanoseconds();
+        auto next_observe_time_ns = now_time_ns + default_observe_interval_ns;
 
         // Observe triggered timers.
         __observe(triggered_timers, next_observe_time_ns, now_time_ns);
@@ -114,7 +114,7 @@ void manager::__observe_thread() {
         // Wait until next observe time arrived.
         if (triggered_timers->empty() && next_observe_time_ns > now_time_ns) {
             // Get new timer.
-            uint64_t wait_time_us = (next_observe_time_ns - now_time_ns) / 1000;
+            auto wait_time_us = (next_observe_time_ns - now_time_ns) / 1000;
             new_timers_.dequeue(new_timer, wait_time_us);
 
             // Update now time.

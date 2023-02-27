@@ -23,7 +23,7 @@ namespace transport {
 tls_acceptor::tls_acceptor(
     tls_credentials xcred,
     const address &listen_address,
-    uint64_t handshake_timeout_ns) pump_noexcept
+    uint64_t handshake_timeout_ns) noexcept
   : base_acceptor(transport_tls_acceptor, listen_address),
     xcred_(xcred),
     handshake_timeout_ns_(handshake_timeout_ns) {
@@ -94,7 +94,7 @@ void tls_acceptor::stop() {
 void tls_acceptor::on_read_event() {
     // Wait starting end
     while (__is_state(state_starting, std::memory_order_relaxed)) {
-        //pump_debug_log("tls acceptor starting, wait");
+        // pump_debug_log("tls acceptor starting, wait");
     }
 
     do {
@@ -184,8 +184,8 @@ void tls_acceptor::on_handshake_stopped(
 bool tls_acceptor::__open_accept_flow() {
     // Init tls acceptor flow.
     flow_.reset(
-        object_create<flow::flow_tls_acceptor>(),
-        object_delete<flow::flow_tls_acceptor>);
+        pump_object_create<flow::flow_tls_acceptor>(),
+        pump_object_destroy<flow::flow_tls_acceptor>);
     if (!flow_) {
         pump_warn_log("new tls acceptor's flow failed");
         return false;
@@ -207,8 +207,8 @@ void tls_acceptor::__close_accept_flow() {
 
 tls_handshaker *tls_acceptor::__create_handshaker() {
     tls_handshaker_sptr handshaker(
-        object_create<tls_handshaker>(),
-        object_delete<tls_handshaker>);
+        pump_object_create<tls_handshaker>(),
+        pump_object_destroy<tls_handshaker>);
     if (!handshaker) {
         pump_warn_log("new tls handshaker object failed");
         return nullptr;

@@ -46,8 +46,8 @@ class pump_lib manager : public toolkit::noncopyable {
      * Create instance
      ********************************************************************************/
     pump_inline static manager_sptr create() {
-        INLINE_OBJECT_CREATE(obj, manager, ());
-        return manager_sptr(obj, object_delete<manager>);
+        pump_object_create_inline(obj, manager, ());
+        return manager_sptr(obj, pump_object_destroy<manager>);
     }
 
     /*********************************************************************************
@@ -108,7 +108,7 @@ class pump_lib manager : public toolkit::noncopyable {
     /*********************************************************************************
      * Constructor
      ********************************************************************************/
-    manager() pump_noexcept;
+    manager() noexcept;
 
   private:
     // Started status

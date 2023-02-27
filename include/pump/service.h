@@ -145,7 +145,7 @@ class pump_lib service_getter {
     /*********************************************************************************
      * Constructor
      ********************************************************************************/
-    service_getter(service *sv) pump_noexcept
+    service_getter(service *sv) noexcept
       : service_(sv) {}
 
     /*********************************************************************************
@@ -156,7 +156,7 @@ class pump_lib service_getter {
     /*********************************************************************************
      * Get service
      ********************************************************************************/
-    pump_inline service *get_service() pump_noexcept {
+    pump_inline service *get_service() noexcept {
         return service_;
     }
 
@@ -164,7 +164,7 @@ class pump_lib service_getter {
     /*********************************************************************************
      * Set service
      ********************************************************************************/
-    pump_inline void __set_service(service *sv) pump_noexcept {
+    pump_inline void __set_service(service *sv) noexcept {
         service_ = sv;
     }
 

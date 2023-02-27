@@ -57,7 +57,7 @@ class pump_lib packet : public header {
     /*********************************************************************************
      * Constructor
      ********************************************************************************/
-    packet(void *ctx, int32_t pkt) pump_noexcept
+    packet(void *ctx, int32_t pkt) noexcept
       : ctx_(ctx),
         pkt_(pkt),
         version_(VERSION_UNKNOWN),
@@ -73,21 +73,21 @@ class pump_lib packet : public header {
     /*********************************************************************************
      * Get context
      ********************************************************************************/
-    pump_inline void *get_context() const pump_noexcept {
+    pump_inline void *get_context() const noexcept {
         return ctx_;
     }
 
     /*********************************************************************************
      * Set context
      ********************************************************************************/
-    pump_inline void set_context(void *ctx) pump_noexcept {
+    pump_inline void set_context(void *ctx) noexcept {
         ctx_ = ctx;
     }
 
     /*********************************************************************************
      * Get packet type
      ********************************************************************************/
-    pump_inline int32_t get_type() const pump_noexcept {
+    pump_inline int32_t get_type() const noexcept {
         return pkt_;
     }
 
@@ -106,35 +106,35 @@ class pump_lib packet : public header {
     /*********************************************************************************
      * Set http body
      ********************************************************************************/
-    pump_inline void set_body(body_sptr &b) pump_noexcept {
+    pump_inline void set_body(body_sptr &b) noexcept {
         body_ = b;
     }
 
     /*********************************************************************************
      * Get http body
      ********************************************************************************/
-    pump_inline const body_sptr get_body() const pump_noexcept {
+    pump_inline const body_sptr get_body() const noexcept {
         return body_;
     }
 
     /*********************************************************************************
      * Set http version
      ********************************************************************************/
-    pump_inline void set_http_version(http_version version) pump_noexcept {
+    pump_inline void set_http_version(http_version version) noexcept {
         version_ = version;
     }
 
     /*********************************************************************************
      * Get http version
      ********************************************************************************/
-    pump_inline http_version get_http_version() const pump_noexcept {
+    pump_inline http_version get_http_version() const noexcept {
         return version_;
     }
 
     /*********************************************************************************
      * Get http version string
      ********************************************************************************/
-    pump_inline std::string get_http_version_string() const pump_noexcept {
+    pump_inline std::string get_http_version_string() const noexcept {
         if (version_ == VERSION_10) {
             return "HTTP/1.0";
         } else if (version_ == VERSION_11) {
@@ -148,7 +148,7 @@ class pump_lib packet : public header {
     /*********************************************************************************
      * Check parse finished or not
      ********************************************************************************/
-    pump_inline bool is_parse_finished() const pump_noexcept {
+    pump_inline bool is_parse_finished() const noexcept {
         return parse_status_ == PARSE_FINISHED;
     }
 

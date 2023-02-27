@@ -62,10 +62,10 @@ bool base_transport::__install_read_tracker() {
     }
 
     r_tracker_.reset(
-        object_create<poll::channel_tracker>(
+        pump_object_create<poll::channel_tracker>(
             shared_from_this(),
             poll::track_none),
-        object_delete<poll::channel_tracker>);
+        pump_object_destroy<poll::channel_tracker>);
     if (!r_tracker_) {
         pump_debug_log("new transport's read tracker object failed");
         return false;
@@ -92,10 +92,10 @@ bool base_transport::__install_send_tracker() {
     }
 
     s_tracker_.reset(
-        object_create<poll::channel_tracker>(
+        pump_object_create<poll::channel_tracker>(
             shared_from_this(),
             poll::track_none),
-        object_delete<poll::channel_tracker>);
+        pump_object_destroy<poll::channel_tracker>);
     if (!s_tracker_) {
         pump_debug_log("new transport's send tracker object failed");
         return false;

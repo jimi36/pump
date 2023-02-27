@@ -27,7 +27,7 @@ namespace pump {
 namespace proto {
 namespace http {
 
-client::client(service *sv) pump_noexcept
+client::client(service *sv) noexcept
   : sv_(sv),
     dial_timeout_(0),
     tls_handshake_timeout_(0),

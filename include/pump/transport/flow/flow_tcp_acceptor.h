@@ -28,7 +28,7 @@ class flow_tcp_acceptor : public flow_base {
     /*********************************************************************************
      * Constructor
      ********************************************************************************/
-    flow_tcp_acceptor() pump_noexcept;
+    flow_tcp_acceptor() noexcept;
 
     /*********************************************************************************
      * Deconstructor
@@ -38,16 +38,12 @@ class flow_tcp_acceptor : public flow_base {
     /*********************************************************************************
      * Init flow
      ********************************************************************************/
-    bool init(
-        poll::channel_sptr &&ch,
-        const address &listen_address);
+    bool init(poll::channel_sptr &&ch, const address &listen_address);
 
     /*********************************************************************************
      * Accept
      ********************************************************************************/
-    pump_socket accept(
-        address *local_address,
-        address *remote_address);
+    pump_socket accept(address *local_address, address *remote_address);
 
   private:
     // IPV6

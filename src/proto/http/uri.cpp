@@ -24,11 +24,11 @@ namespace pump {
 namespace proto {
 namespace http {
 
-uri::uri() pump_noexcept
+uri::uri() noexcept
   : tp_(uri_end) {
 }
 
-uri::uri(const std::string &url) pump_noexcept {
+uri::uri(const std::string &url) noexcept {
     parse(url);
 }
 

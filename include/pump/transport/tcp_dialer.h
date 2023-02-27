@@ -39,11 +39,11 @@ class pump_lib tcp_dialer
         const address &local_address,
         const address &remote_address,
         uint64_t connect_timeout_ns = 0) {
-        INLINE_OBJECT_CREATE(
+        pump_object_create_inline(
             obj,
             tcp_dialer,
             (local_address, remote_address, connect_timeout_ns));
-        return tcp_dialer_sptr(obj, object_delete<tcp_dialer>);
+        return tcp_dialer_sptr(obj, pump_object_destroy<tcp_dialer>);
     }
 
     /*********************************************************************************
@@ -114,8 +114,8 @@ class pump_lib tcp_sync_dialer
      * Create instance
      ********************************************************************************/
     static tcp_sync_dialer_sptr create() {
-        INLINE_OBJECT_CREATE(obj, tcp_sync_dialer, ());
-        return tcp_sync_dialer_sptr(obj, object_delete<tcp_sync_dialer>);
+        pump_object_create_inline(obj, tcp_sync_dialer, ());
+        return tcp_sync_dialer_sptr(obj, pump_object_destroy<tcp_sync_dialer>);
     }
 
     /*********************************************************************************
@@ -155,7 +155,7 @@ class pump_lib tcp_sync_dialer
     /*********************************************************************************
      * Constructor
      ********************************************************************************/
-    tcp_sync_dialer() pump_noexcept {
+    tcp_sync_dialer() noexcept {
     }
 
   private:

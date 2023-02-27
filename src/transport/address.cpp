@@ -20,7 +20,7 @@
 namespace pump {
 namespace transport {
 
-address::address() pump_noexcept
+address::address() noexcept
   : is_v6_(false),
     addrlen_(sizeof(struct sockaddr_in)) {
     memset(&addr_, 0, sizeof(addr_));
@@ -147,7 +147,7 @@ std::string address::to_string() const {
     return std::string(tmp);
 }
 
-bool address::operator==(const address &other) const pump_noexcept {
+bool address::operator==(const address &other) const noexcept {
     if (is_v6_ == other.is_v6_ && addrlen_ == other.addrlen_ &&
         memcmp(addr_, other.addr_, addrlen_) == 0) {
         return true;
@@ -155,7 +155,7 @@ bool address::operator==(const address &other) const pump_noexcept {
     return false;
 }
 
-bool address::operator<(const address &other) const pump_noexcept {
+bool address::operator<(const address &other) const noexcept {
     if (addrlen_ < other.addrlen_) {
         return true;
     } else if (addrlen_ > other.addrlen_) {

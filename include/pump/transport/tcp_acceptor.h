@@ -34,11 +34,11 @@ class pump_lib tcp_acceptor
      * Create instance
      ********************************************************************************/
     pump_inline static tcp_acceptor_sptr create(const address &listen_address) {
-        INLINE_OBJECT_CREATE(
+        pump_object_create_inline(
             obj,
             tcp_acceptor,
             (listen_address));
-        return tcp_acceptor_sptr(obj, object_delete<tcp_acceptor>);
+        return tcp_acceptor_sptr(obj, pump_object_destroy<tcp_acceptor>);
     }
 
     /*********************************************************************************

@@ -35,8 +35,8 @@ bool base_acceptor::__install_accept_tracker(poll::channel_sptr &&ch) {
     }
 
     tracker_.reset(
-        object_create<poll::channel_tracker>(ch, poll::track_read),
-        object_delete<poll::channel_tracker>);
+        pump_object_create<poll::channel_tracker>(ch, poll::track_read),
+        pump_object_destroy<poll::channel_tracker>);
     if (!tracker_) {
         pump_warn_log("new acceptor's tracker object failed");
         return false;

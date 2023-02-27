@@ -20,7 +20,7 @@ namespace pump {
 namespace transport {
 namespace flow {
 
-flow_tls::flow_tls() pump_noexcept
+flow_tls::flow_tls() noexcept
   : is_handshaked_(false),
     session_(nullptr),
     send_iob_(nullptr) {
@@ -65,7 +65,7 @@ error_code flow_tls::want_to_send(toolkit::io_buffer *iob) {
 }
 
 error_code flow_tls::send() {
-    int32_t size = transport::tls_send(
+    auto size = transport::tls_send(
         session_,
         send_iob_->data(),
         send_iob_->size());

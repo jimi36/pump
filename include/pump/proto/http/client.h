@@ -39,8 +39,8 @@ class pump_lib client
      * Create instance
      ********************************************************************************/
     pump_inline static client_sptr create(service *sv) {
-        INLINE_OBJECT_CREATE(obj, client, (sv));
-        return client_sptr(obj, object_delete<client>);
+        pump_object_create_inline(obj, client, (sv));
+        return client_sptr(obj, pump_object_destroy<client>);
     }
 
     /*********************************************************************************
@@ -51,14 +51,14 @@ class pump_lib client
     /*********************************************************************************
      * Set connect timeout time
      ********************************************************************************/
-    pump_inline void set_connect_timeout(int64_t timeout) pump_noexcept {
+    pump_inline void set_connect_timeout(int64_t timeout) noexcept {
         dial_timeout_ = timeout > 0 ? timeout : 0;
     }
 
     /*********************************************************************************
      * Set tls handshake timeout time
      ********************************************************************************/
-    pump_inline void set_tls_handshake_timeout(int64_t timeout) pump_noexcept {
+    pump_inline void set_tls_handshake_timeout(int64_t timeout) noexcept {
         tls_handshake_timeout_ = timeout > 0 ? timeout : 0;
     }
 
@@ -85,7 +85,7 @@ class pump_lib client
     /*********************************************************************************
      * Constructor
      ********************************************************************************/
-    client(service *sv) pump_noexcept;
+    client(service *sv) noexcept;
 
     /*********************************************************************************
      * Setup http connection and listen http response

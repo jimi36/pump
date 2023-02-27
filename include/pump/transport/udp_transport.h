@@ -32,8 +32,8 @@ class pump_lib udp_transport : public base_transport {
      * Create instance
      ********************************************************************************/
     pump_inline static udp_transport_sptr create(const address &bind_address) {
-        INLINE_OBJECT_CREATE(obj, udp_transport, (bind_address));
-        return udp_transport_sptr(obj, object_delete<udp_transport>);
+        pump_object_create_inline(obj, udp_transport, (bind_address));
+        return udp_transport_sptr(obj, pump_object_destroy<udp_transport>);
     }
 
     /*********************************************************************************
@@ -87,7 +87,7 @@ class pump_lib udp_transport : public base_transport {
     /*********************************************************************************
      * Constructor
      ********************************************************************************/
-    udp_transport(const address &bind_address) pump_noexcept;
+    udp_transport(const address &bind_address) noexcept;
 
     /*********************************************************************************
      * Open transport flow

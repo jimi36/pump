@@ -28,7 +28,7 @@ class pump_lib response : public packet {
     /*********************************************************************************
      * Constructor
      ********************************************************************************/
-    response(void *ctx = nullptr) pump_noexcept;
+    response(void *ctx = nullptr) noexcept;
 
     /*********************************************************************************
      * Deconstructor

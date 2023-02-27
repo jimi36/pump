@@ -33,8 +33,8 @@ class pump_lib tls_transport : public base_transport {
      * Create instance
      ********************************************************************************/
     pump_inline static tls_transport_sptr create() {
-        INLINE_OBJECT_CREATE(obj, tls_transport, ());
-        return tls_transport_sptr(obj, object_delete<tls_transport>);
+        pump_object_create_inline(obj, tls_transport, ());
+        return tls_transport_sptr(obj, pump_object_destroy<tls_transport>);
     }
 
     /*********************************************************************************
@@ -107,7 +107,7 @@ class pump_lib tls_transport : public base_transport {
     /*********************************************************************************
      * Constructor
      ********************************************************************************/
-    tls_transport() pump_noexcept;
+    tls_transport() noexcept;
 
     /*********************************************************************************
      * Shutdown transport flow
