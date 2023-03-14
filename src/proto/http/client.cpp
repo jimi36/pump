@@ -139,7 +139,7 @@ bool client::__async_read_http_response(const uri *u) {
     address bind_address("0.0.0.0", 0);
     address peer_address = u->to_address();
     if (u->get_type() == uri_wss || u->get_type() == uri_https) {
-        auto dialer = transport::tls_sync_dialer::create();
+        auto dialer = transport::sync_tls_dialer::create();
         transp = dialer->dial(
             sv_,
             bind_address,
@@ -147,7 +147,7 @@ bool client::__async_read_http_response(const uri *u) {
             dial_timeout_,
             tls_handshake_timeout_);
     } else {
-        auto dialer = transport::tcp_sync_dialer::create();
+        auto dialer = transport::sync_tcp_dialer::create();
         transp = dialer->dial(sv_, bind_address, peer_address, dial_timeout_);
     }
     if (!transp) {

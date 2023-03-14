@@ -258,6 +258,9 @@ int main(int argc, const char **argv) {
         return -1;
     }
 
+    std::shared_ptr<int> ptr(new int(1));
+    printf("shared_ptr size %d\n", sizeof(ptr));
+
     std::string test_case = argv[1];
     int loop = atoi(argv[2]);
 

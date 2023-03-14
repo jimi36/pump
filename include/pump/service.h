@@ -18,7 +18,7 @@
 #define pump_service_h
 
 #include <pump/poll/poller.h>
-#include <pump/time/manager.h>
+#include <pump/time/engine.h>
 #include <pump/toolkit/freelock_queue.h>
 #include <pump/toolkit/freelock_m2m_queue.h>
 #include <pump/toolkit/freelock_o2o_queue.h>
@@ -101,6 +101,17 @@ class pump_lib service : public toolkit::noncopyable {
         return false;
     }
 
+    /*********************************************************************************
+     * Start sync timer
+     ********************************************************************************/
+    pump_inline bool start_sync_timer(time::sync_timer &timer) {
+        auto queue = timers_;
+        if (pump_likely(!!queue)) {
+            return timer.start(queue.get());
+        }
+        return false;
+    }
+
   private:
     /*********************************************************************************
      * Post triggered timers
@@ -131,7 +142,7 @@ class pump_lib service : public toolkit::noncopyable {
     toolkit::freelock_queue<task_queue> posted_tasks_;
 
     // Timers
-    time::manager_sptr timers_;
+    time::engine_sptr timers_;
 
     // Timer worker
     std::shared_ptr<std::thread> timer_worker_;

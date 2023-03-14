@@ -18,7 +18,7 @@ class Timeout : public std::enable_shared_from_this<Timeout> {
         auto cb = pump_bind(&Timeout::on_timer_timeout, this);
         for (int i = 1; i <= 1; i++) {
 			uint64_t timeout = 5e9;
-            auto t = pump::time::timer::create(timeout, cb, true);
+            auto t = pump::time::timer::create(true, timeout, cb);
             if (!sv_->start_timer(t)) {
                 printf("start timeout error\n");
             }
@@ -50,14 +50,21 @@ class Timeout : public std::enable_shared_from_this<Timeout> {
     int32_t last_report_time_;
 };
 
+void timeout() {
+    printf("timeout callback\n");
+}
+
 int main(int argc, const char **argv) {
     pump::init();
 
     pump::service *sv = new pump::service;
     sv->start();
 
-    std::shared_ptr<Timeout> t1(new Timeout(sv));
-    t1->start();
+    //std::shared_ptr<Timeout> t1(new Timeout(sv));
+    //t1->start();
+
+    pump::time::sync_timer st(5000000000, pump_bind(timeout));
+    sv->start_sync_timer(st);
 
     sv->wait_stopped();
 

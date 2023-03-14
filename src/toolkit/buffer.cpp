@@ -79,6 +79,13 @@ bool base_buffer::__init_by_reference(const char *b, uint32_t size) noexcept {
     return true;
 }
 
+io_buffer::io_buffer(bool free) noexcept
+  : base_buffer(free),
+    size_(0),
+    rpos_(0),
+    count_(1) {
+}
+
 bool io_buffer::write(const char *b, uint32_t size) {
     if (!free_) {
         pump_abort();
@@ -123,6 +130,7 @@ bool io_buffer::write(const char *b, uint32_t size) {
     }
 
     memcpy(raw_ + rpos_ + size_, b, size);
+
     size_ += size;
 
     return true;
@@ -172,6 +180,7 @@ bool io_buffer::write(char b, uint32_t count) {
     }
 
     memset(raw_ + rpos_ + size_, b, count);
+
     size_ += count;
 
     return true;
@@ -242,6 +251,21 @@ bool io_buffer::reset_by_reference(const char *b, uint32_t size) {
     size_ = size;
 
     return true;
+}
+
+void io_buffer::clear() noexcept {
+    size_ = 0;
+    rpos_ = 0;
+}
+
+void io_buffer::refer() noexcept {
+    count_.fetch_add(1);
+}
+
+void io_buffer::unrefer() {
+    if (count_.fetch_sub(1) == 1) {
+        pump_object_destroy_inline(this, io_buffer);
+    }
 }
 
 }  // namespace toolkit

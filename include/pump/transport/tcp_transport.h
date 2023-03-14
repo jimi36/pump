@@ -33,7 +33,7 @@ class pump_lib tcp_transport : public base_transport {
      * Create instance
      ********************************************************************************/
     pump_inline static tcp_transport_sptr create() {
-        pump_object_create_inline(obj, tcp_transport, ());
+        pump_object_create_inline(tcp_transport, obj);
         return tcp_transport_sptr(obj, pump_object_destroy<tcp_transport>);
     }
 

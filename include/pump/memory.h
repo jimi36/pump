@@ -46,11 +46,11 @@
 #endif
 
 // Pump object create inline
-#define pump_object_create_inline(obj, TYPE, args) \
-    TYPE *obj = (TYPE *)pump_malloc(sizeof(TYPE)); \
-    if (pump_unlikely(obj != nullptr)) {           \
-        new (obj) TYPE args;                       \
-    }                                              \
+#define pump_object_create_inline(TYPE, obj, ...) \
+    auto obj = (TYPE *)pump_malloc(sizeof(TYPE)); \
+    if (pump_unlikely(obj != nullptr)) {          \
+        new (obj) TYPE(__VA_ARGS__);               \
+    }                                             \
     void(0)
 
 // Pump object destroy inline

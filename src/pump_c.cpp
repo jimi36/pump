@@ -86,13 +86,13 @@ struct pump_c_timer_impl {
 };
 
 pump_c_timer pump_c_timer_create(
-    int timeout_ns,
     int repeated,
+    int timeout_ns,
     pump_c_timeout_callback cb_func) {
     pump_c_timer_impl *impl = pump_object_create<pump_c_timer_impl>();
 
     time::timer_callback cb = pump_bind(cb_func);
-    impl->t = time::timer::create(timeout_ns, cb, repeated);
+    impl->t = time::timer::create(repeated, timeout_ns, cb);
 
     return impl;
 }

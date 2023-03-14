@@ -39,7 +39,7 @@ class pump_lib client
      * Create instance
      ********************************************************************************/
     pump_inline static client_sptr create(service *sv) {
-        pump_object_create_inline(obj, client, (sv));
+        pump_object_create_inline(client, obj, sv);
         return client_sptr(obj, pump_object_destroy<client>);
     }
 

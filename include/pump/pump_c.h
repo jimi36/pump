@@ -80,8 +80,8 @@ typedef void (*pump_c_timeout_callback)();
  * Pump c timer create
  ********************************************************************************/
 pump_c_lib pump_c_timer pump_c_timer_create(
-    int timeout_ns,
     int repeated,
+    int timeout_ns,
     pump_c_timeout_callback cb);
 
 /*********************************************************************************

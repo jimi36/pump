@@ -123,19 +123,6 @@ class pump_lib semaphore : public noncopyable {
     /*********************************************************************************
      * Signal
      ********************************************************************************/
-    void signal() {
-#if defined(OS_WINDOWS)
-        while (!ReleaseSemaphore(sema_, 1, nullptr)) {
-        }
-#elif defined(OS_LINUX)
-        while (sem_post(&sema_) == -1) {
-        }
-#endif
-    }
-
-    /*********************************************************************************
-     * Signal
-     ********************************************************************************/
     void signal(int32_t count = 1) {
 #if defined(OS_WINDOWS)
         while (!ReleaseSemaphore(sema_, count, nullptr)) {

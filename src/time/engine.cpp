@@ -16,7 +16,7 @@
 
 #include "pump/debug.h"
 #include "pump/memory.h"
-#include "pump/time/manager.h"
+#include "pump/time/engine.h"
 #include "pump/time/timestamp.h"
 
 namespace pump {
@@ -24,11 +24,11 @@ namespace time {
 
 const static uint64_t default_observe_interval_ns = 200 * 1000000;  // 200 ms
 
-manager::manager() noexcept
+engine::engine() noexcept
   : started_(false) {
 }
 
-bool manager::start(const timer_pending_callback &cb) {
+bool engine::start(const timer_pending_callback &cb) {
     if (!started_.load()) {
         started_.store(true);
 
@@ -40,7 +40,7 @@ bool manager::start(const timer_pending_callback &cb) {
 
         observer_.reset(
             pump_object_create<std::thread>(
-                pump_bind(&manager::__observe_thread, this)),
+                pump_bind(&engine::__observe_thread, this)),
             pump_object_destroy<std::thread>);
         if (!observer_) {
             pump_debug_log("create observer thread failed");
@@ -52,15 +52,15 @@ bool manager::start(const timer_pending_callback &cb) {
     return started_.load();
 }
 
-void manager::wait_stopped() {
+void engine::wait_stopped() {
     if (observer_) {
         observer_->join();
     }
 }
 
-bool manager::start_timer(timer_sptr &ptr) {
+bool engine::start_timer(timer_sptr &ptr) {
     if (pump_unlikely(!started_.load())) {
-        pump_debug_log("manager is not started, can't start timer");
+        pump_debug_log("engine is not started, can't start timer");
         return false;
     }
     if (pump_unlikely(!ptr->__start(this))) {
@@ -73,9 +73,9 @@ bool manager::start_timer(timer_sptr &ptr) {
     return true;
 }
 
-bool manager::restart_timer(timer_sptr &&ptr) {
+bool engine::restart_timer(timer_sptr &&ptr) {
     if (pump_unlikely(!started_.load())) {
-        pump_debug_log("manager is not started, can't restart timer");
+        pump_debug_log("engine is not started, can't restart timer");
         return false;
     }
     if (!new_timers_.enqueue(std::move(ptr))) {
@@ -84,7 +84,7 @@ bool manager::restart_timer(timer_sptr &&ptr) {
     return true;
 }
 
-void manager::__observe_thread() {
+void engine::__observe_thread() {
     // New timer
     timer_sptr new_timer;
 
@@ -144,7 +144,7 @@ void manager::__observe_thread() {
     }
 }
 
-void manager::__observe(
+void engine::__observe(
     timer_list_sptr &tl,
     uint64_t &next_time_ns,
     uint64_t now_ns) {

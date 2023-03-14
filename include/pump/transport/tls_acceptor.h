@@ -42,9 +42,10 @@ class pump_lib tls_acceptor
         const address &listen_address,
         uint64_t handshake_timeout_ns = 0) {
         pump_object_create_inline(
-            obj,
             tls_acceptor,
-            (xcerd, listen_address, handshake_timeout_ns));
+            obj,
+            xcerd, listen_address, 
+            handshake_timeout_ns);
         return tls_acceptor_sptr(obj, pump_object_destroy<tls_acceptor>);
     }
 

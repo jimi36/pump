@@ -16,36 +16,81 @@
 
 #include "pump/memory.h"
 #include "pump/time/timer.h"
-#include "pump/time/manager.h"
+#include "pump/time/engine.h"
 #include "pump/time/timestamp.h"
 
 namespace pump {
 namespace time {
 
 timer::timer(
+    bool repeated,
     uint64_t timeout,
-    const timer_callback &cb,
-    bool repeated) noexcept
-  : mgr_(nullptr),
-    state_(state_none),
-    cb_(cb),
+    const timer_callback &cb) noexcept
+  : e_(nullptr), 
+    state_(timer_state_none),
     repeated_(repeated),
-    timeout_ns_(timeout) {
+    timeout_ns_(timeout),
+    cb_(cb) {
+}
+
+void timer::stop() noexcept {
+    state_.store(timer_state_stopped);
 }
 
 void timer::handle_timeout() {
-    if (__set_state(state_started, state_pending)) {
+    if (__set_state(timer_state_started, timer_state_pending)) {
         cb_();
 
         if (pump_likely(repeated_)) {
-            if (__set_state(state_pending, state_started)) {
-                // Add to timer manager.
-                mgr_->restart_timer(shared_from_this());
+            if (__set_state(timer_state_pending, timer_state_started)) {
+                // Add to timer engine.
+                e_->restart_timer(shared_from_this());
             }
         } else {
-            __set_state(state_pending, state_stopped);
+            __set_state(timer_state_pending, timer_state_stopped);
         }
     }
+}
+
+bool timer::__start(engine *e) noexcept {
+    if (!__set_state(timer_state_none, timer_state_started)) {
+        return false;
+    }
+
+    e_ = e;
+
+    return true;
+}
+
+bool timer::__set_state(int32_t expected, int32_t desired) noexcept {
+    return state_.compare_exchange_strong(expected, desired);
+}
+
+sync_timer::sync_timer(
+    uint64_t timeout_ns,
+    const timer_callback& cb)
+  : cb_(cb) {
+    raw_ = timer::create(
+        false, 
+        timeout_ns, 
+        pump_bind(&sync_timer::__handle_timeout, this));
+}
+
+bool sync_timer::start(engine *e) {
+    if (!raw_ || !e->start_timer(raw_)) {
+        return false;
+    }
+    if (!semaphore_.wait()) {
+        return false;
+    }
+    if (cb_) {
+        cb_();
+    }
+    return true;
+}
+
+void sync_timer::__handle_timeout() {
+    semaphore_.signal();
 }
 
 }  // namespace time

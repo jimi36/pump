@@ -87,7 +87,7 @@ class pump_lib io_buffer : public base_buffer {
      * Create
      ********************************************************************************/
     static io_buffer *create(uint32_t size = 0) {
-        pump_object_create_inline(obj, io_buffer, (true));
+        pump_object_create_inline(io_buffer, obj, true);
         if (size > 0 && obj != nullptr && !obj->__init_by_alloc(size)) {
             pump_object_destroy_inline(obj, io_buffer);
             return nullptr;
@@ -95,24 +95,25 @@ class pump_lib io_buffer : public base_buffer {
         return obj;
     }
     static io_buffer *create_by_copy(const char *b, uint32_t size) {
-        pump_object_create_inline(obj, io_buffer, (true));
-        if (obj != nullptr && !obj->__init_by_copy(b, size)) {
-            pump_object_destroy_inline(obj, io_buffer);
-            return nullptr;
+        pump_object_create_inline(io_buffer, obj, true);
+        if (obj != nullptr) {
+            if (!obj->__init_by_copy(b, size)) {
+                pump_object_destroy_inline(obj, io_buffer);
+                return nullptr;
+            }
+            obj->size_ = size;
         }
-        obj->size_ = size;
         return obj;
     }
     static io_buffer *create_by_refence(const char *b, uint32_t size) {
-        pump_object_create_inline(obj, io_buffer, (false));
-        if (obj != nullptr && !obj->__init_by_reference(b, size)) {
-            obj->free_ = false;
+        pump_object_create_inline(io_buffer, obj, false);
+        if (obj != nullptr) {
             if (!obj->__init_by_reference(b, size)) {
                 pump_object_destroy_inline(obj, io_buffer);
                 return nullptr;
             }
+            obj->size_ = size;
         }
-        obj->size_ = size;
         return obj;
     }
 
@@ -172,39 +173,25 @@ class pump_lib io_buffer : public base_buffer {
     bool reset_by_reference(const char *b, uint32_t size);
 
     /*********************************************************************************
-     * Clear
+     * Clear data
      ********************************************************************************/
-    pump_inline void clear() noexcept {
-        size_ = 0;
-        rpos_ = 0;
-    }
+    void clear() noexcept;
 
     /*********************************************************************************
      * Reference
      ********************************************************************************/
-    pump_inline void refer() noexcept {
-        count_.fetch_add(1);
-    }
+    void refer() noexcept;
 
     /*********************************************************************************
      * Free reference
      ********************************************************************************/
-    pump_inline void unrefer() {
-        if (count_.fetch_sub(1) == 1) {
-            pump_object_destroy_inline(this, io_buffer);
-        }
-    }
+    void unrefer();
 
   private:
     /*********************************************************************************
      * Constructor
      ********************************************************************************/
-    io_buffer(bool free) noexcept
-      : base_buffer(free),
-        size_(0),
-        rpos_(0),
-        count_(1) {
-    }
+    io_buffer(bool free) noexcept;
 
     /*********************************************************************************
      * Copy constructor

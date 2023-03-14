@@ -42,13 +42,13 @@ class pump_lib tls_dialer
         uint64_t dial_timeout_ns = 0,
         uint64_t handshake_timeout_ns = 0) {
         pump_object_create_inline(
-            obj,
             tls_dialer,
-            (nullptr,
-             local_address,
-             remote_address,
-             dial_timeout_ns,
-             handshake_timeout_ns));
+            obj,
+            nullptr,
+            local_address,
+            remote_address,
+            dial_timeout_ns,
+            handshake_timeout_ns);
         return tls_dialer_sptr(obj, pump_object_destroy<tls_dialer>);
     }
 
@@ -59,13 +59,13 @@ class pump_lib tls_dialer
         uint64_t dial_timeout_ns = 0,
         uint64_t handshake_timeout_ns = 0) {
         pump_object_create_inline(
-            obj,
             tls_dialer,
-            (xcred,
-             local_address,
-             remote_address,
-             dial_timeout_ns,
-             handshake_timeout_ns));
+            obj,
+            xcred,
+            local_address,
+            remote_address,
+            dial_timeout_ns,
+            handshake_timeout_ns);
         return tls_dialer_sptr(obj, pump_object_destroy<tls_dialer>);
     }
 
@@ -151,24 +151,24 @@ class pump_lib tls_dialer
     flow::flow_tls_dialer_sptr flow_;
 };
 
-class tls_sync_dialer;
-DEFINE_SMART_POINTERS(tls_sync_dialer);
+class sync_tls_dialer;
+DEFINE_SMART_POINTERS(sync_tls_dialer);
 
-class pump_lib tls_sync_dialer
-  : public std::enable_shared_from_this<tls_sync_dialer> {
+class pump_lib sync_tls_dialer
+  : public std::enable_shared_from_this<sync_tls_dialer> {
   public:
     /*********************************************************************************
      * Create instance
      ********************************************************************************/
-    static tls_sync_dialer_sptr create() {
-        pump_object_create_inline(obj, tls_sync_dialer, ());
-        return tls_sync_dialer_sptr(obj, pump_object_destroy<tls_sync_dialer>);
+    static sync_tls_dialer_sptr create() {
+        pump_object_create_inline(sync_tls_dialer, obj);
+        return sync_tls_dialer_sptr(obj, pump_object_destroy<sync_tls_dialer>);
     }
 
     /*********************************************************************************
      * Deconstructor
      ********************************************************************************/
-    virtual ~tls_sync_dialer() = default;
+    virtual ~sync_tls_dialer() = default;
 
     /*********************************************************************************
      * Dial by synchronization
@@ -185,14 +185,14 @@ class pump_lib tls_sync_dialer
      * Dialed callback
      ********************************************************************************/
     static void on_dialed(
-        tls_sync_dialer_wptr dialer,
+        sync_tls_dialer_wptr dialer,
         base_transport_sptr &transp,
         bool success);
 
     /*********************************************************************************
      * Dial timeouted callback
      ********************************************************************************/
-    static void on_timeouted(tls_sync_dialer_wptr dialer);
+    static void on_timeouted(sync_tls_dialer_wptr dialer);
 
     /*********************************************************************************
      * Dial stopped callback
@@ -203,7 +203,7 @@ class pump_lib tls_sync_dialer
     /*********************************************************************************
      * Constructor
      ********************************************************************************/
-    tls_sync_dialer() noexcept {}
+    sync_tls_dialer() noexcept {}
 
   private:
     // Tcp dialer

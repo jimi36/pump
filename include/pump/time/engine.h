@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef pump_time_manager_h
-#define pump_time_manager_h
+#ifndef pump_time_engine_h
+#define pump_time_engine_h
 
 #include <map>
 #include <list>
@@ -31,13 +31,13 @@
 namespace pump {
 namespace time {
 
-class manager;
-DEFINE_SMART_POINTERS(manager);
+class engine;
+DEFINE_SMART_POINTERS(engine);
 
 typedef std::list<timer_wptr> timer_list;
 DEFINE_SMART_POINTERS(timer_list);
 
-class pump_lib manager : public toolkit::noncopyable {
+class pump_lib engine : public toolkit::noncopyable {
   protected:
     typedef pump_function<void(timer_list_sptr &)> timer_pending_callback;
 
@@ -45,15 +45,15 @@ class pump_lib manager : public toolkit::noncopyable {
     /*********************************************************************************
      * Create instance
      ********************************************************************************/
-    pump_inline static manager_sptr create() {
-        pump_object_create_inline(obj, manager, ());
-        return manager_sptr(obj, pump_object_destroy<manager>);
+    pump_inline static engine_sptr create() {
+        pump_object_create_inline(engine, obj);
+        return engine_sptr(obj, pump_object_destroy<engine>);
     }
 
     /*********************************************************************************
      * Deconstructor
      ********************************************************************************/
-    ~manager() = default;
+    ~engine() = default;
 
     /*********************************************************************************
      * Start
@@ -108,7 +108,7 @@ class pump_lib manager : public toolkit::noncopyable {
     /*********************************************************************************
      * Constructor
      ********************************************************************************/
-    manager() noexcept;
+    engine() noexcept;
 
   private:
     // Started status

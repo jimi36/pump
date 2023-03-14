@@ -173,7 +173,7 @@ void tcp_dialer::__close_dial_flow() {
     }
 }
 
-base_transport_sptr tcp_sync_dialer::dial(
+base_transport_sptr sync_tcp_dialer::dial(
     service *sv,
     const address &local_address,
     const address &remote_address,
@@ -184,14 +184,14 @@ base_transport_sptr tcp_sync_dialer::dial(
 
     dialer_callbacks cbs;
     cbs.dialed_cb = pump_bind(
-        &tcp_sync_dialer::on_dialed,
+        &sync_tcp_dialer::on_dialed,
         shared_from_this(),
         _1,
         _2);
     cbs.timeouted_cb = pump_bind(
-        &tcp_sync_dialer::on_timeouted,
+        &sync_tcp_dialer::on_timeouted,
         shared_from_this());
-    cbs.stopped_cb = pump_bind(&tcp_sync_dialer::on_stopped);
+    cbs.stopped_cb = pump_bind(&sync_tcp_dialer::on_stopped);
 
     dialer_ = tcp_dialer::create(
         local_address,
@@ -204,8 +204,8 @@ base_transport_sptr tcp_sync_dialer::dial(
     return dial_promise_.get_future().get();
 }
 
-void tcp_sync_dialer::on_dialed(
-    tcp_sync_dialer_wptr dialer,
+void sync_tcp_dialer::on_dialed(
+    sync_tcp_dialer_wptr dialer,
     base_transport_sptr &transp,
     bool success) {
     auto dialer_locker = dialer.lock();
@@ -214,14 +214,14 @@ void tcp_sync_dialer::on_dialed(
     }
 }
 
-void tcp_sync_dialer::on_timeouted(tcp_sync_dialer_wptr dialer) {
+void sync_tcp_dialer::on_timeouted(sync_tcp_dialer_wptr dialer) {
     auto dialer_locker = dialer.lock();
     if (dialer_locker) {
         dialer_locker->dial_promise_.set_value(base_transport_sptr());
     }
 }
 
-void tcp_sync_dialer::on_stopped() {
+void sync_tcp_dialer::on_stopped() {
     pump_assert(false);
 }
 

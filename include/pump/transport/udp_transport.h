@@ -32,7 +32,7 @@ class pump_lib udp_transport : public base_transport {
      * Create instance
      ********************************************************************************/
     pump_inline static udp_transport_sptr create(const address &bind_address) {
-        pump_object_create_inline(obj, udp_transport, (bind_address));
+        pump_object_create_inline(udp_transport, obj, bind_address);
         return udp_transport_sptr(obj, pump_object_destroy<udp_transport>);
     }
 

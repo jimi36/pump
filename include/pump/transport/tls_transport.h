@@ -33,7 +33,7 @@ class pump_lib tls_transport : public base_transport {
      * Create instance
      ********************************************************************************/
     pump_inline static tls_transport_sptr create() {
-        pump_object_create_inline(obj, tls_transport, ());
+        pump_object_create_inline(tls_transport, obj);
         return tls_transport_sptr(obj, pump_object_destroy<tls_transport>);
     }
 

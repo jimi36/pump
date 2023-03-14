@@ -228,7 +228,7 @@ bool tls_handshaker::__start_handshake_timer(uint64_t timeout_ns) {
     }
 
     auto cb = pump_bind(&tls_handshaker::on_timeout, shared_from_this());
-    if (!(timer_ = time::timer::create(timeout_ns, cb))) {
+    if (!(timer_ = time::timer::create(false, timeout_ns, cb))) {
         return false;
     }
 

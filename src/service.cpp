@@ -15,7 +15,6 @@
  */
 
 #include "pump/service.h"
-#include "pump/time/manager.h"
 #include "pump/poll/afd_poller.h"
 #include "pump/poll/epoll_poller.h"
 #include "pump/poll/select_poller.h"
@@ -38,7 +37,7 @@ service::service(bool enable_poll)
 #endif
     }
 
-    timers_ = time::manager::create();
+    timers_ = time::engine::create();
 }
 
 service::~service() {

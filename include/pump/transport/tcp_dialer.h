@@ -40,9 +40,11 @@ class pump_lib tcp_dialer
         const address &remote_address,
         uint64_t connect_timeout_ns = 0) {
         pump_object_create_inline(
+            tcp_dialer, 
             obj,
-            tcp_dialer,
-            (local_address, remote_address, connect_timeout_ns));
+            local_address, 
+            remote_address, 
+            connect_timeout_ns);
         return tcp_dialer_sptr(obj, pump_object_destroy<tcp_dialer>);
     }
 
@@ -104,24 +106,24 @@ class pump_lib tcp_dialer
     flow::flow_tcp_dialer_sptr flow_;
 };
 
-class tcp_sync_dialer;
-DEFINE_SMART_POINTERS(tcp_sync_dialer);
+class sync_tcp_dialer;
+DEFINE_SMART_POINTERS(sync_tcp_dialer);
 
-class pump_lib tcp_sync_dialer
-  : public std::enable_shared_from_this<tcp_sync_dialer> {
+class pump_lib sync_tcp_dialer
+  : public std::enable_shared_from_this<sync_tcp_dialer> {
   public:
     /*********************************************************************************
      * Create instance
      ********************************************************************************/
-    static tcp_sync_dialer_sptr create() {
-        pump_object_create_inline(obj, tcp_sync_dialer, ());
-        return tcp_sync_dialer_sptr(obj, pump_object_destroy<tcp_sync_dialer>);
+    static sync_tcp_dialer_sptr create() {
+        pump_object_create_inline(sync_tcp_dialer, obj);
+        return sync_tcp_dialer_sptr(obj, pump_object_destroy<sync_tcp_dialer>);
     }
 
     /*********************************************************************************
      * Deconstructor
      ********************************************************************************/
-    virtual ~tcp_sync_dialer() = default;
+    virtual ~sync_tcp_dialer() = default;
 
     /*********************************************************************************
      * Dial by sync
@@ -137,14 +139,14 @@ class pump_lib tcp_sync_dialer
      * Dialed callback
      ********************************************************************************/
     static void on_dialed(
-        tcp_sync_dialer_wptr dialer,
+        sync_tcp_dialer_wptr dialer,
         base_transport_sptr &transp,
         bool success);
 
     /*********************************************************************************
      * Dialed timeout callback
      ********************************************************************************/
-    static void on_timeouted(tcp_sync_dialer_wptr dialer);
+    static void on_timeouted(sync_tcp_dialer_wptr dialer);
 
     /*********************************************************************************
      * Stopped dialing callback
@@ -155,7 +157,7 @@ class pump_lib tcp_sync_dialer
     /*********************************************************************************
      * Constructor
      ********************************************************************************/
-    tcp_sync_dialer() noexcept {
+    sync_tcp_dialer() noexcept {
     }
 
   private:
