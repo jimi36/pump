@@ -213,8 +213,7 @@ SpacesInSquareBrackets: false
 # 设置一种标准来对格式兼容, 可以是: Cpp03, Cpp11, Auto
 Standard: Cpp11
 # 应该被解释为完整语句的宏的向量。
-#StatementMacros:
-#  - Q_UNUSED
+#StatementMacros: ['defer_call_end']
 # 设置制表符(\t)的列数
 TabWidth: 4
 # 使用制表符的情况。

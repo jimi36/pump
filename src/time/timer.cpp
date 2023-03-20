@@ -24,13 +24,32 @@ namespace time {
 
 timer::timer(
     bool repeated,
-    uint64_t timeout,
+    uint64_t timeout_ns) noexcept
+  : e_(nullptr),
+    state_(timer_state_none),
+    repeated_(repeated),
+    timeout_ns_(timeout_ns) {
+}
+
+timer::timer(
+    bool repeated,
+    uint64_t timeout_ns,
     const timer_callback &cb) noexcept
   : e_(nullptr), 
     state_(timer_state_none),
     repeated_(repeated),
-    timeout_ns_(timeout),
+    timeout_ns_(timeout_ns),
     cb_(cb) {
+}
+
+bool timer::set_callback(const timer_callback &cb) {
+    if (state_.load() != timer_state_none) {
+        return false;
+    }
+
+    cb_ = cb;
+
+    return true;
 }
 
 void timer::stop() noexcept {
@@ -40,6 +59,10 @@ void timer::stop() noexcept {
 void timer::handle_timeout() {
     if (__set_state(timer_state_started, timer_state_pending)) {
         cb_();
+
+        if (!repeated_) {
+            cb_ = timer_callback();
+        }
 
         if (pump_likely(repeated_)) {
             if (__set_state(timer_state_pending, timer_state_started)) {

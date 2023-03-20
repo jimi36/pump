@@ -69,7 +69,7 @@ bool base_buffer::__init_by_reference(const char *b, uint32_t size) noexcept {
         pump_abort();
     }
 
-    if (b == nullptr || size == 0) {
+    if (b == nullptr && size > 0) {
         return false;
     }
 
