@@ -29,6 +29,7 @@ const static timer_state_type timer_state_none = 0;
 const static timer_state_type timer_state_stopped = 1;
 const static timer_state_type timer_state_started = 2;
 const static timer_state_type timer_state_pending = 3;
+const static timer_state_type timer_state_finished = 4;
 
 class engine;
 
@@ -47,11 +48,23 @@ class pump_lib timer : public std::enable_shared_from_this<timer> {
      ********************************************************************************/
     pump_inline static timer_sptr create(
         bool repeated,
+        uint64_t timeout_ns) {
+        pump_object_create_inline(timer, obj, repeated, timeout_ns);
+        return timer_sptr(obj, pump_object_destroy<timer>);
+    }
+    pump_inline static timer_sptr create(
+        bool repeated,
         uint64_t timeout_ns,
         const timer_callback &cb) {
         pump_object_create_inline(timer, obj, repeated, timeout_ns, cb);
         return timer_sptr(obj, pump_object_destroy<timer>);
     }
+
+    /*********************************************************************************
+     * Set callback
+     * Must set callback before timer added to timer engine.
+     ********************************************************************************/
+    bool set_callback(const timer_callback &cb);
 
     /*********************************************************************************
      * Stop
@@ -75,7 +88,11 @@ class pump_lib timer : public std::enable_shared_from_this<timer> {
      * Get starting state
      ********************************************************************************/
     pump_inline bool is_started() const noexcept {
-        return state_.load() > timer_state_stopped;
+        auto st = state_.load();
+        if (st == timer_state_started || st == timer_state_pending) {
+            return true;
+        }
+        return false;
     }
 
     /*********************************************************************************
@@ -89,6 +106,9 @@ class pump_lib timer : public std::enable_shared_from_this<timer> {
     /*********************************************************************************
      * Constructor
      ********************************************************************************/
+    timer(
+        bool repeated,
+        uint64_t timeout_ns) noexcept;
     timer(
         bool repeated,
         uint64_t timeout_ns,
@@ -110,6 +130,11 @@ class pump_lib timer : public std::enable_shared_from_this<timer> {
     bool __start(engine *e) noexcept;
 
     /*********************************************************************************
+     * Restart
+     ********************************************************************************/
+    bool __restart() noexcept;
+
+    /*********************************************************************************
      * Set state
      ********************************************************************************/
     bool __set_state(int32_t expected, int32_t desired) noexcept;
@@ -118,13 +143,15 @@ class pump_lib timer : public std::enable_shared_from_this<timer> {
     // Timer engine
     engine *e_;
 
+    // Repeated flag
+    bool repeated_;
+
+    // Timeout time
+    uint64_t timeout_ns_;
+
     // Timer state
     std::atomic_int32_t state_;
 
-    // Repeated flag
-    bool repeated_;
-    // Timeout time
-    uint64_t timeout_ns_;
     // Timer callback
     timer_callback cb_;
 };
@@ -155,7 +182,7 @@ class pump_lib sync_timer {
      ********************************************************************************/
     sync_timer operator=(const sync_timer &) = delete;
 
-     /*********************************************************************************
+    /*********************************************************************************
      * Handle timeout
      ********************************************************************************/
     void __handle_timeout();

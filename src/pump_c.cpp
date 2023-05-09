@@ -365,9 +365,9 @@ static void on_transport_read(
 
 static void on_transport_read_from(
     pump_c_transport_impl *impl,
+    const transport::address &addr,
     const char *b,
-    int size,
-    const transport::address &addr) {
+    int size) {
     if (impl->cbs.read_from_cb) {
         impl->cbs.read_from_cb(
             impl,

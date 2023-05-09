@@ -387,7 +387,7 @@ bool tcp_transport::__async_send(toolkit::io_buffer *iob) {
         pump_abort_with_log("push iob to queue failed");
     }
 
-    // If there are no more buffers, we should try to get next send chance.
+    // If there are no more buffers, we try to get next send chance.
     if (pending_send_size_.fetch_add(iob->size()) > 0) {
         return true;
     }

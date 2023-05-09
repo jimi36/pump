@@ -6,6 +6,7 @@
 #include <new>
 
 #include <pump/time/timestamp.h>
+#include <pump/toolkit/features.h>
 #include <pump/toolkit/freelock_m2m_queue.h>
 #include <pump/toolkit/freelock_o2o_queue.h>
 
@@ -254,12 +255,16 @@ int test2(int loop) {
 }
 
 int main(int argc, const char **argv) {
+    int i = 0;
+    defer_call_begin
+        printf("%d\n", ++i);
+    defer_call_end
+    defer_call_begin
+        printf("%d\n", ++i);
+    defer_call_end
     if (argc < 2) {
         return -1;
     }
-
-    std::shared_ptr<int> ptr(new int(1));
-    printf("shared_ptr size %d\n", sizeof(ptr));
 
     std::string test_case = argv[1];
     int loop = atoi(argv[2]);

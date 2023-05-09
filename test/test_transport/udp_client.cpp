@@ -8,9 +8,11 @@ class my_udp_client {
      * Read event callback for udp
      ********************************************************************************/
     virtual void on_read_callback(base_transport *transp,
+                                  const address &from,
                                   const char *b,
-                                  int32_t size,
-                                  const address &from) {}
+                                  int32_t size) {
+        printf("read buffer %d\n", size);
+    }
 
     /*********************************************************************************
      * Stopped event callback
@@ -26,15 +28,7 @@ class my_udp_client {
 void send(udp_transport_sptr transport, const std::string &ip, uint16_t port) {
     char buf[4096];
     address addr(ip, port);
-    while (1) {
-        if (transport->send(buf, 4096, addr) > 0) {
-#if defined(WIN32)
-            Sleep(100);
-#else
-            usleep(1000);
-#endif
-        }
-    }
+    transport->send(buf, 4096, addr);
 }
 
 static std::shared_ptr<my_udp_client> udp_client;

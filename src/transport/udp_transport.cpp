@@ -146,6 +146,29 @@ error_code udp_transport::send(
     return error_none;
 }
 
+error_code udp_transport::send(
+    toolkit::io_buffer *iob,
+    const address &address) {
+    if (iob == nullptr || iob->size() <= 0) {
+        pump_debug_log("io buffer invalid");
+        return error_invalid;
+    }
+
+    if (!is_started()) {
+        pump_debug_log("udp transport not started");
+        return error_unstart;
+    }
+
+    if (flow_->send(iob->data(), iob->size(), address) < 0) {
+        pump_debug_log("udp transport's flow send failed");
+        return error_again;
+    }
+
+    iob->shift(iob->size());
+
+    return error_none;
+}
+
 void udp_transport::on_read_event() {
     // Wait transport starting end.
     while (__is_state(state_starting, std::memory_order_relaxed)) {
@@ -165,7 +188,7 @@ void udp_transport::on_read_event() {
             pump_debug_log("start udp transport's read tracker failed");
         }
         // Callback read data.
-        cbs_.read_from_cb(data, size, remote_addr);
+        cbs_.read_from_cb(remote_addr, data, size);
     } else if (!__start_read_tracker()) {
         pump_debug_log("start udp transport's read tracker failed");
     }

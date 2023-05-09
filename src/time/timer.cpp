@@ -35,10 +35,10 @@ timer::timer(
     bool repeated,
     uint64_t timeout_ns,
     const timer_callback &cb) noexcept
-  : e_(nullptr), 
-    state_(timer_state_none),
+  : e_(nullptr),
     repeated_(repeated),
     timeout_ns_(timeout_ns),
+    state_(timer_state_none),
     cb_(cb) {
 }
 
@@ -58,29 +58,40 @@ void timer::stop() noexcept {
 
 void timer::handle_timeout() {
     if (__set_state(timer_state_started, timer_state_pending)) {
-        cb_();
-
-        if (!repeated_) {
-            cb_ = timer_callback();
-        }
-
-        if (pump_likely(repeated_)) {
-            if (__set_state(timer_state_pending, timer_state_started)) {
-                // Add to timer engine.
-                e_->restart_timer(shared_from_this());
+        if (repeated_) {
+            if (e_->restart_timer(shared_from_this())) {
+                cb_();
             }
         } else {
-            __set_state(timer_state_pending, timer_state_stopped);
+            if (__set_state(timer_state_pending, timer_state_finished)) {
+                cb_();
+            }
         }
     }
 }
 
 bool timer::__start(engine *e) noexcept {
-    if (!__set_state(timer_state_none, timer_state_started)) {
+    pump_assert(e != nullptr);
+
+    auto st = state_.load();
+    if (st != timer_state_none && st != timer_state_finished) {
+        return false;
+    }
+    if (!__set_state(st, timer_state_started)) {
         return false;
     }
 
     e_ = e;
+
+    return true;
+}
+
+bool timer::__restart() noexcept {
+    pump_assert(e_ != nullptr);
+
+    if (!__set_state(timer_state_pending, timer_state_started)) {
+        return false;
+    }
 
     return true;
 }
@@ -91,11 +102,11 @@ bool timer::__set_state(int32_t expected, int32_t desired) noexcept {
 
 sync_timer::sync_timer(
     uint64_t timeout_ns,
-    const timer_callback& cb)
+    const timer_callback &cb)
   : cb_(cb) {
     raw_ = timer::create(
-        false, 
-        timeout_ns, 
+        false,
+        timeout_ns,
         pump_bind(&sync_timer::__handle_timeout, this));
 }
 

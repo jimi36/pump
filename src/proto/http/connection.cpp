@@ -371,7 +371,7 @@ int32_t connection::__handle_http_packet(const char *b, int32_t size) {
 }
 
 int32_t connection::__handle_websocket_frame(const char *b, int32_t size) {
-    auto iob = toolkit::io_buffer::create_by_refence(b, size);
+    auto iob = toolkit::io_buffer::create_by_reference(b, size);
 
     do {
         // Decode websocket frame header.

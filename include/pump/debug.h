@@ -19,6 +19,8 @@
 
 #include <assert.h>
 
+#include <pump/build.h>
+
 // Pump assert
 #define pump_assert(x) assert(x)
 // Pump static assert

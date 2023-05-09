@@ -70,11 +70,18 @@ class pump_lib udp_transport : public base_transport {
     virtual error_code async_read() override;
 
     /*********************************************************************************
-     * Send
+     * Send buffer to peer address
      ********************************************************************************/
     virtual error_code send(
         const char *b,
         int32_t size,
+        const address &address) override;
+
+    /*********************************************************************************
+     * Send io buffer to peer address
+     ********************************************************************************/
+    virtual error_code send(
+        toolkit::io_buffer *iob,
         const address &address) override;
 
   protected:

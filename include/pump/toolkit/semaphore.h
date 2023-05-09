@@ -35,13 +35,12 @@ class pump_lib semaphore : public noncopyable {
     /*********************************************************************************
      * Constructor
      ********************************************************************************/
-    semaphore(int32_t ini_count = 0) {
+    semaphore(int32_t initial_count = 0) {
 #if defined(OS_WINDOWS)
-        const long maxLong = 0x7fffffff;
-        sema_ = CreateSemaphoreW(nullptr, ini_count, maxLong, nullptr);
-        pump_assert(sema_);
+        const long max_count = 0x7fffffff;
+        sema_ = CreateSemaphoreW(nullptr, initial_count, max_count, nullptr);
 #elif defined(OS_LINUX)
-        if (sem_init(&sema_, 0, ini_count) != 0) {
+        if (sem_init(&sema_, 0, initial_count) != 0) {
             pump_assert(false);
         }
 #endif
@@ -95,22 +94,22 @@ class pump_lib semaphore : public noncopyable {
      * Wait with timeout
      * Wait for the signal until timeout.
      ********************************************************************************/
-    bool wait_with_timeout(uint64_t usecs) {
+    bool wait_with_timeout(uint64_t timeout_ns) {
 #if defined(OS_WINDOWS)
-        return WaitForSingleObject(sema_, (unsigned long)(usecs / 1000)) == 0;
+        return WaitForSingleObject(
+                   sema_,
+                   (unsigned long)(timeout_ns / 1000000)) == 0;
 #elif defined(OS_LINUX)
         struct timespec ts;
-        const static int32_t usecs_in_1_sec = 1000000;
-        const static int32_t nsecs_in_1_sec = 1000000000;
         clock_gettime(CLOCK_REALTIME, &ts);
-        ts.tv_sec += (time_t)(usecs / usecs_in_1_sec);
-        ts.tv_nsec += (long)(usecs % usecs_in_1_sec) * 1000;
+        ts.tv_sec += (time_t)(timeout_ns / 1000000000);
+        ts.tv_nsec += (long)(timeout_ns % 1000000000);
         // sem_timedwait bombs if you have more than 1e9 in tv_nsec
         // so we have to clean things up before passing it in
-        if (ts.tv_nsec >= nsecs_in_1_sec) {
-            ts.tv_nsec -= nsecs_in_1_sec;
-            ++ts.tv_sec;
-        }
+        // if (ts.tv_nsec >= nsecs_in_1_sec) {
+        //    ts.tv_nsec -= nsecs_in_1_sec;
+        //    ++ts.tv_sec;
+        //}
 
         int32_t rc;
         do {
@@ -181,8 +180,8 @@ class pump_lib light_semaphore : public noncopyable {
     /*********************************************************************************
      * Wait one signal with timeout
      ********************************************************************************/
-    bool wait(int64_t timeout_usecs) {
-        return try_wait() || __wait_with_spinning(timeout_usecs);
+    bool wait(int64_t timeout_ns) {
+        return try_wait() || __wait_with_spinning(timeout_ns);
     }
 
     /*********************************************************************************
@@ -209,7 +208,7 @@ class pump_lib light_semaphore : public noncopyable {
     /*********************************************************************************
      * Wait with spinning and timeout
      ********************************************************************************/
-    bool __wait_with_spinning(int64_t timeout_usecs = -1) {
+    bool __wait_with_spinning(int64_t timeout_ns = -1) {
         int64_t old_count;
         // Is there a better way to set the initial spin count?
         // If we lower it to 1000, testBenaphore becomes 15x slower on my Core
@@ -232,10 +231,10 @@ class pump_lib light_semaphore : public noncopyable {
         if (old_count > 0) {
             return true;
         }
-        if (timeout_usecs < 0) {
+        if (timeout_ns < 0) {
             return semaphone_.wait();
         }
-        if (semaphone_.wait_with_timeout((uint64_t)timeout_usecs)) {
+        if (semaphone_.wait_with_timeout((uint64_t)timeout_ns)) {
             return true;
         }
         // At this point, we've timed out waiting for the semaphore, but the

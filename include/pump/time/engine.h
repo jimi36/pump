@@ -100,9 +100,7 @@ class pump_lib engine : public toolkit::noncopyable {
     /*********************************************************************************
      * Observe timers
      ********************************************************************************/
-    pump_inline void __queue_timer(timer_sptr &ptr, uint64_t now_ns) {
-        timers_[ptr->timeout() + now_ns].push_back(ptr);
-    }
+    void __queue_timer(timer_sptr &ptr, uint64_t now_ns);
 
   private:
     /*********************************************************************************

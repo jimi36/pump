@@ -22,6 +22,7 @@
 #include <stdlib.h>
 #include <type_traits>
 
+#include <pump/debug.h>
 #include <pump/platform.h>
 
 #if defined(PUMP_HAVE_JEMALLOC)
@@ -66,6 +67,15 @@ pump_inline T *pump_object_create(ArgTypes... args) {
     T *p = (T *)pump_malloc(sizeof(T));
     if (pump_unlikely(p == nullptr)) {
         return nullptr;
+    }
+    return new (p) T(args...);
+}
+
+template <typename T, typename... ArgTypes>
+pump_inline T *pump_object_create_must(ArgTypes... args) {
+    T *p = (T *)pump_malloc(sizeof(T));
+    if (pump_unlikely(p == nullptr)) {
+        pump_abort();
     }
     return new (p) T(args...);
 }

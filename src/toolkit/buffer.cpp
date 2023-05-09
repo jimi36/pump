@@ -7,25 +7,23 @@
 namespace pump {
 namespace toolkit {
 
-base_buffer::base_buffer(bool free) noexcept
-  : free_(free),
+base_buffer::base_buffer(bool alloced) noexcept
+  : alloced_(alloced),
     raw_(nullptr),
     raw_size_(0) {
 }
 
 base_buffer::~base_buffer() {
-    if (free_ && raw_ != nullptr) {
+    if (alloced_ && raw_ != nullptr) {
         pump_free(raw_);
     }
 }
 
 bool base_buffer::__init_by_alloc(uint32_t size) noexcept {
-    if (!free_ || raw_ != nullptr) {
+    pump_assert(size > 0);
+    
+    if (!alloced_ || raw_ != nullptr) {
         pump_abort();
-    }
-
-    if (size == 0) {
-        return true;
     }
 
     try {
@@ -42,12 +40,10 @@ bool base_buffer::__init_by_alloc(uint32_t size) noexcept {
 }
 
 bool base_buffer::__init_by_copy(const char *b, uint32_t size) noexcept {
-    if (!free_ || raw_ != nullptr) {
+    pump_assert(b != nullptr && size > 0);
+    
+    if (!alloced_ || raw_ != nullptr) {
         pump_abort();
-    }
-
-    if (b == nullptr || size == 0) {
-        return false;
     }
 
     try {
@@ -65,12 +61,11 @@ bool base_buffer::__init_by_copy(const char *b, uint32_t size) noexcept {
 }
 
 bool base_buffer::__init_by_reference(const char *b, uint32_t size) noexcept {
-    if (free_ || raw_ != nullptr) {
+    if (alloced_ || raw_ != nullptr) {
         pump_abort();
     }
-
     if (b == nullptr && size > 0) {
-        return false;
+        pump_abort();
     }
 
     raw_ = (char *)b;
@@ -87,7 +82,7 @@ io_buffer::io_buffer(bool free) noexcept
 }
 
 bool io_buffer::write(const char *b, uint32_t size) {
-    if (!free_) {
+    if (!alloced_) {
         pump_abort();
     }
 
@@ -137,7 +132,7 @@ bool io_buffer::write(const char *b, uint32_t size) {
 }
 
 bool io_buffer::write(char b, uint32_t count) {
-    if (!free_) {
+    if (!alloced_) {
         pump_abort();
     }
 
@@ -222,7 +217,7 @@ int32_t io_buffer::shift(int32_t size) {
 }
 
 bool io_buffer::reset_by_copy(const char *b, uint32_t size) {
-    if (!free_) {
+    if (!alloced_) {
         pump_abort();
     }
 
@@ -236,7 +231,7 @@ bool io_buffer::reset_by_copy(const char *b, uint32_t size) {
 }
 
 bool io_buffer::reset_by_reference(const char *b, uint32_t size) {
-    if (free_) {
+    if (alloced_) {
         pump_abort();
     }
 
@@ -263,8 +258,11 @@ void io_buffer::refer() noexcept {
 }
 
 void io_buffer::unrefer() {
-    if (count_.fetch_sub(1) == 1) {
+    auto c = count_.fetch_sub(1);
+    if (c == 1) {
         pump_object_destroy_inline(this, io_buffer);
+    } else if (c <= 0) {
+        pump_abort();
     }
 }
 
