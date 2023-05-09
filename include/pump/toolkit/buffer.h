@@ -33,7 +33,7 @@ class pump_lib base_buffer {
     /*********************************************************************************
      * Constructor
      ********************************************************************************/
-    base_buffer(bool free) noexcept;
+    base_buffer(bool alloced) noexcept;
 
     /*********************************************************************************
      * Deconstructor
@@ -52,6 +52,13 @@ class pump_lib base_buffer {
      ********************************************************************************/
     pump_inline uint32_t capacity() const noexcept {
         return raw_size_;
+    }
+
+    /*********************************************************************************
+     * Check raw buffer alloced or not
+     ********************************************************************************/
+    pump_inline bool is_alloced() const noexcept {
+        return alloced_;
     }
 
   protected:
@@ -73,8 +80,9 @@ class pump_lib base_buffer {
     bool __init_by_reference(const char *b, uint32_t size) noexcept;
 
   protected:
-    // Free flag
-    bool free_;
+    // Alloced flag
+    bool alloced_;
+
     // Raw buffer
     char *raw_;
     // Raw buffer size
@@ -88,31 +96,37 @@ class pump_lib io_buffer : public base_buffer {
      ********************************************************************************/
     static io_buffer *create(uint32_t size = 0) {
         pump_object_create_inline(io_buffer, obj, true);
-        if (size > 0 && obj != nullptr && !obj->__init_by_alloc(size)) {
-            pump_object_destroy_inline(obj, io_buffer);
-            return nullptr;
+        if (obj != nullptr) {
+            if (size > 0 && !obj->__init_by_alloc(size)) {
+                pump_object_destroy_inline(obj, io_buffer);
+                return nullptr;
+            }
         }
         return obj;
     }
-    static io_buffer *create_by_copy(const char *b, uint32_t size) {
+    static io_buffer *create_by_copy(const char *b = nullptr, uint32_t size = 0) {
         pump_object_create_inline(io_buffer, obj, true);
         if (obj != nullptr) {
-            if (!obj->__init_by_copy(b, size)) {
-                pump_object_destroy_inline(obj, io_buffer);
-                return nullptr;
+            if (b != nullptr && size > 0) {
+                if (!obj->__init_by_copy(b, size)) {
+                    pump_object_destroy_inline(obj, io_buffer);
+                    return nullptr;
+                }
+                obj->size_ = size;
             }
-            obj->size_ = size;
         }
         return obj;
     }
-    static io_buffer *create_by_refence(const char *b, uint32_t size) {
+    static io_buffer *create_by_reference(const char *b = nullptr, uint32_t size = 0) {
         pump_object_create_inline(io_buffer, obj, false);
         if (obj != nullptr) {
-            if (!obj->__init_by_reference(b, size)) {
-                pump_object_destroy_inline(obj, io_buffer);
-                return nullptr;
+            if (b != nullptr && size > 0) {
+                if (!obj->__init_by_reference(b, size)) {
+                    pump_object_destroy_inline(obj, io_buffer);
+                    return nullptr;
+                }
+                obj->size_ = size;
             }
-            obj->size_ = size;
         }
         return obj;
     }
@@ -215,6 +229,154 @@ class pump_lib io_buffer : public base_buffer {
     uint32_t rpos_;
     // Reference count
     std::atomic_int count_;
+};
+
+class shared_buffer {
+  public:
+    /*********************************************************************************
+     * Constructor
+     ********************************************************************************/
+    shared_buffer()
+      : iob_(nullptr) {
+    }
+    shared_buffer(io_buffer *iob)
+      : iob_(iob) {
+    }
+    shared_buffer(const shared_buffer &b)
+      : iob_(b.iob_) {
+        if (iob_ != nullptr) {
+            iob_->refer();
+        }
+    }
+
+    /*********************************************************************************
+     * Deconstructor
+     ********************************************************************************/
+    ~shared_buffer() {
+        if (iob_ != nullptr) {
+            iob_->unrefer();
+        }
+    }
+
+    /*********************************************************************************
+     * Assign operator
+     ********************************************************************************/
+    shared_buffer& operator=(const shared_buffer &b) {
+        if (this == &b || iob_ == b.iob_) {
+            return *this;
+        }
+        if (iob_ != nullptr) {
+            iob_->unrefer();
+        }
+        iob_ = b.iob_;
+        if (iob_ != nullptr) {
+            iob_->refer();
+        }
+        return *this;
+    }
+    shared_buffer &operator=(io_buffer *iob) {
+        if (iob_ == iob) {
+            return *this;
+        }
+        if (iob_ != nullptr) {
+            iob_->unrefer();
+        }
+        iob_ = iob;
+        if (iob_ != nullptr) {
+            iob_->refer();
+        }
+        return *this;
+    }
+	
+	/*********************************************************************************
+     * Bool operator
+     ********************************************************************************/
+    operator bool() const noexcept {
+        return iob_ != nullptr;
+    }
+	
+	/*********************************************************************************
+     * Get io buffer
+     ********************************************************************************/
+    pump_inline io_buffer* get_io_buffer() {
+        return iob_;
+    }
+
+    /*********************************************************************************
+     * Write bytes
+     ********************************************************************************/
+    pump_inline bool write(const char *b, uint32_t size) {
+        if (iob_ != nullptr) {
+            return iob_->write(b, size);
+        }
+        return false;
+    }
+
+    /*********************************************************************************
+     * Write bytes with the same byte
+     ********************************************************************************/
+    pump_inline bool write(char b, uint32_t count = 1) {
+        if (iob_ != nullptr) {
+            return iob_->write(b, count);
+        }
+        return false;
+    }
+
+    /*********************************************************************************
+     * Read bytes
+     ********************************************************************************/
+    pump_inline bool read(char *b, uint32_t size) {
+        if (iob_ != nullptr) {
+            return iob_->read(b, size);
+        }
+        return false;
+    }
+
+    /*********************************************************************************
+     * Read one byte
+     ********************************************************************************/
+    pump_inline bool read(char *b) {
+        if (iob_ != nullptr) {
+            return iob_->read(b);
+        }
+        return false;
+    }
+
+    /*********************************************************************************
+     * Shift data position.
+     * If size > 0, shift to right.
+     * If size < 0, shift to left.
+     * If success return data size after shift, else return -1.
+     ********************************************************************************/
+    pump_inline int32_t shift(int32_t size) {
+        if (iob_ != nullptr) {
+            return iob_->shift(size);
+        }
+        return -1;
+    }
+
+    /*********************************************************************************
+     * Get data
+     ********************************************************************************/
+    pump_inline const char *data() const noexcept {
+        if (iob_ != nullptr) {
+            return iob_->data();
+        }
+        return nullptr;
+    }
+
+    /*********************************************************************************
+     * Get data size
+     ********************************************************************************/
+    pump_inline uint32_t size() const noexcept {
+        if (iob_ != nullptr) {
+            return iob_->size();
+        }
+        return 0;
+    }
+  
+  private:
+    io_buffer *iob_;
 };
 
 }  // namespace toolkit

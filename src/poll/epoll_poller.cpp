@@ -99,7 +99,7 @@ bool epoll_poller::__uninstall_channel_tracker(channel_tracker *tracker) {
 #endif
     pump_debug_log(
         "uninstall channel tracker failed %d %d",
-        tracker->get_fd(),
+        (int32_t)tracker->get_fd(),
         net::last_errno());
     return false;
 }
@@ -124,7 +124,7 @@ bool epoll_poller::__start_channel_tracker(channel_tracker *tracker) {
 #endif
     pump_debug_log(
         "start channel tracker failed %d %d",
-        tracker->get_fd(),
+        (int32_t)tracker->get_fd(),
         net::last_errno());
     return false;
 }

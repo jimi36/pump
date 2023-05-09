@@ -47,7 +47,7 @@ class pump_lib noncopyable {
     /*********************************************************************************
      * Disable copy assign operator
      ********************************************************************************/
-    const noncopyable &operator=(const noncopyable &) = delete;
+    noncopyable &operator=(const noncopyable &) = delete;
 };
 
 /*********************************************************************************
@@ -88,5 +88,13 @@ class pump_lib defer : public noncopyable {
 
 }  // namespace toolkit
 }  // namespace pump
+
+#define __defer_name__(s) d##s
+#define __defer_name_ex__(s) __defer_name__(s)
+
+#define defer_call_begin \
+    pump::toolkit::defer __defer_name_ex__(__LINE__)([&]() {
+#define defer_call_end \
+    });
 
 #endif

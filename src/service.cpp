@@ -114,7 +114,7 @@ void service::__start_task_worker() {
     auto func = [&]() {
         task_callback task;
         while (running_) {
-            if (posted_tasks_.dequeue(task, std::chrono::seconds(1))) {
+            if (posted_tasks_.dequeue(task, 1000000000)) {
                 task();
             }
         }
@@ -128,7 +128,7 @@ void service::__start_timer_callback_worker() {
     auto func = [&]() {
         time::timer_list_sptr tl;
         while (running_) {
-            if (triggered_timers_.dequeue(tl, std::chrono::seconds(1))) {
+            if (triggered_timers_.dequeue(tl, 1000000000)) {
                 time::timer_sptr ptr;
                 for (auto b = tl->begin(), e = tl->end(); b != e;) {
                     ptr = (b++)->lock();

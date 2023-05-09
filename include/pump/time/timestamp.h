@@ -112,7 +112,7 @@ class pump_lib timestamp {
 
   public:
     /*********************************************************************************
-     * Overwrite operator =
+     * Assign operator
      ********************************************************************************/
     pump_inline timestamp &operator=(const timestamp &ts) noexcept {
         ms_ = ts.ms_;
@@ -120,21 +120,21 @@ class pump_lib timestamp {
     }
 
     /*********************************************************************************
-     * Overwrite operator <
+     * Little operator
      ********************************************************************************/
     pump_inline bool operator<(const timestamp &ts) const noexcept {
         return ms_ < ts.ms_;
     }
 
     /*********************************************************************************
-     * Overwrite operator <=
+     * Little and equal operator
      ********************************************************************************/
     pump_inline bool operator<=(const timestamp &ts) const noexcept {
         return ms_ <= ts.ms_;
     }
 
     /*********************************************************************************
-     * Overwrite operator ==
+     * Equal operator
      ********************************************************************************/
     pump_inline bool operator==(const timestamp &ts) const noexcept {
         return ms_ == ts.ms_;

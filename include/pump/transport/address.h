@@ -89,12 +89,12 @@ class pump_lib address {
     std::string to_string() const;
 
     /*********************************************************************************
-     * Operator ==
+     * Equal operator
      ********************************************************************************/
     bool operator==(const address &other) const noexcept;
 
     /*********************************************************************************
-     * Operator <
+     * Little operator
      ********************************************************************************/
     bool operator<(const address &other) const noexcept;
 

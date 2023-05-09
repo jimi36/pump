@@ -17,6 +17,8 @@
 #ifndef pump_toolkit_freelock_queue_h
 #define pump_toolkit_freelock_queue_h
 
+#include <chrono>
+
 #include <pump/platform.h>
 #include <pump/toolkit/features.h>
 #include <pump/toolkit/semaphore.h>
@@ -79,20 +81,8 @@ class freelock_queue : public noncopyable {
      * This will block until dequeue success or timeout.
      ********************************************************************************/
     template <typename U>
-    bool dequeue(U &item, uint64_t timeout) {
-        if (semaphone_.wait(timeout)) {
-            while (!queue_.pop(item)) {
-                continue;
-            }
-            return true;
-        }
-        return false;
-    }
-
-    template <typename U, typename Rep, typename Period>
-    bool dequeue(U &item, const std::chrono::duration<Rep, Period> &timeout) {
-        auto ms = std::chrono::duration_cast<std::chrono::microseconds>(timeout);
-        if (semaphone_.wait(ms.count())) {
+    bool dequeue(U &item, int64_t timeout_ns) {
+        if (semaphone_.wait(timeout_ns)) {
             while (!queue_.pop(item)) {
                 continue;
             }

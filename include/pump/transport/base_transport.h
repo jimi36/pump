@@ -168,7 +168,7 @@ class pump_lib base_transport
     }
 
     /*********************************************************************************
-     * Send
+     * Send buffer
      ********************************************************************************/
     virtual error_code send(const char *b, int32_t size) {
         return error_disable;
@@ -176,18 +176,27 @@ class pump_lib base_transport
 
     /*********************************************************************************
      * Send io buffer
-     * The ownership of io buffer will be transferred.
+     * The io buffer will be refer.
      ********************************************************************************/
     virtual error_code send(toolkit::io_buffer *iob) {
         return error_disable;
     }
 
     /*********************************************************************************
-     * Send
+     * Send buffer to peer address
      ********************************************************************************/
     virtual error_code send(
         const char *b,
         int32_t size,
+        const address &address) {
+        return error_disable;
+    }
+
+    /*********************************************************************************
+     * Send io buffer to peer address
+     ********************************************************************************/
+    virtual error_code send(
+        toolkit::io_buffer *iob,
         const address &address) {
         return error_disable;
     }

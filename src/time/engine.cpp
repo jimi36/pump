@@ -78,6 +78,10 @@ bool engine::restart_timer(timer_sptr &&ptr) {
         pump_debug_log("engine is not started, can't restart timer");
         return false;
     }
+    if (pump_unlikely(!ptr->__restart())) {
+        pump_debug_log("start timer failed");
+        return false;
+    }
     if (!new_timers_.enqueue(std::move(ptr))) {
         pump_abort_with_log("push timer to queue failed");
     }
@@ -167,6 +171,10 @@ void engine::__observe(
             timers_.erase(beg, pos);
         }
     }
+}
+
+void engine::__queue_timer(timer_sptr &ptr, uint64_t now_ns) {
+    timers_[ptr->timeout() + now_ns].push_back(ptr);
 }
 
 }  // namespace time

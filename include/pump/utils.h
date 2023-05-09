@@ -61,8 +61,8 @@ pump_lib T random(
     T min,
     T max) {
     std::default_random_engine e(seed);
-    std::uniform_int_distribution<T> u(min, max);
-    return u(e);
+    std::uniform_int_distribution<uint64_t> u(min, max);
+    return T(u(e));
 }
 
 /*********************************************************************************
@@ -76,9 +76,9 @@ pump_lib std::vector<T> random(
     int32_t count) {
     std::vector<T> out(count, 0);
     std::default_random_engine e(seed);
-    std::uniform_int_distribution<T> u(min, max);
+    std::uniform_int_distribution<uint64_t> u(min, max);
     for (int32_t i = 0; i < count; i++) {
-        out[i] = u(e);
+        out[i] = T(u(e));
     }
     return std::move(out);
 }
